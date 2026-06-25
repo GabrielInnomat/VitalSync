@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BuildingBlocks.Domain\BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="..\BuildingBlocks.EventProcessing\BuildingBlocks.EventProcessing.csproj" />
+  </ItemGroup>
+
+</Project>

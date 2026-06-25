@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BuildingBlocks.Domain\BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="..\BuildingBlocks.EventProcessing\BuildingBlocks.EventProcessing.csproj" />
+    <ProjectReference Include="..\BuildingBlocks.Common\BuildingBlocks.Common.csproj" />
+  </ItemGroup>
+
+</Project>

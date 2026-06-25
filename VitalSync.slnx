@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/BuildingBlocks/" />
+  <Folder Name="/BuildingBlocks/src/">
+    <Project Path="BuildingBlocks/src/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj" />
+  </Folder>
+  <Folder Name="/BuildingBlocks/tests/" />
+  <Folder Name="/src/" />
+  <Folder Name="/tests/" />
+</Solution>
