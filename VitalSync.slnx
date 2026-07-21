@@ -3,7 +3,9 @@
   <Folder Name="/BuildingBlocks/src/">
     <Project Path="BuildingBlocks/src/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj" />
   </Folder>
-  <Folder Name="/BuildingBlocks/tests/" />
+  <Folder Name="/BuildingBlocks/tests/">
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.Domain.Tests/BuildingBlocks.Domain.Tests.csproj" />
+  </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/Aspire/">
     <Project Path="src/Aspire/VitalSync.AppHost/VitalSync.AppHost.csproj" />
