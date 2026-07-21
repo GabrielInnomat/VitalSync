@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\VitalSync.Bff\VitalSync.Bff.csproj" />
+    <ProjectReference Include="..\..\Bff\VitalSync.Bff\VitalSync.Bff.csproj" />
     <ProjectReference Include="..\..\Frontend\VitalSync.Web\VitalSync.Web.csproj" />
     <ProjectReference Include="..\..\Services\Nutrition\VitalSync.Nutrition.Api\VitalSync.Nutrition.Api.csproj" />
     <ProjectReference Include="..\..\Services\Fitness\VitalSync.Fitness.Api\VitalSync.Fitness.Api.csproj" />

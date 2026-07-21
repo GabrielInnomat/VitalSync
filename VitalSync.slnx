@@ -10,11 +10,17 @@
     <Project Path="src/Aspire/VitalSync.ServiceDefaults/VitalSync.ServiceDefaults.csproj" />
   </Folder>
   <Folder Name="/src/Bff/">
-    <Project Path="VitalSync.Bff/VitalSync.Bff.csproj" />
+    <Project Path="src/Bff/VitalSync.Bff/VitalSync.Bff.csproj" />
   </Folder>
   <Folder Name="/src/Frontend/">
     <Project Path="src/Frontend/VitalSync.Web/VitalSync.Web.csproj" />
   </Folder>
   <Folder Name="/src/Services/" />
+  <Folder Name="/src/Services/Fitness/">
+    <Project Path="src/Services/Fitness/VitalSync.Fitness.Api/VitalSync.Fitness.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Nutrition/">
+    <Project Path="src/Services/Nutrition/VitalSync.Nutrition.Api/VitalSync.Nutrition.Api.csproj" />
+  </Folder>
   <Folder Name="/tests/" />
 </Solution>
