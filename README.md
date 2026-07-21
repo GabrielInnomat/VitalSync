@@ -2,9 +2,9 @@
 
 > A cloud-native, distributed platform unifying **nutrition**, **workout**, and **health analytics** in a single application.
 
-VitalSync lets users manage nutrition- and workout-related information and derive meaningful insights from the collected data. It is built as a distributed system of independent microservices following Domain-Driven Design, CQRS, and (where it adds business value) Event Sourcing.
+VitalSync lets users manage nutrition- and workout-related information and derive meaningful insights from the collected data. It is built as a distributed system of independent microservices following Domain-Driven Design.
 
-> **Project status:** 🚧 Early development. Business requirements and domain models are intentionally refined iteratively. The technical architecture, however, is considered mandatory and stable. See [Architecture docs](./docs/architecture/overview.md).
+> **Project status:** 🚧 Early development. Business requirements and domain models are intentionally refined iteratively. The technical architecture, however, is considered mandatory and stable.
 
 ---
 
@@ -35,7 +35,7 @@ VitalSync lets users manage nutrition- and workout-related information and deriv
 
 VitalSync combines three domains — **nutrition**, **fitness**, and **analytics** — behind a single, modern user experience. The platform is designed to be modular, extensible, maintainable, testable, loosely coupled, cloud-native, and reusable in the long term.
 
-A core principle of the project: **the architecture is fixed, the domain is fluid.** Technical decisions (communication mechanisms, layer separation, architectural principles) are mandatory. Business requirements and domain models are expected to evolve as the project progresses.
+A core principle of the project: **the architecture is fixed, the domain is fluid.** Technical decisions (communication mechanisms, layer separation, architectural principles) are mandatory. Business/domain details are refined iteratively.
 
 ## Business domains
 
@@ -99,7 +99,7 @@ See [Communication](./docs/architecture/communication.md) for details.
 | Frontend                | Blazor                                                             |
 | Backend-for-Frontend    | REST (outbound) + code-first gRPC (to services)                    |
 | Microservices           | ASP.NET Core, one per business area                                |
-| Inter-service messaging | Kafka _or_ RabbitMQ _(decision pending — see ADR-0004)_            |
+| Inter-service messaging | RabbitMQ via MassTransit (see ADR-0004)                            |
 | Persistence             | Entity Framework Core; Event Sourcing where it adds business value |
 | Patterns                | DDD, CQRS, Event Sourcing (selective)                              |
 | Testing                 | xUnit, FluentAssertions, NSubstitute, EF Core InMemory             |
@@ -108,7 +108,7 @@ See [Communication](./docs/architecture/communication.md) for details.
 
 ## Repository structure
 
-> The structure below is the **target** layout. It will be populated as the project grows.
+> The layout below reflects the current structure. Service subfolders are populated as the project grows.
 
 ```text
 VitalSync/
@@ -163,8 +163,6 @@ dotnet build
 ```bash
 dotnet run --project src/Aspire/VitalSync.AppHost
 ```
-
-> The exact project paths will be confirmed once the Aspire AppHost is added.
 
 ## Testing
 
