@@ -1,8 +1,8 @@
 # BuildingBlocks.Domain — Technical Reference
 
-`BuildingBlocks.Domain` is the foundational building block of the platform. It provides the tactical Domain-Driven Design primitives that every microservice's domain layer builds upon, and it is deliberately **free of any infrastructure or third-party dependency** (the project declares no package references).
+`BuildingBlocks.Domain` is the foundational building block of the platform. It provides the tactical Domain-Driven Design primitives that every microservice's domain layer builds upon, and it is deliberately free of any framework or infrastructure dependency.
 
-A central design goal of this block is that **a single aggregate model serves both persistence worlds** — event sourcing (ES) and state-stored (EF Core) — so that the choice of persistence strategy does not leak into the domain. See [ADR-0011](./decisions/0011-unified-aggregate-for-es-and-ef.md).
+A central design goal of this block is that **a single aggregate model serves both persistence worlds** — event sourcing (ES) and state-stored (EF Core) — so that the choice of persistence strategy is an infrastructure decision made in the Application/Persistence layer, never a decision baked into the domain.
 
 > Scope: this document describes the _domain_ building block only. Application, Persistence, Infrastructure, and EventProcessing are documented separately.
 
@@ -23,7 +23,7 @@ A central design goal of this block is that **a single aggregate model serves bo
 | `Entity<TKey>`                     | abstract class  | Base for non-aggregate entities: constructor-set identity, guard, identity equality. |
 | `IState<TKey>`                     | interface       | An aggregate's state: owns the identity and the event-apply ("evolve") logic.        |
 | `IAggregateRoot<TKey>`             | interface       | Marker for an aggregate root; exposes events **read-only**.                          |
-| `IEventSourcedAggregateRoot<TKey>` | interface       | Optional marker exposing `Version` + `LoadFromHistory` for ES infrastructure.        |
+| `IEventSourcedAggregateRoot<TKey>` | interface       | Infrastructure-only capability exposing `Version` + `LoadFromHistory` for ES.        |
 | `AggregateRoot<TKey, TState>`      | abstract class  | The single aggregate base for both ES and EF Core.                                   |
 | `IHasDomainEvents`                 | interface       | Read-only access to an aggregate's domain events.                                    |
 | `IDomainEventsManager`             | interface       | Privileged contract that can **clear** events (infrastructure-only).                 |
@@ -53,11 +53,11 @@ Because each aggregate has its own key type, passing the wrong key is a **compil
 There are two cases, by design:
 
 - **Non-aggregate entities** (`Entity<TKey>`) receive their identity in the **constructor** and expose it get-only. The empty-GUID guard runs in that constructor.
-- **Aggregate roots** (`AggregateRoot<TKey, TState>`) take their identity from their **state** (`Id => State.Id`). A freshly created aggregate therefore starts with a default `Id`; the **first applied event sets it**. See [ADR-0008](./decisions/0008-entity-identity-and-equality.md) and [ADR-0010](./decisions/0010-aggregate-state-object.md).
+- **Aggregate roots** (`AggregateRoot<TKey, TState>`) take their identity from their **state** (`Id => State.Id`). A freshly created aggregate therefore starts with a default `Id`; the **first applied event** must set it.
 
 ### Identity validation for aggregates
 
-Because an aggregate's identity comes from its state, the empty-GUID guard cannot run at construction. Instead it runs **at every state transition**: immediately after an event is applied (in both `RaiseEvent` and `LoadFromHistory`), the resulting `State.Id` must be non-empty, otherwise a `DomainValidationException` is thrown.
+Because an aggregate's identity comes from its state, the empty-GUID guard cannot run at construction. Instead it runs **at every state transition**: immediately after an event is applied (in both `RaiseEvent` and replay).
 
 This means:
 
@@ -69,13 +69,13 @@ There is deliberately **no** separate post-creation validity check; validity is 
 
 ### Identity equality
 
-Both `Entity<TKey>` and `AggregateRoot<TKey, TState>` implement identity equality: two instances are equal when they are the **same concrete type** and have **equal ids**. `Equals(object?)` and `GetHashCode()` are `sealed` so derived types cannot reintroduce inconsistent equality.
+Both `Entity<TKey>` and `AggregateRoot<TKey, TState>` implement identity equality: two instances are equal when they are the **same concrete type** and have **equal ids**. `Equals(object?)` and `GetHashCode()` are `sealed`.
 
 ```text
 left.Equals(right)  ⇔  left.GetType() == right.GetType()  ∧  left.Id == right.Id
 ```
 
-> Note: two _un-created_ aggregates both have `Id == default` and would compare equal until their creation events run. In practice aggregates are only created through factories that immediately raise the creation event (after which `RaiseEvent` has enforced a non-empty `Id`), so this is a degenerate case.
+> Note: two _un-created_ aggregates both have `Id == default` and would compare equal until their creation events run. In practice aggregates are only created through factories that immediately raise the creation event.
 
 ## The state object
 
@@ -90,7 +90,7 @@ public interface IState<out TKey>
 }
 ```
 
-The state object exists to keep large aggregates maintainable. All **apply/evolution logic lives on the state**, so the aggregate class contains only the public command API (the behavior invoked by commands), not the per-event state-mutation code. For a large aggregate this avoids the otherwise unavoidable "two methods per event" growth (one command method + one apply branch) inside the aggregate. See [ADR-0010](./decisions/0010-aggregate-state-object.md).
+The state object exists to keep large aggregates maintainable. All **apply/evolution logic lives on the state**, so the aggregate class contains only the public command API (the behavior invoked by commands).
 
 State implementations are expected to be **immutable**: `Apply` returns the next state (`this with { … }`) rather than mutating in place.
 
@@ -119,28 +119,31 @@ public sealed record RecipeState : IState<RecipeId>
 
 ```csharp
 public abstract class AggregateRoot<TKey, TState>
-    : IAggregateRoot<TKey>, IDomainEventsManager, IEquatable<AggregateRoot<TKey, TState>>
+    : IAggregateRoot<TKey>, IDomainEventsManager,
+      IEquatable<AggregateRoot<TKey, TState>>, IEventSourcedAggregateRoot<TKey>
     where TKey : struct, IEntityKey
     where TState : IState<TKey>
 ```
 
-- It holds the current `State`, the `Version` (stream position), and the private uncommitted-events list.
+- It holds the current `State`, an internal version (stream position), and the private uncommitted-events list.
 - `Id` is derived from `State`.
 - State changes **only** via:
   - `RaiseEvent(e)` — apply the event to the state, validate identity, advance the version, and record the event (new behavior from a command);
   - `LoadFromHistory(history)` — replay a persisted stream to rebuild state (rehydration; records nothing).
 - It exposes events **read-only** and implements clearing **explicitly** (see below).
+- It implements `IEventSourcedAggregateRoot<TKey>` (`Version` + `LoadFromHistory`) **explicitly**, so those event-sourcing members are **not** on a concrete aggregate's public surface — a caller must cast to `IEventSourcedAggregateRoot<TKey>` to reach them (exactly like `IDomainEventsManager.ClearDomainEvents()`).
 
 How each world uses it:
 
-|                   | Event-sourced                       | State-stored (EF Core)           |
-| ----------------- | ----------------------------------- | -------------------------------- |
-| Persists          | the raised events                   | the `TState` object              |
-| Rebuilds state by | `LoadFromHistory` (replay)          | loading the stored `TState`      |
-| Uses `Version`    | yes (stream position / concurrency) | unused                           |
-| Uses `Apply`      | yes (replay + new events)           | inert (state is loaded directly) |
+|                        | Event-sourced                                        | State-stored (EF Core)               |
+| ---------------------- | ---------------------------------------------------- | ------------------------------------ |
+| Persists               | the raised events                                    | the `TState` object                  |
+| Rebuilds state by      | `LoadFromHistory` (replay), via the ES cast          | loading the stored `TState`          |
+| Uses `Version`         | yes (stream position / concurrency), via the ES cast | never obtains the ES view; invisible |
+| Uses `Apply`           | yes (replay + new events)                            | inert (state is loaded directly)     |
+| Sees ES members public | via `IEventSourcedAggregateRoot<TKey>` cast only     | never                                |
 
-The aggregate author does **not** choose a base class per strategy; they always use `AggregateRoot<TKey, TState>`. See [ADR-0011](./decisions/0011-unified-aggregate-for-es-and-ef.md).
+The aggregate author does **not** choose a base class per strategy; they always use `AggregateRoot<TKey, TState>`. **The ES-vs-EF decision is made in the Application/Persistence layer** by selecting the appropriate repository for the context. See [ADR-0011](./decisions/0011-unified-aggregate-for-es-and-ef.md).
 
 ### Ownership rule
 
@@ -164,19 +167,32 @@ void IDomainEventsManager.ClearDomainEvents() => _domainEvents.Clear();
 
 - Raising is `protected` (`RaiseEvent`), so only the aggregate itself can add events.
 
+The same explicit-implementation technique hides the event-sourcing capability:
+
+```text
+IEventSourcedAggregateRoot<TKey>  → long Version; void LoadFromHistory(...)   (ES infrastructure only)
+```
+
+Both `ClearDomainEvents` and the ES members are reachable **only** by code that deliberately casts to the respective interface — by convention, the persistence layer.
+
 ### Access matrix
 
-| Caller holds…                               | Read events? | Clear events?              | Raise events?               |
-| ------------------------------------------- | ------------ | -------------------------- | --------------------------- |
-| The concrete aggregate (e.g. `Recipe`)      | ✅           | ❌ (not on surface)        | ❌ (only internally)        |
-| `IAggregateRoot<TKey>`                      | ✅           | ❌                         | ❌                          |
-| `IHasDomainEvents`                          | ✅           | ❌                         | ❌                          |
-| `IDomainEventsManager` (cast)               | ✅           | ✅                         | ❌                          |
-| A subclass of `AggregateRoot<TKey, TState>` | ✅           | ❌ (explicit, not visible) | ✅ (`protected RaiseEvent`) |
+| Caller holds…                               | Read events? | Clear events?              | Raise events?               | ES members (`Version`/`LoadFromHistory`)? |
+| ------------------------------------------- | ------------ | -------------------------- | --------------------------- | ----------------------------------------- |
+| The concrete aggregate (e.g. `Recipe`)      | ✅           | ❌ (not on surface)        | ❌ (only internally)        | ❌ (not on surface)                       |
+| `IAggregateRoot<TKey>`                      | ✅           | ❌                         | ❌                          | ❌                                        |
+| `IHasDomainEvents`                          | ✅           | ❌                         | ❌                          | ❌                                        |
+| `IDomainEventsManager` (cast)               | ✅           | ✅                         | ❌                          | ❌                                        |
+| `IEventSourcedAggregateRoot<TKey>` (cast)   | ✅           | ❌                         | ❌                          | ✅                                        |
+| A subclass of `AggregateRoot<TKey, TState>` | ✅           | ❌ (explicit, not visible) | ✅ (`protected RaiseEvent`) | ❌ (explicit, not visible)                |
 
-### Why clearing is separated
+### Why clearing (and ES capability) is separated
 
-The persistence layer collects events, dispatches them, and clears them **only after a successful save**. Keeping `ClearDomainEvents()` off the public surface prevents any application layer from clearing prematurely (which would silently drop undispatched events). See [ADR-0006](./decisions/0006-aggregate-owns-domain-events.md) and [ADR-0007](./decisions/0007-read-only-vs-managed-domain-events.md).
+The persistence layer collects events, dispatches them, and clears them **only after a successful save**. Keeping `ClearDomainEvents()` off the public surface prevents any application layer from clearing prematurely (which would silently drop undispatched events). The same reasoning applies to `Version`/`LoadFromHistory`: a state-stored aggregate should never see event-sourcing ceremony, and only event-sourcing infrastructure that deliberately casts to `IEventSourcedAggregateRoot<TKey>` may rehydrate. See [ADR-0006](./decisions/0006-aggregate-owns-domain-events.md), [ADR-0007](./decisions/0007-read-only-vs-managed-domain-events.md), and [ADR-0011](./decisions/0011-unified-aggregate-for-es-and-ef.md).
+
+### Replay-misuse guard
+
+`LoadFromHistory` may only rebuild a **fresh** aggregate. If it is called on an aggregate that already has state (its internal version is `> 0` — because events were raised or a prior replay ran), it throws a `DomainValidationException`. This turns accidental rehydration of an already-materialized aggregate (e.g. an EF-Core repository mistakenly replaying) into an immediate, obvious failure instead of silent state corruption.
 
 ### Lifecycle
 
@@ -184,14 +200,14 @@ The persistence layer collects events, dispatches them, and clears them **only a
             new aggregate (State.Id == default)
                         │
         ┌───────────────┴────────────────┐
-        │ command path                   │ rehydration path
-        ▼                                ▼
+        │ command path                   │ rehydration path (ES infra casts to
+        ▼                                ▼  IEventSourcedAggregateRoot<TKey>)
 RaiseEvent(creationEvent)          LoadFromHistory(stream)
-  State = State.Apply(e)             for each e:
-  EnsureValidIdentity()                State = State.Apply(e)
-  Version++                            EnsureValidIdentity()
-  record event                         Version++
-        │
+  State = State.Apply(e)             guard: throw if version > 0
+  EnsureValidIdentity()              for each e:
+  Version++                            State = State.Apply(e)
+  record event                         EnsureValidIdentity()
+        │                               Version++
         ▼
 DomainEvents  (read-only, side-effect free)
         │
@@ -254,7 +270,7 @@ public sealed record RecipeState : IState<RecipeId>
     };
 }
 
-// Aggregate: only the public command surface. No apply noise, regardless of size.
+// Aggregate: only the public command surface. No apply noise, no ES ceremony.
 public sealed class Recipe : AggregateRoot<RecipeId, RecipeState>
 {
     private Recipe() : base(RecipeState.Empty) { }
@@ -267,13 +283,6 @@ public sealed class Recipe : AggregateRoot<RecipeId, RecipeState>
         return recipe;
     }
 
-    public static Recipe Rehydrate(IEnumerable<IDomainEvent> history)
-    {
-        var recipe = new Recipe();
-        recipe.LoadFromHistory(history);
-        return recipe;
-    }
-
     public void Rename(string newName, IClock clock)
     {
         RuleChecker.Check(new RecipeNameMustNotBeEmpty(newName));
@@ -282,19 +291,27 @@ public sealed class Recipe : AggregateRoot<RecipeId, RecipeState>
 }
 ```
 
-- **Event-sourced** services persist the events and call `Rehydrate`/`LoadFromHistory`.
-- **State-stored (EF Core)** services persist `RecipeState` (e.g. as an owned/complex type) and never replay; `Apply` and `Version` are simply unused.
+- **Event-sourced** services persist the events and rehydrate through the ES view:
+
+  ```csharp
+  var recipe = new Recipe();
+  ((IEventSourcedAggregateRoot<RecipeId>)recipe).LoadFromHistory(history);
+  ```
+
+  (In practice this cast lives inside the event-sourced repository, not in domain or application code.)
+- **State-stored (EF Core)** services persist `RecipeState` (e.g. as an owned/complex type) and never replay; `Apply`, `Version`, and `LoadFromHistory` are simply never reached.
 
 ## Design rules (summary)
 
 1. The domain block has **zero** infrastructure dependencies.
-2. **One aggregate base** (`AggregateRoot<TKey, TState>`) serves both ES and EF Core.
+2. **One aggregate base** (`AggregateRoot<TKey, TState>`) serves both ES and EF Core; the persistence choice is made in the Application/Persistence layer, not by the aggregate's type.
 3. All **apply/evolution logic lives on the state** (`IState<TKey>`), keeping aggregates free of apply noise.
 4. Aggregate **identity comes from the state**; it is validated at **every transition** (no post-creation check).
 5. Equality is **identity-based** and type-sensitive on both entities and aggregates.
 6. Aggregates **own** their events; outsiders read only; clearing is **explicit** and infrastructure-only.
-7. Domain events are **pure** and carry an `EventId`.
-8. Business rules and domain validation are **distinct**, with distinct exceptions.
+7. **Event-sourcing capability** (`Version`/`LoadFromHistory`) is exposed via **explicit** `IEventSourcedAggregateRoot<TKey>` implementation — off the public surface — and `LoadFromHistory` is guarded against replay onto an already-materialized aggregate.
+8. Domain events are **pure** and carry an `EventId`.
+9. Business rules and domain validation are **distinct**, with distinct exceptions.
 
 ## Related documents
 
