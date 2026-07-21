@@ -21,6 +21,12 @@ An ADR documents a single architectural decision, its context, and its consequen
 | [0003](./0003-bff-with-rest-and-code-first-grpc.md)       | BFF with REST externally and code-first gRPC internally | Accepted |
 | [0004](./0004-asynchronous-messaging-between-services.md) | Asynchronous messaging between services                 | Accepted |
 | [0005](./0005-strongly-typed-aggregate-identifiers.md)    | Strongly typed aggregate identifiers                    | Accepted |
+| [0006](./0006-aggregate-owns-domain-events.md)            | Aggregate owns its domain events                        | Accepted |
+| [0007](./0007-read-only-vs-managed-domain-events.md)      | Read-only vs. managed domain events                     | Accepted |
+| [0008](./0008-entity-identity-and-equality.md)            | Entity identity and equality                            | Accepted |
+| [0009](./0009-business-rules-and-domain-validation.md)    | Business rules and domain validation                    | Accepted |
+| [0010](./0010-aggregate-state-object.md)                  | Aggregate state object                                  | Accepted |
+| [0011](./0011-unified-aggregate-for-es-and-ef.md)         | Unified aggregate for event sourcing and EF Core        | Accepted |
 
 ## Template
 
