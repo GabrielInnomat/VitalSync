@@ -10,16 +10,24 @@ VitalSync lets users manage nutrition- and workout-related information and deriv
 
 ## Table of contents
 
-- [Vision](#vision)
-- [Business domains](#business-domains)
-- [Architecture at a glance](#architecture-at-a-glance)
-- [Technology stack](#technology-stack)
-- [Repository structure](#repository-structure)
-- [Building Blocks platform](#building-blocks-platform)
-- [Getting started](#getting-started)
-- [Testing](#testing)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
+- [VitalSync](#vitalsync)
+  - [Table of contents](#table-of-contents)
+  - [Vision](#vision)
+  - [Business domains](#business-domains)
+    - [Nutrition](#nutrition)
+    - [Fitness](#fitness)
+    - [Analytics \& Reporting](#analytics--reporting)
+  - [Architecture at a glance](#architecture-at-a-glance)
+  - [Technology stack](#technology-stack)
+  - [Repository structure](#repository-structure)
+  - [Building Blocks platform](#building-blocks-platform)
+  - [Getting started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Build](#build)
+    - [Run (Aspire AppHost)](#run-aspire-apphost)
+  - [Testing](#testing)
+  - [Documentation](#documentation)
+  - [Contributing](#contributing)
 
 ---
 
@@ -32,6 +40,7 @@ A core principle of the project: **the architecture is fixed, the domain is flui
 ## Business domains
 
 ### Nutrition
+
 - Manage ingredients and their nutritional values
 - Create recipes
 - Compose meal plans
@@ -39,12 +48,14 @@ A core principle of the project: **the architecture is fixed, the domain is flui
 - Calculate nutrient intake based on consumed meals
 
 ### Fitness
+
 - Manage exercises
 - Create workout plans
 - Track completed workout sessions
 - Determine energy expenditure and calories burned
 
 ### Analytics & Reporting
+
 - Reporting and analytical capabilities derived from nutrition and fitness data
 - Specific analytics requirements are identified and extended throughout the project
 
@@ -82,16 +93,16 @@ See [Communication](./docs/architecture/communication.md) for details.
 
 ## Technology stack
 
-| Concern | Choice |
-|---|---|
-| Orchestration | .NET Aspire 13 |
-| Frontend | Blazor |
-| Backend-for-Frontend | REST (outbound) + code-first gRPC (to services) |
-| Microservices | ASP.NET Core, one per business area |
-| Inter-service messaging | Kafka *or* RabbitMQ *(decision pending — see ADR-0004)* |
-| Persistence | Entity Framework Core; Event Sourcing where it adds business value |
-| Patterns | DDD, CQRS, Event Sourcing (selective) |
-| Testing | xUnit, FluentAssertions, NSubstitute, EF Core InMemory |
+| Concern                 | Choice                                                             |
+| ----------------------- | ------------------------------------------------------------------ |
+| Orchestration           | .NET Aspire 13                                                     |
+| Frontend                | Blazor                                                             |
+| Backend-for-Frontend    | REST (outbound) + code-first gRPC (to services)                    |
+| Microservices           | ASP.NET Core, one per business area                                |
+| Inter-service messaging | Kafka _or_ RabbitMQ _(decision pending — see ADR-0004)_            |
+| Persistence             | Entity Framework Core; Event Sourcing where it adds business value |
+| Patterns                | DDD, CQRS, Event Sourcing (selective)                              |
+| Testing                 | xUnit, FluentAssertions, NSubstitute, EF Core InMemory             |
 
 > **Note:** `.NET Aspire 13` is the chosen orchestrator version for this project. Aspire is applied at the orchestration/application layer; the reusable Building Blocks remain framework-agnostic.
 
@@ -108,7 +119,6 @@ VitalSync/
 │   │   ├── BuildingBlocks.Infrastructure/
 │   │   ├── BuildingBlocks.Persistence/
 │   │   ├── BuildingBlocks.EventProcessing/
-│   │   └── BuildingBlocks.Common/
 │   └── tests/
 │       ├── BuildingBlocks.Domain.Tests/
 │       ├── BuildingBlocks.Application.Tests/

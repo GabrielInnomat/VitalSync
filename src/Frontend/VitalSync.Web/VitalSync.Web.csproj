@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\VitalSync.ServiceDefaults\VitalSync.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\Aspire\VitalSync.ServiceDefaults\VitalSync.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

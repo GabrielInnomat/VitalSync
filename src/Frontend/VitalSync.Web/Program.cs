@@ -1,9 +1,8 @@
+using VitalSync.ServiceDefaults;
 using VitalSync.Web;
 using VitalSync.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
 
 // Add services to the container.
