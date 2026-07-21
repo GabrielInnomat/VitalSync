@@ -7,21 +7,33 @@ public abstract class AggregateRoot<TKey, TState>(TState initialState)
 {
     private readonly List<IDomainEvent> _domainEvents = [];
 
+    private long _version;
+
     public TState State { get; private set; } = initialState;
 
     public TKey Id => State.Id;
 
-    public long Version { get; private set; }
-
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
-    public void LoadFromHistory(IEnumerable<IDomainEvent> history)
+    // Event-sourcing capability is exposed only through the explicit interface
+    // implementation below, so it never appears on a concrete aggregate's public
+    // surface. State-stored (EF Core) aggregates use the same base class without
+    // seeing these members; event-sourcing infrastructure reaches them by casting
+    // to IEventSourcedAggregateRoot<TKey>.
+    long IEventSourcedAggregateRoot<TKey>.Version => _version;
+
+    void IEventSourcedAggregateRoot<TKey>.LoadFromHistory(IEnumerable<IDomainEvent> history)
     {
+        if (_version > 0)
+            throw new DomainValidationException(
+                "Cannot rehydrate an aggregate that already has state; " +
+                "LoadFromHistory must be called on a fresh instance.");
+
         foreach (var domainEvent in history)
         {
             State = ApplyToState(domainEvent);
             EnsureValidIdentity();
-            Version++;
+            _version++;
         }
     }
 
@@ -29,7 +41,7 @@ public abstract class AggregateRoot<TKey, TState>(TState initialState)
     {
         State = ApplyToState(domainEvent);
         EnsureValidIdentity();
-        Version++;
+        _version++;
         _domainEvents.Add(domainEvent);
     }
 
