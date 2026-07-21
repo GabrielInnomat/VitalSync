@@ -12,8 +12,8 @@ The **Building Blocks** are a reusable platform of shared concepts and component
 
 | Building Block                   | Responsibility                                                                                         | Depends on                            |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------- |
-| `BuildingBlocks.Domain`          | Entities, Aggregate Roots, Domain Events, Value Objects, strongly typed identifiers, domain exceptions | _(nothing — BCL only)_                |
-| `BuildingBlocks.Common`          | Cross-cutting utilities (e.g., `Result`, clock abstraction)                                            | _(BCL only)_                          |
+| `BuildingBlocks.Domain`          | Entities, Aggregate Roots, Domain Events, Value Objects, strongly typed identifiers, domain exceptions, clock abstraction (`IClock`) | _(nothing — BCL only)_                |
+| `BuildingBlocks.Common`          | Cross-cutting utilities (e.g., `Result`)                                                                | _(BCL only)_                          |
 | `BuildingBlocks.Application`     | CQRS abstractions (commands, queries, handlers) and pipeline behaviors                                 | `Common`                              |
 | `BuildingBlocks.EventProcessing` | Domain event handler/dispatcher abstractions, outbox abstractions                                      | `Domain`                              |
 | `BuildingBlocks.Persistence`     | EF Core base `DbContext` (unit of work + event collection), strongly typed id value converters         | `Domain`, `EventProcessing`           |
