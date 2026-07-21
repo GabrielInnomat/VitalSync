@@ -2,21 +2,29 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-24
+- **Amended:** 2026-07-21 (implementation signatures clarified — the aggregate base is `AggregateRoot<TKey, TState>` and the raise method is `RaiseEvent(...)`; see the note below and [ADR-0010](./0010-aggregate-state-object.md))
 
 ## Context
 
-Domain events represent business-relevant occurrences inside an aggregate. The architecture mandates that *adding and removing* domain events is exclusively the responsibility of the aggregate, and that other layers may access these events only in a read-only manner.
+Domain events represent business-relevant occurrences inside an aggregate. The architecture mandates that *adding and removing* domain events is exclusively the responsibility of the aggregate, and no outside layer may tamper with the event stream.
 
-A naive implementation exposes a mutable event collection or a public clear method, which lets any layer add, remove, or clear events at the wrong time — most dangerously, clearing events before they have been dispatched after a successful save.
+A naive implementation exposes a mutable event collection or a public clear method, which lets any layer add, remove, or clear events at the wrong time — most dangerously, clearing events before they have been dispatched.
 
 ## Decision
 
-`AggregateRoot<TKey>` is the **sole owner** of its domain events:
+The aggregate base is the **sole owner** of its domain events:
 
 - Events are stored in a private list.
-- Events can only be added via a `protected RaiseDomainEvent(...)`, so only the aggregate itself raises events.
+- Events can only be added via a `protected` raise method, so only the aggregate itself raises events.
 - The event collection is exposed only as a read-only view (`IReadOnlyCollection<IDomainEvent> DomainEvents`).
 - Clearing is **not** part of the aggregate's public surface (see [ADR-0007](./0007-read-only-vs-managed-domain-events.md)).
+
+> **Implementation note (amendment 2026-07-21):** This ADR originally referred to the aggregate base as `AggregateRoot<TKey>` with a `RaiseDomainEvent(...)` method. The design later evolved (see [ADR-0010](./0010-aggregate-state-object.md) and [ADR-0011](./0011-unified-aggregate-for-es-and-ef.md)) so that the state object owns identity and apply logic. The **as-implemented** signatures are:
+>
+> - the base class is `AggregateRoot<TKey, TState>` (not `AggregateRoot<TKey>`), and
+> - the protected raise method is `RaiseEvent(IDomainEvent)` (not `RaiseDomainEvent(...)`).
+>
+> The ownership rule described here is unchanged; only the type/method names differ from the original wording.
 
 ## Consequences
 
