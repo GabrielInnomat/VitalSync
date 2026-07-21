@@ -52,6 +52,7 @@ A reusable set of shared Building Blocks underpins the services without coupling
 
 These are intentionally unresolved and tracked for the "analyze & challenge" phase:
 
-- **Messaging platform**: Kafka vs. RabbitMQ (see [ADR-0004](./decisions/0004-asynchronous-messaging-between-services.md)).
 - **Event Sourcing scope**: which Bounded Contexts justify it (see [CQRS & Event Sourcing](./cqrs-and-event-sourcing.md)).
 - **Bounded Context boundaries**: the final decomposition is part of the project.
+
+> **Resolved:** The messaging platform is decided — **RabbitMQ** (with MassTransit) — see [ADR-0004](./decisions/0004-asynchronous-messaging-between-services.md).
