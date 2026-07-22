@@ -2,42 +2,45 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-25
+- **Amended:** 2026-07-22 (`IState` is now the self-referencing `IState<TSelf, TKey>` so `Apply` returns the concrete state without a cast; the state object now applies only to event-modeled aggregates — see [ADR-0012](./0012-optional-event-sourcing-aggregate.md))
 
 ## Context
 
-When an aggregate participates in event sourcing, two methods tend to appear per domain event: one on the public command API (the behavior a command invokes) and one that applies the event to mutate state (used both for new events and for replay during rehydration). For a large aggregate with many event types, this "two methods per event" growth makes the aggregate class large and interleaves two concerns — *deciding what should happen* and *how state reflects what happened* — in a single file.
+When an aggregate participates in event sourcing, two methods tend to appear per domain event: one on the public command API (the behavior a command invokes) and one that applies the event to mutat[...]
 
-Additionally, the platform requires a single aggregate model that works for both event-sourced and state-stored (EF Core) persistence (see [ADR-0011](./0011-unified-aggregate-for-es-and-ef.md)). A common representation of "current state" is needed that both worlds can use.
+Additionally, the platform originally required a single aggregate model for both event-sourced and state-stored persistence (see [ADR-0011](./0011-unified-aggregate-for-es-and-ef.md)). That requirement was later revised: event sourcing is now an opt-in domain-modeling choice and the state object applies only to event-modeled aggregates (see [ADR-0012](./0012-optional-event-sourcing-aggregate.md)).
 
 ## Decision
 
-Introduce a dedicated **state object** per aggregate, described by `IState<TKey>`:
+Introduce a dedicated **state object** per event-sourced aggregate, described by `IState<TSelf, TKey>`:
 
 ```csharp
-public interface IState<out TKey> where TKey : struct, IEntityKey
+public interface IState<TSelf, out TKey>
+    where TSelf : IState<TSelf, TKey>
+    where TKey : struct, IEntityKey
 {
     TKey Id { get; }
-    IState<TKey> Apply(IDomainEvent domainEvent);
+    TSelf Apply(IDomainEvent domainEvent);
 }
 ```
 
-- **All apply/evolution logic lives on the state.** The aggregate (`AggregateRoot<TKey, TState>`) exposes only the public command API and delegates state changes to the state's `Apply`.
+- **All apply/evolution logic lives on the state.** The aggregate (`EventSourcedAggregateRoot<TKey, TState>`) exposes only the public command API and delegates state changes to the state's `Apply`.
 - **The state owns the aggregate's identity** (`Id`). The aggregate derives its `Id` from the state.
-- **State objects are immutable**: `Apply` returns the next state (`this with { … }`).
-- The single base `AggregateRoot<TKey, TState>` calls `Apply` in `RaiseEvent` (new events) and `LoadFromHistory` (replay), advances `Version`, validates identity at each transition, and records uncommitted events.
+- **State objects are immutable**: `Apply` returns the next state (`this with { … }`). The self-referencing generic guarantees `Apply` returns the concrete `TState`, removing the previous cast.
+- `EventSourcedAggregateRoot<TKey, TState>` calls `Apply` in `RaiseEvent` (new events) and `LoadFromHistory` (replay), advances `Version`, and validates identity.
 - Apply logic is **on the state itself**, not in a separately injected applier.
 
 ## Consequences
 
-- Large aggregates stay readable: the aggregate file contains business behavior; the state file contains evolution logic.
+- Large event-sourced aggregates stay readable: the aggregate file contains business behavior; the state file contains evolution logic.
 - The state object is a small, individually testable unit (state + event → next state).
-- The same state type is the natural representation persisted by EF Core and rebuilt by replay in event sourcing, enabling a single aggregate model (ADR-0011).
-- Aggregate identity cannot be set at construction; it is established by the first applied event and validated per transition (see [ADR-0008](./0008-entity-identity-and-equality.md)).
+- `Apply` is statically typed to the concrete state, so call sites need no cast.
+- Aggregate identity is established by the first applied event and validated after replay (see [ADR-0008](./0008-entity-identity-and-equality.md)).
 - Reading aggregate state at command-time goes through `State.X` (e.g. invariant checks read from `State`), a minor ergonomic shift.
-- Mapping an immutable state record (including collections) in EF Core requires owned/complex-type configuration; this cost lives in the Persistence building block, not the domain.
+- State-modeled aggregates (`AggregateRoot<TKey>`) do not use a state object at all; this pattern is scoped to event-modeled aggregates (ADR-0012).
 
 ## Alternatives considered
 
 - **Apply-on-the-aggregate** (mutating methods directly on the aggregate): simplest, but produces the "two methods per event" growth and interleaves concerns in large aggregates.
-- **Injected `IEventApplier<TState>`** (apply logic in a separate injected service): adds constructor ceremony to every aggregate and splits a state and its evolution across two types; rejected in favor of apply-on-the-state.
-- **No shared state type** (each world models state differently): defeats the goal of a single aggregate model for ES and EF Core.
+- **Injected `IEventApplier<TState>`** (apply logic in a separate injected service): adds constructor ceremony to every aggregate and splits a state and its evolution across two types; rejected in[...]
+- **Non-self-referencing `IState<TKey>` returning `IState<TKey>`:** required an unchecked cast back to the concrete state in the aggregate; replaced by the self-referencing form.
