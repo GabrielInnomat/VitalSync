@@ -52,7 +52,7 @@ public abstract class EventSourcedAggregateRoot<TKey, TState>
 
     private void EnsureValidIdentity()
     {
-        if (State.Id is IEntityKey<Guid> guidKey && guidKey.Value == Guid.Empty)
+        if (State.Id.IsEmpty)
             throw new DomainValidationException(
                 "The aggregate's identity must be set to a non-empty value by the applied event.");
     }

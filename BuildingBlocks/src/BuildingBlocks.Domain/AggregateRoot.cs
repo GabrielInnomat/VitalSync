@@ -28,9 +28,9 @@ public abstract class AggregateRoot<TKey>
 
     private static void EnsureValidIdentity(TKey id)
     {
-        if (id is IEntityKey<Guid> guidKey && guidKey.Value == Guid.Empty)
+        if (id.IsEmpty)
             throw new DomainValidationException(
-                "The id of an aggregate cannot be an empty GUID.");
+                "The id of an aggregate cannot be empty.");
     }
 
     public bool Equals(AggregateRoot<TKey>? other)
