@@ -5,7 +5,7 @@ public abstract class Entity<TKey> : IEntity<TKey>, IEquatable<Entity<TKey>>
 {
     protected Entity(TKey id)
     {
-        if (id.Value == Guid.Empty)
+        if (id is IEntityKey<Guid> guidKey && guidKey.Value == Guid.Empty)
             throw new DomainValidationException("The id of an entity cannot be an empty GUID.");
         Id = id;
     }

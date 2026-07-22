@@ -1,60 +1,31 @@
 namespace BuildingBlocks.Domain;
 
-public abstract class AggregateRoot<TKey, TState>(TState initialState)
-    : IAggregateRoot<TKey>, IDomainEventsManager, IEquatable<AggregateRoot<TKey, TState>>, IEventSourcedAggregateRoot<TKey>
+/// <summary>
+/// Base class for state-modeled aggregate roots. The aggregate mutates its own
+/// fields directly and records domain events so the rest of the system can react
+/// to what happened. Choosing this base means the aggregate's meaning is captured
+/// by its current state; use <see cref="EventSourcedAggregateRoot{TKey, TState}"/>
+/// instead when the sequence of events is itself business value.
+/// </summary>
+public abstract class AggregateRoot<TKey>
+    : IAggregateRoot<TKey>, IDomainEventsManager, IEquatable<AggregateRoot<TKey>>
     where TKey : struct, IEntityKey
-    where TState : IState<TKey>
 {
     private readonly List<IDomainEvent> _domainEvents = [];
 
-    private long _version;
+    protected AggregateRoot(TKey id)
+    {
+        EnsureValidIdentity(id);
+        Id = id;
+    }
 
-    public TState State { get; private set; } = initialState;
-
-    public TKey Id => State.Id;
+    public TKey Id { get; }
 
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
-    // Event-sourcing capability is exposed only through the explicit interface
-    // implementation below, so it never appears on a concrete aggregate's public
-    // surface. State-stored (EF Core) aggregates use the same base class without
-    // seeing these members; event-sourcing infrastructure reaches them by casting
-    // to IEventSourcedAggregateRoot<TKey>.
-    long IEventSourcedAggregateRoot<TKey>.Version => _version;
-
-    void IEventSourcedAggregateRoot<TKey>.LoadFromHistory(IEnumerable<IDomainEvent> history)
+    protected void AddDomainEvent(IDomainEvent domainEvent)
     {
-        if (_version > 0)
-            throw new DomainValidationException(
-                "Cannot rehydrate an aggregate that already has state; " +
-                "LoadFromHistory must be called on a fresh instance.");
-
-        foreach (var domainEvent in history)
-        {
-            State = ApplyToState(domainEvent);
-            EnsureValidIdentity();
-            _version++;
-        }
-    }
-
-    protected void RaiseEvent(IDomainEvent domainEvent)
-    {
-        State = ApplyToState(domainEvent);
-        EnsureValidIdentity();
-        _version++;
         _domainEvents.Add(domainEvent);
-    }
-
-    private TState ApplyToState(IDomainEvent domainEvent)
-    {
-        return (TState)State.Apply(domainEvent);
-    }
-
-    private void EnsureValidIdentity()
-    {
-        if (State.Id.Value == Guid.Empty)
-            throw new DomainValidationException(
-                "The aggregate's identity must be set to a non-empty value by the applied event.");
     }
 
     void IDomainEventsManager.ClearDomainEvents()
@@ -62,7 +33,14 @@ public abstract class AggregateRoot<TKey, TState>(TState initialState)
         _domainEvents.Clear();
     }
 
-    public bool Equals(AggregateRoot<TKey, TState>? other)
+    private static void EnsureValidIdentity(TKey id)
+    {
+        if (id is IEntityKey<Guid> guidKey && guidKey.Value == Guid.Empty)
+            throw new DomainValidationException(
+                "The id of an aggregate cannot be an empty GUID.");
+    }
+
+    public bool Equals(AggregateRoot<TKey>? other)
     {
         return other is not null
                && other.GetType() == GetType()
@@ -71,7 +49,7 @@ public abstract class AggregateRoot<TKey, TState>(TState initialState)
 
     public sealed override bool Equals(object? obj)
     {
-        return Equals(obj as AggregateRoot<TKey, TState>);
+        return Equals(obj as AggregateRoot<TKey>);
     }
 
     public sealed override int GetHashCode()
@@ -79,7 +57,7 @@ public abstract class AggregateRoot<TKey, TState>(TState initialState)
         return HashCode.Combine(GetType(), Id);
     }
 
-    public static bool operator ==(AggregateRoot<TKey, TState>? left, AggregateRoot<TKey, TState>? right)
+    public static bool operator ==(AggregateRoot<TKey>? left, AggregateRoot<TKey>? right)
     {
         if (ReferenceEquals(left, right))
             return true;
@@ -90,7 +68,7 @@ public abstract class AggregateRoot<TKey, TState>(TState initialState)
         return left.Equals(right);
     }
 
-    public static bool operator !=(AggregateRoot<TKey, TState>? left, AggregateRoot<TKey, TState>? right)
+    public static bool operator !=(AggregateRoot<TKey>? left, AggregateRoot<TKey>? right)
     {
         return !(left == right);
     }

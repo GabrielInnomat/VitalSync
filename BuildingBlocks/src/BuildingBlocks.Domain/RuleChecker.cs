@@ -25,4 +25,12 @@ public static class RuleChecker
             Check(rule);
         }
     }
+
+    public static void Check(params IDomainValidationRule[] rules)
+    {
+        foreach (var rule in rules)
+        {
+            Check(rule);
+        }
+    }
 }
