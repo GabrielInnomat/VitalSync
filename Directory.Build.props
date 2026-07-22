@@ -1,0 +1,32 @@
+<Project>
+
+  <!--
+    Solution-wide build & code-style enforcement.
+    Applied automatically to EVERY project in the repository (src, tests,
+    BuildingBlocks) because MSBuild imports the nearest Directory.Build.props
+    walking up from each project file.
+  -->
+  <PropertyGroup>
+    <!-- Language / nullability baseline -->
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Run IDExxxx code-style rules during `dotnet build`, not just in the IDE. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Enable the full .NET analyzer catalog (CAxxxx quality rules), strictest mode. -->
+    <AnalysisLevel>latest-all</AnalysisLevel>
+    <AnalysisMode>All</AnalysisMode>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+
+    <!-- Strictest: every warning (compiler, style and analyzer) fails the build. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+    <WarningLevel>9999</WarningLevel>
+
+    <!-- Generate XML docs so missing-doc rules are meaningful and reproducible. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>
