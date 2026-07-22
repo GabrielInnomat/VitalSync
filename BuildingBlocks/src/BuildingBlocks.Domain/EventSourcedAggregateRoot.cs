@@ -34,7 +34,7 @@ public abstract class EventSourcedAggregateRoot<TKey, TState>
         EnsureValidIdentity();
     }
 
-    protected sealed void RaiseEvent(IDomainEvent domainEvent, IClock clock)
+    protected void RaiseEvent(IDomainEvent domainEvent, IClock clock)
     {
         var stamped = Stamp(domainEvent, clock);
         State = State.Apply(stamped);
