@@ -1,14 +1,5 @@
 namespace BuildingBlocks.Domain;
 
-/// <summary>
-/// Base class for aggregate roots that are modeled as a stream of domain events,
-/// chosen when the history of what happened carries business value. State is
-/// immutable and derived by applying events. This is purely a domain-modeling
-/// decision: the domain has no knowledge of how or where the aggregate is stored.
-/// The event-sourcing surface (<see cref="IEventSourcedAggregateRoot{TKey}"/>) is
-/// exposed only through explicit interface implementation so it does not appear
-/// on a concrete aggregate's public API; infrastructure reaches it by casting.
-/// </summary>
 public abstract class EventSourcedAggregateRoot<TKey, TState>
     : IAggregateRoot<TKey>, IDomainEventsManager,
       IEquatable<EventSourcedAggregateRoot<TKey, TState>>, IEventSourcedAggregateRoot<TKey>
@@ -43,14 +34,7 @@ public abstract class EventSourcedAggregateRoot<TKey, TState>
         EnsureValidIdentity();
     }
 
-    /// <summary>
-    /// Raises a new domain event. Invariants must be checked by the caller before
-    /// this is invoked so a rule violation can never leave the aggregate in a
-    /// half-mutated state. The event's <see cref="IDomainEvent.OccurredAt"/> is
-    /// stamped here if it has not been set, keeping event records free of an
-    /// ambient clock dependency.
-    /// </summary>
-    protected void RaiseEvent(IDomainEvent domainEvent, IClock clock)
+    protected sealed void RaiseEvent(IDomainEvent domainEvent, IClock clock)
     {
         var stamped = Stamp(domainEvent, clock);
         State = State.Apply(stamped);

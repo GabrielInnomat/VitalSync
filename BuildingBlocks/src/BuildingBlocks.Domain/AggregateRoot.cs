@@ -1,12 +1,5 @@
 namespace BuildingBlocks.Domain;
 
-/// <summary>
-/// Base class for state-modeled aggregate roots. The aggregate mutates its own
-/// fields directly and records domain events so the rest of the system can react
-/// to what happened. Choosing this base means the aggregate's meaning is captured
-/// by its current state; use <see cref="EventSourcedAggregateRoot{TKey, TState}"/>
-/// instead when the sequence of events is itself business value.
-/// </summary>
 public abstract class AggregateRoot<TKey>
     : IAggregateRoot<TKey>, IDomainEventsManager, IEquatable<AggregateRoot<TKey>>
     where TKey : struct, IEntityKey
@@ -23,7 +16,7 @@ public abstract class AggregateRoot<TKey>
 
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
-    protected void AddDomainEvent(IDomainEvent domainEvent)
+    protected sealed void AddDomainEvent(IDomainEvent domainEvent)
     {
         _domainEvents.Add(domainEvent);
     }
