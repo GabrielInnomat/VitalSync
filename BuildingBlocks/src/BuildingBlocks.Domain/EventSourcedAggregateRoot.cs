@@ -25,6 +25,15 @@ public abstract class EventSourcedAggregateRoot<TKey, TState>
 
     void IEventSourcedAggregateRoot<TKey>.LoadFromHistory(IEnumerable<IDomainEvent> history)
     {
+        // Guard against replay misuse: history may only be applied to an aggregate that
+        // has not yet raised any uncommitted events. This deliberately checks for pending
+        // domain events rather than the version, so that snapshot-based rehydration
+        // (restore state + version, then replay only the events after the snapshot)
+        // remains possible.
+        if (_domainEvents.Count > 0)
+            throw new InvalidOperationException(
+                "LoadFromHistory cannot be called after events have been raised on the aggregate.");
+
         foreach (var domainEvent in history)
         {
             State = State.Apply(domainEvent);
