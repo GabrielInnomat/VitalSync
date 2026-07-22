@@ -1,6 +1,9 @@
 namespace BuildingBlocks.Domain;
 
-public interface IEntityKey;
+public interface IEntityKey
+{
+    bool IsEmpty { get; }
+}
 
 public interface IEntityKey<out TValue> : IEntityKey
     where TValue : notnull
