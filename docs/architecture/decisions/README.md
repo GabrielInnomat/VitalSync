@@ -28,6 +28,7 @@ An ADR documents a single architectural decision, its context, and its consequen
 | [0010](./0010-aggregate-state-object.md)                  | Aggregate state object                                  | Accepted                  |
 | [0011](./0011-unified-aggregate-for-es-and-ef.md)         | Unified aggregate for event sourcing and EF Core        | Superseded by ADR-0012    |
 | [0012](./0012-optional-event-sourcing-aggregate.md)       | Optional event sourcing via a split aggregate hierarchy | Accepted                  |
+| [0013](./0013-xml-documentation-conventions.md)           | XML documentation conventions for Building Blocks       | Accepted                  |
 
 ## Template
 
