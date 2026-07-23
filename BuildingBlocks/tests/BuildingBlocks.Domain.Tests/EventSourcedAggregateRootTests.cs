@@ -2,6 +2,7 @@ using BuildingBlocks.Domain.Tests.TestDoubles;
 
 namespace BuildingBlocks.Domain.Tests;
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code", Justification = "Need to check if the overwritten equality operator handles null correctly")]
 public sealed class EventSourcedAggregateRootTests
 {
     private static readonly DateTimeOffset FixedNow =

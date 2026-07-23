@@ -1,7 +1,7 @@
 namespace BuildingBlocks.Domain.Tests.TestDoubles;
 
 /// <summary>Configurable <see cref="IBusinessRule"/> that records whether it was evaluated.</summary>
-public sealed class FakeBusinessRule(bool isBroken, string message = "business rule broken")
+internal sealed class FakeBusinessRule(bool isBroken, string message = "business rule broken")
     : IBusinessRule
 {
     public bool Evaluated { get; private set; }
@@ -16,7 +16,7 @@ public sealed class FakeBusinessRule(bool isBroken, string message = "business r
 }
 
 /// <summary>Configurable <see cref="IDomainValidationRule"/> that records whether it was evaluated.</summary>
-public sealed class FakeValidationRule(bool isInvalid, string message = "validation rule invalid")
+internal sealed class FakeValidationRule(bool isInvalid, string message = "validation rule invalid")
     : IDomainValidationRule
 {
     public bool Evaluated { get; private set; }

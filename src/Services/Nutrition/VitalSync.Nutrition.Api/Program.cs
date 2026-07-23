@@ -12,5 +12,4 @@ app.UseExceptionHandler();
 app.MapGet("/", () => "VitalSync Nutrition service is running.");
 
 app.MapDefaultEndpoints();
-
-await app.RunAsync();
+await app.RunAsync().ConfigureAwait(false);

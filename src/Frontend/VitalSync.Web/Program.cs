@@ -1,5 +1,4 @@
 using VitalSync.ServiceDefaults;
-using VitalSync.Web;
 using VitalSync.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,10 +7,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddOutputCache();
-builder.Services.AddHttpClient<WeatherApiClient>(client =>
-    {
-        client.BaseAddress = new("https+http://backend-for-frontend");
-    });
+// builder.Services.AddHttpClient<WeatherApiClient>(client => client.BaseAddress = new("https+http://backend-for-frontend"));
 
 var app = builder.Build();
 

@@ -38,4 +38,4 @@ builder.AddProject<Projects.VitalSync_Web>("web-frontend")
     .WithReference(backendForFrontend)
     .WaitFor(backendForFrontend);
 
-await builder.Build().RunAsync();
+await builder.Build().RunAsync().ConfigureAwait(false);

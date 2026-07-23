@@ -2,6 +2,8 @@ using BuildingBlocks.Domain.Tests.TestDoubles;
 
 namespace BuildingBlocks.Domain.Tests;
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code", Justification = "Need to check if the overwritten equality operator handles null correctly")]
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Assertions", "xUnit2024:Do not use boolean asserts for simple equality tests", Justification = "Need to check if the overwritten equality operator handles null correctly")]
 public sealed class AggregateRootTests
 {
     [Fact]
@@ -39,7 +41,7 @@ public sealed class AggregateRootTests
         aggregate.RaiseTestEvent(first);
         aggregate.RaiseTestEvent(second);
 
-        Assert.Equal(new IDomainEvent[] { first, second }, aggregate.DomainEvents);
+        Assert.Equal([first, second], aggregate.DomainEvents);
     }
 
     [Fact]

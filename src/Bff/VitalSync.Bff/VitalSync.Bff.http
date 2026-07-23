@@ -1,6 +1,0 @@
-@VitalSync.Bff_HostAddress = http://localhost:5251
-
-GET {{VitalSync.Bff_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

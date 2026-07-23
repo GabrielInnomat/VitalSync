@@ -4,7 +4,7 @@ namespace BuildingBlocks.Domain.Tests.TestDoubles;
 /// Immutable state for the event-sourced aggregate test double. Applying a
 /// <see cref="TestDomainEvent"/> / <see cref="RawDomainEvent"/> sets the id and value.
 /// </summary>
-public sealed record TestState(TestId Id, int Value) : IState<TestState, TestId>
+internal sealed record TestState(TestId Id, int Value) : IState<TestState, TestId>
 {
     public static TestState Empty => new(TestId.Empty, 0);
 
@@ -17,7 +17,7 @@ public sealed record TestState(TestId Id, int Value) : IState<TestState, TestId>
 }
 
 /// <summary>State whose <see cref="Apply"/> never sets a non-empty id, to test the identity guard.</summary>
-public sealed record NeverIdentifiedState(TestId Id, int Value) : IState<NeverIdentifiedState, TestId>
+internal sealed record NeverIdentifiedState(TestId Id, int Value) : IState<NeverIdentifiedState, TestId>
 {
     public static NeverIdentifiedState Empty => new(TestId.Empty, 0);
 

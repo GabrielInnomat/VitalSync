@@ -12,10 +12,17 @@ using OpenTelemetry.Trace;
 
 namespace VitalSync.ServiceDefaults;
 
-public static class Extensions
+public static class AspireExtensions
 {
     private const string HealthEndpointPath = "/health";
     private const string AlivenessEndpointPath = "/alive";
+
+    private static readonly Action<ILogger, string, string, string, Exception?> HealthChecksNotMappedAction =
+        LoggerMessage.Define<string, string, string>(
+            LogLevel.Warning,
+            new EventId(1, nameof(HealthChecksNotMapped)),
+            "Health check endpoints are not mapped in '{Environment}' because no 'ManagementPort' is configured. " +
+            "Set 'ManagementPort' to expose '{Health}' and '{Alive}' on an internal-only port for orchestrator probes.");
 
     public const string LiveTag = "live";
     public const string ReadyTag = "ready";
@@ -31,10 +38,7 @@ public static class Extensions
             http.AddServiceDiscovery();
         });
 
-        builder.Services.Configure<ServiceDiscoveryOptions>(options =>
-        {
-            options.AllowedSchemes = ["https"];
-        });
+        builder.Services.Configure<ServiceDiscoveryOptions>(options => options.AllowedSchemes = ["https"]);
 
         return builder;
     }
@@ -48,23 +52,17 @@ public static class Extensions
         });
 
         builder.Services.AddOpenTelemetry()
-            .WithMetrics(metrics =>
-            {
-                metrics.AddAspNetCoreInstrumentation()
+            .WithMetrics(metrics => metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation();
-            })
-            .WithTracing(tracing =>
-            {
-                tracing.AddSource(builder.Environment.ApplicationName)
+                    .AddRuntimeInstrumentation())
+            .WithTracing(tracing => tracing.AddSource(builder.Environment.ApplicationName)
                     .AddAspNetCoreInstrumentation(tracing =>
                         tracing.Filter = context =>
-                            !context.Request.Path.StartsWithSegments(HealthEndpointPath)
-                            && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath)
+                            !context.Request.Path.StartsWithSegments(HealthEndpointPath, StringComparison.OrdinalIgnoreCase)
+                            && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath, StringComparison.OrdinalIgnoreCase)
                     )
                     .AddGrpcClientInstrumentation()
-                    .AddHttpClientInstrumentation();
-            });
+                    .AddHttpClientInstrumentation());
 
         builder.AddOpenTelemetryExporters();
 
@@ -121,6 +119,8 @@ public static class Extensions
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
+        ArgumentNullException.ThrowIfNull(app);
+
         var liveOptions = new HealthCheckOptions
         {
             Predicate = r => r.Tags.Contains(LiveTag)
@@ -132,7 +132,6 @@ public static class Extensions
         {
             app.MapHealthChecks(HealthEndpointPath, readyOptions);
             app.MapHealthChecks(AlivenessEndpointPath, liveOptions);
-
             return app;
         }
 
@@ -144,12 +143,12 @@ public static class Extensions
         }
         else
         {
-            app.Logger.LogWarning(
-                "Health check endpoints are not mapped in '{Environment}' because no 'ManagementPort' is configured. " +
-                "Set 'ManagementPort' to expose '{Health}' and '{Alive}' on an internal-only port for orchestrator probes.",
-                app.Environment.EnvironmentName, HealthEndpointPath, AlivenessEndpointPath);
+            app.Logger.HealthChecksNotMapped(app.Environment.EnvironmentName, HealthEndpointPath, AlivenessEndpointPath);
         }
 
         return app;
     }
+
+    private static void HealthChecksNotMapped(this ILogger logger, string environment, string health, string alive) =>
+        HealthChecksNotMappedAction(logger, environment, health, alive, null);
 }

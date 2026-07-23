@@ -12,6 +12,4 @@ app.UseExceptionHandler();
 app.MapGet("/", () => "VitalSync Fitness service is running.");
 
 app.MapDefaultEndpoints();
-
-
-await app.RunAsync();
+await app.RunAsync().ConfigureAwait(false);
