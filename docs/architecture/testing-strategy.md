@@ -17,8 +17,7 @@ Automated tests are implemented for **both the Building Blocks and the individua
 
 | Tool | Use |
 |---|---|
-| **xUnit** | Test framework |
-| **FluentAssertions** | Expressive assertions |
+| **xUnit** | Test framework and assertions (`Assert.*`; see ADR-0014) |
 | **NSubstitute** | Mocking/substitutes |
 | **EF Core InMemory** | Fast persistence-layer tests |
 
