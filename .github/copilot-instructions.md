@@ -98,6 +98,31 @@ See `docs/architecture/communication.md` and the ADRs below.
 ADRs are immutable once accepted; to change a decision, add a superseding ADR.
 Index: `docs/architecture/decisions/README.md`.
 
+## XML documentation conventions (ADR-0013)
+
+XML documentation is authored to a consistent standard — see
+`docs/architecture/decisions/0013-xml-documentation-conventions.md`.
+
+- **Scope:** XML docs are required **only under `BuildingBlocks/src/*`**. Do **not** add
+  them to `BuildingBlocks/tests/*` or to any application/service code outside
+  `BuildingBlocks`. The requirement is enforced by the `BuildingBlocks` `.editorconfig`
+  (`dotnet_diagnostic.CS1591.severity = warning`); never copy that setting into test or
+  service projects.
+- **`<remarks>` — why / how / when.** For every public/protected member, include **at most
+  one** `<remarks>` covering any *useful* subset of: **why** it exists, **how** to use it,
+  **when** to use it. Include only the parts that add insight; never restate the `<summary>`.
+  - Required on **types** and on **methods/constructors** (omit only in the rare case where
+    nothing beyond the summary can be said).
+  - Optional on **trivial properties** (`Id`, `Message`, `Value`, `IsEmpty`, …) and
+    **equality/boilerplate** (`Equals`, `GetHashCode`, `==`, `!=`) — add only when insightful.
+  - Exempt for explicitly implemented members using `<inheritdoc/>`.
+- **Formatting:** `<summary>` is one sentence; booleans use `<c>true</c> if …; otherwise, <c>false</c>.`;
+  null is always `<see langword="null"/>`; use `<see cref>` / `<typeparamref>` / `<paramref>` for
+  references; document exceptions with `<exception cref="...">Thrown when …</exception>`.
+- **Canonical phrasings:** describe the same concept the same way every time (e.g. `TKey` →
+  "The type of the identity key."; `Id` → "Gets the unique identifier of the {entity|aggregate root}.").
+  See ADR-0013 for the full glossary.
+
 ## Testing
 
 - Frameworks: **xUnit**, **FluentAssertions**, **NSubstitute**, **EF Core InMemory**.
@@ -125,9 +150,11 @@ Docker (for messaging infrastructure/containers).
 3. Follow the DDD/CQRS/ES ADR conventions listed above.
 4. Keep layer boundaries clean; don't leak infrastructure into the domain.
 5. Add or update tests (mirror the project structure).
-6. If a change affects architecture, **add or update an ADR** using the template in
+6. Document `BuildingBlocks/src/*` per the XML documentation conventions (ADR-0013);
+   don't add XML docs to tests or service code.
+7. If a change affects architecture, **add or update an ADR** using the template in
    `docs/architecture/decisions/README.md`.
-7. Match existing style; respect `.editorconfig` and `Directory.Build.props`.
+8. Match existing style; respect `.editorconfig` and `Directory.Build.props`.
 
 ## Key documentation
 
