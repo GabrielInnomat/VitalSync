@@ -4,6 +4,11 @@ These instructions orient Copilot (chat and coding agent) so it can navigate and
 contribute to VitalSync **without rediscovering the architecture file-by-file**.
 Read this first, then consult the linked docs before making changes.
 
+> [!IMPORTANT]
+> **Publishing:** Cloud agents are **disabled** for this repository. Commit and
+> publish changes **directly to the `main` branch** — do not create separate
+> branches or pull requests for changes.
+
 ## What VitalSync is
 
 A cloud-native, distributed platform unifying **nutrition**, **fitness**, and
@@ -157,6 +162,8 @@ Docker (for messaging infrastructure/containers).
 7. If a change affects architecture, **add or update an ADR** using the template in
    `docs/architecture/decisions/README.md`.
 8. Match existing style; respect `.editorconfig` and `Directory.Build.props`.
+9. Publish changes **directly to the `main` branch** — cloud agents are disabled, so
+   do not open pull requests or work on separate branches.
 
 ## Key documentation
 
