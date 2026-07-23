@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/BuildingBlocks/" />
   <Folder Name="/BuildingBlocks/src/">
+    <Project Path="BuildingBlocks/src/BuildingBlocks.Application/BuildingBlocks.Application.csproj" />
     <Project Path="BuildingBlocks/src/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj" />
   </Folder>
   <Folder Name="/BuildingBlocks/tests/">
