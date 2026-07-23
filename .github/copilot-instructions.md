@@ -25,7 +25,7 @@ microservices using **DDD**, **CQRS**, and **selective Event Sourcing**.
 | Inter-service messaging | RabbitMQ via MassTransit                                 |
 | Persistence             | EF Core; Event Sourcing where it adds business value     |
 | Patterns                | DDD, CQRS, Event Sourcing (selective)                    |
-| Testing                 | xUnit, FluentAssertions, NSubstitute, EF Core InMemory   |
+| Testing                 | xUnit (incl. built-in asserts), NSubstitute, EF Core InMemory |
 
 Language: **C#**. Solution file: `VitalSync.slnx`. Shared build config in
 `Directory.Build.props` and `.editorconfig`.
@@ -125,7 +125,9 @@ XML documentation is authored to a consistent standard — see
 
 ## Testing
 
-- Frameworks: **xUnit**, **FluentAssertions**, **NSubstitute**, **EF Core InMemory**.
+- Frameworks: **xUnit** (including its built-in `Assert.*` assertions), **NSubstitute**,
+  **EF Core InMemory**. Do **not** use FluentAssertions — it was removed for licensing
+  reasons (see ADR-0014); express expectations with standard xUnit assertions.
 - Test projects mirror source structure (e.g. `BuildingBlocks.Domain.Tests`).
 - Strategy covers unit, integration, domain, application-layer, persistence, and
   component-communication tests. See `docs/architecture/testing-strategy.md`.
