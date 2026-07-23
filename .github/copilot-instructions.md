@@ -5,9 +5,12 @@ contribute to VitalSync **without rediscovering the architecture file-by-file**.
 Read this first, then consult the linked docs before making changes.
 
 > [!IMPORTANT]
-> **Publishing:** Cloud agents are **disabled** for this repository. Commit and
-> publish changes **directly to the `main` branch** — do not create separate
-> branches or pull requests for changes.
+> **Publishing / branching policy:** Cloud/coding agents are **disabled** for this
+> repository. **Always commit directly to the `main` branch.** Never create a new
+> branch, never open a pull request, and never ask which branch to use — `main` is
+> always the correct and only target. (Note: the tooling will still show a one-time
+> write-confirmation prompt for each commit; that is a platform safety gate and is
+> expected.)
 
 ## What VitalSync is
 
@@ -162,8 +165,9 @@ Docker (for messaging infrastructure/containers).
 7. If a change affects architecture, **add or update an ADR** using the template in
    `docs/architecture/decisions/README.md`.
 8. Match existing style; respect `.editorconfig` and `Directory.Build.props`.
-9. Publish changes **directly to the `main` branch** — cloud agents are disabled, so
-   do not open pull requests or work on separate branches.
+9. **Always publish changes directly to the `main` branch.** Cloud agents are disabled,
+   so never open pull requests, never work on separate branches, and never ask which
+   branch to use — `main` is always the target.
 
 ## Key documentation
 
