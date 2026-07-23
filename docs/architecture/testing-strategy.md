@@ -23,6 +23,8 @@ Automated tests are implemented for **both the Building Blocks and the individua
 
 > Integration and component-communication tests may additionally use containerized infrastructure (e.g., via Testcontainers) once the messaging platform is selected.
 
+> NSubstitute is used in the application/persistence/messaging tests; domain tests use lightweight hand-written test doubles instead.
+
 ## Principles
 
 - **The domain is highly testable** because it has no infrastructure dependencies — domain tests need no mocks for frameworks.
