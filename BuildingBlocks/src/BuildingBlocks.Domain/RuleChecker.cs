@@ -3,6 +3,11 @@ namespace BuildingBlocks.Domain;
 /// <summary>
 /// Provides utility methods for checking business rules and domain validation rules.
 /// </summary>
+/// <remarks>
+/// This helper centralises the "check a rule and throw the matching exception" logic so aggregates can guard their
+/// invariants with a single call instead of repeating conditional-throw blocks. Call the appropriate overload from
+/// within domain logic; <see langword="null"/> rules and arrays are ignored so guard clauses stay terse.
+/// </remarks>
 public static class RuleChecker
 {
     /// <summary>
