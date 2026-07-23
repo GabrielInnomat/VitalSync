@@ -4,9 +4,11 @@ namespace BuildingBlocks.Domain;
 /// Base class for event-sourced aggregate roots, whose state is derived from a sequence of domain events.
 /// </summary>
 /// <remarks>
-/// This class provides a foundation for event sourcing: it manages the aggregate's state, identity, versioning, and
-/// domain events, allowing the aggregate's state to be reconstructed from its event history. Two aggregate roots are
-/// considered equal when they are the same concrete type and share the same <see cref="Id"/>.
+/// This class provides the machinery for event sourcing: it holds the current <see cref="State"/>, tracks a version for
+/// optimistic concurrency, records raised events for dispatch, and rebuilds state by replaying history. Derive from it
+/// when an aggregate's source of truth is its event stream rather than a directly stored snapshot; otherwise use
+/// <see cref="AggregateRoot{TKey}"/>. Two aggregate roots are considered equal when they are the same concrete type and
+/// share the same <see cref="Id"/>.
 /// </remarks>
 /// <typeparam name="TKey">The type of the identity key.</typeparam>
 /// <typeparam name="TState">The type of the aggregate root's state.</typeparam>
@@ -37,9 +39,7 @@ public abstract class EventSourcedAggregateRoot<TKey, TState>(TState initialStat
     /// </remarks>
     public TKey Id => State.Id;
 
-    /// <summary>
-    /// Gets the read-only collection of domain events raised by the aggregate root.
-    /// </summary>
+    /// <inheritdoc/>
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
     /// <inheritdoc/>
@@ -110,6 +110,9 @@ public abstract class EventSourcedAggregateRoot<TKey, TState>(TState initialStat
     /// <summary>
     /// Determines whether the specified aggregate root is equal to the current aggregate root.
     /// </summary>
+    /// <remarks>
+    /// Two aggregate roots are considered equal when they are the same concrete type and share the same <see cref="Id"/>.
+    /// </remarks>
     /// <param name="other">The aggregate root to compare with the current aggregate root.</param>
     /// <returns><c>true</c> if the specified aggregate root is equal to the current aggregate root; otherwise, <c>false</c>.</returns>
     public bool Equals(EventSourcedAggregateRoot<TKey, TState>? other)

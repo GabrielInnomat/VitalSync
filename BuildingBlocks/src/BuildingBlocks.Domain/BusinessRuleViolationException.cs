@@ -3,6 +3,12 @@ namespace BuildingBlocks.Domain;
 /// <summary>
 /// Represents an exception that is thrown when a business rule is violated.
 /// </summary>
+/// <remarks>
+/// This exception signals that a domain invariant modelled by an <see cref="IBusinessRule"/> was broken, distinguishing
+/// business-rule failures from structural validation failures (<see cref="DomainValidationException"/>). It is normally
+/// raised through <see cref="RuleChecker"/> rather than thrown directly, so callers can catch it to translate a broken
+/// invariant into an appropriate response.
+/// </remarks>
 public sealed class BusinessRuleViolationException : Exception
 {
     /// <summary>

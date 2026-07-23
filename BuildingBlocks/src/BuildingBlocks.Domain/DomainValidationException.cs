@@ -3,6 +3,12 @@ namespace BuildingBlocks.Domain;
 /// <summary>
 /// Represents an exception that is thrown when a domain validation fails.
 /// </summary>
+/// <remarks>
+/// This exception signals that domain data failed a structural precondition modelled by an
+/// <see cref="IDomainValidationRule"/> (for example, an empty identity), distinguishing malformed-data failures from
+/// broken business invariants (<see cref="BusinessRuleViolationException"/>). It is normally raised through
+/// <see cref="RuleChecker"/> or from within an aggregate's guard clauses rather than thrown directly.
+/// </remarks>
 public sealed class DomainValidationException : Exception
 {
     /// <summary>

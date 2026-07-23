@@ -3,6 +3,11 @@ namespace BuildingBlocks.Domain;
 /// <summary>
 /// Represents a validation rule for a domain entity.
 /// </summary>
+/// <remarks>
+/// A domain validation rule captures a structural precondition that must hold for domain data to be well formed,
+/// separate from the business invariants modelled by <see cref="IBusinessRule"/>. Pass instances to
+/// <see cref="RuleChecker"/>, which throws a <see cref="DomainValidationException"/> when the rule is invalid.
+/// </remarks>
 public interface IDomainValidationRule
 {
     /// <summary>
