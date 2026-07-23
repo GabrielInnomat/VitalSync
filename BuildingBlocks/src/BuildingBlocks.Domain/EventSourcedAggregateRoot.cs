@@ -4,12 +4,11 @@ namespace BuildingBlocks.Domain;
 /// Base class for event-sourced aggregate roots, whose state is derived from a sequence of domain events.
 /// </summary>
 /// <remarks>
-/// An aggregate root is a central entity that encapsulates a cluster of related entities and enforces consistency
-/// rules within the aggregate. This class provides a foundation for event sourcing: it manages the aggregate's state,
-/// identity, versioning, and domain events, allowing the aggregate's state to be reconstructed from its event history.
-/// Two aggregate roots are considered equal when they are the same concrete type and share the same <see cref="Id"/>.
+/// This class provides a foundation for event sourcing: it manages the aggregate's state, identity, versioning, and
+/// domain events, allowing the aggregate's state to be reconstructed from its event history. Two aggregate roots are
+/// considered equal when they are the same concrete type and share the same <see cref="Id"/>.
 /// </remarks>
-/// <typeparam name="TKey">The type of the aggregate root's identifier.</typeparam>
+/// <typeparam name="TKey">The type of the identity key.</typeparam>
 /// <typeparam name="TState">The type of the aggregate root's state.</typeparam>
 /// <param name="initialState">The initial state of the aggregate root.</param>
 public abstract class EventSourcedAggregateRoot<TKey, TState>(TState initialState)
@@ -39,7 +38,7 @@ public abstract class EventSourcedAggregateRoot<TKey, TState>(TState initialStat
     public TKey Id => State.Id;
 
     /// <summary>
-    /// Gets a read-only collection of domain events that have been raised by the aggregate root.
+    /// Gets the read-only collection of domain events raised by the aggregate root.
     /// </summary>
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
@@ -109,10 +108,10 @@ public abstract class EventSourcedAggregateRoot<TKey, TState>(TState initialStat
     }
 
     /// <summary>
-    /// Determines whether the current aggregate root is equal to another aggregate root of the same type.
+    /// Determines whether the specified aggregate root is equal to the current aggregate root.
     /// </summary>
-    /// <param name="other">The other aggregate root to compare with the current aggregate root.</param>
-    /// <returns><c>true</c> if the current aggregate root is equal to the other aggregate root; otherwise, <c>false</c>.</returns>
+    /// <param name="other">The aggregate root to compare with the current aggregate root.</param>
+    /// <returns><c>true</c> if the specified aggregate root is equal to the current aggregate root; otherwise, <c>false</c>.</returns>
     public bool Equals(EventSourcedAggregateRoot<TKey, TState>? other)
     {
         return other is not null
@@ -121,17 +120,17 @@ public abstract class EventSourcedAggregateRoot<TKey, TState>(TState initialStat
     }
 
     /// <summary>
-    /// Determines whether the current aggregate root is equal to another object.
+    /// Determines whether the specified object is equal to the current aggregate root.
     /// </summary>
     /// <param name="obj">The object to compare with the current aggregate root.</param>
-    /// <returns><c>true</c> if the current aggregate root is equal to the other object; otherwise, <c>false</c>.</returns>
+    /// <returns><c>true</c> if the specified object is equal to the current aggregate root; otherwise, <c>false</c>.</returns>
     public sealed override bool Equals(object? obj)
     {
         return Equals(obj as EventSourcedAggregateRoot<TKey, TState>);
     }
 
     /// <summary>
-    /// Returns a hash code for the current aggregate root, based on its type and identifier.
+    /// Returns a hash code for the current aggregate root.
     /// </summary>
     /// <returns>A hash code for the current aggregate root.</returns>
     public sealed override int GetHashCode()

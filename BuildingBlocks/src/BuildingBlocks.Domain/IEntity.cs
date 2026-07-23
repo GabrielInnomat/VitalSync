@@ -1,9 +1,9 @@
 namespace BuildingBlocks.Domain;
 
 /// <summary>
-/// Represents an entity with a unique identifier of type <typeparamref name="TKey"/>.
+/// Represents an entity that is uniquely identified by an identity key.
 /// </summary>
-/// <typeparam name="TKey">The type of the unique identifier for the entity.</typeparam>
+/// <typeparam name="TKey">The type of the identity key.</typeparam>
 public interface IEntity<out TKey>
     where TKey : struct, IEntityKey
 {

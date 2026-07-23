@@ -1,22 +1,26 @@
 namespace BuildingBlocks.Domain;
 
 /// <summary>
-/// Represents a unique identifier for an entity / aggregate root in the domain model.
+/// Represents a unique identifier for an entity or aggregate root in the domain model.
 /// </summary>
 public interface IEntityKey
 {
     /// <summary>
-    /// Indicates whether the entity key is empty or not.
-    /// An empty key typically means that the entity has not been assigned a valid identifier yet.
+    /// Gets a value indicating whether the entity key is empty.
     /// </summary>
+    /// <remarks>
+    /// An empty key typically means that the entity has not yet been assigned a valid identifier.
+    /// </remarks>
     bool IsEmpty { get; }
 }
 
 /// <summary>
-/// Represents a unique identifier for an entity / aggregate root in the domain model, with a specific value type.
-/// This is used to strongly type the entity key, ensuring that the key's value is of a specific type (TValue) and cannot be null.
+/// Represents a strongly typed unique identifier for an entity or aggregate root in the domain model.
 /// </summary>
-/// <typeparam name="TValue">The type of the value for the key.</typeparam>
+/// <remarks>
+/// Strong typing ensures that the key's value is of type <typeparamref name="TValue"/> and cannot be <see langword="null"/>.
+/// </remarks>
+/// <typeparam name="TValue">The type of the key's value.</typeparam>
 public interface IEntityKey<out TValue> : IEntityKey
     where TValue : notnull
 {

@@ -17,7 +17,7 @@ public abstract record DomainEvent : IDomainEvent
     }
 
     /// <summary>
-    /// Gets the unique identifier for the domain event.
+    /// Gets the unique identifier of the domain event.
     /// </summary>
     /// <remarks>
     /// This identifier is generated when the event is created and can be used to track and reference the event within the system.

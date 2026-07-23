@@ -6,7 +6,7 @@ namespace BuildingBlocks.Domain;
 /// <remarks>
 /// Two aggregate roots are considered equal when they are the same concrete type and share the same <see cref="Id"/>.
 /// </remarks>
-/// <typeparam name="TKey">The type of the aggregate root's identifier.</typeparam>
+/// <typeparam name="TKey">The type of the identity key.</typeparam>
 public abstract class AggregateRoot<TKey>
     : IAggregateRoot<TKey>, IDomainEventsManager, IEquatable<AggregateRoot<TKey>>
     where TKey : struct, IEntityKey
@@ -14,9 +14,9 @@ public abstract class AggregateRoot<TKey>
     private readonly List<IDomainEvent> _domainEvents = [];
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AggregateRoot{TKey}"/> class with the specified identifier.
+    /// Initializes a new instance of the <see cref="AggregateRoot{TKey}"/> class with the specified unique identifier.
     /// </summary>
-    /// <param name="id">The identifier of the aggregate root.</param>
+    /// <param name="id">The unique identifier of the aggregate root.</param>
     /// <exception cref="DomainValidationException">Thrown when <paramref name="id"/> is empty.</exception>
     protected AggregateRoot(TKey id)
     {
@@ -25,12 +25,12 @@ public abstract class AggregateRoot<TKey>
     }
 
     /// <summary>
-    /// Gets the identifier of the aggregate root.
+    /// Gets the unique identifier of the aggregate root.
     /// </summary>
     public TKey Id { get; }
 
     /// <summary>
-    /// Gets the collection of domain events associated with the aggregate root.
+    /// Gets the read-only collection of domain events raised by the aggregate root.
     /// </summary>
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
@@ -61,10 +61,10 @@ public abstract class AggregateRoot<TKey>
     }
 
     /// <summary>
-    /// Determines whether the specified <see cref="AggregateRoot{TKey}"/> is equal to the current instance.
+    /// Determines whether the specified aggregate root is equal to the current aggregate root.
     /// </summary>
-    /// <param name="other">The <see cref="AggregateRoot{TKey}"/> to compare with the current instance.</param>
-    /// <returns><c>true</c> if the specified <see cref="AggregateRoot{TKey}"/> is equal to the current instance; otherwise, <c>false</c>.</returns>
+    /// <param name="other">The aggregate root to compare with the current aggregate root.</param>
+    /// <returns><c>true</c> if the specified aggregate root is equal to the current aggregate root; otherwise, <c>false</c>.</returns>
     public bool Equals(AggregateRoot<TKey>? other)
     {
         return other is not null
@@ -73,41 +73,41 @@ public abstract class AggregateRoot<TKey>
     }
 
     /// <summary>
-    /// Determines whether the specified object is equal to the current instance.
+    /// Determines whether the specified object is equal to the current aggregate root.
     /// </summary>
-    /// <param name="obj">The object to compare with the current instance.</param>
-    /// <returns><c>true</c> if the specified object is equal to the current instance; otherwise, <c>false</c>.</returns>
+    /// <param name="obj">The object to compare with the current aggregate root.</param>
+    /// <returns><c>true</c> if the specified object is equal to the current aggregate root; otherwise, <c>false</c>.</returns>
     public sealed override bool Equals(object? obj)
     {
         return Equals(obj as AggregateRoot<TKey>);
     }
 
     /// <summary>
-    /// Returns a hash code for the current instance.
+    /// Returns a hash code for the current aggregate root.
     /// </summary>
-    /// <returns>A hash code for the current instance.</returns>
+    /// <returns>A hash code for the current aggregate root.</returns>
     public sealed override int GetHashCode()
     {
         return HashCode.Combine(GetType(), Id);
     }
 
     /// <summary>
-    /// Determines whether two <see cref="AggregateRoot{TKey}"/> instances are equal.
+    /// Determines whether two aggregate roots are equal.
     /// </summary>
-    /// <param name="left">The first <see cref="AggregateRoot{TKey}"/> to compare.</param>
-    /// <param name="right">The second <see cref="AggregateRoot{TKey}"/> to compare.</param>
-    /// <returns><c>true</c> if the two <see cref="AggregateRoot{TKey}"/> instances are equal; otherwise, <c>false</c>.</returns>
+    /// <param name="left">The first aggregate root to compare.</param>
+    /// <param name="right">The second aggregate root to compare.</param>
+    /// <returns><c>true</c> if the two aggregate roots are equal; otherwise, <c>false</c>.</returns>
     public static bool operator ==(AggregateRoot<TKey>? left, AggregateRoot<TKey>? right)
     {
         return ReferenceEquals(left, right) || (left is not null && right is not null && left.Equals(right));
     }
 
     /// <summary>
-    /// Determines whether two <see cref="AggregateRoot{TKey}"/> instances are not equal.
+    /// Determines whether two aggregate roots are not equal.
     /// </summary>
-    /// <param name="left">The first <see cref="AggregateRoot{TKey}"/> to compare.</param>
-    /// <param name="right">The second <see cref="AggregateRoot{TKey}"/> to compare.</param>
-    /// <returns><c>true</c> if the two <see cref="AggregateRoot{TKey}"/> instances are not equal; otherwise, <c>false</c>.</returns>
+    /// <param name="left">The first aggregate root to compare.</param>
+    /// <param name="right">The second aggregate root to compare.</param>
+    /// <returns><c>true</c> if the two aggregate roots are not equal; otherwise, <c>false</c>.</returns>
     public static bool operator !=(AggregateRoot<TKey>? left, AggregateRoot<TKey>? right)
     {
         return !(left == right);

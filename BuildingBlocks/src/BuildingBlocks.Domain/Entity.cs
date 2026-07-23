@@ -6,7 +6,7 @@ namespace BuildingBlocks.Domain;
 /// <remarks>
 /// Two entities are considered equal when they are the same concrete type and share the same <see cref="Id"/>.
 /// </remarks>
-/// <typeparam name="TKey">The type of the entity's identity key.</typeparam>
+/// <typeparam name="TKey">The type of the identity key.</typeparam>
 public abstract class Entity<TKey> : IEntity<TKey>, IEquatable<Entity<TKey>>
     where TKey : struct, IEntityKey
 {
@@ -53,7 +53,7 @@ public abstract class Entity<TKey> : IEntity<TKey>, IEquatable<Entity<TKey>>
     }
 
     /// <summary>
-    /// Returns a hash code for the entity based on its type and unique identifier.
+    /// Returns a hash code for the current entity.
     /// </summary>
     /// <returns>A hash code for the current entity.</returns>
     public sealed override int GetHashCode()
