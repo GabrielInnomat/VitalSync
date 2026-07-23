@@ -13,6 +13,6 @@ public interface IBusinessRule
     /// <summary>
     /// Determines whether the business rule is broken.
     /// </summary>
-    /// <returns></returns>
+    /// <returns><c>true</c> if the business rule is broken; otherwise, <c>false</c>.</returns>
     bool IsBroken();
 }

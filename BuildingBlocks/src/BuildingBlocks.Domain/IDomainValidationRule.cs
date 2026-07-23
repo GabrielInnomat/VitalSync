@@ -13,6 +13,6 @@ public interface IDomainValidationRule
     /// <summary>
     /// Determines whether the validation rule is invalid.
     /// </summary>
-    /// <returns>True if the validation rule is invalid; otherwise, false.</returns>
+    /// <returns><c>true</c> if the validation rule is invalid; otherwise, <c>false</c>.</returns>
     bool IsInvalid();
 }

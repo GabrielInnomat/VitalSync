@@ -1,12 +1,15 @@
 namespace BuildingBlocks.Domain;
 
 /// <summary>
-/// Represents a base class for domain events in the domain model. A domain event is an occurrence that is significant to the business domain and is used to communicate changes or actions that have taken place within the system. This class provides a common implementation for domain events, including a unique identifier and a timestamp indicating when the event occurred.
+/// Base class for domain events, occurrences that are significant to the business domain.
 /// </summary>
+/// <remarks>
+/// A domain event is used to communicate changes or actions that have taken place within the domain model.
+/// </remarks>
 public abstract record DomainEvent : IDomainEvent
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="DomainEvent"/> class. The constructor generates a new unique identifier for the event.
+    /// Initializes a new instance of the <see cref="DomainEvent"/> class, generating a new unique identifier for the event.
     /// </summary>
     protected DomainEvent()
     {
@@ -14,8 +17,11 @@ public abstract record DomainEvent : IDomainEvent
     }
 
     /// <summary>
-    /// Gets the unique identifier for the domain event. This identifier is generated when the event is created and can be used to track and reference the event within the system.
+    /// Gets the unique identifier for the domain event.
     /// </summary>
+    /// <remarks>
+    /// This identifier is generated when the event is created and can be used to track and reference the event within the system.
+    /// </remarks>
     public Guid EventId { get; init; }
 
     /// <summary>

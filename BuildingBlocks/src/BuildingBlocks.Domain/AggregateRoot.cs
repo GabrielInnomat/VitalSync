@@ -1,9 +1,11 @@
 namespace BuildingBlocks.Domain;
 
 /// <summary>
-/// Represents the base class for aggregate roots in the domain model.
-/// This class is used for aggregates that are not event sourced.
+/// Base class for aggregate roots that are not event-sourced.
 /// </summary>
+/// <remarks>
+/// Two aggregate roots are considered equal when they are the same concrete type and share the same <see cref="Id"/>.
+/// </remarks>
 /// <typeparam name="TKey">The type of the aggregate root's identifier.</typeparam>
 public abstract class AggregateRoot<TKey>
     : IAggregateRoot<TKey>, IDomainEventsManager, IEquatable<AggregateRoot<TKey>>
@@ -15,6 +17,7 @@ public abstract class AggregateRoot<TKey>
     /// Initializes a new instance of the <see cref="AggregateRoot{TKey}"/> class with the specified identifier.
     /// </summary>
     /// <param name="id">The identifier of the aggregate root.</param>
+    /// <exception cref="DomainValidationException">Thrown when <paramref name="id"/> is empty.</exception>
     protected AggregateRoot(TKey id)
     {
         EnsureValidIdentity(id);
@@ -35,16 +38,14 @@ public abstract class AggregateRoot<TKey>
     /// Adds a domain event to the aggregate root's collection of domain events.
     /// </summary>
     /// <param name="domainEvent">The domain event to add.</param>
-    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="domainEvent"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="domainEvent"/> is <see langword="null"/>.</exception>
     protected void AddDomainEvent(IDomainEvent domainEvent)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
         _domainEvents.Add(domainEvent);
     }
 
-    /// <summary>
-    /// Clears all domain events from the aggregate root's collection of domain events.
-    /// </summary>
+    /// <inheritdoc/>
     void IDomainEventsManager.ClearDomainEvents()
     {
         _domainEvents.Clear();

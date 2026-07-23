@@ -6,7 +6,7 @@ namespace BuildingBlocks.Domain;
 public interface IHasDomainEvents
 {
     /// <summary>
-    /// Gets the redonly collection of domain events associated with the aggregate root.
+    /// Gets the read-only collection of domain events associated with the aggregate root.
     /// </summary>
     IReadOnlyCollection<IDomainEvent> DomainEvents { get; }
 }
