@@ -6,7 +6,7 @@
 
 ## Context
 
-When an aggregate participates in event sourcing, two methods tend to appear per domain event: one on the public command API (the behavior a command invokes) and one that applies the event to mutat[...]
+When an aggregate participates in event sourcing, two methods tend to appear per domain event: one on the public command API (the behavior a command invokes) and one that applies the event to mutate state (used both for new events and for replay during rehydration). For a large aggregate with many event types, this "two methods per event" growth makes the aggregate class large and interleaves two concerns — _deciding what should happen_ and _how state reflects what happened_ — in a single file.
 
 Additionally, the platform originally required a single aggregate model for both event-sourced and state-stored persistence (see [ADR-0011](./0011-unified-aggregate-for-es-and-ef.md)). That requirement was later revised: event sourcing is now an opt-in domain-modeling choice and the state object applies only to event-modeled aggregates (see [ADR-0012](./0012-optional-event-sourcing-aggregate.md)).
 
@@ -42,5 +42,5 @@ public interface IState<TSelf, out TKey>
 ## Alternatives considered
 
 - **Apply-on-the-aggregate** (mutating methods directly on the aggregate): simplest, but produces the "two methods per event" growth and interleaves concerns in large aggregates.
-- **Injected `IEventApplier<TState>`** (apply logic in a separate injected service): adds constructor ceremony to every aggregate and splits a state and its evolution across two types; rejected in[...]
+- **Injected `IEventApplier<TState>`** (apply logic in a separate injected service): adds constructor ceremony to every aggregate and splits a state and its evolution across two types; rejected in favor of apply-on-the-state.
 - **Non-self-referencing `IState<TKey>` returning `IState<TKey>`:** required an unchecked cast back to the concrete state in the aggregate; replaced by the self-referencing form.
