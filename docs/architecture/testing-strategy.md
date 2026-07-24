@@ -8,7 +8,7 @@ Automated tests are implemented for **both the Building Blocks and the individua
 |---|---|---|
 | **Unit tests** | Verify individual units in isolation | A class or method |
 | **Domain tests** | Verify domain rules, invariants, and event-raising | Aggregates, value objects, domain events |
-| **Application-layer tests** | Verify command/query handlers and pipeline behaviors | Handlers, validation, CQRS flow |
+| **Application-layer tests** | Verify command/query handlers and pipeline behaviors | Handlers, dispatcher, pipeline, CQRS flow, `Result` semantics |
 | **Persistence tests** | Verify mapping, persistence, and event collection on save | EF Core `DbContext`, converters |
 | **Integration tests** | Verify components working together with real-ish infrastructure | Service + database / messaging |
 | **Component communication tests** | Verify messaging and contracts between components | gRPC contracts, message publish/consume |
@@ -35,11 +35,12 @@ Automated tests are implemented for **both the Building Blocks and the individua
 ## What the current Building Blocks tests cover
 
 - **Domain**: strongly typed id equality and compile-time distinctness, aggregate event raising/clearing, read-only exposure of domain events, entity identity equality, value object structural equality.
-- **Application**: validation pipeline behavior (pass/fail/no-validators), `Result` success/failure semantics.
+- **Application**: dispatcher routing to the correct handler, pipeline behavior ordering and execution, exception-to-`Result` translation (business-rule / domain-validation), `Result` / `Result<T>` success/failure semantics.
 - **Persistence**: domain events are dispatched and cleared on `SaveChanges`; dispatcher is not invoked when there are no events.
 - **Event Processing**: dispatcher invokes the correct handler and tolerates missing handlers.
 
 ## Related
 
 - [Building Blocks](./building-blocks.md)
+- [BuildingBlocks.Application reference](./building-blocks-application.md)
 - [Domain model](./domain-model.md)

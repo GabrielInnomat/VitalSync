@@ -37,7 +37,7 @@ The architecture must be:
 
 ## The Building Blocks platform
 
-A reusable set of shared Building Blocks underpins the services without coupling them to VitalSync. It covers Domain, Application, Infrastructure, Persistence, Event Processing, and Common Utilities. See [Building Blocks](./building-blocks.md).
+A reusable set of shared Building Blocks underpins the services without coupling them to VitalSync. It covers Domain, Application, Infrastructure, Persistence, and Event Processing. See [Building Blocks](./building-blocks.md).
 
 ## Related documents
 

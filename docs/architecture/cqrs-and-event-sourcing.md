@@ -4,8 +4,8 @@
 
 Every microservice implements **Command Query Responsibility Segregation (CQRS)** to separate write operations from read operations.
 
-- **Commands** change state and express intent (e.g., *CreateRecipe*, *CompleteWorkoutSession*). They return a success/failure result, not data.
-- **Queries** read state and never mutate it.
+- **Commands** change state and express intent (e.g., *CreateRecipe*, *CompleteWorkoutSession*). They return a `Result` (success/failure), or a `Result<T>` when a value is needed — e.g. a **create** command returns the new aggregate's strongly typed id (`Result<RecipeId>`) so the frontend can navigate to it. A **delete/void** command returns a plain `Result`.
+- **Queries** read state and never mutate it; they return `Result<T>`.
 - Commands and queries are handled by **dedicated handlers**.
 
 ```text
@@ -18,7 +18,7 @@ Every microservice implements **Command Query Responsibility Segregation (CQRS)*
 └───────────────────────┘         └───────────────────────┘
 ```
 
-The Application building block provides the `ICommand`, `IQuery`, and corresponding handler abstractions. See [Building Blocks](./building-blocks.md).
+The Application building block provides the `ICommand`, `IQuery`, and corresponding handler abstractions, a hand-rolled dispatcher, and the `Result` / `Error` model. Domain exceptions (`BusinessRuleViolationException`, `DomainValidationException`) are translated to `Result.Failure` at the Application boundary. See [Building Blocks](./building-blocks.md), the [BuildingBlocks.Application reference](./building-blocks-application.md), and [ADR-0015](./decisions/0015-hand-rolled-cqrs-mediator.md) / [ADR-0017](./decisions/0017-application-error-handling-and-result.md).
 
 ## Persistence strategy
 
