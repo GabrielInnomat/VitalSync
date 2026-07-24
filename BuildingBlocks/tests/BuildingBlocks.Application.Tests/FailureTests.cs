@@ -12,22 +12,32 @@ public sealed class FailureTests
         Assert.Equal(FailureCategory.Validation, failure.Category);
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData(" ")]
-    public void Constructor_WithInvalidCode_ThrowsArgumentException(string? code)
+    [Fact]
+    public void Constructor_WithNullCode_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentException>(() => new Failure(code!, "message", FailureCategory.Validation));
+        Assert.Throws<ArgumentNullException>(() => new Failure(null!, "message", FailureCategory.Validation));
     }
 
     [Theory]
-    [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public void Constructor_WithInvalidMessage_ThrowsArgumentException(string? message)
+    public void Constructor_WithWhiteSpaceCode_ThrowsArgumentException(string code)
     {
-        Assert.Throws<ArgumentException>(() => new Failure("code", message!, FailureCategory.Validation));
+        Assert.Throws<ArgumentException>(() => new Failure(code, "message", FailureCategory.Validation));
+    }
+
+    [Fact]
+    public void Constructor_WithNullMessage_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new Failure("code", null!, FailureCategory.Validation));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void Constructor_WithWhiteSpaceMessage_ThrowsArgumentException(string message)
+    {
+        Assert.Throws<ArgumentException>(() => new Failure("code", message, FailureCategory.Validation));
     }
 
     [Fact]
