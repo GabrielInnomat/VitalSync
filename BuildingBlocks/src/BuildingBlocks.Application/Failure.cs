@@ -20,10 +20,13 @@ public sealed record Failure
     /// <param name="code">A stable, machine-readable identifier for the failure (for example <c>recipe.name_required</c>).</param>
     /// <param name="message">A human-readable description of the failure.</param>
     /// <param name="category">The category that classifies the failure.</param>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="code"/> or <paramref name="message"/> is <see langword="null"/> or white space.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="code"/> or <paramref name="message"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="code"/> or <paramref name="message"/> is empty or consists only of white-space characters.</exception>
     public Failure(string code, string message, FailureCategory category)
     {
+        ArgumentNullException.ThrowIfNull(code);
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        ArgumentNullException.ThrowIfNull(message);
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
 
         Code = code;
