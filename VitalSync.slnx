@@ -5,6 +5,7 @@
     <Project Path="BuildingBlocks/src/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj" />
   </Folder>
   <Folder Name="/BuildingBlocks/tests/">
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.Application.Tests/BuildingBlocks.Application.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Domain.Tests/BuildingBlocks.Domain.Tests.csproj" />
   </Folder>
   <Folder Name="/src/" />
