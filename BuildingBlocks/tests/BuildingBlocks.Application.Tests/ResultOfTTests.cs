@@ -9,7 +9,7 @@ public sealed class ResultOfTTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(42, result.Value);
-        Assert.Empty(result.Errors);
+        Assert.Empty(result.Failures);
     }
 
     [Fact]
@@ -22,20 +22,20 @@ public sealed class ResultOfTTests
     }
 
     [Fact]
-    public void Failure_WithError_CreatesFailedResult()
+    public void Failure_WithDescription_CreatesFailedResult()
     {
-        var error = Error.NotFound("recipe.not_found", "The recipe was not found.");
+        var failure = Failure.NotFound("recipe.not_found", "The recipe was not found.");
 
-        var result = Result<int>.Failure(error);
+        var result = Result<int>.Failure(failure);
 
         Assert.True(result.IsFailure);
-        Assert.Equal(error, Assert.Single(result.Errors));
+        Assert.Equal(failure, Assert.Single(result.Failures));
     }
 
     [Fact]
     public void Value_OnFailedResult_ThrowsInvalidOperationException()
     {
-        var result = Result<int>.Failure(Error.NotFound("code", "message"));
+        var result = Result<int>.Failure(Failure.NotFound("code", "message"));
 
         Assert.Throws<InvalidOperationException>(() => result.Value);
     }
@@ -50,17 +50,17 @@ public sealed class ResultOfTTests
     }
 
     [Fact]
-    public void ImplicitConversion_FromError_CreatesFailedResult()
+    public void ImplicitConversion_FromFailure_CreatesFailedResult()
     {
-        Result<int> result = Error.Validation("code", "message");
+        Result<int> result = Failure.Validation("code", "message");
 
         Assert.True(result.IsFailure);
-        Assert.Equal(ErrorCategory.Validation, Assert.Single(result.Errors).Category);
+        Assert.Equal(FailureCategory.Validation, Assert.Single(result.Failures).Category);
     }
 
     [Fact]
-    public void Failure_WithNullError_ThrowsArgumentNullException()
+    public void Failure_WithNullDescription_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => Result<int>.Failure((Error)null!));
+        Assert.Throws<ArgumentNullException>(() => Result<int>.Failure((Failure)null!));
     }
 }

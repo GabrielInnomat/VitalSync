@@ -11,4 +11,4 @@ namespace BuildingBlocks.Application;
 /// <param name="cancellationToken">A token that can be used to request cancellation of the operation.</param>
 /// <typeparam name="TResponse">The type of the response produced by the remainder of the pipeline.</typeparam>
 /// <returns>A task whose result is the response produced by the next component in the pipeline.</returns>
-public delegate Task<TResponse> RequestHandlerDelegate<TResponse>(CancellationToken cancellationToken);
+public delegate Task<TResponse> RequestPipelineContinuation<TResponse>(CancellationToken cancellationToken);

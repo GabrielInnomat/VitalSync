@@ -9,54 +9,54 @@ public sealed class ResultTests
 
         Assert.True(result.IsSuccess);
         Assert.False(result.IsFailure);
-        Assert.Empty(result.Errors);
+        Assert.Empty(result.Failures);
     }
 
     [Fact]
-    public void Failure_WithError_CreatesFailedResult()
+    public void Failure_WithDescription_CreatesFailedResult()
     {
-        var error = Error.NotFound("recipe.not_found", "The recipe was not found.");
+        var failure = Failure.NotFound("recipe.not_found", "The recipe was not found.");
 
-        var result = Result.Failure(error);
+        var result = Result.Failure(failure);
 
         Assert.True(result.IsFailure);
         Assert.False(result.IsSuccess);
-        Assert.Equal(error, Assert.Single(result.Errors));
+        Assert.Equal(failure, Assert.Single(result.Failures));
     }
 
     [Fact]
-    public void Failure_WithMultipleErrors_CarriesAllErrors()
+    public void Failure_WithMultipleFailures_CarriesAllFailures()
     {
-        var errors = new[]
+        var failures = new[]
         {
-            Error.Validation("recipe.name_required", "The recipe name is required."),
-            Error.Validation("recipe.name_too_long", "The recipe name is too long."),
+            Failure.Validation("recipe.name_required", "The recipe name is required."),
+            Failure.Validation("recipe.name_too_long", "The recipe name is too long."),
         };
 
-        var result = Result.Failure(errors);
+        var result = Result.Failure(failures);
 
         Assert.True(result.IsFailure);
-        Assert.Equal(2, result.Errors.Count);
+        Assert.Equal(2, result.Failures.Count);
     }
 
     [Fact]
-    public void Failure_WithNullError_ThrowsArgumentNullException()
+    public void Failure_WithNullDescription_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => Result.Failure((Error)null!));
+        Assert.Throws<ArgumentNullException>(() => Result.Failure((Failure)null!));
     }
 
     [Fact]
-    public void Failure_WithEmptyErrors_ThrowsArgumentException()
+    public void Failure_WithEmptyFailures_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() => Result.Failure(Array.Empty<Error>()));
+        Assert.Throws<ArgumentException>(() => Result.Failure([]));
     }
 
     [Fact]
-    public void ImplicitConversion_FromError_CreatesFailedResult()
+    public void ImplicitConversion_FromFailure_CreatesFailedResult()
     {
-        Result result = Error.Conflict("recipe.exists", "The recipe already exists.");
+        Result result = Failure.Conflict("recipe.exists", "The recipe already exists.");
 
         Assert.True(result.IsFailure);
-        Assert.Equal(ErrorCategory.Conflict, Assert.Single(result.Errors).Category);
+        Assert.Equal(FailureCategory.Conflict, Assert.Single(result.Failures).Category);
     }
 }

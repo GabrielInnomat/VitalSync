@@ -9,9 +9,7 @@ namespace BuildingBlocks.Application;
 /// through <see cref="ISender"/>, which returns a <see cref="Result"/>. For commands that must return a value (for
 /// example the identifier of a newly created aggregate), use <see cref="ICommand{TResult}"/> instead.
 /// </remarks>
-public interface ICommand
-{
-}
+public interface ICommand;
 
 /// <summary>
 /// Represents a command that expresses an intent to change state and yields a value of type <typeparamref name="TResult"/> on success.
@@ -23,6 +21,4 @@ public interface ICommand
 /// <see cref="ISender"/>, which returns a <see cref="Result{TResult}"/>.
 /// </remarks>
 /// <typeparam name="TResult">The type of the value produced by the command on success.</typeparam>
-public interface ICommand<TResult>
-{
-}
+public interface ICommand<TResult>;

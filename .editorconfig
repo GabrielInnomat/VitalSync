@@ -246,5 +246,7 @@ dotnet_naming_rule.private_fields_underscore.symbols = private_fields
 dotnet_naming_rule.private_fields_underscore.style = camel_case_underscore
 
 #### Analyzer severities ####
-dotnet_diagnostic.CS1591.severity = Warning
+
 dotnet_diagnostic.CA1030.severity = none
+dotnet_diagnostic.CA1040.severity = none
+dotnet_diagnostic.CA2225.severity = none

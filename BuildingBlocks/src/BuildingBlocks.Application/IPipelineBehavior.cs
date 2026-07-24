@@ -14,12 +14,12 @@ namespace BuildingBlocks.Application;
 /// <typeparam name="TResponse">The type of the response produced by the pipeline.</typeparam>
 public interface IPipelineBehavior<in TRequest, TResponse>
 {
-	/// <summary>
-	/// Handles the request and invokes the next component in the pipeline.
-	/// </summary>
-	/// <param name="request">The request being processed.</param>
-	/// <param name="next">The continuation that invokes the next behavior or the request handler.</param>
-	/// <param name="cancellationToken">A token that can be used to request cancellation of the operation.</param>
-	/// <returns>A task whose result is the response produced by the pipeline.</returns>
-	Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken);
+    /// <summary>
+    /// Handles the request and invokes the next component in the pipeline.
+    /// </summary>
+    /// <param name="request">The request being processed.</param>
+    /// <param name="continuation">The continuation that invokes the next behavior or the request handler.</param>
+    /// <param name="cancellationToken">A token that can be used to request cancellation of the operation.</param>
+    /// <returns>A task whose result is the response produced by the pipeline.</returns>
+    Task<TResponse> Handle(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken cancellationToken);
 }

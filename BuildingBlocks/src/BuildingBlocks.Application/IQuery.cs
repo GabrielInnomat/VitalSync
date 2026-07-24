@@ -9,6 +9,4 @@ namespace BuildingBlocks.Application;
 /// and is dispatched through <see cref="ISender"/>, which returns a <see cref="Result{TResult}"/>.
 /// </remarks>
 /// <typeparam name="TResult">The type of the value produced by the query.</typeparam>
-public interface IQuery<TResult>
-{
-}
+public interface IQuery<TResult>;
