@@ -24,9 +24,9 @@ microservices using **DDD**, **CQRS**, and **selective Event Sourcing**.
 
 ## Tech stack
 
-| Concern                 | Choice                                                   |
-| ----------------------- | -------------------------------------------------------- |
-| Orchestration           | .NET Aspire 13                                           |
+| Concern                 | Choice                                                    |
+| ----------------------- | --------------------------------------------------------- |
+| Orchestration           | .NET Aspire 13                                            |
 | Frontend                | Blazor (UI only)                                         |
 | Backend-for-Frontend    | REST (to frontend) + code-first gRPC (to services)      |
 | Microservices           | ASP.NET Core, one per business area                      |
@@ -45,26 +45,26 @@ VitalSync/
 ├── BuildingBlocks/                 # Reusable, VitalSync-INDEPENDENT platform
 │   ├── src/
 │   │   ├── BuildingBlocks.Domain/          # Aggregates, entities, domain events, IDs, rules
-│   │   ├── BuildingBlocks.Application/      # CQRS abstractions (commands/queries/handlers)
-│   │   ├── BuildingBlocks.Infrastructure/  # Cross-cutting infrastructure
-│   │   ├── BuildingBlocks.Persistence/      # EF Core persistence building blocks
+│   │   ├── BuildingBlocks.Application/      # CQRS abstractions (commands/queries/handlers), Result/Error
+│   │   ├── BuildingBlocks.Infrastructure/  # Cross-cutting infrastructure (e.g. DI-based dispatcher)
 │   │   └── BuildingBlocks.EventProcessing/  # Event sourcing / event processing
-│   └── tests/                       # Mirrors src/ with *.Tests projects
+│   │   ├── BuildingBlocks.Persistence/      # EF Core persistence building blocks
+│   └── tests/                          # Mirrors src/ with *.Tests projects
 ├── src/                            # VitalSync APPLICATION
-│   ├── Aspire/                      # .NET Aspire AppHost & ServiceDefaults (entry point)
-│   ├── Bff/                         # Backend-for-Frontend (REST out, gRPC in)
-│   ├── Frontend/                    # Blazor client (UI only)
-│   └── Services/                    # One folder per microservice
+│   ├── Aspire/                     # .NET Aspire AppHost & ServiceDefaults (entry point)
+│   ├── Bff/                        # Backend-for-Frontend (REST out, gRPC in)
+│   ├── Frontend/                   # Blazor client (UI only)
+│   └── Services/                   # One folder per microservice
 │       ├── Nutrition/
 │       ├── Fitness/
 │       └── Analytics/
 ├── docs/                           # Architecture, ADRs, glossary, user stories
-└── tests/                           # Cross-cutting / integration tests
+└── tests/                          # Cross-cutting / integration tests
 ```
 
 Guidance for finding things:
 - **Shared/reusable concepts** (base aggregate, domain event, typed IDs, CQRS
-  interfaces) → `BuildingBlocks/src/...`. These must stay framework-agnostic and
+  interfaces, `Result`) → `BuildingBlocks/src/...`. These must stay framework-agnostic and
   independent of VitalSync.
 - **Business logic** → the relevant service under `src/Services/<Domain>/`.
 - **UI** → `src/Frontend/` (never put business logic here).
@@ -102,6 +102,23 @@ See `docs/architecture/communication.md` and the ADRs below.
 - Aggregates use an **aggregate state object** (ADR-0010).
 - **Event sourcing is optional**, via a split aggregate hierarchy (ADR-0012, which
   supersedes ADR-0011). Only apply ES where it adds business value.
+
+## Application / CQRS conventions (from accepted ADRs)
+
+- CQRS abstractions and the `Result` / `Error` model live in
+  **`BuildingBlocks.Application`** (depends only on `Domain`). A **hand-rolled
+  dispatcher** is used instead of MediatR (ADR-0015); the DI-based implementation
+  lives in `BuildingBlocks.Infrastructure`.
+- Handlers and dispatch are **async-only** with a `CancellationToken`; no sync overloads.
+- **Commands** return `Result` or `Result<T>` (a **create** returns the new typed id,
+  e.g. `Result<RecipeId>`; **delete/void** returns `Result`). **Queries** return `Result<T>`.
+- Expected domain errors (`BusinessRuleViolationException`, `DomainValidationException`)
+  are **translated to `Result.Failure`** by an Application pipeline behavior; unexpected
+  errors bubble to a thin global handler (ADR-0017). `ErrorCategory` is one of
+  `Validation`, `BusinessRule`, `NotFound`, `Conflict` — transport status mapping is
+  owned by the BFF/service host, never by `Application`.
+- Pipeline behaviors run in **explicit DI registration order**.
+- `BuildingBlocks.Common` **does not exist** (ADR-0016) — do not reference it.
 
 ADRs are immutable once accepted; to change a decision, add a superseding ADR.
 Index: `docs/architecture/decisions/README.md`.
@@ -174,6 +191,7 @@ Docker (for messaging infrastructure/containers).
 - Architecture overview — `docs/architecture/overview.md`
 - Communication — `docs/architecture/communication.md`
 - Building Blocks — `docs/architecture/building-blocks.md`
+- BuildingBlocks.Application — `docs/architecture/building-blocks-application.md`
 - Domain model — `docs/architecture/domain-model.md`
 - CQRS & Event Sourcing — `docs/architecture/cqrs-and-event-sourcing.md`
 - Testing strategy — `docs/architecture/testing-strategy.md`
