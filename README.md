@@ -79,7 +79,7 @@ A core principle of the project: **the architecture is fixed, the domain is flui
 └──┬───┘       └───┬────┘      └────┬────┘
    │               │                │
    └───────────────┴────────────────┘
-        Asynchronous messaging only
+         Asynchronous messaging only
 
 ```
 
@@ -138,7 +138,7 @@ VitalSync/
 
 ## Building Blocks platform
 
-In addition to the application, VitalSync includes a **reusable platform of shared Building Blocks** providing reusable concepts for the Domain, Application, Infrastructure, Persistence, Event Pr[...]
+In addition to the application, VitalSync includes a **reusable platform of shared Building Blocks** providing reusable concepts for the Domain, Application, Infrastructure, Persistence, and Event Processing layers.
 
 These Building Blocks are deliberately **independent of VitalSync** and reusable in future projects. See [Building Blocks](./docs/architecture/building-blocks.md).
 
@@ -179,6 +179,7 @@ See [Testing strategy](./docs/architecture/testing-strategy.md).
 - [Architecture overview](./docs/architecture/overview.md)
 - [Communication](./docs/architecture/communication.md)
 - [Building Blocks](./docs/architecture/building-blocks.md)
+- [BuildingBlocks.Application reference](./docs/architecture/building-blocks-application.md)
 - [Domain model](./docs/architecture/domain-model.md)
 - [CQRS & Event Sourcing](./docs/architecture/cqrs-and-event-sourcing.md)
 - [Testing strategy](./docs/architecture/testing-strategy.md)
