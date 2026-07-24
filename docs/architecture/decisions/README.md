@@ -30,6 +30,9 @@ An ADR documents a single architectural decision, its context, and its consequen
 | [0012](./0012-optional-event-sourcing-aggregate.md)       | Optional event sourcing via a split aggregate hierarchy | Accepted                  |
 | [0013](./0013-xml-documentation-conventions.md)           | XML documentation conventions for Building Blocks       | Accepted                  |
 | [0014](./0014-replace-fluentassertions-with-xunit-asserts.md) | Replace FluentAssertions with standard xUnit asserts | Accepted                  |
+| [0015](./0015-hand-rolled-cqrs-mediator.md)               | Hand-rolled CQRS mediator instead of MediatR            | Accepted                  |
+| [0016](./0016-remove-common-result-in-application.md)     | Remove BuildingBlocks.Common; Result lives in Application | Accepted                |
+| [0017](./0017-application-error-handling-and-result.md)   | Application error handling: domain exceptions → Result  | Accepted                  |
 
 ## Template
 
