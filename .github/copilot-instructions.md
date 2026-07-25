@@ -31,7 +31,8 @@ microservices using **DDD**, **CQRS**, and **selective Event Sourcing**.
 | Backend-for-Frontend    | REST (to frontend) + code-first gRPC (to services)      |
 | Microservices           | ASP.NET Core, one per business area                      |
 | Inter-service messaging | RabbitMQ via MassTransit                                 |
-| Persistence             | EF Core; Event Sourcing via Marten on PostgreSQL where it adds business value (ADR-0019) |
+| Persistence             | EF Core on PostgreSQL; Event Sourcing via Marten on PostgreSQL where it adds business value (ADR-0019/0020) |
+| Database topology       | PostgreSQL, one database per bounded context; shared server now, server-per-context possible later (ADR-0020) |
 | Patterns                | DDD, CQRS, Event Sourcing (selective)                    |
 | Testing                 | xUnit (incl. built-in asserts), NSubstitute, EF Core InMemory |
 
@@ -121,12 +122,25 @@ See `docs/architecture/communication.md` and the ADRs below.
 
 - **EF Core is the default**; **Event Sourcing is selective**, applied only where the
   event history carries business value (ADR-0012).
+- **Everything runs on PostgreSQL** — the single relational engine (ADR-0020).
+  State-stored contexts use **EF Core via the Npgsql provider**; event-sourced
+  contexts use **Marten on PostgreSQL** (ADR-0019).
+- **Each bounded context owns its own database** — never shared, with **no
+  cross-database foreign keys, joins, or transactions** (cross-context consistency is
+  via integration events). Today all context databases live on **one shared
+  PostgreSQL server** (in Aspire: one server resource with one `AddDatabase(...)` per
+  context). Moving a context onto its **own dedicated server** later is a sanctioned,
+  non-breaking migration — a connection-string change plus a data move, touching no
+  Domain/Application/Infrastructure code (ADR-0020). Give each context its own
+  `DbContext`, migrations, and named connection string to keep this cheap.
 - The **event store is Marten on PostgreSQL** (ADR-0019), used as a **raw event store**:
   the event-sourced repository in `BuildingBlocks.Infrastructure` appends uncommitted
   domain events (optimistic concurrency on `Version`) and, on load, fetches the raw
   stream and folds it through the aggregate's own `LoadFromHistory`. Marten's
   convention-based `Apply`-on-aggregate aggregation is **not** used, so the domain
   (ADR-0010 / ADR-0012) stays untouched.
+- The **event store and the state-stored store never co-locate in the same database**,
+  even on the same server, so they can move and scale independently.
 - **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
   and the event schema is unchanged, so snapshots can be added per context later with
   **no event migration**.
