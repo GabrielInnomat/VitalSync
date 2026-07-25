@@ -36,12 +36,7 @@ Automated tests are implemented for **both the Building Blocks and the individua
 
 - **Domain**: strongly typed id equality and compile-time distinctness, aggregate event raising/clearing, read-only exposure of domain events, entity identity equality, value object structural equality.
 - **Application**: dispatcher routing to the correct handler, pipeline behavior ordering and execution, exception-to-`Result` translation (business-rule / domain-validation), `Result` / `Result<T>` success/failure semantics.
-- **Persistence**: domain events are dispatched and cleared on `SaveChanges`; dispatcher is not invoked when there are no events.
-- **Event Processing**: dispatcher invokes the correct handler and tolerates missing handlers.
 
 ## Related
 
 - [Building Blocks](./building-blocks.md)
-- [BuildingBlocks.Domainreference](./building-blocks-Domain.md)
-- [BuildingBlocks.Application reference](./building-blocks-application.md)
-- [Domain model](./domain-model.md)

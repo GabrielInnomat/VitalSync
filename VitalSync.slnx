@@ -3,6 +3,7 @@
   <Folder Name="/BuildingBlocks/src/">
     <Project Path="BuildingBlocks/src/BuildingBlocks.Application/BuildingBlocks.Application.csproj" />
     <Project Path="BuildingBlocks/src/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj" />
+    <Project Path="BuildingBlocks/src/BuildingBlocks.Infrastructure/BuildingBlocks.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/BuildingBlocks/tests/">
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Application.Tests/BuildingBlocks.Application.Tests.csproj" />

@@ -11,23 +11,23 @@ VitalSync lets users manage nutrition- and workout-related information and deriv
 ## Table of contents
 
 - [VitalSync](#vitalsync)
-  - [Table of contents](#table-of-contents)
-  - [Vision](#vision)
-  - [Business domains](#business-domains)
-    - [Nutrition](#nutrition)
-    - [Fitness](#fitness)
-    - [Analytics \& Reporting](#analytics--reporting)
-  - [Architecture at a glance](#architecture-at-a-glance)
-  - [Technology stack](#technology-stack)
-  - [Repository structure](#repository-structure)
-  - [Building Blocks platform](#building-blocks-platform)
-  - [Getting started](#getting-started)
-    - [Prerequisites](#prerequisites)
-    - [Build](#build)
-    - [Run (Aspire AppHost)](#run-aspire-apphost)
-  - [Testing](#testing)
-  - [Documentation](#documentation)
-  - [Contributing](#contributing)
+    - [Table of contents](#table-of-contents)
+    - [Vision](#vision)
+    - [Business domains](#business-domains)
+        - [Nutrition](#nutrition)
+        - [Fitness](#fitness)
+        - [Analytics \& Reporting](#analytics--reporting)
+    - [Architecture at a glance](#architecture-at-a-glance)
+    - [Technology stack](#technology-stack)
+    - [Repository structure](#repository-structure)
+    - [Building Blocks platform](#building-blocks-platform)
+    - [Getting started](#getting-started)
+        - [Prerequisites](#prerequisites)
+        - [Build](#build)
+        - [Run (Aspire AppHost)](#run-aspire-apphost)
+    - [Testing](#testing)
+    - [Documentation](#documentation)
+    - [Contributing](#contributing)
 
 ---
 
@@ -135,7 +135,7 @@ VitalSync/
 
 ## Building Blocks platform
 
-In addition to the application, VitalSync includes a **reusable platform of shared Building Blocks** providing reusable concepts for the Domain, Application, Infrastructure, Persistence, and Event Processing layers.
+In addition to the application, VitalSync includes a **reusable platform of shared Building Blocks** providing reusable concepts for the Domain, Application, and Infrastructure layers.
 
 These Building Blocks are deliberately **independent of VitalSync** and reusable in future projects. See [Building Blocks](./docs/architecture/building-blocks.md).
 
