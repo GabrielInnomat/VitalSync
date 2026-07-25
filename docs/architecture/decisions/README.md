@@ -33,6 +33,7 @@ An ADR documents a single architectural decision, its context, and its consequen
 | [0015](./0015-hand-rolled-cqrs-mediator.md)               | Hand-rolled CQRS mediator instead of MediatR            | Accepted                  |
 | [0016](./0016-remove-common-result-in-application.md)     | Remove BuildingBlocks.Common; Result lives in Application | Accepted                |
 | [0017](./0017-application-error-handling-and-result.md)   | Application error handling: domain exceptions → Result  | Accepted                  |
+| [0018](./0018-three-building-block-packages.md)           | Three building block packages: Domain, Application, Infrastructure | Accepted        |
 
 ## Template
 
