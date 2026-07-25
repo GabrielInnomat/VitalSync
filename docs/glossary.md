@@ -336,10 +336,31 @@ the tail of the stream instead of the whole history. In VitalSync it is
 **deferred**; because a Marten snapshot is a separate document and the event schema
 is unchanged, it can be introduced later per context with **no event migration**.
 
+### PostgreSQL
+
+The **single relational database engine** for the platform. It backs **both**
+state-stored contexts (EF Core via the Npgsql provider) and event-sourced contexts
+(Marten). Standardizing on one engine — already required by Marten (ADR-0019) —
+minimizes operational surface and reuses the first-party .NET Aspire PostgreSQL
+hosting integration. See
+[ADR-0020](./architecture/decisions/0020-postgresql-for-state-stored-contexts.md).
+
+### Database per bounded context
+
+The database topology: **each bounded context owns its own database**, never
+shared, with **no cross-database foreign keys, joins, or transactions**
+(cross-context consistency is via integration events). Today all context databases
+are hosted on **one shared PostgreSQL server** (in Aspire: one server resource with
+one `AddDatabase(...)` per context). Moving a context onto its **own dedicated
+server** later is a sanctioned, non-breaking migration — a connection-string change
+plus a data move, touching no application code. See
+[ADR-0020](./architecture/decisions/0020-postgresql-for-state-stored-contexts.md).
+
 ### Entity Framework Core (EF Core)
 
-The ORM used for state-stored persistence. Persistence tests also use its
-**InMemory** provider for fast feedback.
+The ORM used for state-stored persistence, running on **PostgreSQL** via the
+Npgsql provider (ADR-0020). Persistence tests also use its **InMemory** provider
+for fast feedback.
 
 ### Unit of Work
 
