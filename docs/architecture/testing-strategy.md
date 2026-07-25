@@ -4,22 +4,22 @@ Automated tests are implemented for **both the Building Blocks and the individua
 
 ## Test categories
 
-| Category | Purpose | Typical scope |
-|---|---|---|
-| **Unit tests** | Verify individual units in isolation | A class or method |
-| **Domain tests** | Verify domain rules, invariants, and event-raising | Aggregates, value objects, domain events |
-| **Application-layer tests** | Verify command/query handlers and pipeline behaviors | Handlers, dispatcher, pipeline, CQRS flow, `Result` semantics |
-| **Persistence tests** | Verify mapping, persistence, and event collection on save | EF Core `DbContext`, converters |
-| **Integration tests** | Verify components working together with real-ish infrastructure | Service + database / messaging |
-| **Component communication tests** | Verify messaging and contracts between components | gRPC contracts, message publish/consume |
+| Category                          | Purpose                                                         | Typical scope                                                 |
+| --------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------- |
+| **Unit tests**                    | Verify individual units in isolation                            | A class or method                                             |
+| **Domain tests**                  | Verify domain rules, invariants, and event-raising              | Aggregates, value objects, domain events                      |
+| **Application-layer tests**       | Verify command/query handlers and pipeline behaviors            | Handlers, dispatcher, pipeline, CQRS flow, `Result` semantics |
+| **Persistence tests**             | Verify mapping, persistence, and event collection on save       | EF Core `DbContext`, converters                               |
+| **Integration tests**             | Verify components working together with real-ish infrastructure | Service + database / messaging                                |
+| **Component communication tests** | Verify messaging and contracts between components               | gRPC contracts, message publish/consume                       |
 
 ## Tooling
 
-| Tool | Use |
-|---|---|
-| **xUnit** | Test framework and assertions (`Assert.*`; see ADR-0014) |
-| **NSubstitute** | Mocking/substitutes |
-| **EF Core InMemory** | Fast persistence-layer tests |
+| Tool                 | Use                                                      |
+| -------------------- | -------------------------------------------------------- |
+| **xUnit**            | Test framework and assertions (`Assert.*`; see ADR-0014) |
+| **NSubstitute**      | Mocking/substitutes                                      |
+| **EF Core InMemory** | Fast persistence-layer tests                             |
 
 > Integration and component-communication tests may additionally use containerized infrastructure (e.g., via Testcontainers) once the messaging platform is selected.
 
@@ -42,5 +42,6 @@ Automated tests are implemented for **both the Building Blocks and the individua
 ## Related
 
 - [Building Blocks](./building-blocks.md)
+- [BuildingBlocks.Domainreference](./building-blocks-Domain.md)
 - [BuildingBlocks.Application reference](./building-blocks-application.md)
 - [Domain model](./domain-model.md)

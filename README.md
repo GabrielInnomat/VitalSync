@@ -11,23 +11,23 @@ VitalSync lets users manage nutrition- and workout-related information and deriv
 ## Table of contents
 
 - [VitalSync](#vitalsync)
-    - [Table of contents](#table-of-contents)
-    - [Vision](#vision)
-    - [Business domains](#business-domains)
-        - [Nutrition](#nutrition)
-        - [Fitness](#fitness)
-        - [Analytics \& Reporting](#analytics--reporting)
-    - [Architecture at a glance](#architecture-at-a-glance)
-    - [Technology stack](#technology-stack)
-    - [Repository structure](#repository-structure)
-    - [Building Blocks platform](#building-blocks-platform)
-    - [Getting started](#getting-started)
-        - [Prerequisites](#prerequisites)
-        - [Build](#build)
-        - [Run (Aspire AppHost)](#run-aspire-apphost)
-    - [Testing](#testing)
-    - [Documentation](#documentation)
-    - [Contributing](#contributing)
+  - [Table of contents](#table-of-contents)
+  - [Vision](#vision)
+  - [Business domains](#business-domains)
+    - [Nutrition](#nutrition)
+    - [Fitness](#fitness)
+    - [Analytics \& Reporting](#analytics--reporting)
+  - [Architecture at a glance](#architecture-at-a-glance)
+  - [Technology stack](#technology-stack)
+  - [Repository structure](#repository-structure)
+  - [Building Blocks platform](#building-blocks-platform)
+  - [Getting started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Build](#build)
+    - [Run (Aspire AppHost)](#run-aspire-apphost)
+  - [Testing](#testing)
+  - [Documentation](#documentation)
+  - [Contributing](#contributing)
 
 ---
 
@@ -116,14 +116,11 @@ VitalSync/
 │   ├── src/
 │   │   ├── BuildingBlocks.Domain/
 │   │   ├── BuildingBlocks.Application/
-│   │   ├── BuildingBlocks.Infrastructure/
-│   │   ├── BuildingBlocks.Persistence/
-│   │   ├── BuildingBlocks.EventProcessing/
+│   │   ├── BuildingBlocks.Infrastructure
 │   └── tests/
 │       ├── BuildingBlocks.Domain.Tests/
 │       ├── BuildingBlocks.Application.Tests/
-│       ├── BuildingBlocks.Persistence.Tests/
-│       └── BuildingBlocks.EventProcessing.Tests/
+│       ├── BuildingBlocks.Infrastructure.Tests/
 ├── src/                         # VitalSync application
 │   ├── Aspire/                  # .NET Aspire AppHost & ServiceDefaults
 │   ├── Bff/                     # Backend-for-Frontend
@@ -179,7 +176,6 @@ See [Testing strategy](./docs/architecture/testing-strategy.md).
 - [Architecture overview](./docs/architecture/overview.md)
 - [Communication](./docs/architecture/communication.md)
 - [Building Blocks](./docs/architecture/building-blocks.md)
-- [BuildingBlocks.Application reference](./docs/architecture/building-blocks-application.md)
 - [Domain model](./docs/architecture/domain-model.md)
 - [CQRS & Event Sourcing](./docs/architecture/cqrs-and-event-sourcing.md)
 - [Testing strategy](./docs/architecture/testing-strategy.md)

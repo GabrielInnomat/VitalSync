@@ -46,9 +46,7 @@ VitalSync/
 │   ├── src/
 │   │   ├── BuildingBlocks.Domain/          # Aggregates, entities, domain events, IDs, rules
 │   │   ├── BuildingBlocks.Application/      # CQRS abstractions (commands/queries/handlers), Result/Failure
-│   │   ├── BuildingBlocks.Infrastructure/  # Cross-cutting infrastructure (e.g. DI-based dispatcher)
-│   │   └── BuildingBlocks.EventProcessing/  # Event sourcing / event processing
-│   │   ├── BuildingBlocks.Persistence/      # EF Core persistence building blocks
+│   │   ├── BuildingBlocks.Infrastructure/  # Cross-cutting infrastructure (e.g. DI-based dispatcher, Event sourcing / event processing, Persistence)
 │   └── tests/                          # Mirrors src/ with *.Tests projects
 ├── src/                            # VitalSync APPLICATION
 │   ├── Aspire/                     # .NET Aspire AppHost & ServiceDefaults (entry point)
@@ -118,7 +116,6 @@ See `docs/architecture/communication.md` and the ADRs below.
   `Validation`, `BusinessRule`, `NotFound`, `Conflict` — transport status mapping is
   owned by the BFF/service host, never by `Application`.
 - Pipeline behaviors run in **explicit DI registration order**.
-- `BuildingBlocks.Common` **does not exist** (ADR-0016) — do not reference it.
 
 ADRs are immutable once accepted; to change a decision, add a superseding ADR.
 Index: `docs/architecture/decisions/README.md`.
@@ -191,7 +188,6 @@ Docker (for messaging infrastructure/containers).
 - Architecture overview — `docs/architecture/overview.md`
 - Communication — `docs/architecture/communication.md`
 - Building Blocks — `docs/architecture/building-blocks.md`
-- BuildingBlocks.Application — `docs/architecture/building-blocks-application.md`
 - Domain model — `docs/architecture/domain-model.md`
 - CQRS & Event Sourcing — `docs/architecture/cqrs-and-event-sourcing.md`
 - Testing strategy — `docs/architecture/testing-strategy.md`
