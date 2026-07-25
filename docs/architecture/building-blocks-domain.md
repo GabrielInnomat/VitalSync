@@ -4,7 +4,7 @@
 
 The block provides **two aggregate bases**: one for state-stored (EF Core) aggregates and one for event-sourced (ES) aggregates. An aggregate author chooses the base that matches the persistence strategy of the service.
 
-> Scope: this document describes the _domain_ building block only. Application, Persistence, Infrastructure, and EventProcessing are documented separately.
+> Scope: this document describes the _domain_ building block only. Application, and Infrastructure are documented separately.
 
 ## Design goals
 
@@ -16,27 +16,27 @@ The block provides **two aggregate bases**: one for state-stored (EF Core) aggre
 
 ## Contents
 
-| Type                                        | Kind            | Responsibility                                                                       |
-| ------------------------------------------- | --------------- | ------------------------------------------------------------------------------------ |
-| `IEntityKey`                                | interface       | Marker contract for a strongly typed key; exposes `IsEmpty` for identity validation. |
-| `IEntityKey<TValue>`                        | interface       | A strongly typed key that exposes its underlying `Value` (any `notnull` type).       |
-| `IEntity<TKey>`                             | interface       | An entity with a strongly typed identity.                                            |
-| `Entity<TKey>`                              | abstract class  | Base for non-aggregate entities: constructor-set identity, guard, identity equality. |
-| `IState<TSelf, TKey>`                       | interface       | An aggregate's state: owns the identity and the event-apply ("evolve") logic.        |
-| `IAggregateRoot<TKey>`                      | interface       | Marker for an aggregate root; exposes events **read-only**.                          |
-| `IEventSourcedAggregateRoot<TKey>`          | interface       | Infrastructure-only capability exposing `Version` + `LoadFromHistory` for ES.        |
-| `AggregateRoot<TKey>`                       | abstract class  | Base for **state-stored** aggregates: identity set in the constructor.               |
-| `EventSourcedAggregateRoot<TKey, TState>`   | abstract class  | Base for **event-sourced** aggregates: identity derived from state via events.       |
-| `IHasDomainEvents`                          | interface       | Read-only access to an aggregate's domain events.                                    |
-| `IDomainEventsManager`                      | interface       | Privileged contract that can **clear** events (infrastructure-only).                 |
-| `IDomainEvent`                              | interface       | Pure business event contract (`EventId`, `OccurredAt`).                              |
-| `DomainEvent`                               | abstract record | Convenience base supplying `EventId` and clock-based `OccurredAt`.                   |
-| `IClock`                                    | interface       | Abstraction over "now" for deterministic time.                                       |
-| `IBusinessRule`                             | interface       | An invariant that can be _broken_.                                                   |
-| `IDomainValidationRule`                     | interface       | A validation constraint that can be _invalid_.                                       |
-| `RuleChecker`                               | static class    | Evaluates rules and throws the matching exception.                                   |
-| `BusinessRuleViolationException`            | exception       | Raised when a business rule is broken.                                               |
-| `DomainValidationException`                 | exception       | Raised when a domain validation rule is invalid.                                     |
+| Type                                      | Kind            | Responsibility                                                                       |
+| ----------------------------------------- | --------------- | ------------------------------------------------------------------------------------ |
+| `IEntityKey`                              | interface       | Marker contract for a strongly typed key; exposes `IsEmpty` for identity validation. |
+| `IEntityKey<TValue>`                      | interface       | A strongly typed key that exposes its underlying `Value` (any `notnull` type).       |
+| `IEntity<TKey>`                           | interface       | An entity with a strongly typed identity.                                            |
+| `Entity<TKey>`                            | abstract class  | Base for non-aggregate entities: constructor-set identity, guard, identity equality. |
+| `IState<TSelf, TKey>`                     | interface       | An aggregate's state: owns the identity and the event-apply ("evolve") logic.        |
+| `IAggregateRoot<TKey>`                    | interface       | Marker for an aggregate root; exposes events **read-only**.                          |
+| `IEventSourcedAggregateRoot<TKey>`        | interface       | Infrastructure-only capability exposing `Version` + `LoadFromHistory` for ES.        |
+| `AggregateRoot<TKey>`                     | abstract class  | Base for **state-stored** aggregates: identity set in the constructor.               |
+| `EventSourcedAggregateRoot<TKey, TState>` | abstract class  | Base for **event-sourced** aggregates: identity derived from state via events.       |
+| `IHasDomainEvents`                        | interface       | Read-only access to an aggregate's domain events.                                    |
+| `IDomainEventsManager`                    | interface       | Privileged contract that can **clear** events (infrastructure-only).                 |
+| `IDomainEvent`                            | interface       | Pure business event contract (`EventId`, `OccurredAt`).                              |
+| `DomainEvent`                             | abstract record | Convenience base supplying `EventId` and clock-based `OccurredAt`.                   |
+| `IClock`                                  | interface       | Abstraction over "now" for deterministic time.                                       |
+| `IBusinessRule`                           | interface       | An invariant that can be _broken_.                                                   |
+| `IDomainValidationRule`                   | interface       | A validation constraint that can be _invalid_.                                       |
+| `RuleChecker`                             | static class    | Evaluates rules and throws the matching exception.                                   |
+| `BusinessRuleViolationException`          | exception       | Raised when a business rule is broken.                                               |
+| `DomainValidationException`               | exception       | Raised when a domain validation rule is invalid.                                     |
 
 ## Identity and keys
 
@@ -180,18 +180,18 @@ public abstract class EventSourcedAggregateRoot<TKey, TState>
 - It holds the current `State`, an internal version (stream position), and the private uncommitted-events list.
 - `Id` is derived from `State`.
 - State changes **only** via:
-  - `RaiseEvent(e, clock)` — stamp the event with the clock, apply it to the state, validate identity, advance the version, and record the event (new behavior from a command);
-  - `LoadFromHistory(history)` — replay a persisted stream to rebuild state (rehydration; records nothing).
+    - `RaiseEvent(e, clock)` — stamp the event with the clock, apply it to the state, validate identity, advance the version, and record the event (new behavior from a command);
+    - `LoadFromHistory(history)` — replay a persisted stream to rebuild state (rehydration; records nothing).
 - It exposes events **read-only** and implements clearing **explicitly** (see below).
 - It implements `IEventSourcedAggregateRoot<TKey>` (`Version` + `LoadFromHistory`) **explicitly**, so those event-sourcing members are **not** on a concrete aggregate's public surface — a caller must deliberately cast to reach them.
 
-| Aspect                 | `AggregateRoot<TKey>` (EF Core)      | `EventSourcedAggregateRoot<TKey, TState>` (ES) |
-| ---------------------- | ------------------------------------ | ---------------------------------------------- |
-| Identity source        | constructor argument                 | `State.Id`, set by the first event             |
-| Persists               | the aggregate/entity object          | the raised events                              |
-| Rebuilds state by      | loading the stored object            | `LoadFromHistory` (replay), via the ES cast    |
-| Has `Version`          | no                                   | yes (stream position / concurrency)            |
-| Records events         | `AddDomainEvent`                     | `RaiseEvent` (applies + records)               |
+| Aspect            | `AggregateRoot<TKey>` (EF Core) | `EventSourcedAggregateRoot<TKey, TState>` (ES) |
+| ----------------- | ------------------------------- | ---------------------------------------------- |
+| Identity source   | constructor argument            | `State.Id`, set by the first event             |
+| Persists          | the aggregate/entity object     | the raised events                              |
+| Rebuilds state by | loading the stored object       | `LoadFromHistory` (replay), via the ES cast    |
+| Has `Version`     | no                              | yes (stream position / concurrency)            |
+| Records events    | `AddDomainEvent`                | `RaiseEvent` (applies + records)               |
 
 ### Ownership rule
 
@@ -225,14 +225,14 @@ Both `ClearDomainEvents` and the ES members are reachable **only** by code that 
 
 ### Access matrix (event-sourced base)
 
-| Caller holds…                               | Read events? | Clear events?              | Raise events?               | ES members (`Version`/`LoadFromHistory`)? |
-| ------------------------------------------- | ------------ | -------------------------- | --------------------------- | ----------------------------------------- |
-| The concrete aggregate (e.g. `Recipe`)      | ✅           | ❌ (not on surface)        | ❌ (only internally)        | ❌ (not on surface)                       |
-| `IAggregateRoot<TKey>`                      | ✅           | ❌                         | ❌                          | ❌                                        |
-| `IHasDomainEvents`                          | ✅           | ❌                         | ❌                          | ❌                                        |
-| `IDomainEventsManager` (cast)               | ✅           | ✅                         | ❌                          | ❌                                        |
-| `IEventSourcedAggregateRoot<TKey>` (cast)   | ✅           | ❌                         | ❌                          | ✅                                        |
-| A subclass of the ES base                   | ✅           | ❌ (explicit, not visible) | ✅ (`protected RaiseEvent`) | ❌ (explicit, not visible)                |
+| Caller holds…                             | Read events? | Clear events?              | Raise events?               | ES members (`Version`/`LoadFromHistory`)? |
+| ----------------------------------------- | ------------ | -------------------------- | --------------------------- | ----------------------------------------- |
+| The concrete aggregate (e.g. `Recipe`)    | ✅           | ❌ (not on surface)        | ❌ (only internally)        | ❌ (not on surface)                       |
+| `IAggregateRoot<TKey>`                    | ✅           | ❌                         | ❌                          | ❌                                        |
+| `IHasDomainEvents`                        | ✅           | ❌                         | ❌                          | ❌                                        |
+| `IDomainEventsManager` (cast)             | ✅           | ✅                         | ❌                          | ❌                                        |
+| `IEventSourcedAggregateRoot<TKey>` (cast) | ✅           | ❌                         | ❌                          | ✅                                        |
+| A subclass of the ES base                 | ✅           | ❌ (explicit, not visible) | ✅ (`protected RaiseEvent`) | ❌ (explicit, not visible)                |
 
 > The state-stored base is identical except that it has no `IEventSourcedAggregateRoot<TKey>` members at all (last column is not applicable), and subclasses raise via `protected AddDomainEvent`.
 
@@ -356,12 +356,12 @@ public sealed class Recipe : EventSourcedAggregateRoot<RecipeId, RecipeState>
 
 - **Event-sourced** services persist the events and rehydrate through the ES view:
 
-  ```csharp
-  var recipe = new Recipe();
-  ((IEventSourcedAggregateRoot<RecipeId>)recipe).LoadFromHistory(history);
-  ```
+    ```csharp
+    var recipe = new Recipe();
+    ((IEventSourcedAggregateRoot<RecipeId>)recipe).LoadFromHistory(history);
+    ```
 
-  (In practice this cast lives inside the event-sourced repository, not in domain or application code.)
+    (In practice this cast lives inside the event-sourced repository, not in domain or application code.)
 
 ## Usage example — a state-stored aggregate
 

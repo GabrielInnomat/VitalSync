@@ -89,7 +89,7 @@ public interface IPipelineBehavior<TRequest, TResponse>
 - **Ordering is explicit registration order** (ADR-0015): behaviors run in the
   order they are registered in DI. Registration lives in `Infrastructure`.
 - The generic behaviors themselves (logging, unit-of-work, validation) live in
-  `Infrastructure` / `Persistence`; only the **contract** lives here.
+  `Infrastructure`; only the **contract** lives here.
 
 ## Failure handling & the `Result` model
 
@@ -133,8 +133,8 @@ exceptions handled globally.
 `BuildingBlocks.Application` never mentions HTTP or gRPC status codes. Mapping
 `ErrorCategory` to a status code is a transport concern owned by the boundary:
 
-- the **BFF** maps `ErrorCategory` → HTTP status code;
-- the **service host** maps `ErrorCategory` → gRPC status.
+- the **BFF** maps `FailureCategory` → HTTP status code;
+- the **service host** maps `FailureCategory` → gRPC status.
 
 Both consume the same semantic categories, mapping them independently.
 
