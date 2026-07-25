@@ -100,7 +100,7 @@ See [Communication](./docs/architecture/communication.md) for details.
 | Backend-for-Frontend    | REST (outbound) + code-first gRPC (to services)                       |
 | Microservices           | ASP.NET Core, one per business area                                   |
 | Inter-service messaging | RabbitMQ via MassTransit (see ADR-0004)                               |
-| Persistence             | Entity Framework Core; Event Sourcing where it adds business value    |
+| Persistence             | Entity Framework Core; Event Sourcing via Marten on PostgreSQL where it adds business value (see ADR-0019) |
 | Patterns                | DDD, CQRS, Event Sourcing (selective)                                 |
 | Testing                 | xUnit (built-in asserts, see ADR-0014), NSubstitute, EF Core InMemory |
 

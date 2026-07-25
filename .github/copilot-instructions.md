@@ -31,7 +31,7 @@ microservices using **DDD**, **CQRS**, and **selective Event Sourcing**.
 | Backend-for-Frontend    | REST (to frontend) + code-first gRPC (to services)      |
 | Microservices           | ASP.NET Core, one per business area                      |
 | Inter-service messaging | RabbitMQ via MassTransit                                 |
-| Persistence             | EF Core; Event Sourcing where it adds business value     |
+| Persistence             | EF Core; Event Sourcing via Marten on PostgreSQL where it adds business value (ADR-0019) |
 | Patterns                | DDD, CQRS, Event Sourcing (selective)                    |
 | Testing                 | xUnit (incl. built-in asserts), NSubstitute, EF Core InMemory |
 
@@ -46,7 +46,7 @@ VitalSync/
 │   ├── src/
 │   │   ├── BuildingBlocks.Domain/          # Aggregates, entities, domain events, IDs, rules
 │   │   ├── BuildingBlocks.Application/      # CQRS abstractions (commands/queries/handlers), Result/Failure
-│   │   ├── BuildingBlocks.Infrastructure/  # Cross-cutting infrastructure (e.g. DI-based dispatcher, Event sourcing / event processing, Persistence)
+│   │   ├── BuildingBlocks.Infrastructure/  # Cross-cutting infrastructure (e.g. DI-based dispatcher, event sourcing via Marten, persistence, messaging)
 │   └── tests/                          # Mirrors src/ with *.Tests projects
 ├── src/                            # VitalSync APPLICATION
 │   ├── Aspire/                     # .NET Aspire AppHost & ServiceDefaults (entry point)
@@ -116,6 +116,21 @@ See `docs/architecture/communication.md` and the ADRs below.
   `Validation`, `BusinessRule`, `NotFound`, `Conflict` — transport status mapping is
   owned by the BFF/service host, never by `Application`.
 - Pipeline behaviors run in **explicit DI registration order**.
+
+## Persistence & event sourcing (from accepted ADRs)
+
+- **EF Core is the default**; **Event Sourcing is selective**, applied only where the
+  event history carries business value (ADR-0012).
+- The **event store is Marten on PostgreSQL** (ADR-0019), used as a **raw event store**:
+  the event-sourced repository in `BuildingBlocks.Infrastructure` appends uncommitted
+  domain events (optimistic concurrency on `Version`) and, on load, fetches the raw
+  stream and folds it through the aggregate's own `LoadFromHistory`. Marten's
+  convention-based `Apply`-on-aggregate aggregation is **not** used, so the domain
+  (ADR-0010 / ADR-0012) stays untouched.
+- **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
+  and the event schema is unchanged, so snapshots can be added per context later with
+  **no event migration**.
+- PostgreSQL is provisioned as a first-party **.NET Aspire** resource.
 
 ADRs are immutable once accepted; to change a decision, add a superseding ADR.
 Index: `docs/architecture/decisions/README.md`.
