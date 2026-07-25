@@ -10,15 +10,15 @@ The **Building Blocks** are a reusable platform of shared concepts and component
 
 ## Packages
 
-| Building Block                   | Responsibility                                                                                         | Depends on                            |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------- |
-| `BuildingBlocks.Domain`          | Entities, Aggregate Roots, Domain Events, Value Objects, strongly typed identifiers, domain exceptions, clock abstraction (`IClock`) | _(nothing — BCL only)_                |
-| `BuildingBlocks.Application`     | CQRS abstractions (commands, queries, handlers), pipeline behavior contract, dispatcher (`ISender`) contract, and the `Result` / `Error` model | `Domain`                              |
-| `BuildingBlocks.EventProcessing` | Domain event handler/dispatcher abstractions, outbox abstractions                                      | `Domain`                              |
-| `BuildingBlocks.Persistence`     | EF Core base `DbContext` (unit of work + event collection), strongly typed id value converters         | `Domain`, `EventProcessing`           |
-| `BuildingBlocks.Infrastructure`  | Default implementations of cross-cutting abstractions (e.g., DI-based dispatcher / mediator)            | `Domain`, `EventProcessing`, `Application` |
+| Building Block                   | Responsibility                                                                                                                                   | Depends on                                 |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ |
+| `BuildingBlocks.Domain`          | Entities, Aggregate Roots, Domain Events, Value Objects, strongly typed identifiers, domain exceptions, clock abstraction (`IClock`)             | _(nothing — BCL only)_                     |
+| `BuildingBlocks.Application`     | CQRS abstractions (commands, queries, handlers), pipeline behavior contract, dispatcher (`ISender`) contract, and the `Result` / `Failure` model | `Domain`                                   |
+| `BuildingBlocks.EventProcessing` | Domain event handler/dispatcher abstractions, outbox abstractions                                                                                | `Domain`                                   |
+| `BuildingBlocks.Persistence`     | EF Core base `DbContext` (unit of work + event collection), strongly typed id value converters                                                   | `Domain`, `EventProcessing`                |
+| `BuildingBlocks.Infrastructure`  | Default implementations of cross-cutting abstractions (e.g., DI-based dispatcher / mediator)                                                     | `Domain`, `EventProcessing`, `Application` |
 
-> See the [BuildingBlocks.Application reference](./building-blocks-application.md) for the full CQRS contract catalog, return conventions, and error model.
+> See the [BuildingBlocks.Application reference](./building-blocks-application.md) for the full CQRS contract catalog, return conventions, and Failure model.
 
 ## Dependency direction
 

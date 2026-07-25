@@ -11,7 +11,7 @@ The Domain enforces constraints by **throwing** exceptions —
 layer, however, exposes command/query outcomes as a uniform `Result` / `Result<T>`
 (see [ADR-0016](./0016-remove-common-result-in-application.md)).
 
-If domain exceptions were allowed to escape *around* `Result`, callers (the BFF,
+If domain exceptions were allowed to escape _around_ `Result`, callers (the BFF,
 the frontend) would face **two** different failure channels — exceptions and
 failed results — for what are, from the caller's perspective, the same class of
 expected domain errors. We need a single, predictable failure channel for expected
@@ -27,22 +27,22 @@ Adopt a two-tier error-handling model:
    `ExceptionToResultBehavior` in the Application pipeline catches
    `BusinessRuleViolationException` and `DomainValidationException` and converts
    them into `Result.Failure(...)`. Handlers may also return `Result.Failure`
-   directly for expected outcomes such as *not found* or *conflict*.
+   directly for expected outcomes such as _not found_ or _conflict_.
 
 2. **Unexpected errors → thin global handler.**
    Any other exception (bugs, infrastructure/transport failures) is **not**
    wrapped in a `Result`. It bubbles to a thin **global exception handler** in the
    service host, which returns a generic internal error. There is deliberately **no**
-   `Unexpected` error category — unexpected failures never become a `Result`.
+   `Unexpected` Failurecategory — unexpected failures never become a `Result`.
 
-### Result error shape
+### Result Failure shape
 
-A failed `Result` carries **one or more** `Error` values. Each `Error` has:
+A failed `Result` carries **one or more** `Failure` values. Each `Failure` has:
 
 - `Code` — a stable, machine-readable string (e.g. `recipe.name_required`) for
   i18n and specific client handling;
 - `Message` — a human-readable description;
-- `Category` — an `ErrorCategory` enum, one of:
+- `Category` — an `FailureCategory` enum, one of:
   `Validation`, `BusinessRule`, `NotFound`, `Conflict`.
 
 The translation behavior maps `DomainValidationException` → `Validation` and
@@ -52,11 +52,11 @@ The translation behavior maps `DomainValidationException` → `Validation` and
 ### Transport status mapping is not an Application concern
 
 `BuildingBlocks.Application` never references HTTP or gRPC. Mapping
-`ErrorCategory` to a transport status code is owned by the boundary:
+`FailureCategory` to a transport status code is owned by the boundary:
 
-- the **BFF** maps `ErrorCategory` → **HTTP status code** (the only place HTTP
+- the **BFF** maps `FailureCategory` → **HTTP status code** (the only place HTTP
   status codes are defined);
-- the **service host** maps `ErrorCategory` → **gRPC status**.
+- the **service host** maps `FailureCategory` → **gRPC status**.
 
 This keeps the Application layer framework-agnostic and reusable, and lets REST
 and gRPC map the same semantic categories independently.

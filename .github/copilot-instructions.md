@@ -45,7 +45,7 @@ VitalSync/
 ├── BuildingBlocks/                 # Reusable, VitalSync-INDEPENDENT platform
 │   ├── src/
 │   │   ├── BuildingBlocks.Domain/          # Aggregates, entities, domain events, IDs, rules
-│   │   ├── BuildingBlocks.Application/      # CQRS abstractions (commands/queries/handlers), Result/Error
+│   │   ├── BuildingBlocks.Application/      # CQRS abstractions (commands/queries/handlers), Result/Failure
 │   │   ├── BuildingBlocks.Infrastructure/  # Cross-cutting infrastructure (e.g. DI-based dispatcher)
 │   │   └── BuildingBlocks.EventProcessing/  # Event sourcing / event processing
 │   │   ├── BuildingBlocks.Persistence/      # EF Core persistence building blocks
@@ -105,7 +105,7 @@ See `docs/architecture/communication.md` and the ADRs below.
 
 ## Application / CQRS conventions (from accepted ADRs)
 
-- CQRS abstractions and the `Result` / `Error` model live in
+- CQRS abstractions and the `Result` / `Failure` model live in
   **`BuildingBlocks.Application`** (depends only on `Domain`). A **hand-rolled
   dispatcher** is used instead of MediatR (ADR-0015); the DI-based implementation
   lives in `BuildingBlocks.Infrastructure`.
@@ -114,7 +114,7 @@ See `docs/architecture/communication.md` and the ADRs below.
   e.g. `Result<RecipeId>`; **delete/void** returns `Result`). **Queries** return `Result<T>`.
 - Expected domain errors (`BusinessRuleViolationException`, `DomainValidationException`)
   are **translated to `Result.Failure`** by an Application pipeline behavior; unexpected
-  errors bubble to a thin global handler (ADR-0017). `ErrorCategory` is one of
+  errors bubble to a thin global handler (ADR-0017). `FailureCategory` is one of
   `Validation`, `BusinessRule`, `NotFound`, `Conflict` — transport status mapping is
   owned by the BFF/service host, never by `Application`.
 - Pipeline behaviors run in **explicit DI registration order**.

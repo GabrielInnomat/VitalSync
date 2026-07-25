@@ -2,7 +2,7 @@
 
 `BuildingBlocks.Application` is the reusable, framework-agnostic building block that
 defines the **CQRS abstractions** (commands, queries, handlers), the **pipeline
-behavior** contract, the **dispatcher** contract, and the **`Result` / `Error`**
+behavior** contract, the **dispatcher** contract, and the **`Result` / `Failure`**
 model shared by every microservice. It depends only on `BuildingBlocks.Domain` and
 is independent of VitalSync.
 
@@ -19,16 +19,16 @@ is independent of VitalSync.
   accepts a `CancellationToken`. There are **no** synchronous overloads.
 - **Depends on `Domain` only.** Needed for the domain exception types translated by
   the pipeline; nothing else is required.
-- **Contracts here, DI wiring elsewhere.** The dispatcher and behavior *contracts*
-  live here; their DI-based *implementations* live in `BuildingBlocks.Infrastructure`.
+- **Contracts here, DI wiring elsewhere.** The dispatcher and behavior _contracts_
+  live here; their DI-based _implementations_ live in `BuildingBlocks.Infrastructure`.
 
 ## CQRS contracts
 
-| Concept | Marker | Handler | Returns |
-|---|---|---|---|
-| Command (no value) | `ICommand` | `ICommandHandler<TCommand>` | `Task<Result>` |
+| Concept              | Marker              | Handler                              | Returns                 |
+| -------------------- | ------------------- | ------------------------------------ | ----------------------- |
+| Command (no value)   | `ICommand`          | `ICommandHandler<TCommand>`          | `Task<Result>`          |
 | Command (with value) | `ICommand<TResult>` | `ICommandHandler<TCommand, TResult>` | `Task<Result<TResult>>` |
-| Query | `IQuery<TResult>` | `IQueryHandler<TQuery, TResult>` | `Task<Result<TResult>>` |
+| Query                | `IQuery<TResult>`   | `IQueryHandler<TQuery, TResult>`     | `Task<Result<TResult>>` |
 
 - **Commands** express intent and change state.
 - **Queries** read state and never mutate it.
@@ -39,26 +39,26 @@ is independent of VitalSync.
 - **Create** returns the new aggregate's **strongly typed identifier** (ADR-0005)
   so the frontend can navigate to the created item:
 
-  ```csharp
-  public sealed record CreateRecipeCommand(string Name) : ICommand<RecipeId>;
+    ```csharp
+    public sealed record CreateRecipeCommand(string Name) : ICommand<RecipeId>;
 
-  public sealed class CreateRecipeHandler : ICommandHandler<CreateRecipeCommand, RecipeId>
-  {
-      public async Task<Result<RecipeId>> Handle(CreateRecipeCommand command, CancellationToken ct)
-      {
-          var recipe = Recipe.Create(command.Name);   // may throw domain exceptions
-          await _repository.AddAsync(recipe, ct);
-          return Result.Success(recipe.Id);
-      }
-  }
-  ```
+    public sealed class CreateRecipeHandler : ICommandHandler<CreateRecipeCommand, RecipeId>
+    {
+        public async Task<Result<RecipeId>> Handle(CreateRecipeCommand command, CancellationToken ct)
+        {
+            var recipe = Recipe.Create(command.Name);   // may throw domain exceptions
+            await _repository.AddAsync(recipe, ct);
+            return Result.Success(recipe.Id);
+        }
+    }
+    ```
 
 - **Delete / update / void** return a plain `Result` — success or failure is enough:
 
-  ```csharp
-  public sealed record DeleteRecipeCommand(RecipeId Id) : ICommand;
-  // handler returns Task<Result>
-  ```
+    ```csharp
+    public sealed record DeleteRecipeCommand(RecipeId Id) : ICommand;
+    // handler returns Task<Result>
+    ```
 
 ## Dispatcher
 
@@ -80,7 +80,7 @@ pipeline behaviors from the container.
 ```csharp
 public interface IPipelineBehavior<TRequest, TResponse>
 {
-    Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken ct);
+    Task<TResponse> Handle(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken ct);
 }
 ```
 
@@ -91,7 +91,7 @@ public interface IPipelineBehavior<TRequest, TResponse>
 - The generic behaviors themselves (logging, unit-of-work, validation) live in
   `Infrastructure` / `Persistence`; only the **contract** lives here.
 
-## Error handling & the `Result` model
+## Failure handling & the `Result` model
 
 Per [ADR-0017](./decisions/0017-application-error-handling-and-result.md):
 
@@ -99,33 +99,33 @@ Per [ADR-0017](./decisions/0017-application-error-handling-and-result.md):
   (ADR-0009). An **`ExceptionToResultBehavior`** (registered first) translates these
   into `Result.Failure`.
 - Handlers may also return `Result.Failure` directly for expected outcomes such as
-  *not found* or *conflict*.
+  _not found_ or _conflict_.
 - **Unexpected** exceptions are **not** turned into `Result`; they bubble to a thin
   global handler in the service host.
 
 ### `Result` / `Result<T>`
 
-- `Result` — success, or failure carrying **one or more** `Error`s.
-- `Result<T>` — success carrying a value of `T`, or failure carrying `Error`s.
+- `Result` — success, or failure carrying **one or more** `Failure`s.
+- `Result<T>` — success carrying a value of `T`, or failure carrying `Failure`s.
 
-### `Error`
+### `Failure`
 
-| Member | Meaning |
-|---|---|
-| `Code` | Stable, machine-readable string (e.g. `recipe.name_required`) for i18n / specific client handling. |
-| `Message` | Human-readable description. |
-| `Category` | An `ErrorCategory` value (below). |
+| Member     | Meaning                                                                                            |
+| ---------- | -------------------------------------------------------------------------------------------------- |
+| `Code`     | Stable, machine-readable string (e.g. `recipe.name_required`) for i18n / specific client handling. |
+| `Message`  | Human-readable description.                                                                        |
+| `Category` | An `FailureCategory` value (below).                                                                |
 
-### `ErrorCategory`
+### `FailureCategory`
 
-| Category | Source |
-|---|---|
-| `Validation` | `DomainValidationException` (translated) |
-| `BusinessRule` | `BusinessRuleViolationException` (translated) |
-| `NotFound` | Returned directly by handlers for missing aggregates |
-| `Conflict` | Returned directly by handlers for already-exists / concurrency |
+| Category       | Source                                                         |
+| -------------- | -------------------------------------------------------------- |
+| `Validation`   | `DomainValidationException` (translated)                       |
+| `BusinessRule` | `BusinessRuleViolationException` (translated)                  |
+| `NotFound`     | Returned directly by handlers for missing aggregates           |
+| `Conflict`     | Returned directly by handlers for already-exists / concurrency |
 
-There is deliberately **no** `Unexpected` category — unexpected errors remain
+There is deliberately **no** `Unexpected` category — unexpected failures remain
 exceptions handled globally.
 
 ## Transport status mapping (not defined here)

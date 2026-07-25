@@ -4,7 +4,7 @@
 
 Every microservice implements **Command Query Responsibility Segregation (CQRS)** to separate write operations from read operations.
 
-- **Commands** change state and express intent (e.g., *CreateRecipe*, *CompleteWorkoutSession*). They return a `Result` (success/failure), or a `Result<T>` when a value is needed — e.g. a **create** command returns the new aggregate's strongly typed id (`Result<RecipeId>`) so the frontend can navigate to it. A **delete/void** command returns a plain `Result`.
+- **Commands** change state and express intent (e.g., _CreateRecipe_, _CompleteWorkoutSession_). They return a `Result` (success/failure), or a `Result<T>` when a value is needed — e.g. a **create** command returns the new aggregate's strongly typed id (`Result<RecipeId>`) so the frontend can navigate to it. A **delete/void** command returns a plain `Result`.
 - **Queries** read state and never mutate it; they return `Result<T>`.
 - Commands and queries are handled by **dedicated handlers**.
 
@@ -18,7 +18,7 @@ Every microservice implements **Command Query Responsibility Segregation (CQRS)*
 └───────────────────────┘         └───────────────────────┘
 ```
 
-The Application building block provides the `ICommand`, `IQuery`, and corresponding handler abstractions, a hand-rolled dispatcher, and the `Result` / `Error` model. Domain exceptions (`BusinessRuleViolationException`, `DomainValidationException`) are translated to `Result.Failure` at the Application boundary. See [Building Blocks](./building-blocks.md), the [BuildingBlocks.Application reference](./building-blocks-application.md), and [ADR-0015](./decisions/0015-hand-rolled-cqrs-mediator.md) / [ADR-0017](./decisions/0017-application-error-handling-and-result.md).
+The Application building block provides the `ICommand`, `IQuery`, and corresponding handler abstractions, a hand-rolled dispatcher, and the `Result` / `Failure` model. Domain exceptions (`BusinessRuleViolationException`, `DomainValidationException`) are translated to `Result.Failure` at the Application boundary. See [Building Blocks](./building-blocks.md), the [BuildingBlocks.Application reference](./building-blocks-application.md), and [ADR-0015](./decisions/0015-hand-rolled-cqrs-mediator.md) / [ADR-0017](./decisions/0017-application-error-handling-and-result.md).
 
 ## Persistence strategy
 
@@ -40,13 +40,13 @@ Contexts that are largely CRUD-shaped (e.g., managing the ingredient catalog) ar
 
 ### Trade-offs to weigh during "analyze & challenge"
 
-| Aspect | EF Core (state-stored) | Event Sourcing |
-|---|---|---|
-| Implementation complexity | Lower | Higher |
-| Full audit/history | Not inherent | Inherent |
-| Temporal queries / replay | Hard | Natural |
-| Read models | Direct from tables | Usually via projections |
-| Operational overhead | Lower | Higher (event store, projections, versioning) |
+| Aspect                    | EF Core (state-stored) | Event Sourcing                                |
+| ------------------------- | ---------------------- | --------------------------------------------- |
+| Implementation complexity | Lower                  | Higher                                        |
+| Full audit/history        | Not inherent           | Inherent                                      |
+| Temporal queries / replay | Hard                   | Natural                                       |
+| Read models               | Direct from tables     | Usually via projections                       |
+| Operational overhead      | Lower                  | Higher (event store, projections, versioning) |
 
 ## Read models & projections
 
@@ -54,8 +54,8 @@ Regardless of write strategy, the read side may use **projections** optimized fo
 
 ## Open questions
 
-- Which Bounded Contexts (if any) justify Event Sourcing? *(To be decided.)*
-- Event store technology, if Event Sourcing is adopted. *(To be decided.)*
+- Which Bounded Contexts (if any) justify Event Sourcing? _(To be decided.)_
+- Event store technology, if Event Sourcing is adopted. _(To be decided.)_
 
 ## Related
 
