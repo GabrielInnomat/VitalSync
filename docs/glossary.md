@@ -307,13 +307,34 @@ stream (via `LoadFromHistory`), typically inside the event-sourced repository.
 ### Version (stream position)
 
 The monotonic position of an event-sourced aggregate within its stream, advanced
-on every `RaiseEvent`. Used for ordering and optimistic **concurrency**.
+on every `RaiseEvent`. Used for ordering and optimistic **concurrency** (asserted
+as the expected revision when appending to the Marten event stream).
 
 ### Projection / Read model
 
 A representation of data **optimized for queries** on the read side of CQRS. With
 Event Sourcing, projections are built by replaying events; with EF Core, read
 models may be the same tables or purpose-built views.
+
+### Event store (Marten on PostgreSQL)
+
+The technology backing event-sourced contexts: **Marten** (MIT-licensed) on
+**PostgreSQL**, used as a **raw event store**. The event-sourced repository
+appends uncommitted domain events to the stream (with optimistic concurrency on
+`Version`) and, on load, fetches the raw stream and folds it through the
+aggregate's own `LoadFromHistory` — Marten's convention-based `Apply`-on-aggregate
+aggregation is **not** used, keeping the domain untouched. Snapshotting is deferred
+but can be added per context without an event-schema migration. PostgreSQL has a
+first-party .NET Aspire hosting integration. See
+[ADR-0019](./architecture/decisions/0019-event-store-technology-marten.md).
+
+### Snapshotting
+
+An optional optimization for event-sourced aggregates: persist the aggregate's
+`State` at a known version so a load can start from the snapshot and replay only
+the tail of the stream instead of the whole history. In VitalSync it is
+**deferred**; because a Marten snapshot is a separate document and the event schema
+is unchanged, it can be introduced later per context with **no event migration**.
 
 ### Entity Framework Core (EF Core)
 
@@ -414,9 +435,11 @@ and dispatcher contracts, and the `Result` / `Failure` model. Depends **only** o
 
 The **single outer layer** holding all reusable, framework-bound,
 third-party-backed implementations that are still VitalSync-agnostic: unit of work,
-generic repositories (EF Core and the TBD event store), domain- and
-integration-event dispatching, the RabbitMQ/MassTransit transport, and the DI-based
-CQRS dispatcher and pipeline behaviors. Depends on both `Domain` and `Application`.
+generic repositories (EF Core and the Marten-based event store, see
+[ADR-0019](./architecture/decisions/0019-event-store-technology-marten.md)), domain-
+and integration-event dispatching, the RabbitMQ/MassTransit transport, and the
+DI-based CQRS dispatcher and pipeline behaviors. Depends on both `Domain` and
+`Application`.
 
 ### Purity boundary
 
@@ -428,7 +451,8 @@ where **every** third-party dependency is localized. Nothing depends on
 ### Repository
 
 An abstraction for loading and saving aggregates. `Infrastructure` provides
-**generic repositories** for EF Core and (once selected) for the event store.
+**generic repositories** for EF Core and for the Marten-based event store (see
+[ADR-0019](./architecture/decisions/0019-event-store-technology-marten.md)).
 
 ---
 
@@ -447,6 +471,14 @@ application locally and in the cloud, via the `AppHost` and `ServiceDefaults`
 projects. Aspire is applied at the orchestration layer; the Building Blocks remain
 framework-agnostic. See
 [ADR-0002](./architecture/decisions/0002-use-dotnet-aspire-13-for-orchestration.md).
+
+### Marten
+
+The **MIT-licensed** library that turns **PostgreSQL** into VitalSync's event
+store. Used as a raw event store (append streams + fetch streams), not through its
+convention-based aggregation, so the domain's `LoadFromHistory` rehydration and the
+ADR-0010/0012 aggregate shape stay intact. See
+[ADR-0019](./architecture/decisions/0019-event-store-technology-marten.md).
 
 ### AppHost
 
