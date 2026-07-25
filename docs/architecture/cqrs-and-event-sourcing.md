@@ -15,7 +15,7 @@ Every microservice implements **Command Query Responsibility Segregation (CQRS)*
 │        │               │         │        │              │
 │        ▼               │         │        ▼              │
 │   Aggregate / Domain   │         │   Read model / store  │
-└───────────────────────┘         └───────────────────────┘
+└────────────────────────┘         └───────────────────────┘
 ```
 
 The Application building block provides the `ICommand`, `IQuery`, and corresponding handler abstractions, a hand-rolled dispatcher, and the `Result` / `Failure` model. Domain exceptions (`BusinessRuleViolationException`, `DomainValidationException`) are translated to `Result.Failure` at the Application boundary. See [Building Blocks](./building-blocks.md), the [BuildingBlocks.Application reference](./building-blocks-application.md), and [ADR-0015](./decisions/0015-hand-rolled-cqrs-mediator.md) / [ADR-0017](./decisions/0017-application-error-handling-and-result.md).
@@ -48,6 +48,26 @@ Contexts that are largely CRUD-shaped (e.g., managing the ingredient catalog) ar
 | Read models               | Direct from tables     | Usually via projections                       |
 | Operational overhead      | Lower                  | Higher (event store, projections, versioning) |
 
+## Database & topology
+
+Both persistence approaches run on **PostgreSQL** — the single relational engine
+for the platform. State-stored contexts use EF Core (via the Npgsql provider) and
+event-sourced contexts use Marten; both are PostgreSQL underneath.
+
+**Each bounded context owns its own database.** Contexts never share a database,
+and there are **no cross-database foreign keys, joins, or transactions** —
+cross-context consistency is via integration events. Today all context databases
+are hosted on **one shared PostgreSQL server** (in Aspire: one server resource with
+one `AddDatabase(...)` per context). Moving a context onto its **own dedicated
+server** later ("server per context") is an explicitly supported, non-breaking
+migration: because each context already has its own database, `DbContext`,
+migrations, and connection string, it is a connection-string change plus a data
+move, touching no Domain/Application/Infrastructure code.
+
+The event store and the state-stored store **never co-locate in the same
+database**, even on the same server, so they can move and scale independently. See
+[ADR-0020](./decisions/0020-postgresql-for-state-stored-contexts.md).
+
 ## Event store technology
 
 When a context is event-sourced, its events are persisted in **Marten on
@@ -78,3 +98,4 @@ Regardless of write strategy, the read side may use **projections** optimized fo
 - [Domain model](./domain-model.md)
 - [Communication](./communication.md) (domain vs. integration events)
 - [ADR-0019 — Event store technology (Marten on PostgreSQL)](./decisions/0019-event-store-technology-marten.md)
+- [ADR-0020 — PostgreSQL for state-stored contexts; database per bounded context](./decisions/0020-postgresql-for-state-stored-contexts.md)
