@@ -48,16 +48,33 @@ Contexts that are largely CRUD-shaped (e.g., managing the ingredient catalog) ar
 | Read models               | Direct from tables     | Usually via projections                       |
 | Operational overhead      | Lower                  | Higher (event store, projections, versioning) |
 
+## Event store technology
+
+When a context is event-sourced, its events are persisted in **Marten on
+PostgreSQL**, used as a **raw event store**: the event-sourced repository in
+`BuildingBlocks.Infrastructure` appends uncommitted domain events to the stream
+(with optimistic concurrency asserted against the aggregate's `Version`) and, on
+load, fetches the raw stream and folds it through the aggregate's own
+`LoadFromHistory`. Marten's convention-based `Apply`-on-aggregate aggregation is
+**not** used, so the domain (ADR-0010 / ADR-0012) is untouched.
+
+**Snapshotting is deferred but non-breaking:** because a Marten snapshot is a
+separate document and the event schema is identical with or without snapshots,
+snapshotting can be added per context later with **no event migration**.
+
+Marten is MIT-licensed and runs on PostgreSQL, which has a first-party .NET Aspire
+hosting integration. See [ADR-0019](./decisions/0019-event-store-technology-marten.md).
+
 ## Read models & projections
 
 Regardless of write strategy, the read side may use **projections** optimized for queries. With Event Sourcing, projections are built by replaying events. With EF Core, read models can be the same tables or dedicated query models.
 
 ## Open questions
 
-- Which Bounded Contexts (if any) justify Event Sourcing? _(To be decided.)_
-- Event store technology, if Event Sourcing is adopted. _(To be decided.)_
+- Which Bounded Contexts (if any) justify Event Sourcing? _(To be decided per context.)_
 
 ## Related
 
 - [Domain model](./domain-model.md)
 - [Communication](./communication.md) (domain vs. integration events)
+- [ADR-0019 — Event store technology (Marten on PostgreSQL)](./decisions/0019-event-store-technology-marten.md)
