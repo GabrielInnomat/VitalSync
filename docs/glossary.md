@@ -6,9 +6,12 @@ architecture** (how it is built). It is written to be worth reading for
 experienced engineers who want to understand VitalSync's use cases or the
 design decisions behind it.
 
-Terms are grouped by theme. Within each group they are ordered so that
-foundational terms come first. Cross-references point to the deeper documents
-under [`docs/architecture`](./architecture/overview.md) and the
+## How this glossary is organized
+
+Terms are grouped by theme. **Within each theme they are ordered alphabetically**
+for predictable lookup; where one term builds on another the definition links to
+it directly. Cross-references point to the deeper documents under
+[`docs/architecture`](./architecture/overview.md) and the
 [Architecture Decision Records](./architecture/decisions/README.md) (ADRs).
 
 - [Product & business domains](#product--business-domains)
@@ -26,14 +29,28 @@ under [`docs/architecture`](./architecture/overview.md) and the
 
 ## Product & business domains
 
-### VitalSync
+### Analytics & Reporting
 
-The product: a **cloud-native, distributed platform** that unifies **nutrition**,
-**fitness**, and **health analytics** behind a single user experience. Users
-manage diet and workout data and derive insights from it. A guiding principle of
-the project is *"the architecture is fixed, the domain is fluid"* — technical
-decisions are mandatory and stable, while business requirements are refined
-iteratively.
+The business domain that derives insights and reports from the data produced by
+Nutrition and Fitness. Its concrete requirements are intentionally identified and
+extended as the project evolves.
+
+### Fitness
+
+The business domain concerned with physical activity. Its use cases include
+managing **exercises**, creating **workout plans**, tracking completed **workout
+sessions**, and determining energy expenditure / calories burned.
+
+### Ingredient
+
+A Nutrition concept: a single food item together with its nutritional values. The
+ingredient catalog is largely CRUD-shaped and is therefore a candidate for
+traditional (EF Core) persistence rather than Event Sourcing.
+
+### Meal plan
+
+A Nutrition concept that composes recipes/meals over time; the basis for shopping
+lists and for calculating nutrient intake.
 
 ### Nutrition
 
@@ -43,24 +60,6 @@ The business domain concerned with food and diet. Its use cases include managing
 from consumed meals. It is the most developed domain in the current
 [user stories](./userStories/nutrition/001_createRecipe.md).
 
-### Fitness
-
-The business domain concerned with physical activity. Its use cases include
-managing **exercises**, creating **workout plans**, tracking completed **workout
-sessions**, and determining energy expenditure / calories burned.
-
-### Analytics & Reporting
-
-The business domain that derives insights and reports from the data produced by
-Nutrition and Fitness. Its concrete requirements are intentionally identified and
-extended as the project evolves.
-
-### Ingredient
-
-A Nutrition concept: a single food item together with its nutritional values. The
-ingredient catalog is largely CRUD-shaped and is therefore a candidate for
-traditional (EF Core) persistence rather than Event Sourcing.
-
 ### Recipe
 
 A Nutrition **aggregate** composed of ingredients and quantities. It is the
@@ -68,10 +67,14 @@ canonical example used throughout the architecture docs (e.g. `Recipe`,
 `RecipeId`, `RecipeCreated`) to illustrate aggregates, strongly typed
 identifiers, and domain events.
 
-### Meal plan
+### VitalSync
 
-A Nutrition concept that composes recipes/meals over time; the basis for shopping
-lists and for calculating nutrient intake.
+The product: a **cloud-native, distributed platform** that unifies **nutrition**,
+**fitness**, and **health analytics** behind a single user experience. Users
+manage diet and workout data and derive insights from it. A guiding principle of
+the project is *"the architecture is fixed, the domain is fluid"* — technical
+decisions are mandatory and stable, while business requirements are refined
+iteratively.
 
 ### Workout session
 
@@ -84,13 +87,6 @@ decided — see [CQRS & Event Sourcing](./architecture/cqrs-and-event-sourcing.m
 
 ## Bounded contexts & the ubiquitous language
 
-### Domain-Driven Design (DDD)
-
-The overarching design approach. VitalSync applies DDD in every microservice:
-the **domain layer is the heart** of each service, models the business explicitly,
-and is kept independent of infrastructure. See
-[Domain model](./architecture/domain-model.md).
-
 ### Bounded Context
 
 A boundary within which a domain model and its **ubiquitous language** are
@@ -98,11 +94,12 @@ consistent and self-contained. VitalSync's candidate contexts are **Nutrition**,
 **Fitness**, and **Analytics**; the final decomposition is deliberately part of
 the project and refined iteratively. Contexts never share a domain model.
 
-### Ubiquitous Language
+### Domain-Driven Design (DDD)
 
-The shared, precise vocabulary used consistently by domain experts and code
-within a bounded context. This glossary is, in part, an entry point into that
-language.
+The overarching design approach. VitalSync applies DDD in every microservice:
+the **domain layer is the heart** of each service, models the business explicitly,
+and is kept independent of infrastructure. See
+[Domain model](./architecture/domain-model.md).
 
 ### Microservice
 
@@ -110,6 +107,12 @@ An independently deployable service that owns one business area and its data.
 Services do **not** share databases and avoid synchronous coupling, which
 preserves independent deployability. VitalSync has one service per business area
 (Nutrition, Fitness, Analytics).
+
+### Ubiquitous Language
+
+The shared, precise vocabulary used consistently by domain experts and code
+within a bounded context. This glossary is, in part, an entry point into that
+language.
 
 ---
 
@@ -119,23 +122,20 @@ These are the building-block primitives provided by
 [`BuildingBlocks.Domain`](./architecture/building-blocks-domain.md) and used by
 every service's domain layer.
 
-### Entity
-
-An object with an **identity** that persists over time. Equality is based on
-identity — two entities are equal when they are the **same concrete type** and
-have the **same id** (not on their attribute values). See
-[ADR-0008](./architecture/decisions/0008-entity-identity-and-equality.md).
-
-### Value Object
-
-An immutable object defined entirely by its attributes, with **structural
-equality**. Examples in VitalSync: a nutritional value, a quantity with a unit, a
-calorie amount.
-
 ### Aggregate
 
 A cluster of domain objects treated as a single unit for data changes, bounded by
 its **Aggregate Root**.
+
+### Aggregate owns its domain events
+
+A core ownership rule: **only** the aggregate may raise events; **only** a
+privileged infrastructure contract may clear them; everyone else gets a
+**read-only** view. This is enforced structurally via two interfaces —
+`IHasDomainEvents` (read-only, everyone) and `IDomainEventsManager` (clear,
+infrastructure-only, implemented explicitly). See
+[ADR-0006](./architecture/decisions/0006-aggregate-owns-domain-events.md) and
+[ADR-0007](./architecture/decisions/0007-read-only-vs-managed-domain-events.md).
 
 ### Aggregate Root
 
@@ -152,42 +152,6 @@ other layers. VitalSync provides two aggregate bases:
 The author picks the base that matches the service's persistence strategy
 ([ADR-0012](./architecture/decisions/0012-optional-event-sourcing-aggregate.md)).
 
-### Strongly Typed Identifier
-
-An aggregate identifier modeled as a **Value Object** (a `readonly record struct`
-implementing `IEntityKey<TValue>`) rather than a raw primitive. A `RecipeId` and
-an `IngredientId` are distinct, incompatible types even though both wrap a `Guid`,
-so passing the wrong id is a **compile-time error**. Each key defines its own
-`IsEmpty` rule, making identity validation type-agnostic. See
-[ADR-0005](./architecture/decisions/0005-strongly-typed-aggregate-identifiers.md).
-
-### State object (`IState<TSelf, TKey>`)
-
-For event-sourced aggregates, an **immutable** object that owns the aggregate's
-identity and all **apply / evolve** logic. `Apply(IDomainEvent)` returns the next
-state (`this with { … }`). Keeping evolution logic on the state keeps large
-aggregates free of "apply noise" — the aggregate class holds only the public
-command API. See
-[ADR-0010](./architecture/decisions/0010-aggregate-state-object.md).
-
-### Domain Event
-
-A record of something **business-relevant** that has happened in the domain (e.g.
-`RecipeCreated`, `RecipeRenamed`). Domain events are **pure business data** —
-no infrastructure or third-party types — carry a stable `EventId` and an
-`OccurredAt`, and are **internal** to a service. They may be translated into an
-**integration event** at the service boundary.
-
-### Aggregate owns its domain events
-
-A core ownership rule: **only** the aggregate may raise events; **only** a
-privileged infrastructure contract may clear them; everyone else gets a
-**read-only** view. This is enforced structurally via two interfaces —
-`IHasDomainEvents` (read-only, everyone) and `IDomainEventsManager` (clear,
-infrastructure-only, implemented explicitly). See
-[ADR-0006](./architecture/decisions/0006-aggregate-owns-domain-events.md) and
-[ADR-0007](./architecture/decisions/0007-read-only-vs-managed-domain-events.md).
-
 ### Business Rule vs. Domain Validation
 
 Two distinct concepts, each with its own rule interface and exception:
@@ -200,16 +164,48 @@ Two distinct concepts, each with its own rule interface and exception:
 `RuleChecker` evaluates them and throws the matching exception. See
 [ADR-0009](./architecture/decisions/0009-business-rules-and-domain-validation.md).
 
+### Domain Event
+
+A record of something **business-relevant** that has happened in the domain (e.g.
+`RecipeCreated`, `RecipeRenamed`). Domain events are **pure business data** —
+no infrastructure or third-party types — carry a stable `EventId` and an
+`OccurredAt`, and are **internal** to a service. They may be translated into an
+**integration event** at the service boundary.
+
+### Entity
+
+An object with an **identity** that persists over time. Equality is based on
+identity — two entities are equal when they are the **same concrete type** and
+have the **same id** (not on their attribute values). See
+[ADR-0008](./architecture/decisions/0008-entity-identity-and-equality.md).
+
+### State object (`IState<TSelf, TKey>`)
+
+For event-sourced aggregates, an **immutable** object that owns the aggregate's
+identity and all **apply / evolve** logic. `Apply(IDomainEvent)` returns the next
+state (`this with { … }`). Keeping evolution logic on the state keeps large
+aggregates free of "apply noise" — the aggregate class holds only the public
+command API. See
+[ADR-0010](./architecture/decisions/0010-aggregate-state-object.md).
+
+### Strongly Typed Identifier
+
+An aggregate identifier modeled as a **Value Object** (a `readonly record struct`
+implementing `IEntityKey<TValue>`) rather than a raw primitive. A `RecipeId` and
+an `IngredientId` are distinct, incompatible types even though both wrap a `Guid`,
+so passing the wrong id is a **compile-time error**. Each key defines its own
+`IsEmpty` rule, making identity validation type-agnostic. See
+[ADR-0005](./architecture/decisions/0005-strongly-typed-aggregate-identifiers.md).
+
+### Value Object
+
+An immutable object defined entirely by its attributes, with **structural
+equality**. Examples in VitalSync: a nutritional value, a quantity with a unit, a
+calorie amount.
+
 ---
 
 ## CQRS & the application layer
-
-### CQRS (Command Query Responsibility Segregation)
-
-A **mandatory** pattern in every microservice: write operations (**commands**) are
-separated from read operations (**queries**), each handled by a dedicated handler.
-The abstractions live in
-[`BuildingBlocks.Application`](./architecture/building-blocks-application.md).
 
 ### Command
 
@@ -219,16 +215,12 @@ An object that expresses **intent** and **changes state** (e.g. `CreateRecipe`,
 commands return the new aggregate's strongly typed id; **delete/update** commands
 return a plain `Result`.
 
-### Query
+### CQRS (Command Query Responsibility Segregation)
 
-An object that **reads state and never mutates it**. Marked with `IQuery<TResult>`
-and handled by an `IQueryHandler<TQuery, TResult>` returning `Task<Result<TResult>>`.
-
-### Handler
-
-The single dedicated class that processes one command or query
-(`ICommandHandler<…>`, `IQueryHandler<…>`). Handlers are **async-only** —
-they return a `Task<…>` and accept a `CancellationToken`.
+A **mandatory** pattern in every microservice: write operations (**commands**) are
+separated from read operations (**queries**), each handled by a dedicated handler.
+The abstractions live in
+[`BuildingBlocks.Application`](./architecture/building-blocks-application.md).
 
 ### Dispatcher (`ISender`) / hand-rolled mediator
 
@@ -238,19 +230,13 @@ The single entry point callers use to send a command or query. VitalSync uses a
 matching handler and pipeline. See
 [ADR-0015](./architecture/decisions/0015-hand-rolled-cqrs-mediator.md).
 
-### Pipeline behavior
+### Exception-to-Result translation
 
-A wrapper around handler execution that applies **cross-cutting concerns**
-(exception translation, logging, unit-of-work, validation). Behaviors run in
-**explicit registration order**; only the `IPipelineBehavior<TRequest, TResponse>`
-contract lives in `Application`, the concrete behaviors live in `Infrastructure`.
-
-### Result / Result&lt;T&gt;
-
-The uniform outcome model returned by handlers. `Result` is success or a failure
-carrying one or more `Failure`s; `Result<T>` additionally carries a value on
-success. It lives in `BuildingBlocks.Application`. See
-[ADR-0016](./architecture/decisions/0016-remove-common-result-in-application.md).
+The rule that expected **domain exceptions** (`BusinessRuleViolationException`,
+`DomainValidationException`) are translated into `Result.Failure` by an
+`ExceptionToResultBehavior` at the application boundary, while unexpected
+exceptions bubble up. See
+[ADR-0017](./architecture/decisions/0017-application-error-handling-and-result.md).
 
 ### Failure / FailureCategory
 
@@ -260,73 +246,144 @@ a human-readable `Message`, and a `Category`. Categories are `Validation`,
 `Unexpected` category — unexpected errors stay exceptions and bubble to a thin
 global handler.
 
-### Exception-to-Result translation
+### Handler
 
-The rule that expected **domain exceptions** (`BusinessRuleViolationException`,
-`DomainValidationException`) are translated into `Result.Failure` by an
-`ExceptionToResultBehavior` at the application boundary, while unexpected
-exceptions bubble up. See
-[ADR-0017](./architecture/decisions/0017-application-error-handling-and-result.md).
+The single dedicated class that processes one command or query
+(`ICommandHandler<…>`, `IQueryHandler<…>`). Handlers are **async-only** —
+they return a `Task<…>` and accept a `CancellationToken`.
+
+### Pipeline behavior
+
+A wrapper around handler execution that applies **cross-cutting concerns**
+(exception translation, logging, unit-of-work, validation). Behaviors run in
+**explicit registration order**; only the `IPipelineBehavior<TRequest, TResponse>`
+contract lives in `Application`, the concrete behaviors live in `Infrastructure`.
+
+### Query
+
+An object that **reads state and never mutates it**. Marked with `IQuery<TResult>`
+and handled by an `IQueryHandler<TQuery, TResult>` returning `Task<Result<TResult>>`.
+
+### `Result` / `Result<T>`
+
+The uniform outcome model returned by handlers. `Result` is success or a failure
+carrying one or more `Failure`s; `Result<T>` additionally carries a value on
+success. It lives in `BuildingBlocks.Application`. See
+[ADR-0016](./architecture/decisions/0016-remove-common-result-in-application.md).
 
 ---
 
 ## Event Sourcing & persistence
 
-### Persistence strategy (selective Event Sourcing)
+### Database per bounded context
 
-VitalSync uses **two complementary approaches**. Traditional state-storage
-(**EF Core**) is the default; **Event Sourcing** is applied *only where it adds
-business value*. The exact contexts that justify Event Sourcing are still to be
-decided. See [CQRS & Event Sourcing](./architecture/cqrs-and-event-sourcing.md).
+The database topology: **each bounded context owns its own databases**, never
+shared, with **no cross-database foreign keys, joins, or transactions**
+(cross-context consistency is via integration events). The unit of ownership is a
+**[write+read pair](#write-database--read-database-writeread-pair)** — each context
+owns exactly two PostgreSQL databases. Today all context databases are hosted on
+**one shared PostgreSQL server** (in Aspire: one server resource with **two
+`AddDatabase(...)` calls per context**, e.g. `nutrition-write` and
+`nutrition-read`). Moving either database of a context onto its **own dedicated
+server** later is a sanctioned, non-breaking migration — a connection-string change
+plus a data move, touching no application code. See
+[ADR-0020](./architecture/decisions/0020-postgresql-for-state-stored-contexts.md)
+and
+[ADR-0021](./architecture/decisions/0021-write-read-database-pair-per-context.md).
 
 ### Event Sourcing (ES)
 
 A persistence approach in which an aggregate's state is derived from an
 **append-only stream of domain events** rather than being stored directly. It
 provides inherent audit/history and natural temporal queries / replay, at the
-cost of higher complexity (event store, projections, versioning).
+cost of higher complexity (event store, projections, versioning). Backed by the
+[event store](#event-store-marten-on-postgresql).
 
-### State-stored (traditional) persistence
+### Event store (Marten on PostgreSQL)
 
-The default approach: the aggregate object is persisted directly via EF Core.
-Simpler than Event Sourcing, but without inherent history or replay.
+The technology backing event-sourced contexts: [Marten](#marten) on
+[PostgreSQL](#postgresql), used as a **raw event store**. The event-sourced
+repository appends uncommitted domain events to the stream (with optimistic
+concurrency on [`Version`](#version-stream-position)) and, on load, fetches the raw
+stream and folds it through the aggregate's own
+[`LoadFromHistory`](#raiseevent--loadfromhistory) — Marten's convention-based
+`Apply`-on-aggregate aggregation is **not** used, keeping the domain untouched.
+[Snapshotting](#snapshotting) is deferred but can be added per context without an
+event-schema migration. The Marten streams (`mt_events` / `mt_streams`) live in the
+context's **write database**
+([ADR-0021](./architecture/decisions/0021-write-read-database-pair-per-context.md)).
+See
+[ADR-0019](./architecture/decisions/0019-event-store-technology-marten.md).
+
+### Eventual consistency (read side)
+
+Because a context's write and read databases are **separate** PostgreSQL databases,
+no single local transaction spans both, so read-model updates are **necessarily
+post-commit and eventually consistent** — typically low-latency (the
+[Publisher](#publisher-outbox-backed) drains immediately after commit), but
+correctness never depends on the lag being zero. **Read-your-writes** is handled at
+the BFF/UI where it matters. See
+[ADR-0022](./architecture/decisions/0022-event-driven-read-models.md).
+
+### Persistence strategy (selective Event Sourcing)
+
+VitalSync uses **two complementary approaches**. Traditional
+[state-storage](#state-stored-traditional-persistence) (**EF Core**) is the default;
+[Event Sourcing](#event-sourcing-es) is applied *only where it adds business value*.
+The exact contexts that justify Event Sourcing are still to be decided. See
+[CQRS & Event Sourcing](./architecture/cqrs-and-event-sourcing.md).
+
+### Projection / Read model
+
+A representation of data **optimized for queries** on the read side of CQRS. Read
+models live in a context's dedicated **[read database](#write-database--read-database-writeread-pair)**
+— never mixed into the write tables — and are updated **uniformly** for both
+event-sourced and state-stored contexts by replaying/handling the context's
+**domain events** after the write commits (via a
+[projection handler](#projection-handler)). They are **derived and rebuildable**: a
+read database can be dropped and reconstructed by replaying events (ES) or
+re-running projections over the write side. See
+[ADR-0021](./architecture/decisions/0021-write-read-database-pair-per-context.md)
+and
+[ADR-0022](./architecture/decisions/0022-event-driven-read-models.md).
+
+### Projection handler
+
+An **in-context** handler that applies a domain event to a
+[read model](#projection--read-model) in the read database. Because delivery is
+at-least-once, projection handlers **must** be **idempotent** (applying an event
+twice yields the same state — e.g. upsert by key) and **order-aware** (each read
+model tracks a **last-processed position/version** per aggregate/stream and skips
+events at or below it). Cross-aggregate ordering is **not** guaranteed. In-context
+projections consume **domain** events directly; cross-context read data arrives only
+via **integration** events. Read models are **not** a Building Block — they are
+domain-shaped and owned by each service. See
+[ADR-0022](./architecture/decisions/0022-event-driven-read-models.md).
+
+### Publisher (outbox-backed)
+
+The `BuildingBlocks.Infrastructure` component that, **after** the write commits,
+**drains the transactional [outbox](#outbox-transactional-outbox)** and dispatches
+each domain event to (a) **in-context [projection handlers](#projection-handler)**
+that update the read database and (b) the **integration-event path** to
+RabbitMQ/MassTransit. Delivery is **at-least-once**: an outbox entry is marked
+processed only after its handlers succeed, otherwise it is retried. See
+[ADR-0022](./architecture/decisions/0022-event-driven-read-models.md).
 
 ### RaiseEvent / LoadFromHistory
 
 The two ways an event-sourced aggregate's state changes: `RaiseEvent(e, clock)`
 stamps a new event, applies it to the state, validates identity, advances the
 version, and records it; `LoadFromHistory(history)` **replays** a persisted stream
-to rebuild state (rehydration, recording nothing). A **replay-misuse guard**
-prevents `LoadFromHistory` from running after uncommitted events exist.
+to rebuild state ([rehydration](#rehydration), recording nothing). A
+**replay-misuse guard** prevents `LoadFromHistory` from running after uncommitted
+events exist.
 
 ### Rehydration
 
 Rebuilding an event-sourced aggregate's current state by replaying its event
-stream (via `LoadFromHistory`), typically inside the event-sourced repository.
-
-### Version (stream position)
-
-The monotonic position of an event-sourced aggregate within its stream, advanced
-on every `RaiseEvent`. Used for ordering and optimistic **concurrency** (asserted
-as the expected revision when appending to the Marten event stream).
-
-### Projection / Read model
-
-A representation of data **optimized for queries** on the read side of CQRS. With
-Event Sourcing, projections are built by replaying events; with EF Core, read
-models may be the same tables or purpose-built views.
-
-### Event store (Marten on PostgreSQL)
-
-The technology backing event-sourced contexts: **Marten** (MIT-licensed) on
-**PostgreSQL**, used as a **raw event store**. The event-sourced repository
-appends uncommitted domain events to the stream (with optimistic concurrency on
-`Version`) and, on load, fetches the raw stream and folds it through the
-aggregate's own `LoadFromHistory` — Marten's convention-based `Apply`-on-aggregate
-aggregation is **not** used, keeping the domain untouched. Snapshotting is deferred
-but can be added per context without an event-schema migration. PostgreSQL has a
-first-party .NET Aspire hosting integration. See
-[ADR-0019](./architecture/decisions/0019-event-store-technology-marten.md).
+stream (via [`LoadFromHistory`](#raiseevent--loadfromhistory)), typically inside the
+event-sourced repository.
 
 ### Snapshotting
 
@@ -336,31 +393,11 @@ the tail of the stream instead of the whole history. In VitalSync it is
 **deferred**; because a Marten snapshot is a separate document and the event schema
 is unchanged, it can be introduced later per context with **no event migration**.
 
-### PostgreSQL
+### State-stored (traditional) persistence
 
-The **single relational database engine** for the platform. It backs **both**
-state-stored contexts (EF Core via the Npgsql provider) and event-sourced contexts
-(Marten). Standardizing on one engine — already required by Marten (ADR-0019) —
-minimizes operational surface and reuses the first-party .NET Aspire PostgreSQL
-hosting integration. See
-[ADR-0020](./architecture/decisions/0020-postgresql-for-state-stored-contexts.md).
-
-### Database per bounded context
-
-The database topology: **each bounded context owns its own database**, never
-shared, with **no cross-database foreign keys, joins, or transactions**
-(cross-context consistency is via integration events). Today all context databases
-are hosted on **one shared PostgreSQL server** (in Aspire: one server resource with
-one `AddDatabase(...)` per context). Moving a context onto its **own dedicated
-server** later is a sanctioned, non-breaking migration — a connection-string change
-plus a data move, touching no application code. See
-[ADR-0020](./architecture/decisions/0020-postgresql-for-state-stored-contexts.md).
-
-### Entity Framework Core (EF Core)
-
-The ORM used for state-stored persistence, running on **PostgreSQL** via the
-Npgsql provider (ADR-0020). Persistence tests also use its **InMemory** provider
-for fast feedback.
+The default approach: the aggregate object is persisted directly via
+[EF Core](#entity-framework-core-ef-core). Simpler than
+[Event Sourcing](#event-sourcing-es), but without inherent history or replay.
 
 ### Unit of Work
 
@@ -368,9 +405,32 @@ The infrastructure component that groups changes into a single transactional
 save. On save, it collects the aggregates' domain events, hands them to the
 dispatcher/outbox, and clears them **only after** the save succeeds.
 
+### Version (stream position)
+
+The monotonic position of an event-sourced aggregate within its stream, advanced
+on every `RaiseEvent`. Used for ordering and optimistic **concurrency** (asserted
+as the expected revision when appending to the Marten event stream).
+
+### Write database / Read database (write+read pair)
+
+The two databases every bounded context owns. The **write database** holds the
+authoritative state (EF Core tables for state-stored contexts; Marten event streams
+for event-sourced contexts). The **read database** holds **query-optimized
+[read models](#projection--read-model)**, updated from domain events after the write
+commits, and is **derived and rebuildable** (never the system of record). Both
+belong to one context and are never shared. See
+[ADR-0021](./architecture/decisions/0021-write-read-database-pair-per-context.md).
+
 ---
 
 ## Messaging & communication
+
+### Asynchronous messaging
+
+The only channel for inter-service communication, chosen to maximize loose
+coupling and independent deployability and to prevent distributed call chains and
+temporal coupling. See
+[ADR-0004](./architecture/decisions/0004-asynchronous-messaging-between-services.md).
 
 ### Backend-for-Frontend (BFF)
 
@@ -379,11 +439,6 @@ and orchestrates calls to microservices via **code-first gRPC**. It centralizes
 cross-cutting concerns (auth, aggregation, response shaping) and decouples the UI
 from the service topology. See
 [ADR-0003](./architecture/decisions/0003-bff-with-rest-and-code-first-grpc.md).
-
-### Frontend (Blazor)
-
-The user interface. It holds **no business logic** and communicates
-**exclusively** through the BFF — never directly with a microservice.
 
 ### Code-first gRPC
 
@@ -397,23 +452,16 @@ The mandatory topology: **Frontend → BFF** (REST) → **Microservice** (gRPC),
 synchronous service-to-service communication. See
 [Communication](./architecture/communication.md).
 
+### Frontend (Blazor)
+
+The user interface. It holds **no business logic** and communicates
+**exclusively** through the BFF — never directly with a microservice.
+
 ### Integration Event
 
 A message published to the messaging backbone to communicate **across services**.
 Distinct from a **domain event** (internal to one service); domain events are
 translated into integration events at the service boundary.
-
-### Asynchronous messaging
-
-The only channel for inter-service communication, chosen to maximize loose
-coupling and independent deployability and to prevent distributed call chains and
-temporal coupling. See
-[ADR-0004](./architecture/decisions/0004-asynchronous-messaging-between-services.md).
-
-### RabbitMQ
-
-The chosen messaging platform (the message broker) for asynchronous inter-service
-communication.
 
 ### MassTransit
 
@@ -423,8 +471,19 @@ The abstraction layer over RabbitMQ, providing publish/subscribe, the
 ### Outbox (transactional outbox)
 
 A reliability pattern: domain events collected on save are written and then
-forwarded to the messaging backbone, ensuring messages are not lost even if the
-process fails after committing state.
+forwarded after commit, ensuring messages are not lost even if the process fails
+after committing state. In VitalSync the **same** outbox is written in the write
+transaction and drained after commit by the [Publisher](#publisher-outbox-backed)
+to drive **two** paths: the **integration-event** path to RabbitMQ (ADR-0004)
+**and** the **in-context read-model projections** in the read database. This gives
+**at-least-once** delivery and closes the crash-window drift a naive in-memory
+publisher would have across two databases. See
+[ADR-0022](./architecture/decisions/0022-event-driven-read-models.md).
+
+### RabbitMQ
+
+The chosen messaging platform (the message broker) for asynchronous inter-service
+communication.
 
 ---
 
@@ -438,19 +497,19 @@ Split into exactly **three** packages by a **purity / dependency** boundary, not
 functional one. See [Building Blocks](./architecture/building-blocks.md) and
 [ADR-0018](./architecture/decisions/0018-three-building-block-packages.md).
 
-### BuildingBlocks.Domain
-
-The **pure core**: tactical DDD primitives (entities, the two aggregate bases,
-strongly typed keys, domain events, business-rule/validation abstractions). It has
-**zero** third-party dependencies — BCL only. See
-[reference](./architecture/building-blocks-domain.md).
-
 ### BuildingBlocks.Application
 
 The **framework-agnostic use-case layer**: CQRS contracts, the pipeline-behavior
 and dispatcher contracts, and the `Result` / `Failure` model. Depends **only** on
 `Domain` and holds **contracts, not implementations**. See
 [reference](./architecture/building-blocks-application.md).
+
+### BuildingBlocks.Domain
+
+The **pure core**: tactical DDD primitives (entities, the two aggregate bases,
+strongly typed keys, domain events, business-rule/validation abstractions). It has
+**zero** third-party dependencies — BCL only. See
+[reference](./architecture/building-blocks-domain.md).
 
 ### BuildingBlocks.Infrastructure
 
@@ -479,12 +538,6 @@ An abstraction for loading and saving aggregates. `Infrastructure` provides
 
 ## Technology & operations
 
-### Cloud-native
-
-A quality goal for VitalSync: services are built to run in a modern,
-containerized, orchestrated cloud environment and to be modular, extensible,
-maintainable, testable, and loosely coupled.
-
 ### .NET Aspire
 
 The **orchestrator** (version 13) used to compose and run the distributed
@@ -493,18 +546,22 @@ projects. Aspire is applied at the orchestration layer; the Building Blocks rema
 framework-agnostic. See
 [ADR-0002](./architecture/decisions/0002-use-dotnet-aspire-13-for-orchestration.md).
 
-### Marten
-
-The **MIT-licensed** library that turns **PostgreSQL** into VitalSync's event
-store. Used as a raw event store (append streams + fetch streams), not through its
-convention-based aggregation, so the domain's `LoadFromHistory` rehydration and the
-ADR-0010/0012 aggregate shape stay intact. See
-[ADR-0019](./architecture/decisions/0019-event-store-technology-marten.md).
-
 ### AppHost
 
 The .NET Aspire entry-point project that wires up and runs the services and their
 dependencies (e.g. `dotnet run --project src/Aspire/VitalSync.AppHost`).
+
+### Cloud-native
+
+A quality goal for VitalSync: services are built to run in a modern,
+containerized, orchestrated cloud environment and to be modular, extensible,
+maintainable, testable, and loosely coupled.
+
+### Entity Framework Core (EF Core)
+
+The ORM used for state-stored persistence, running on [PostgreSQL](#postgresql) via
+the Npgsql provider (ADR-0020). Persistence tests also use its **InMemory** provider
+for fast feedback.
 
 ### IClock
 
@@ -512,15 +569,35 @@ An abstraction over "now" that makes time-dependent domain behavior
 **deterministic** and testable. On the event-sourced base, `RaiseEvent` stamps
 events through `IClock`.
 
+### Marten
+
+The **MIT-licensed** library that turns [PostgreSQL](#postgresql) into VitalSync's
+[event store](#event-store-marten-on-postgresql). Used as a raw event store (append
+streams + fetch streams), not through its convention-based aggregation, so the
+domain's `LoadFromHistory` rehydration and the ADR-0010/0012 aggregate shape stay
+intact. See
+[ADR-0019](./architecture/decisions/0019-event-store-technology-marten.md).
+
+### PostgreSQL
+
+The **single relational database engine** for the platform. It backs **both**
+state-stored contexts (EF Core via the Npgsql provider) and event-sourced contexts
+([Marten](#marten)), and hosts **both the write and the read database** of every
+context
+([ADR-0021](./architecture/decisions/0021-write-read-database-pair-per-context.md)).
+Standardizing on one engine — already required by Marten (ADR-0019) — minimizes
+operational surface and reuses the first-party .NET Aspire PostgreSQL hosting
+integration. See
+[ADR-0020](./architecture/decisions/0020-postgresql-for-state-stored-contexts.md).
+
 ---
 
 ## Testing
 
-### Testing strategy
+### Behavior over implementation
 
-Automated tests cover **both** the Building Blocks and the individual
-microservices, spanning several categories. See
-[Testing strategy](./architecture/testing-strategy.md).
+A testing principle: assert observable behavior (e.g. "creating a recipe raises a
+`RecipeCreated` event") rather than internal details.
 
 ### Test categories
 
@@ -533,6 +610,12 @@ microservices, spanning several categories. See
 - **Integration tests** — components working together with real-ish infrastructure.
 - **Component communication tests** — gRPC contracts and message publish/consume.
 
+### Testing strategy
+
+Automated tests cover **both** the Building Blocks and the individual
+microservices, spanning several categories. See
+[Testing strategy](./architecture/testing-strategy.md).
+
 ### Tooling
 
 **xUnit** (with built-in `Assert.*`, see
@@ -540,26 +623,9 @@ microservices, spanning several categories. See
 **NSubstitute** for substitutes/mocks, and **EF Core InMemory** for fast
 persistence tests. Domain tests prefer lightweight hand-written test doubles.
 
-### Behavior over implementation
-
-A testing principle: assert observable behavior (e.g. "creating a recipe raises a
-`RecipeCreated` event") rather than internal details.
-
 ---
 
 ## Process & conventions
-
-### Architecture Decision Record (ADR)
-
-A lightweight document capturing a single architectural decision, its context, and
-its consequences. ADRs are **immutable once accepted** — to change a decision you
-add a new ADR that **supersedes** the old one (e.g. ADR-0012 supersedes ADR-0011).
-See the [ADR index](./architecture/decisions/README.md).
-
-### ADR status
-
-An ADR is **Proposed** (under discussion), **Accepted** (decided and in effect),
-or **Superseded** (replaced by a later, linked ADR).
 
 ### "Architecture is fixed, the domain is fluid"
 
@@ -572,6 +638,18 @@ business/domain requirements are expected to be **refined iteratively**.
 The project phase in which open questions are deliberately left unresolved and
 revisited — most notably **which bounded contexts justify Event Sourcing** and
 the **final bounded-context decomposition**.
+
+### Architecture Decision Record (ADR)
+
+A lightweight document capturing a single architectural decision, its context, and
+its consequences. ADRs are **immutable once accepted** — to change a decision you
+add a new ADR that **supersedes** the old one (e.g. ADR-0012 supersedes ADR-0011).
+See the [ADR index](./architecture/decisions/README.md).
+
+### ADR status
+
+An ADR is **Proposed** (under discussion), **Accepted** (decided and in effect),
+or **Superseded** (replaced by a later, linked ADR).
 
 ### User story
 
