@@ -36,6 +36,8 @@ An ADR documents a single architectural decision, its context, and its consequen
 | [0018](./0018-three-building-block-packages.md)           | Three building block packages: Domain, Application, Infrastructure | Accepted        |
 | [0019](./0019-event-store-technology-marten.md)           | Marten on PostgreSQL as the event store                 | Accepted                  |
 | [0020](./0020-postgresql-for-state-stored-contexts.md)    | PostgreSQL for state-stored contexts; database per bounded context | Accepted        |
+| [0021](./0021-write-read-database-pair-per-context.md)    | Write/read database pair per bounded context            | Accepted                  |
+| [0022](./0022-event-driven-read-models.md)               | Event-driven read models via an outbox-backed publisher | Accepted                  |
 
 ## Template
 

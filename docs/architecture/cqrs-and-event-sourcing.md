@@ -4,7 +4,7 @@
 
 Every microservice implements **Command Query Responsibility Segregation (CQRS)** to separate write operations from read operations.
 
-- **Commands** change state and express intent (e.g., _CreateRecipe_, _CompleteWorkoutSession_). They return a `Result` (success/failure), or a `Result<T>` when a value is needed — e.g. a **create** command returns the new aggregate's strongly typed id (`Result<RecipeId>`) so the frontend can navigate to it. A **delete/void** command returns a plain `Result`.
+- **Commands** change state and express intent (e.g., _CreateRecipe_, _CompleteWorkoutSession_). They return a `Result` (success/failure), or a `Result<T>` when a value is needed — e.g. a **create** returns the new typed id.
 - **Queries** read state and never mutate it; they return `Result<T>`.
 - Commands and queries are handled by **dedicated handlers**.
 
@@ -18,7 +18,7 @@ Every microservice implements **Command Query Responsibility Segregation (CQRS)*
 └────────────────────────┘         └───────────────────────┘
 ```
 
-The Application building block provides the `ICommand`, `IQuery`, and corresponding handler abstractions, a hand-rolled dispatcher, and the `Result` / `Failure` model. Domain exceptions (`BusinessRuleViolationException`, `DomainValidationException`) are translated to `Result.Failure` at the Application boundary. See [Building Blocks](./building-blocks.md), the [BuildingBlocks.Application reference](./building-blocks-application.md), and [ADR-0015](./decisions/0015-hand-rolled-cqrs-mediator.md) / [ADR-0017](./decisions/0017-application-error-handling-and-result.md).
+The Application building block provides the `ICommand`, `IQuery`, and corresponding handler abstractions, a hand-rolled dispatcher, and the `Result` / `Failure` model. Domain exceptions (`BusinessRuleViolationException`, `DomainValidationException`) are translated to `Result.Failure` by an Application pipeline behavior.
 
 ## Persistence strategy
 
@@ -54,15 +54,25 @@ Both persistence approaches run on **PostgreSQL** — the single relational engi
 for the platform. State-stored contexts use EF Core (via the Npgsql provider) and
 event-sourced contexts use Marten; both are PostgreSQL underneath.
 
-**Each bounded context owns its own database.** Contexts never share a database,
-and there are **no cross-database foreign keys, joins, or transactions** —
-cross-context consistency is via integration events. Today all context databases
-are hosted on **one shared PostgreSQL server** (in Aspire: one server resource with
-one `AddDatabase(...)` per context). Moving a context onto its **own dedicated
+**Each bounded context owns exactly two PostgreSQL databases: a write database and
+a read database** (see [ADR-0021](./decisions/0021-write-read-database-pair-per-context.md)).
+
+- The **write database** holds the authoritative state: EF Core tables for
+  state-stored contexts, and the Marten event streams for event-sourced contexts.
+- The **read database** holds **query-optimized read models** (projections), kept
+  up to date from domain events after the write commits (see
+  [ADR-0022](./decisions/0022-event-driven-read-models.md)). It is **derived and
+  rebuildable** — never the system of record.
+
+Contexts never share a database, and there are **no cross-database foreign keys,
+joins, or transactions** — cross-context consistency is via integration events.
+Today both databases of every context are hosted on **one shared PostgreSQL
+server** (in Aspire: one server resource with **two `AddDatabase(...)` calls per
+context**, e.g. `nutrition-write` and `nutrition-read`, each with its own named
+connection string). Moving either database of a context onto its **own dedicated
 server** later ("server per context") is an explicitly supported, non-breaking
-migration: because each context already has its own database, `DbContext`,
-migrations, and connection string, it is a connection-string change plus a data
-move, touching no Domain/Application/Infrastructure code.
+migration: a connection-string change plus a data move, touching no
+Domain/Application/Infrastructure code.
 
 The event store and the state-stored store **never co-locate in the same
 database**, even on the same server, so they can move and scale independently. See
@@ -87,7 +97,32 @@ hosting integration. See [ADR-0019](./decisions/0019-event-store-technology-mart
 
 ## Read models & projections
 
-Regardless of write strategy, the read side may use **projections** optimized for queries. With Event Sourcing, projections are built by replaying events. With EF Core, read models can be the same tables or dedicated query models.
+The read side of every context lives in its own **read database**
+([ADR-0021](./decisions/0021-write-read-database-pair-per-context.md)) and is kept
+up to date by an **event-driven, outbox-backed Publisher**
+([ADR-0022](./decisions/0022-event-driven-read-models.md)), used **uniformly** for
+event-sourced and state-stored contexts:
+
+1. On command handling the aggregate raises **domain events** (ES: appended to the
+   Marten stream; state-stored: collected on the aggregate).
+2. In the **write transaction** those events are also written to a **transactional
+   outbox** in the write database, so they are captured atomically with the change
+   (no cross-database transaction is required).
+3. After commit, the **Publisher** (in `BuildingBlocks.Infrastructure`) drains the
+   outbox and dispatches each event to **in-context projection handlers** (which
+   update the read database) and, where selected, to the **integration-event path**
+   on RabbitMQ/MassTransit ([ADR-0004](./decisions/0004-asynchronous-messaging-between-services.md)).
+   The same outbox already required by ADR-0004 is reused.
+4. An outbox entry is marked processed **only after** its handlers succeed, giving
+   **at-least-once** delivery.
+
+Because delivery is at-least-once and the two databases are separate, read-model
+updates are **eventually consistent** with writes, and projection handlers **must
+be idempotent and per-aggregate order-aware** (tracking a last-processed
+position/version). Read models are **domain-shaped and owned by each service** — not
+a Building Block; Infrastructure ships only the plumbing (Publisher, outbox,
+dispatch loop, projection runner, transport). Read models are **rebuildable** by
+replaying events (ES) or re-running projections over the write side.
 
 ## Open questions
 
@@ -99,3 +134,5 @@ Regardless of write strategy, the read side may use **projections** optimized fo
 - [Communication](./communication.md) (domain vs. integration events)
 - [ADR-0019 — Event store technology (Marten on PostgreSQL)](./decisions/0019-event-store-technology-marten.md)
 - [ADR-0020 — PostgreSQL for state-stored contexts; database per bounded context](./decisions/0020-postgresql-for-state-stored-contexts.md)
+- [ADR-0021 — Write/read database pair per bounded context](./decisions/0021-write-read-database-pair-per-context.md)
+- [ADR-0022 — Event-driven read models via an outbox-backed publisher](./decisions/0022-event-driven-read-models.md)
