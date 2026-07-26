@@ -32,7 +32,8 @@ microservices using **DDD**, **CQRS**, and **selective Event Sourcing**.
 | Microservices           | ASP.NET Core, one per business area                      |
 | Inter-service messaging | RabbitMQ via MassTransit                                 |
 | Persistence             | EF Core on PostgreSQL; Event Sourcing via Marten on PostgreSQL where it adds business value (ADR-0019/0020) |
-| Database topology       | PostgreSQL, one database per bounded context; shared server now, server-per-context possible later (ADR-0020) |
+| Database topology       | PostgreSQL; a **write + read database pair** per bounded context (ADR-0021); shared server now, server-per-context possible later (ADR-0020) |
+| Read models             | Event-driven projections in each context's read DB via an outbox-backed publisher (ADR-0022) |
 | Patterns                | DDD, CQRS, Event Sourcing (selective)                    |
 | Testing                 | xUnit (incl. built-in asserts), NSubstitute, EF Core InMemory |
 
@@ -125,14 +126,17 @@ See `docs/architecture/communication.md` and the ADRs below.
 - **Everything runs on PostgreSQL** — the single relational engine (ADR-0020).
   State-stored contexts use **EF Core via the Npgsql provider**; event-sourced
   contexts use **Marten on PostgreSQL** (ADR-0019).
-- **Each bounded context owns its own database** — never shared, with **no
-  cross-database foreign keys, joins, or transactions** (cross-context consistency is
-  via integration events). Today all context databases live on **one shared
-  PostgreSQL server** (in Aspire: one server resource with one `AddDatabase(...)` per
-  context). Moving a context onto its **own dedicated server** later is a sanctioned,
+- **Each bounded context owns a write + read database pair** (ADR-0021). The **write
+  database** holds the authoritative state (EF Core tables, or Marten event streams);
+  the **read database** holds query-optimized read models. Databases are **never
+  shared across contexts**, with **no cross-database foreign keys, joins, or
+  transactions** (cross-context consistency is via integration events). Today all
+  context databases live on **one shared PostgreSQL server** (in Aspire: one server
+  resource with **two `AddDatabase(...)` calls per context**, e.g. `nutrition-write`
+  and `nutrition-read`, each with its own named connection string). Moving either
+  database of a context onto its **own dedicated server** later is a sanctioned,
   non-breaking migration — a connection-string change plus a data move, touching no
-  Domain/Application/Infrastructure code (ADR-0020). Give each context its own
-  `DbContext`, migrations, and named connection string to keep this cheap.
+  Domain/Application/Infrastructure code (ADR-0020/0021).
 - The **event store is Marten on PostgreSQL** (ADR-0019), used as a **raw event store**:
   the event-sourced repository in `BuildingBlocks.Infrastructure` appends uncommitted
   domain events (optimistic concurrency on `Version`) and, on load, fetches the raw
@@ -141,6 +145,22 @@ See `docs/architecture/communication.md` and the ADRs below.
   (ADR-0010 / ADR-0012) stays untouched.
 - The **event store and the state-stored store never co-locate in the same database**,
   even on the same server, so they can move and scale independently.
+- **Read models are event-driven, via an outbox-backed publisher** (ADR-0022), used
+  uniformly for ES and state-stored contexts: domain events are written to a
+  **transactional outbox** in the write transaction; after commit the **Publisher**
+  (in `BuildingBlocks.Infrastructure`) drains the outbox and dispatches events to
+  **in-context projection handlers** (updating the read DB) and, where selected, to
+  the **integration-event path** on RabbitMQ (the same outbox already required by
+  ADR-0004 is reused). Delivery is **at-least-once**, so projection handlers **must
+  be idempotent and per-aggregate order-aware** (track a last-processed
+  position/version); reads are **eventually consistent** with writes.
+- **Read models are owned by each service, not a Building Block** — the service owns
+  its read-model schema, projection handlers, and queries; Infrastructure ships only
+  the plumbing (Publisher, outbox, dispatch loop, projection runner, transport). Read
+  models are **derived and rebuildable** by replaying events / re-running projections.
+- **In-context** projections use **domain** events directly; **integration** events
+  (RabbitMQ) are the **only** cross-context signal — never read another context's
+  database.
 - **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
   and the event schema is unchanged, so snapshots can be added per context later with
   **no event migration**.

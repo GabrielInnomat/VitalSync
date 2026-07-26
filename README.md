@@ -2,7 +2,7 @@
 
 > A cloud-native, distributed platform unifying **nutrition**, **workout**, and **health analytics** in a single application.
 
-VitalSync lets users manage nutrition- and workout-related information and derive meaningful insights from the collected data. It is built as a distributed system of independent microservices following Domain-Driven Design.
+VitalSync lets users manage nutrition- and workout-related information and derive meaningful insights from the collected data. It is built as a distributed system of independent microservices follo[...]
 
 > **Project status:** 🚧 Early development. Business requirements and domain models are intentionally refined iteratively. The technical architecture, however, is considered mandatory and stable.
 
@@ -33,9 +33,9 @@ VitalSync lets users manage nutrition- and workout-related information and deriv
 
 ## Vision
 
-VitalSync combines three domains — **nutrition**, **fitness**, and **analytics** — behind a single, modern user experience. The platform is designed to be modular, extensible, maintainable, testable, loosely coupled, cloud-native, and reusable in the long term.
+VitalSync combines three domains — **nutrition**, **fitness**, and **analytics** — behind a single, modern user experience. The platform is designed to be modular, extensible, maintainable, te[...]
 
-A core principle of the project: **the architecture is fixed, the domain is fluid.** Technical decisions (communication mechanisms, layer separation, architectural principles) are mandatory. Business/domain details are refined iteratively.
+A core principle of the project: **the architecture is fixed, the domain is fluid.** Technical decisions (communication mechanisms, layer separation, architectural principles) are mandatory. Busin[...]
 
 ## Business domains
 
@@ -101,7 +101,8 @@ See [Communication](./docs/architecture/communication.md) for details.
 | Microservices           | ASP.NET Core, one per business area                                   |
 | Inter-service messaging | RabbitMQ via MassTransit (see ADR-0004)                               |
 | Persistence             | EF Core on PostgreSQL (see ADR-0020); Event Sourcing via Marten on PostgreSQL where it adds business value (see ADR-0019) |
-| Database topology       | PostgreSQL, one database per bounded context; shared server now, server-per-context possible later (see ADR-0020) |
+| Database topology       | PostgreSQL; a write + read database pair per bounded context (see ADR-0021); shared server now, server-per-context possible later (see ADR-0020) |
+| Read models             | Event-driven projections in each context's read database via an outbox-backed publisher (see ADR-0022) |
 | Patterns                | DDD, CQRS, Event Sourcing (selective)                                 |
 | Testing                 | xUnit (built-in asserts, see ADR-0014), NSubstitute, EF Core InMemory |
 
@@ -185,7 +186,7 @@ See [Testing strategy](./docs/architecture/testing-strategy.md).
 
 ## Contributing
 
-This is an evolving project. Architectural principles are mandatory; business/domain details are refined iteratively. When proposing changes that affect architecture, please add or update an [ADR](./docs/architecture/decisions/README.md).
+This is an evolving project. Architectural principles are mandatory; business/domain details are refined iteratively. When proposing changes that affect architecture, please add or update an [ADR[...]
 
 ---
 
