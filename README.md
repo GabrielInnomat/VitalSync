@@ -2,7 +2,7 @@
 
 > A cloud-native, distributed platform unifying **nutrition**, **workout**, and **health analytics** in a single application.
 
-VitalSync lets users manage nutrition- and workout-related information and derive meaningful insights from the collected data. It is built as a distributed system of independent microservices follo[...]
+VitalSync lets users manage nutrition- and workout-related information and derive meaningful insights from the collected data. It is built as a distributed system of independent microservices following Domain-Driven Design, CQRS, and selective Event Sourcing.
 
 > **Project status:** 🚧 Early development. Business requirements and domain models are intentionally refined iteratively. The technical architecture, however, is considered mandatory and stable.
 
@@ -33,9 +33,9 @@ VitalSync lets users manage nutrition- and workout-related information and deriv
 
 ## Vision
 
-VitalSync combines three domains — **nutrition**, **fitness**, and **analytics** — behind a single, modern user experience. The platform is designed to be modular, extensible, maintainable, te[...]
+VitalSync combines three domains — **nutrition**, **fitness**, and **analytics** — behind a single, modern user experience. The platform is designed to be modular, extensible, maintainable, testable, and independently deployable.
 
-A core principle of the project: **the architecture is fixed, the domain is fluid.** Technical decisions (communication mechanisms, layer separation, architectural principles) are mandatory. Busin[...]
+A core principle of the project: **the architecture is fixed, the domain is fluid.** Technical decisions (communication mechanisms, layer separation, architectural principles) are mandatory. Business requirements and domain models are refined iteratively as the project evolves.
 
 ## Business domains
 
@@ -118,11 +118,11 @@ VitalSync/
 │   ├── src/
 │   │   ├── BuildingBlocks.Domain/
 │   │   ├── BuildingBlocks.Application/
-│   │   ├── BuildingBlocks.Infrastructure
+│   │   └── BuildingBlocks.Infrastructure/
 │   └── tests/
 │       ├── BuildingBlocks.Domain.Tests/
 │       ├── BuildingBlocks.Application.Tests/
-│       ├── BuildingBlocks.Infrastructure.Tests/
+│       └── BuildingBlocks.Infrastructure.Tests/
 ├── src/                         # VitalSync application
 │   ├── Aspire/                  # .NET Aspire AppHost & ServiceDefaults
 │   ├── Bff/                     # Backend-for-Frontend
@@ -139,7 +139,11 @@ VitalSync/
 
 In addition to the application, VitalSync includes a **reusable platform of shared Building Blocks** providing reusable concepts for the Domain, Application, and Infrastructure layers.
 
-These Building Blocks are deliberately **independent of VitalSync** and reusable in future projects. See [Building Blocks](./docs/architecture/building-blocks.md).
+These Building Blocks are deliberately **independent of VitalSync** and reusable in future projects. See [Building Blocks](./docs/architecture/building-blocks.md) for the overview, and the per-package references:
+
+- [BuildingBlocks.Domain](./docs/architecture/building-blocks-domain.md)
+- [BuildingBlocks.Application](./docs/architecture/building-blocks-application.md)
+- [BuildingBlocks.Infrastructure](./docs/architecture/building-blocks-infrastructure.md) *(specification — not yet implemented)*
 
 ## Getting started
 
@@ -178,6 +182,9 @@ See [Testing strategy](./docs/architecture/testing-strategy.md).
 - [Architecture overview](./docs/architecture/overview.md)
 - [Communication](./docs/architecture/communication.md)
 - [Building Blocks](./docs/architecture/building-blocks.md)
+    - [BuildingBlocks.Domain](./docs/architecture/building-blocks-domain.md)
+    - [BuildingBlocks.Application](./docs/architecture/building-blocks-application.md)
+    - [BuildingBlocks.Infrastructure](./docs/architecture/building-blocks-infrastructure.md)
 - [Domain model](./docs/architecture/domain-model.md)
 - [CQRS & Event Sourcing](./docs/architecture/cqrs-and-event-sourcing.md)
 - [Testing strategy](./docs/architecture/testing-strategy.md)
@@ -186,7 +193,7 @@ See [Testing strategy](./docs/architecture/testing-strategy.md).
 
 ## Contributing
 
-This is an evolving project. Architectural principles are mandatory; business/domain details are refined iteratively. When proposing changes that affect architecture, please add or update an [ADR[...]
+This is an evolving project. Architectural principles are mandatory; business/domain details are refined iteratively. When proposing changes that affect architecture, please add or update an [ADR](./docs/architecture/decisions/README.md).
 
 ---
 
