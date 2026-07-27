@@ -36,7 +36,7 @@ This document describes how the parts of VitalSync talk to each other. These rul
 |---|---|---|
 | Frontend → BFF | Synchronous (request/response) | REST (HTTP/JSON) |
 | BFF → Microservice | Synchronous (request/response) | Code-first gRPC |
-| Microservice → Microservice | **Asynchronous** | Messaging (RabbitMQ via MassTransit) |
+| Microservice → Microservice | **Asynchronous** | Messaging (RabbitMQ via Wolverine) |
 
 ## Integration events
 
@@ -46,4 +46,4 @@ See [Domain model](./domain-model.md) for domain events and [Building Blocks](./
 
 ## Messaging platform
 
-The messaging platform is **RabbitMQ**, accessed through the **MassTransit** abstraction (publish/subscribe, transactional outbox, retries, dead-lettering). The decision and its trade-offs are recorded in [ADR-0004](./decisions/0004-asynchronous-messaging-between-services.md).
+The messaging platform is **RabbitMQ**, accessed through the **Wolverine** abstraction (publish/subscribe, transactional outbox, retries, dead-lettering). Wolverine is MIT-licensed and runs side-by-side with Marten (ADR-0019), enqueuing integration events to its outbox inside the write transaction and delivering them after commit. The decision and its trade-offs are recorded in [ADR-0023](./decisions/0023-wolverine-messaging-transport.md) (which supersedes [ADR-0004](./decisions/0004-asynchronous-messaging-between-services.md)).
