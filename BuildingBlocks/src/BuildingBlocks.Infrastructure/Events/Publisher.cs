@@ -8,11 +8,11 @@ namespace BuildingBlocks.Infrastructure.Events;
 /// The outbox-backed publisher: fans a committed domain event out to projections and the integration-event path.
 /// </summary>
 /// <remarks>
-/// Invoked by the outbox drain loop once per committed event (ADR-0022), the publisher first runs the in-context
-/// projection handlers via the <see cref="ProjectionRunner"/> and then translates the event through every registered
-/// <see cref="IIntegrationEventMapper"/>, publishing the resulting integration events to the messaging transport
-/// (ADR-0023). Because the drain marks an outbox entry processed only after this method succeeds, delivery is
-/// at-least-once and everything invoked here must be idempotent.
+/// Invoked once per domain event delivered by Wolverine's transactional outbox (ADR-0022/0023) — see
+/// <see cref="DomainEventEnvelopeHandler"/> — the publisher first runs the in-context projection handlers
+/// via the <see cref="ProjectionRunner"/> and then translates the event through every registered
+/// <see cref="IIntegrationEventMapper"/>, publishing the resulting integration events to the messaging transport.
+/// Delivery is at-least-once, so everything invoked here must be idempotent.
 /// </remarks>
 /// <param name="projectionRunner">The runner that dispatches the event to in-context projection handlers.</param>
 /// <param name="mappers">The service-owned translation maps from domain events to integration events.</param>
@@ -25,11 +25,11 @@ public sealed class Publisher(
     private readonly IIntegrationEventMapper[] _mappers = [.. mappers];
 
     /// <inheritdoc/>
-    public async Task PublishAsync(IDomainEvent domainEvent, long streamPosition, CancellationToken cancellationToken)
+    public async Task PublishAsync(IDomainEvent domainEvent, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
 
-        await projectionRunner.RunAsync(domainEvent, streamPosition, cancellationToken).ConfigureAwait(false);
+        await projectionRunner.RunAsync(domainEvent, cancellationToken).ConfigureAwait(false);
 
         foreach (var mapper in _mappers)
         {

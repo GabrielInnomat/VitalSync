@@ -1,13 +1,14 @@
 using System.Reflection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.Messaging;
-using BuildingBlocks.Infrastructure.Outbox;
 using BuildingBlocks.Infrastructure.Persistence;
+using JasperFx.Events;
 using Marten;
-using Marten.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Wolverine.EntityFrameworkCore;
+using Wolverine.Marten;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection;
 
@@ -76,10 +77,13 @@ public sealed class BuildingBlocksOptions
     /// Enables EF Core persistence against the context's write database (state-stored contexts, ADR-0020).
     /// </summary>
     /// <remarks>
-    /// The host must register <typeparamref name="TContext"/> itself (e.g. via <c>AddDbContext</c>) against the
-    /// write-database connection string of the ADR-0021 pair, and its model must call
-    /// <see cref="OutboxModelBuilderExtensions.AddOutboxMessages"/>. This method wires the unit of work, the generic
-    /// repository, and the outbox store/drainer on top of that context.
+    /// The host must register <typeparamref name="TContext"/> itself, via
+    /// <c>AddDbContextWithWolverineIntegration&lt;TContext&gt;</c> (not plain <c>AddDbContext</c>) against the
+    /// write-database connection string of the ADR-0021 pair, and must apply
+    /// <see cref="WolverineOptionsExtensions.ApplyBuildingBlockEfCoreOutbox"/> from its <c>UseWolverine</c> setup —
+    /// both are required for <see cref="IDbContextOutbox{TContext}"/> to enlist outgoing messages in the same
+    /// transaction as <typeparamref name="TContext"/>'s <c>SaveChanges</c> (ADR-0022/0023). This method wires the unit
+    /// of work and the generic repository on top of that context.
     /// </remarks>
     /// <typeparam name="TContext">The write-database context type of the bounded context.</typeparam>
     /// <returns>The same options, for chaining.</returns>
@@ -87,10 +91,8 @@ public sealed class BuildingBlocksOptions
         where TContext : DbContext
     {
         _services.TryAddScoped<DbContext>(static provider => provider.GetRequiredService<TContext>());
-        _services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork>();
+        _services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork<TContext>>();
         _services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
-        _services.TryAddScoped<IOutboxStore, EfCoreOutboxStore>();
-        _services.TryAddScoped<OutboxDrainer>();
         return this;
     }
 
@@ -99,8 +101,11 @@ public sealed class BuildingBlocksOptions
     /// </summary>
     /// <remarks>
     /// Registers Marten with string stream identities and lightweight sessions on the given write-database connection
-    /// string of the ADR-0021 pair, and wires the unit of work, the event-sourced repository, and the outbox
-    /// store/drainer on top of it.
+    /// string of the ADR-0021 pair, integrates it with Wolverine so a session can be enrolled in the messaging
+    /// transport's transactional outbox (ADR-0023), and wires the unit of work and the event-sourced repository on top
+    /// of it. The host must still apply
+    /// <see cref="WolverineOptionsExtensions.ApplyBuildingBlockDomainEventRouting"/> from its <c>UseWolverine</c>
+    /// setup for the outbox to actually be dispatched.
     /// </remarks>
     /// <param name="connectionString">The connection string of the context's write database.</param>
     /// <returns>The same options, for chaining.</returns>
@@ -113,13 +118,12 @@ public sealed class BuildingBlocksOptions
         {
             options.Connection(connectionString);
             options.Events.StreamIdentity = StreamIdentity.AsString;
-        }).UseLightweightSessions();
+        }).UseLightweightSessions()
+            .IntegrateWithWolverine();
 
         _services.TryAddScoped<MartenAggregateTracker>();
         _services.TryAddScoped<IUnitOfWork, MartenUnitOfWork>();
         _services.TryAddScoped(typeof(IEventSourcedRepository<,>), typeof(MartenEventSourcedRepository<,>));
-        _services.TryAddScoped<IOutboxStore, MartenOutboxStore>();
-        _services.TryAddScoped<OutboxDrainer>();
         return this;
     }
 

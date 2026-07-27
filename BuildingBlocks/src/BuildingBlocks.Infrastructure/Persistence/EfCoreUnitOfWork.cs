@@ -1,7 +1,8 @@
 using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
-using BuildingBlocks.Infrastructure.Outbox;
+using BuildingBlocks.Infrastructure.Messaging;
 using Microsoft.EntityFrameworkCore;
+using Wolverine.EntityFrameworkCore;
 
 namespace BuildingBlocks.Infrastructure.Persistence;
 
@@ -9,21 +10,24 @@ namespace BuildingBlocks.Infrastructure.Persistence;
 /// EF Core-backed unit of work for state-stored bounded contexts.
 /// </summary>
 /// <remarks>
-/// On commit, in a single write-database transaction, the unit of work persists the tracked aggregate changes,
-/// collects the tracked aggregates' uncommitted domain events, and writes them to the transactional outbox atomically
-/// with the state change (ADR-0022); the context's model must therefore map the outbox via
-/// <see cref="OutboxModelBuilderExtensions.AddOutboxMessages"/>. After a successful save the aggregates' event
-/// collections are cleared and the drain loop is signalled for an immediate, low-latency dispatch. It is owned by the
-/// unit-of-work pipeline behavior — command handlers never commit themselves.
+/// On commit, every tracked aggregate's uncommitted domain events are wrapped in a <see cref="DomainEventEnvelope"/>
+/// and enrolled in Wolverine's transactional outbox via <see cref="IDbContextOutbox{TContext}"/>; calling
+/// <see cref="IDbContextOutbox{TContext}.SaveChangesAndFlushMessagesAsync(CancellationToken)"/> then persists the
+/// aggregate changes and the outbox entries atomically in a single write-database transaction (ADR-0022, ADR-0023) —
+/// the host must therefore register <typeparamref name="TContext"/> via <c>AddDbContextWithWolverineIntegration</c>
+/// and apply <see cref="WolverineOptionsExtensions.ApplyBuildingBlockEfCoreOutbox"/>. After a successful save the
+/// aggregates' event collections are cleared. It is owned by the unit-of-work pipeline behavior — command handlers
+/// never commit themselves.
 /// </remarks>
-/// <param name="context">The write-database context whose tracked changes are committed.</param>
-/// <param name="signal">The outbox signal notified after a successful commit.</param>
-public sealed class EfCoreUnitOfWork(DbContext context, OutboxSignal signal) : IUnitOfWork
+/// <typeparam name="TContext">The write-database context type of the bounded context.</typeparam>
+/// <param name="outbox">The Wolverine outbox bound to the write-database context whose tracked changes are committed.</param>
+public sealed class EfCoreUnitOfWork<TContext>(IDbContextOutbox<TContext> outbox) : IUnitOfWork
+    where TContext : DbContext
 {
     /// <inheritdoc/>
     public async Task CommitAsync(CancellationToken cancellationToken)
     {
-        var aggregates = context.ChangeTracker.Entries()
+        var aggregates = outbox.DbContext.ChangeTracker.Entries()
             .Select(entry => entry.Entity)
             .OfType<IDomainEventsManager>()
             .Where(aggregate => aggregate.DomainEvents.Count > 0)
@@ -31,18 +35,17 @@ public sealed class EfCoreUnitOfWork(DbContext context, OutboxSignal signal) : I
 
         foreach (var aggregate in aggregates)
         {
-            var streamId = EntityKeyFormatter.GetStreamKeyForAggregate(aggregate);
-            var messages = OutboxMessageFactory.CreateMessages(streamId, aggregate.DomainEvents, basePosition: null);
-            context.Set<OutboxMessage>().AddRange(messages);
+            foreach (var domainEvent in aggregate.DomainEvents)
+            {
+                await outbox.PublishAsync(DomainEventEnvelopeSerializer.Wrap(domainEvent)).ConfigureAwait(false);
+            }
         }
 
-        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await outbox.SaveChangesAndFlushMessagesAsync(cancellationToken).ConfigureAwait(false);
 
         foreach (var aggregate in aggregates)
         {
             aggregate.ClearDomainEvents();
         }
-
-        signal.Notify();
     }
 }

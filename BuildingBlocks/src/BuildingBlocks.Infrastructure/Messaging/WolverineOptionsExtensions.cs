@@ -1,4 +1,5 @@
 using Wolverine;
+using Wolverine.EntityFrameworkCore;
 using Wolverine.ErrorHandling;
 using Wolverine.RabbitMQ;
 
@@ -8,16 +9,55 @@ namespace BuildingBlocks.Infrastructure.Messaging;
 /// Wolverine host configuration defaults for the Building Blocks messaging backbone.
 /// </summary>
 /// <remarks>
-/// Service hosts call <see cref="ApplyBuildingBlockMessagingDefaults"/> from their <c>UseWolverine</c> setup to get the
-/// RabbitMQ transport with sane, overridable defaults: auto-provisioned broker objects, a retry-with-cooldown policy
-/// for transient consumer failures, and dead-lettering to the error queue once retries are exhausted (ADR-0023).
-/// Anything configured afterwards on the same options overrides these defaults.
+/// Every service host that persists through this package's unit-of-work implementations must run Wolverine
+/// (ADR-0023), because domain events now flow through Wolverine's own transactional outbox even when they never leave
+/// the process (in-context projections, ADR-0022) — RabbitMQ is only needed for the subset of events selected as
+/// integration events. Hosts call <see cref="ApplyBuildingBlockDomainEventRouting"/> unconditionally from their
+/// <c>UseWolverine</c> setup; <see cref="ApplyBuildingBlockMessagingDefaults"/> and
+/// <see cref="ApplyBuildingBlockEfCoreOutbox"/> are added on top when the host also publishes integration events to
+/// RabbitMQ or persists through EF Core, respectively. Anything configured afterwards on the same options overrides
+/// these defaults.
 /// </remarks>
 public static class WolverineOptionsExtensions
 {
+    private const string DomainEventLocalQueueName = "building-blocks-domain-events";
+
+    /// <summary>
+    /// Applies the routing every host needs for domain events to flow through Wolverine's transactional outbox.
+    /// </summary>
+    /// <remarks>
+    /// Wolverine only dispatches to handlers registered for a message's exact concrete type (it does not support
+    /// interface- or base-type routing), so every domain event is wrapped in the single concrete
+    /// <see cref="DomainEventEnvelope"/> before publishing (see the unit-of-work implementations in
+    /// <c>BuildingBlocks.Infrastructure.Persistence</c>). This method makes this package's assembly discoverable so
+    /// Wolverine finds <see cref="DomainEventEnvelopeHandler"/> regardless of which service hosts it, and routes the
+    /// envelope to a durable, strictly sequential local queue so redelivery after a crash cannot reorder a single
+    /// aggregate's events relative to one another (ADR-0022's per-aggregate ordering rule).
+    /// </remarks>
+    /// <param name="options">The Wolverine options being configured by the host.</param>
+    /// <returns>The same options, for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> is <see langword="null"/>.</exception>
+    public static WolverineOptions ApplyBuildingBlockDomainEventRouting(this WolverineOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        options.Discovery.IncludeAssembly(typeof(DomainEventEnvelopeHandler).Assembly);
+
+        options.PublishMessage<DomainEventEnvelope>()
+            .ToLocalQueue(DomainEventLocalQueueName)
+            .Sequential()
+            .UseDurableInbox();
+
+        return options;
+    }
+
     /// <summary>
     /// Applies the default RabbitMQ transport, retry, and dead-letter configuration.
     /// </summary>
+    /// <remarks>
+    /// Only required for hosts that also select <c>UseWolverineMessaging</c> to publish integration events; a service
+    /// with purely in-context projections needs only <see cref="ApplyBuildingBlockDomainEventRouting"/>.
+    /// </remarks>
     /// <param name="options">The Wolverine options being configured by the host.</param>
     /// <param name="rabbitMqUri">The AMQP connection URI of the RabbitMQ broker (typically the Aspire-provided connection string).</param>
     /// <returns>The same options, for chaining.</returns>
@@ -35,6 +75,26 @@ public static class WolverineOptionsExtensions
                 TimeSpan.FromMilliseconds(500),
                 TimeSpan.FromSeconds(2))
             .Then.MoveToErrorQueue();
+
+        return options;
+    }
+
+    /// <summary>
+    /// Activates Wolverine's EF Core transactional middleware, required for <c>IDbContextOutbox&lt;TContext&gt;</c> to
+    /// enlist outgoing messages in the same transaction as a state-stored context's <c>SaveChanges</c>.
+    /// </summary>
+    /// <remarks>
+    /// Only required for hosts that select <c>UseEfCorePersistence</c>; a purely event-sourced host needs only
+    /// <see cref="ApplyBuildingBlockDomainEventRouting"/>.
+    /// </remarks>
+    /// <param name="options">The Wolverine options being configured by the host.</param>
+    /// <returns>The same options, for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> is <see langword="null"/>.</exception>
+    public static WolverineOptions ApplyBuildingBlockEfCoreOutbox(this WolverineOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        options.UseEntityFrameworkCoreTransactions();
 
         return options;
     }
