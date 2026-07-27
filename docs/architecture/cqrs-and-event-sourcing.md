@@ -4,7 +4,7 @@
 
 Every microservice implements **Command Query Responsibility Segregation (CQRS)** to separate write operations from read operations.
 
-- **Commands** change state and express intent (e.g., _CreateRecipe_, _CompleteWorkoutSession_). They return a `Result` (success/failure), or a `Result<T>` when a value is needed — e.g. a **creat[...]
+- **Commands** change state and express intent (e.g., _CreateRecipe_, _CompleteWorkoutSession_). They return a `Result` (success/failure), or a `Result<T>` when a value is needed — e.g. a **create** returns the new typed id.
 - **Queries** read state and never mutate it; they return `Result<T>`.
 - Commands and queries are handled by **dedicated handlers**.
 
@@ -18,7 +18,7 @@ Every microservice implements **Command Query Responsibility Segregation (CQRS)*
 └────────────────────────┘         └───────────────────────┘
 ```
 
-The Application building block provides the `ICommand`, `IQuery`, and corresponding handler abstractions, a hand-rolled dispatcher, and the `Result` / `Failure` model. Domain exceptions (`Business[...]
+The Application building block provides the `ICommand`, `IQuery`, and corresponding handler abstractions, a hand-rolled dispatcher, and the `Result` / `Failure` model. Domain exceptions (`BusinessRuleViolationException`, `DomainValidationException`) are translated to `Result.Failure` by an Application pipeline behavior.
 
 ## Persistence strategy
 
@@ -27,7 +27,7 @@ Two complementary approaches are used:
 1. **Traditional persistence (default).** Most contexts use **Entity Framework Core** to persist aggregate state directly.
 2. **Event Sourcing (selective).** Where it provides **business value**, an aggregate's state is derived from an append-only stream of domain events instead of being stored directly.
 
-> **Decision rule:** Event Sourcing is applied **only where it adds business value**. In all other cases, EF Core is used. The exact contexts that justify Event Sourcing are **to be determined** d[...]
+> **Decision rule:** Event Sourcing is applied **only where it adds business value**. In all other cases, EF Core is used. The exact contexts that justify Event Sourcing are **to be determined** during the project.
 
 ### When might Event Sourcing add value here?
 
