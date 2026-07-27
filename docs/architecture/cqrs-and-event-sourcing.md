@@ -4,7 +4,7 @@
 
 Every microservice implements **Command Query Responsibility Segregation (CQRS)** to separate write operations from read operations.
 
-- **Commands** change state and express intent (e.g., _CreateRecipe_, _CompleteWorkoutSession_). They return a `Result` (success/failure), or a `Result<T>` when a value is needed — e.g. a **create** returns the new typed id.
+- **Commands** change state and express intent (e.g., _CreateRecipe_, _CompleteWorkoutSession_). They return a `Result` (success/failure), or a `Result<T>` when a value is needed — e.g. a **creat[...]
 - **Queries** read state and never mutate it; they return `Result<T>`.
 - Commands and queries are handled by **dedicated handlers**.
 
@@ -18,7 +18,7 @@ Every microservice implements **Command Query Responsibility Segregation (CQRS)*
 └────────────────────────┘         └───────────────────────┘
 ```
 
-The Application building block provides the `ICommand`, `IQuery`, and corresponding handler abstractions, a hand-rolled dispatcher, and the `Result` / `Failure` model. Domain exceptions (`BusinessRuleViolationException`, `DomainValidationException`) are translated to `Result.Failure` by an Application pipeline behavior.
+The Application building block provides the `ICommand`, `IQuery`, and corresponding handler abstractions, a hand-rolled dispatcher, and the `Result` / `Failure` model. Domain exceptions (`Business[...]
 
 ## Persistence strategy
 
@@ -27,7 +27,7 @@ Two complementary approaches are used:
 1. **Traditional persistence (default).** Most contexts use **Entity Framework Core** to persist aggregate state directly.
 2. **Event Sourcing (selective).** Where it provides **business value**, an aggregate's state is derived from an append-only stream of domain events instead of being stored directly.
 
-> **Decision rule:** Event Sourcing is applied **only where it adds business value**. In all other cases, EF Core is used. The exact contexts that justify Event Sourcing are **to be determined** during the project.
+> **Decision rule:** Event Sourcing is applied **only where it adds business value**. In all other cases, EF Core is used. The exact contexts that justify Event Sourcing are **to be determined** d[...]
 
 ### When might Event Sourcing add value here?
 
@@ -111,8 +111,8 @@ event-sourced and state-stored contexts:
 3. After commit, the **Publisher** (in `BuildingBlocks.Infrastructure`) drains the
    outbox and dispatches each event to **in-context projection handlers** (which
    update the read database) and, where selected, to the **integration-event path**
-   on RabbitMQ/MassTransit ([ADR-0004](./decisions/0004-asynchronous-messaging-between-services.md)).
-   The same outbox already required by ADR-0004 is reused.
+   on RabbitMQ/Wolverine ([ADR-0023](./decisions/0023-wolverine-messaging-transport.md), which supersedes [ADR-0004](./decisions/0004-asynchronous-messaging-between-services.md)).
+   The same outbox already required for integration events is reused.
 4. An outbox entry is marked processed **only after** its handlers succeed, giving
    **at-least-once** delivery.
 
@@ -136,3 +136,4 @@ replaying events (ES) or re-running projections over the write side.
 - [ADR-0020 — PostgreSQL for state-stored contexts; database per bounded context](./decisions/0020-postgresql-for-state-stored-contexts.md)
 - [ADR-0021 — Write/read database pair per bounded context](./decisions/0021-write-read-database-pair-per-context.md)
 - [ADR-0022 — Event-driven read models via an outbox-backed publisher](./decisions/0022-event-driven-read-models.md)
+- [ADR-0023 — Wolverine as the messaging transport (replaces MassTransit)](./decisions/0023-wolverine-messaging-transport.md)

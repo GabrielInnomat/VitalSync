@@ -19,7 +19,7 @@ An ADR documents a single architectural decision, its context, and its consequen
 | [0001](./0001-record-architecture-decisions.md)           | Record architecture decisions                           | Accepted                  |
 | [0002](./0002-use-dotnet-aspire-13-for-orchestration.md)  | Use .NET Aspire 13 for orchestration                    | Accepted                  |
 | [0003](./0003-bff-with-rest-and-code-first-grpc.md)       | BFF with REST externally and code-first gRPC internally | Accepted                  |
-| [0004](./0004-asynchronous-messaging-between-services.md) | Asynchronous messaging between services                 | Accepted                  |
+| [0004](./0004-asynchronous-messaging-between-services.md) | Asynchronous messaging between services                 | Superseded by ADR-0023    |
 | [0005](./0005-strongly-typed-aggregate-identifiers.md)    | Strongly typed aggregate identifiers                    | Accepted                  |
 | [0006](./0006-aggregate-owns-domain-events.md)            | Aggregate owns its domain events                        | Accepted                  |
 | [0007](./0007-read-only-vs-managed-domain-events.md)      | Read-only vs. managed domain events                     | Accepted                  |
@@ -38,6 +38,7 @@ An ADR documents a single architectural decision, its context, and its consequen
 | [0020](./0020-postgresql-for-state-stored-contexts.md)    | PostgreSQL for state-stored contexts; database per bounded context | Accepted        |
 | [0021](./0021-write-read-database-pair-per-context.md)    | Write/read database pair per bounded context            | Accepted                  |
 | [0022](./0022-event-driven-read-models.md)               | Event-driven read models via an outbox-backed publisher | Accepted                  |
+| [0023](./0023-wolverine-messaging-transport.md)           | Wolverine as the messaging transport (replaces MassTransit) | Accepted (supersedes ADR-0004) |
 
 ## Template
 

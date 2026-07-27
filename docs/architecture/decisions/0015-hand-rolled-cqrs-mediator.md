@@ -62,9 +62,17 @@ dispatcher — so the maintenance cost is low and fully under our control.
   situation ADR-0014 established we avoid.
 - **Other mediator libraries** (e.g. MassTransit Mediator, Wolverine, source-generator
   mediators) — each adds a third-party dependency, its own opinions, and future
-  license/maintenance risk; using MassTransit's in-process mediator would also
-  couple a framework-agnostic layer to MassTransit (currently our *messaging*
-  choice, ADR-0004). Rejected in favor of a minimal, dependency-free implementation.
+  license/maintenance risk, and couples this framework-agnostic layer to that
+  library. This applies **even to Wolverine, which VitalSync now uses as its
+  messaging transport** ([ADR-0023](./0023-wolverine-messaging-transport.md)):
+  Wolverine-as-mediator was reconsidered when it was adopted for messaging and
+  still **declined** — not on licensing (Wolverine is MIT), but because using it
+  as the in-process dispatcher would couple `BuildingBlocks.Application` to
+  Wolverine and force VitalSync's `Result` / exception-to-Result / pipeline-order
+  conventions to fit Wolverine's opinions. Wolverine stays **transport-only**;
+  where an incoming message must trigger domain work, its handler is a thin
+  adapter that calls `ISender`. Rejected in favor of a minimal, dependency-free
+  implementation.
 - **No mediator (inject handlers directly)** — viable, but loses a single,
   uniform place to apply cross-cutting pipeline behaviors (e.g. exception-to-Result
   translation). Rejected in favor of a thin dispatcher.
