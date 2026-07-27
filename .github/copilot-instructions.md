@@ -30,7 +30,7 @@ microservices using **DDD**, **CQRS**, and **selective Event Sourcing**.
 | Frontend                | Blazor (UI only)                                         |
 | Backend-for-Frontend    | REST (to frontend) + code-first gRPC (to services)      |
 | Microservices           | ASP.NET Core, one per business area                      |
-| Inter-service messaging | RabbitMQ via MassTransit                                 |
+| Inter-service messaging | RabbitMQ via Wolverine (MIT; runs side-by-side with Marten, ADR-0023) |
 | Persistence             | EF Core on PostgreSQL; Event Sourcing via Marten on PostgreSQL where it adds business value (ADR-0019/0020) |
 | Database topology       | PostgreSQL; a **write + read database pair** per bounded context (ADR-0021); shared server now, server-per-context possible later (ADR-0020) |
 | Read models             | Event-driven projections in each context's read DB via an outbox-backed publisher (ADR-0022) |
@@ -86,7 +86,7 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 - The BFF exposes **REST** to the frontend and talks to microservices via
   **code-first gRPC**.
 - Microservices **never** call each other synchronously. All inter-service
-  communication is **asynchronous** via RabbitMQ/MassTransit.
+  communication is **asynchronous** via RabbitMQ/Wolverine .
 - Layer separation (Domain / Application / Infrastructure / Persistence) is
   mandatory; keep dependencies pointing inward (domain has no infrastructure deps).
 
@@ -150,8 +150,10 @@ See `docs/architecture/communication.md` and the ADRs below.
   **transactional outbox** in the write transaction; after commit the **Publisher**
   (in `BuildingBlocks.Infrastructure`) drains the outbox and dispatches events to
   **in-context projection handlers** (updating the read DB) and, where selected, to
-  the **integration-event path** on RabbitMQ (the same outbox already required by
-  ADR-0004 is reused). Delivery is **at-least-once**, so projection handlers **must
+  the **integration-event path** on RabbitMQ via **Wolverine** (the same outbox
+  already required for integration events is reused; Wolverine is transport-only,
+  **not** the CQRS mediator — ADR-0015/0023). Delivery is **at-least-once**, so
+  projection handlers **must
   be idempotent and per-aggregate order-aware** (track a last-processed
   position/version); reads are **eventually consistent** with writes.
 - **Read models are owned by each service, not a Building Block** — the service owns

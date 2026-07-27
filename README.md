@@ -93,18 +93,18 @@ See [Communication](./docs/architecture/communication.md) for details.
 
 ## Technology stack
 
-| Concern                 | Choice                                                                |
-| ----------------------- | --------------------------------------------------------------------- |
-| Orchestration           | .NET Aspire 13                                                        |
-| Frontend                | Blazor                                                                |
-| Backend-for-Frontend    | REST (outbound) + code-first gRPC (to services)                       |
-| Microservices           | ASP.NET Core, one per business area                                   |
-| Inter-service messaging | RabbitMQ via MassTransit (see ADR-0004)                               |
-| Persistence             | EF Core on PostgreSQL (see ADR-0020); Event Sourcing via Marten on PostgreSQL where it adds business value (see ADR-0019) |
+| Concern                 | Choice                                                                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Orchestration           | .NET Aspire 13                                                                                                                                   |
+| Frontend                | Blazor                                                                                                                                           |
+| Backend-for-Frontend    | REST (outbound) + code-first gRPC (to services)                                                                                                  |
+| Microservices           | ASP.NET Core, one per business area                                                                                                              |
+| Inter-service messaging | RabbitMQ via Wolverine (see ADR-0023, supersedes ADR-0004)                                                                                       |
+| Persistence             | EF Core on PostgreSQL (see ADR-0020); Event Sourcing via Marten on PostgreSQL where it adds business value (see ADR-0019)                        |
 | Database topology       | PostgreSQL; a write + read database pair per bounded context (see ADR-0021); shared server now, server-per-context possible later (see ADR-0020) |
-| Read models             | Event-driven projections in each context's read database via an outbox-backed publisher (see ADR-0022) |
-| Patterns                | DDD, CQRS, Event Sourcing (selective)                                 |
-| Testing                 | xUnit (built-in asserts, see ADR-0014), NSubstitute, EF Core InMemory |
+| Read models             | Event-driven projections in each context's read database via an outbox-backed publisher (see ADR-0022)                                           |
+| Patterns                | DDD, CQRS, Event Sourcing (selective)                                                                                                            |
+| Testing                 | xUnit (built-in asserts, see ADR-0014), NSubstitute, EF Core InMemory                                                                            |
 
 > **Note:** `.NET Aspire 13` is the chosen orchestrator version for this project. Aspire is applied at the orchestration/application layer; the reusable Building Blocks remain framework-agnostic.
 
