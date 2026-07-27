@@ -39,6 +39,7 @@ An ADR documents a single architectural decision, its context, and its consequen
 | [0021](./0021-write-read-database-pair-per-context.md)    | Write/read database pair per bounded context            | Accepted                  |
 | [0022](./0022-event-driven-read-models.md)               | Event-driven read models via an outbox-backed publisher | Accepted                  |
 | [0023](./0023-wolverine-messaging-transport.md)           | Wolverine as the messaging transport (replaces MassTransit) | Accepted (supersedes ADR-0004) |
+| [0024](./0024-contract-placement-innermost-consumer.md)   | Contracts live in the innermost layer that consumes them | Accepted                  |
 
 ## Template
 
