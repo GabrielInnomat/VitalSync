@@ -227,7 +227,10 @@ The abstractions live in
 The single entry point callers use to send a command or query. VitalSync uses a
 **hand-rolled** mediator instead of MediatR: the `ISender` contract lives in
 `Application`, its DI-based implementation in `Infrastructure` resolves the
-matching handler and pipeline. See
+matching handler and pipeline. The dispatcher is deliberately **not** replaced by
+Wolverine even though Wolverine is now the messaging transport
+([ADR-0023](./architecture/decisions/0023-wolverine-messaging-transport.md)) —
+Wolverine stays transport-only to keep the framework-agnostic core decoupled. See
 [ADR-0015](./architecture/decisions/0015-hand-rolled-cqrs-mediator.md).
 
 ### Exception-to-Result translation
@@ -366,7 +369,7 @@ The `BuildingBlocks.Infrastructure` component that, **after** the write commits,
 **drains the transactional [outbox](#outbox-transactional-outbox)** and dispatches
 each domain event to (a) **in-context [projection handlers](#projection-handler)**
 that update the read database and (b) the **integration-event path** to
-RabbitMQ/MassTransit. Delivery is **at-least-once**: an outbox entry is marked
+RabbitMQ/Wolverine. Delivery is **at-least-once**: an outbox entry is marked
 processed only after its handlers succeed, otherwise it is retried. See
 [ADR-0022](./architecture/decisions/0022-event-driven-read-models.md).
 
@@ -403,7 +406,10 @@ The default approach: the aggregate object is persisted directly via
 
 The infrastructure component that groups changes into a single transactional
 save. On save, it collects the aggregates' domain events, hands them to the
-dispatcher/outbox, and clears them **only after** the save succeeds.
+dispatcher/outbox, and clears them **only after** the save succeeds. Integration
+events are enqueued to the [Wolverine](#wolverine) outbox **within this same
+transaction**, so they commit atomically with the state change and are delivered
+after commit ([ADR-0023](./architecture/decisions/0023-wolverine-messaging-transport.md)).
 
 ### Version (stream position)
 
@@ -430,7 +436,8 @@ belong to one context and are never shared. See
 The only channel for inter-service communication, chosen to maximize loose
 coupling and independent deployability and to prevent distributed call chains and
 temporal coupling. See
-[ADR-0004](./architecture/decisions/0004-asynchronous-messaging-between-services.md).
+[ADR-0023](./architecture/decisions/0023-wolverine-messaging-transport.md) (which
+supersedes [ADR-0004](./architecture/decisions/0004-asynchronous-messaging-between-services.md)).
 
 ### Backend-for-Frontend (BFF)
 
@@ -463,27 +470,34 @@ A message published to the messaging backbone to communicate **across services**
 Distinct from a **domain event** (internal to one service); domain events are
 translated into integration events at the service boundary.
 
-### MassTransit
-
-The abstraction layer over RabbitMQ, providing publish/subscribe, the
-**transactional outbox**, retries, and dead-lettering.
-
 ### Outbox (transactional outbox)
 
 A reliability pattern: domain events collected on save are written and then
 forwarded after commit, ensuring messages are not lost even if the process fails
 after committing state. In VitalSync the **same** outbox is written in the write
 transaction and drained after commit by the [Publisher](#publisher-outbox-backed)
-to drive **two** paths: the **integration-event** path to RabbitMQ (ADR-0004)
-**and** the **in-context read-model projections** in the read database. This gives
-**at-least-once** delivery and closes the crash-window drift a naive in-memory
-publisher would have across two databases. See
+to drive **two** paths: the **integration-event** path to RabbitMQ via
+[Wolverine](#wolverine) (ADR-0023) **and** the **in-context read-model projections**
+in the read database. This gives **at-least-once** delivery and closes the
+crash-window drift a naive in-memory publisher would have across two databases. See
 [ADR-0022](./architecture/decisions/0022-event-driven-read-models.md).
 
 ### RabbitMQ
 
 The chosen messaging platform (the message broker) for asynchronous inter-service
 communication.
+
+### Wolverine
+
+The **MIT-licensed** abstraction over RabbitMQ, providing publish/subscribe, the
+**transactional outbox**, retries, and dead-lettering. It replaced **MassTransit**
+(which moved to a commercial license) and runs **side-by-side with**
+[Marten](#marten), enqueuing integration events to its outbox **inside the write
+transaction** and delivering them after commit. Wolverine is used **only** as the
+messaging transport — **not** as the in-process CQRS
+[dispatcher](#dispatcher-isender--hand-rolled-mediator), which stays hand-rolled
+(ADR-0015). See
+[ADR-0023](./architecture/decisions/0023-wolverine-messaging-transport.md).
 
 ---
 
@@ -517,7 +531,7 @@ The **single outer layer** holding all reusable, framework-bound,
 third-party-backed implementations that are still VitalSync-agnostic: unit of work,
 generic repositories (EF Core and the Marten-based event store, see
 [ADR-0019](./architecture/decisions/0019-event-store-technology-marten.md)), domain-
-and integration-event dispatching, the RabbitMQ/MassTransit transport, and the
+and integration-event dispatching, the RabbitMQ/Wolverine transport, and the
 DI-based CQRS dispatcher and pipeline behaviors. Depends on both `Domain` and
 `Application`.
 
@@ -575,7 +589,8 @@ The **MIT-licensed** library that turns [PostgreSQL](#postgresql) into VitalSync
 [event store](#event-store-marten-on-postgresql). Used as a raw event store (append
 streams + fetch streams), not through its convention-based aggregation, so the
 domain's `LoadFromHistory` rehydration and the ADR-0010/0012 aggregate shape stay
-intact. See
+intact. Runs **side-by-side with** [Wolverine](#wolverine) (same ecosystem),
+sharing a transaction and outbox (ADR-0023). See
 [ADR-0019](./architecture/decisions/0019-event-store-technology-marten.md).
 
 ### PostgreSQL
@@ -643,7 +658,8 @@ the **final bounded-context decomposition**.
 
 A lightweight document capturing a single architectural decision, its context, and
 its consequences. ADRs are **immutable once accepted** — to change a decision you
-add a new ADR that **supersedes** the old one (e.g. ADR-0012 supersedes ADR-0011).
+add a new ADR that **supersedes** the old one (e.g. ADR-0012 supersedes ADR-0011,
+ADR-0023 supersedes ADR-0004).
 See the [ADR index](./architecture/decisions/README.md).
 
 ### ADR status
