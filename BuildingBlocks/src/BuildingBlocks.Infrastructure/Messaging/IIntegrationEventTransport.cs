@@ -11,7 +11,7 @@ namespace BuildingBlocks.Infrastructure.Messaging;
 /// implementation is the production default (ADR-0023); a no-op implementation backs hosts that have not enabled
 /// messaging.
 /// </remarks>
-public interface IIntegrationEventTransport
+internal interface IIntegrationEventTransport
 {
     /// <summary>
     /// Publishes an integration event to the message broker.

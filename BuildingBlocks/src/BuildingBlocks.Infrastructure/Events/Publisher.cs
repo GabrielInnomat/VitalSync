@@ -17,7 +17,7 @@ namespace BuildingBlocks.Infrastructure.Events;
 /// <param name="projectionRunner">The runner that dispatches the event to in-context projection handlers.</param>
 /// <param name="mappers">The service-owned translation maps from domain events to integration events.</param>
 /// <param name="transport">The transport that carries integration events to the broker.</param>
-public sealed class Publisher(
+internal sealed class Publisher(
     ProjectionRunner projectionRunner,
     IEnumerable<IIntegrationEventMapper> mappers,
     IIntegrationEventTransport transport) : IDomainEventPublisher

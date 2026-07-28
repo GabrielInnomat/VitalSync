@@ -32,7 +32,7 @@ Building Block allowed to reference third-party packages.
   `Domain` and `Application` stay dependency-free (ADR-0018).
 - **Implements `Application` contracts; defines none of its own use-case contracts.**
   Where a new abstraction is needed that services must see, the contract goes to
-  the innermost layer that consumes it (ADR-0024) — never here.
+  the innermost layer that consumes it (ADR-0024).
 - **Nothing depends on Infrastructure** except service hosts / composition roots.
   Services reference it for DI registration and receive everything else through
   the `Domain` / `Application` abstractions.
@@ -46,11 +46,11 @@ capability. Top-level namespaces/folders:
 
 | Folder                 | Capability                                                     |
 | ---------------------- | -------------------------------------------------------------- |
-| `Dispatching/`         | DI-based `ISender` implementation + pipeline behaviors          |
-| `Persistence/`         | Unit of work, EF Core generic repository, Marten ES repository  |
-| `Events/`              | Domain-event publisher, projection runner                       |
-| `Messaging/`           | Wolverine/RabbitMQ integration-event transport                  |
-| `DependencyInjection/` | `IServiceCollection` registration extensions                    |
+| `Dispatching/`         | DI-based `ISender` implementation + pipeline behaviors         |
+| `Persistence/`         | Unit of work, EF Core generic repository, Marten ES repository |
+| `Events/`              | Domain-event publisher, projection runner                      |
+| `Messaging/`           | Wolverine/RabbitMQ integration-event transport                 |
+| `DependencyInjection/` | `IServiceCollection` registration extensions                   |
 
 ---
 
@@ -69,11 +69,11 @@ Implements the `ISender` contract from `BuildingBlocks.Application`
 
 ### Pipeline behaviors shipped here
 
-| Behavior                    | Position             | Responsibility                                                                                                                                             |
-| --------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ExceptionToResultBehavior` | **First**            | Translates `DomainValidationException` / `BusinessRuleViolationException` into `Result.Failure` (ADR-0017). Unexpected exceptions pass through untouched.   |
-| `LoggingBehavior`           | Second               | Structured logging of request name, outcome (success/failure categories), and duration. Never logs payload contents by default.                             |
-| `UnitOfWorkBehavior`        | Last (commands only) | Begins the unit of work, invokes the handler, and commits on success — including the atomic outbox write (see §2/§4). Rolls back on failure. Queries bypass it. |
+| Behavior                    | Position  | Responsibility                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ExceptionToResultBehavior` | **First** | Translates `DomainValidationException` / `BusinessRuleViolationException` into `Result.Failure` (ADR-0017). Unexpected exceptions pass through untouched.                                                                                                                                                                                                                                                                                      |
+| `LoggingBehavior`           | Second    | Structured logging of request name, outcome (success/failure categories), and duration. Never logs payload contents by default.                                                                                                                                                                                                                                                                                                                |
+| `UnitOfWorkBehavior`        | Last      | Commits the unit of work when a **command** completes successfully — including the atomic outbox write (see §2/§4). Queries and failed results are unaffected: nothing is committed, and query-only hosts need no `IUnitOfWork` registration. Translates the store's optimistic-concurrency exceptions raised on commit (Marten's `ConcurrencyException`, EF Core's `DbUpdateConcurrencyException`) into a `Failure` with category `Conflict`. |
 
 The canonical registration order is therefore:
 `ExceptionToResult → Logging → UnitOfWork → handler`.
@@ -94,6 +94,11 @@ public interface IUnitOfWork   // contract lives in Application (ADR-0024)
     3. write those events to the **transactional outbox** in the write database
        (ADR-0022, ADR-0023) — atomically with the state change;
     4. clear the aggregates' event collections.
+- **Optimistic-concurrency conflicts surface at commit, not before.** Both
+  stores only detect a version conflict when the changes are flushed
+  (`SaveChanges` / `SaveChangesAsync`); repositories merely _stage_ changes and
+  therefore cannot observe these exceptions. The commit path — via the
+  `UnitOfWorkBehavior` (§1) — translates them into a `Conflict` failure.
 - Two implementations, one per persistence style, sharing the same behavior:
   an EF Core–backed unit of work and a Marten-session–backed unit of work.
   Wolverine's native Marten/EF Core integration provides the shared
@@ -124,15 +129,27 @@ public interface IRepository<TAggregate, TKey>   // contract lives in Applicatio
 
 ### Marten event-sourced repository (ADR-0019)
 
-Roughly **one class**, using Marten as a **raw stream store**:
+A small cluster of classes, using Marten as a **raw stream store**:
+
+- `MartenEventSourcedRepository<TAggregate, TKey>` — the repository itself;
+- `MartenAggregateTracker` — a scoped tracker the repository registers saved
+  aggregates with, so the Marten unit of work can collect their uncommitted
+  domain events for the outbox at commit time and defer clearing the event
+  collections until after a successful commit (§2);
+- `EntityKeyFormatter` — derives the stream key from the aggregate type and its
+  strongly typed identifier (`{AggregateType}-{Id}`), since Marten streams are
+  keyed by string (`StreamIdentity.AsString`) while aggregates use strongly
+  typed keys (ADR-0005).
 
 - **Load:** `FetchStream(id)` → fold via
   `((IEventSourcedAggregateRoot<TKey>)aggregate).LoadFromHistory(history)`.
   Marten's `Apply`-on-aggregate convention is **never** used (preserves
   ADR-0010 / ADR-0012).
-- **Save:** append uncommitted domain events to the stream with expected-version
-  optimistic concurrency asserted against the aggregate's `Version`. Marten's
-  `ConcurrencyException` is translated into a `Failure` with category `Conflict`.
+- **Save:** _stages_ an append of the uncommitted domain events to the stream
+  with expected-version optimistic concurrency asserted against the aggregate's
+  `Version`. A wrong expected version surfaces Marten's `ConcurrencyException`
+  only when the unit of work commits the session; the commit path
+  translates it into a `Failure` with category `Conflict`.
 - **Snapshotting is deferred** (ADR-0019): when a context later needs it, the
   repository reads the latest snapshot document, then folds only the stream tail
   via the aggregate's `FromState` seed — a purely additive change.
@@ -146,6 +163,10 @@ Roughly **one class**, using Marten as a **raw stream store**:
   outbox (`IDbContextOutbox<TContext>` for EF Core, `IMartenOutbox` for
   Marten) **inside the write transaction** (same unit of work as the state
   change).
+- Wrapping and unwrapping are centralized in a `DomainEventEnvelopeSerializer`
+  so the two unit-of-work implementations and the envelope handler share one
+  serialization scheme; the envelope carries the event's stable `EventId` and
+  its concrete type for faithful round-tripping.
 - **Dispatch:** after commit, Wolverine delivers each envelope to the single
   `DomainEventEnvelopeHandler` this package registers, which unwraps it and
   calls the **Publisher**. The Publisher dispatches the unwrapped event to:
@@ -200,16 +221,21 @@ for hosts, e.g.:
 ```csharp
 services.AddBuildingBlocks(options =>
 {
-    options.AddCommandsAndQueriesFrom(typeof(SomeHandler).Assembly);
+    options.AddHandlersFrom(typeof(SomeHandler).Assembly);
     options.UseEfCorePersistence<NutritionWriteDbContext>();   // or:
     options.UseMartenEventSourcing("ConnectionStrings:NutritionWrite");
-    options.UseWolverineMessaging(rabbitMqConnectionName: "messaging");
+    options.UseWolverineMessaging();
 });
 ```
 
 - Registers `ISender`, the behaviors **in the canonical order** (§1), the unit
   of work, repositories, the Publisher/outbox, the projection runner, and the
   Wolverine transport.
+- `UseMartenEventSourcing` configures Marten with **string stream identities**
+  (`StreamIdentity.AsString`, required by the `EntityKeyFormatter` stream-key
+  scheme, §3) and **lightweight sessions** (no identity-map/change-tracking
+  overhead — appends are staged explicitly by the repository), and integrates
+  the session with Wolverine so it can be enrolled in the transactional outbox.
 - Connection strings follow the write/read pair naming of ADR-0021
   (e.g. `NutritionWrite` / `NutritionRead`).
 - The exact API shape of the options builder is illustrative and may evolve
@@ -243,14 +269,14 @@ builder.Host.UseWolverine(opts =>
 
 ## Third-party dependencies (exhaustive)
 
-| Package                                                                           | Used for                                          |
-| --------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `Microsoft.EntityFrameworkCore` + Npgsql provider                                   | State-stored persistence (ADR-0020)               |
-| `Marten`                                                                            | Event store, raw stream access (ADR-0019)         |
-| `WolverineFx.RabbitMQ`                                                              | Integration-event transport (ADR-0023)            |
-| `WolverineFx.Marten`                                                                | Native transactional outbox for Marten (ADR-0023) |
-| `WolverineFx.EntityFrameworkCore`                                                   | Native transactional outbox for EF Core (ADR-0023) |
-| `Microsoft.Extensions.DependencyInjection.Abstractions` / `Logging.Abstractions`   | DI wiring, logging behavior                       |
+| Package                                                                          | Used for                                           |
+| -------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `Microsoft.EntityFrameworkCore` + Npgsql provider                                | State-stored persistence (ADR-0020)                |
+| `Marten`                                                                         | Event store, raw stream access (ADR-0019)          |
+| `WolverineFx.RabbitMQ`                                                           | Integration-event transport (ADR-0023)             |
+| `WolverineFx.Marten`                                                             | Native transactional outbox for Marten (ADR-0023)  |
+| `WolverineFx.EntityFrameworkCore`                                                | Native transactional outbox for EF Core (ADR-0023) |
+| `Microsoft.Extensions.DependencyInjection.Abstractions` / `Logging.Abstractions` | DI wiring, logging behavior                        |
 
 Adding any further third-party dependency to the platform requires it to land
 **here** — and nowhere else.
