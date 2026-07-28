@@ -88,8 +88,100 @@ public interface IPipelineBehavior<TRequest, TResponse>
   translation, logging, unit-of-work, etc.).
 - **Ordering is explicit registration order** (ADR-0015): behaviors run in the
   order they are registered in DI. Registration lives in `Infrastructure`.
-- The generic behaviors themselves (logging, unit-of-work, validation) live in
+- The generic behaviors themselves (logging, unit-of-work, ExceptionToResult) live in
   `Infrastructure`; only the **contract** lives here.
+
+## Infrastructure-implemented contracts
+
+Per [ADR-0024](./decisions/0024-contract-placement-innermost-consumer.md), a
+contract lives in the innermost layer that consumes it. The following contracts
+therefore live in `Application` while their implementations reside in
+`BuildingBlocks.Infrastructure` (see
+[BuildingBlocks.Infrastructure](./building-blocks-infrastructure.md)):
+
+### Unit of work
+
+```csharp
+public interface IUnitOfWork
+{
+    Task CommitAsync(CancellationToken ct);
+}
+```
+
+One unit of work spans each command dispatch; it is owned by the unit-of-work
+pipeline behavior in `Infrastructure` — handlers never commit themselves.
+
+```csharp
+public interface IRepository<TAggregate, in TKey>
+    where TAggregate : AggregateRoot<TKey>
+    where TKey : struct, IEntityKey
+{
+    Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken ct);
+    Task AddAsync(TAggregate aggregate, CancellationToken ct);
+    void Remove(TAggregate aggregate);
+}
+```
+
+The `TKey : struct, IEntityKey` constraint ties the repository to the strongly
+typed identifier model of `BuildingBlocks.Domain` (ADR-0005): keys are value
+types implementing `IEntityKey`, never primitives.
+
+```csharp
+public interface IEventSourcedRepository<TAggregate, in TKey>
+    where TAggregate : class, IEventSourcedAggregateRoot<TKey>
+    where TKey : struct, IEntityKey
+{
+    Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken ct);
+    Task SaveAsync(TAggregate aggregate, CancellationToken ct);
+}
+```
+
+`IEventSourcedRepository` is the event-sourced counterpart of `IRepository`
+(ADR-0019): loading rehydrates the aggregate by replaying its event stream via
+`IEventSourcedAggregateRoot<TKey>.LoadFromHistory`, and saving appends the
+uncommitted domain events with expected-version optimistic concurrency asserted
+against the aggregate's `Version`.
+
+### Domain-event publishing & projections
+
+```csharp
+public interface IDomainEventPublisher
+{
+    Task PublishAsync(IDomainEvent domainEvent, CancellationToken ct);
+}
+
+public interface IProjectionHandler<in TDomainEvent>
+    where TDomainEvent : IDomainEvent
+{
+    Task Handle(TDomainEvent domainEvent, CancellationToken ct);
+}
+```
+
+- `IDomainEventPublisher` is the contract of the outbox-backed publisher
+  (ADR-0022/0023): it is invoked once per committed domain event and fans it out
+  to the in-context projection handlers and the integration-event path.
+- `IProjectionHandler<TDomainEvent>` is implemented per service to update read
+  models. Delivery is at-least-once, so idempotency is the handler's
+  responsibility (upsert by key, tracked via the event's stable `EventId`).
+
+### Integration events
+
+```csharp
+public interface IIntegrationEvent;
+
+public interface IIntegrationEventMapper
+{
+    IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent);
+}
+```
+
+- `IIntegrationEvent` marks the immutable, serializable contract types that are
+  the **only** cross-context signal (ADR-0004/0023); domain events and
+  aggregates never cross the broker.
+- `IIntegrationEventMapper` is implemented **per service** (the translation maps
+  themselves never live in the Building Blocks): it selects which domain events
+  leave the context and what shape they take, returning an empty collection for
+  events without cross-context significance.
 
 ## Failure handling & the `Result` model
 
@@ -131,7 +223,7 @@ exceptions handled globally.
 ## Transport status mapping (not defined here)
 
 `BuildingBlocks.Application` never mentions HTTP or gRPC status codes. Mapping
-`ErrorCategory` to a status code is a transport concern owned by the boundary:
+`FailureCategory` to a status code is a transport concern owned by the boundary:
 
 - the **BFF** maps `FailureCategory` → HTTP status code;
 - the **service host** maps `FailureCategory` → gRPC status.
