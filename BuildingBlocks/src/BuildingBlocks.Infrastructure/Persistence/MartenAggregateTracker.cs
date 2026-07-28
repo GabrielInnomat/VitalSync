@@ -15,6 +15,15 @@ public sealed class MartenAggregateTracker
     private readonly List<IDomainEventsManager> _aggregates = [];
 
     /// <summary>
+    /// Gets the aggregates saved in the current unit of work, in the order they were tracked.
+    /// </summary>
+    /// <remarks>
+    /// The unit of work reads each aggregate's uncommitted <see cref="IHasDomainEvents.DomainEvents"/> from here to
+    /// enroll them in the outbox before committing the session, then calls <see cref="ClearDomainEvents"/>.
+    /// </remarks>
+    public IReadOnlyList<IDomainEventsManager> Aggregates => _aggregates;
+
+    /// <summary>
     /// Registers an aggregate whose uncommitted events were appended in the current unit of work.
     /// </summary>
     /// <param name="aggregate">The aggregate to track until commit.</param>

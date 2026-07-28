@@ -10,8 +10,8 @@ namespace BuildingBlocks.Infrastructure.Persistence;
 /// </summary>
 /// <remarks>
 /// Stream keys have the shape <c>{AggregateTypeName}/{KeyValue}</c>, which keeps streams of different aggregate types
-/// from colliding in the same event store and gives outbox messages a readable stream id. Value extraction goes
-/// through the <see cref="IEntityKey{TValue}"/> contract and is compiled and cached per key type.
+/// from colliding in the same event store. Value extraction goes through the <see cref="IEntityKey{TValue}"/>
+/// contract and is compiled and cached per key type.
 /// </remarks>
 internal static class EntityKeyFormatter
 {
@@ -21,17 +21,6 @@ internal static class EntityKeyFormatter
         string.Create(
             CultureInfo.InvariantCulture,
             $"{aggregateType.Name}/{GetKeyValue(key)}");
-
-    public static string GetStreamKeyForAggregate(object aggregate)
-    {
-        var idProperty = aggregate.GetType().GetProperty(nameof(IEntity<>.Id))
-            ?? throw new InvalidOperationException(
-                $"The aggregate type '{aggregate.GetType()}' does not expose an Id property.");
-        var key = idProperty.GetValue(aggregate)
-            ?? throw new InvalidOperationException(
-                $"The aggregate type '{aggregate.GetType()}' has a null Id.");
-        return GetStreamKey(aggregate.GetType(), key);
-    }
 
     private static object GetKeyValue(object key)
     {

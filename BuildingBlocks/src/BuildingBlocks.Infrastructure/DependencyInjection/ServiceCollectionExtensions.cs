@@ -2,7 +2,6 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.Dispatching;
 using BuildingBlocks.Infrastructure.Events;
 using BuildingBlocks.Infrastructure.Messaging;
-using BuildingBlocks.Infrastructure.Outbox;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -14,8 +13,11 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection;
 /// <remarks>
 /// Hosts call <see cref="AddBuildingBlocks"/> once at composition time; everything else in this package is reached
 /// through the <c>Domain</c>/<c>Application</c> abstractions. The registration wires the dispatcher, the pipeline
-/// behaviors in the canonical order, the outbox-backed publisher with its projection runner and drain loop, and a
-/// no-op messaging transport that <see cref="BuildingBlocksOptions.UseWolverineMessaging"/> replaces.
+/// behaviors in the canonical order, the outbox-backed publisher with its projection runner, and a no-op messaging
+/// transport that <see cref="BuildingBlocksOptions.UseWolverineMessaging"/> replaces. The outbox itself is Wolverine's
+/// own transactional outbox (ADR-0023); the host wires it up via <see cref="WolverineOptionsExtensions"/> from its
+/// <c>UseWolverine</c> setup, and <see cref="DomainEventEnvelopeHandler"/> is the single handler that delivers into
+/// the publisher registered here.
 /// </remarks>
 public static class ServiceCollectionExtensions
 {
@@ -41,15 +43,12 @@ public static class ServiceCollectionExtensions
         configure(new BuildingBlocksOptions(services));
 
         services.TryAddScoped<ISender, Sender>();
-
         services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(IPipelineBehavior<,>), typeof(ExceptionToResultBehavior<,>)));
         services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>)));
         services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(IPipelineBehavior<,>), typeof(UnitOfWorkBehavior<,>)));
 
         services.TryAddScoped<ProjectionRunner>();
         services.TryAddScoped<IDomainEventPublisher, Publisher>();
-        services.TryAddSingleton<OutboxSignal>();
-        services.AddHostedService<OutboxProcessor>();
 
         return services;
     }

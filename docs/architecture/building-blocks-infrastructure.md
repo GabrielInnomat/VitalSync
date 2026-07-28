@@ -48,7 +48,6 @@ capability. Top-level namespaces/folders:
 | ---------------------- | -------------------------------------------------------------- |
 | `Dispatching/`         | DI-based `ISender` implementation + pipeline behaviors          |
 | `Persistence/`         | Unit of work, EF Core generic repository, Marten ES repository  |
-| `Outbox/`              | Transactional outbox write + drain loop                         |
 | `Events/`              | Domain-event publisher, projection runner                       |
 | `Messaging/`           | Wolverine/RabbitMQ integration-event transport                  |
 | `DependencyInjection/` | `IServiceCollection` registration extensions                    |
@@ -140,18 +139,26 @@ Roughly **one class**, using Marten as a **raw stream store**:
 
 ## 4. Transactional outbox & Publisher (ADR-0022, ADR-0023)
 
-- **Write:** domain events are written to Wolverine's PostgreSQL-backed outbox
-  **inside the write transaction** (same unit of work as the state change).
-- **Drain:** after commit, the **Publisher** drains the outbox and dispatches
-  each event to:
+- **Write:** every uncommitted domain event of a tracked aggregate is wrapped
+  in a `DomainEventEnvelope` — the single concrete message type this package
+  publishes, since Wolverine dispatches by exact concrete type and cannot
+  route by the open `IDomainEvent` interface — and handed to Wolverine's
+  outbox (`IDbContextOutbox<TContext>` for EF Core, `IMartenOutbox` for
+  Marten) **inside the write transaction** (same unit of work as the state
+  change).
+- **Dispatch:** after commit, Wolverine delivers each envelope to the single
+  `DomainEventEnvelopeHandler` this package registers, which unwraps it and
+  calls the **Publisher**. The Publisher dispatches the unwrapped event to:
     - **in-context projection handlers** (via the projection runner, §5), which
       update the context's **read database**;
     - the **integration-event path** (§6) for events selected for cross-service
       communication.
-- An outbox entry is marked processed **only after** its handlers succeed;
-  failures are retried → **at-least-once** delivery.
-- The Publisher drains immediately after commit in the happy path, keeping
-  read-model lag low; correctness never depends on that lag being zero.
+- Delivery is **at-least-once**: a failed dispatch is retried by Wolverine's
+  own outbox, not by any custom drain loop.
+- The envelope is routed to a durable, strictly sequential local queue, so a
+  single aggregate's events cannot be reordered relative to one another by a
+  crash-triggered redelivery (see §7,
+  `WolverineOptionsExtensions.ApplyBuildingBlockDomainEventRouting`).
 
 ## 5. Projection runner (domain-event dispatching)
 
@@ -159,11 +166,13 @@ Roughly **one class**, using Marten as a **raw stream store**:
   type. The **handler abstraction lives in `Application`** (ADR-0024); only the
   runner lives here.
 - Enforces/enables the ADR-0022 handler rules:
-    - **Idempotency** is the handler's responsibility (upsert by key), but the
-      runner supplies each event's **stream position/version** so handlers can
-      track a last-processed marker and skip duplicates.
-    - **Per-aggregate ordering** is guaranteed by the runner; cross-aggregate
-      ordering is not.
+    - **Idempotency** is the handler's responsibility (upsert by key), tracked
+      via the event's stable `EventId` (generated once when the event is
+      raised) as the last-processed marker — this works identically for
+      event-sourced and state-stored aggregates, which do not all have a
+      meaningful stream position.
+    - **Per-aggregate ordering** is guaranteed by the messaging transport's
+      sequential local queue (§4), not by the runner itself.
 - Read models themselves are **not** part of this package — they are
   domain-shaped and belong to each service (ADR-0022). Infrastructure ships
   plumbing only.
@@ -207,6 +216,19 @@ services.AddBuildingBlocks(options =>
   during implementation; the registration responsibilities above are
   normative.
 
+**Every host must additionally run Wolverine**, because domain events now flow
+through Wolverine's own transactional outbox even for purely in-context
+projections (§4), not only for integration events:
+
+```csharp
+builder.Host.UseWolverine(opts =>
+{
+    opts.ApplyBuildingBlockDomainEventRouting();       // always required
+    opts.ApplyBuildingBlockEfCoreOutbox();              // only if UseEfCorePersistence was selected
+    opts.ApplyBuildingBlockMessagingDefaults(rabbitMqUri); // only if UseWolverineMessaging was selected
+});
+```
+
 ## What deliberately does NOT live here
 
 - **Read models, projection handlers, queries** — per service (ADR-0022).
@@ -225,7 +247,9 @@ services.AddBuildingBlocks(options =>
 | --------------------------------------------------------------------------------- | ------------------------------------------------- |
 | `Microsoft.EntityFrameworkCore` + Npgsql provider                                   | State-stored persistence (ADR-0020)               |
 | `Marten`                                                                            | Event store, raw stream access (ADR-0019)         |
-| `WolverineFx` (+ Marten/EF/RabbitMQ integrations)                                    | Outbox, transport (ADR-0023)                      |
+| `WolverineFx.RabbitMQ`                                                              | Integration-event transport (ADR-0023)            |
+| `WolverineFx.Marten`                                                                | Native transactional outbox for Marten (ADR-0023) |
+| `WolverineFx.EntityFrameworkCore`                                                   | Native transactional outbox for EF Core (ADR-0023) |
 | `Microsoft.Extensions.DependencyInjection.Abstractions` / `Logging.Abstractions`   | DI wiring, logging behavior                       |
 
 Adding any further third-party dependency to the platform requires it to land

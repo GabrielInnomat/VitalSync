@@ -1,6 +1,5 @@
 using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
-using BuildingBlocks.Infrastructure.Outbox;
 using Marten;
 
 namespace BuildingBlocks.Infrastructure.Persistence;
@@ -13,10 +12,10 @@ namespace BuildingBlocks.Infrastructure.Persistence;
 /// <see cref="IEventSourcedAggregateRoot{TKey}.LoadFromHistory"/> — Marten's convention-based
 /// <c>Apply</c>-on-aggregate aggregation is never used, so the domain (ADR-0010/0012) stays untouched. Saving stages
 /// an append of the uncommitted domain events with expected-version optimistic concurrency asserted against the
-/// aggregate's <see cref="IEventSourcedAggregateRoot{TKey}.Version"/>, writes the matching outbox documents into the
-/// same session, and registers the aggregate with the <see cref="MartenAggregateTracker"/>; everything becomes
-/// durable atomically when the <see cref="MartenUnitOfWork"/> commits. Snapshotting is deferred (ADR-0019) and can be
-/// added later as a purely additive change.
+/// aggregate's <see cref="IEventSourcedAggregateRoot{TKey}.Version"/> and registers the aggregate with the
+/// <see cref="MartenAggregateTracker"/>; the <see cref="MartenUnitOfWork"/> reads the tracked aggregate's events back
+/// off the tracker to enroll them in the outbox before the session commits, so everything becomes durable atomically.
+/// Snapshotting is deferred (ADR-0019) and can be added later as a purely additive change.
 /// </remarks>
 /// <typeparam name="TAggregate">The type of the event-sourced aggregate root.</typeparam>
 /// <typeparam name="TKey">The type of the aggregate root's identity key.</typeparam>
@@ -58,13 +57,6 @@ public sealed class MartenEventSourcedRepository<TAggregate, TKey>(IDocumentSess
 
         var streamKey = EntityKeyFormatter.GetStreamKey(typeof(TAggregate), aggregate.Id);
         session.Events.Append(streamKey, eventSourced.Version, uncommittedEvents);
-
-        var basePosition = eventSourced.Version - uncommittedEvents.Count;
-        var messages = OutboxMessageFactory.CreateMessages(streamKey, uncommittedEvents, basePosition);
-        foreach (var message in messages)
-        {
-            session.Store(message);
-        }
 
         tracker.Track((IDomainEventsManager)aggregate);
         return Task.CompletedTask;
