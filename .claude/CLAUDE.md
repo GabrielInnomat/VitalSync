@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A cloud-native, distributed platform unifying **nutrition**, **fitness**, and **health analytics** behind a single Blazor UI. Built as independent ASP.NET Core microservices using **DDD**, **CQRS**, and **selective Event Sourcing**.
 
-Core principle: **the architecture is fixed, the domain is fluid.** Technical/architectural decisions are mandatory and stable. Business/domain details are refined iteratively as the project evolves (it is early-stage: `src/Services/*` currently contain only placeholder API projects). When a change affects architecture, add or update an ADR.
+Core principle: Technical/architectural decisions are mandatory and stable. Business/domain details are refined iteratively as the project evolves (it is early-stage: `src/Services/*` currently contain only placeholder API projects). When a change affects architecture, add or superseed an ADR.
 
 ## Build, test, run
 
@@ -132,7 +132,7 @@ ADRs are immutable once accepted; to change a decision, add a superseding ADR. I
 6. Document `BuildingBlocks/src/*` per the XML documentation conventions (ADR-0013); don't add XML docs to tests or service code.
 7. If a change affects architecture, add or update an ADR using the template in `docs/architecture/decisions/README.md`.
 8. Match existing style; respect `.editorconfig` and `Directory.Build.props`.
-9. Always publish changes directly to the `main` branch (see policy note at top).
+9. Always publish changes directly to the `main` branch.
 
 ## Key documentation
 
