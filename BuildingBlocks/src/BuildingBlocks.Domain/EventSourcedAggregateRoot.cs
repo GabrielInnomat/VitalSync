@@ -71,25 +71,14 @@ public abstract class EventSourcedAggregateRoot<TKey, TState>(TState initialStat
     /// aggregate's state, increments the version, and records the event as uncommitted.
     /// </remarks>
     /// <param name="domainEvent">The domain event to raise and apply to the aggregate's state.</param>
-    /// <param name="clock">The clock used to stamp the event with the current timestamp.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="domainEvent"/> or <paramref name="clock"/> is <see langword="null"/>.</exception>
-    protected void RaiseEvent(IDomainEvent domainEvent, IClock clock)
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="domainEvent"/> is <see langword="null"/>.</exception>
+    protected void RaiseEvent(IDomainEvent domainEvent)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        var stamped = Stamp(domainEvent, clock);
-        State = State.Apply(stamped);
+        State = State.Apply(domainEvent);
         EnsureValidIdentity();
         _version++;
-        _domainEvents.Add(stamped);
-    }
-
-    private static IDomainEvent Stamp(IDomainEvent domainEvent, IClock clock)
-    {
-        return domainEvent is DomainEvent { OccurredAt.Ticks: 0 } record
-            ? record with { OccurredAt = clock.Now }
-            : domainEvent;
+        _domainEvents.Add(domainEvent);
     }
 
     private void EnsureValidIdentity()

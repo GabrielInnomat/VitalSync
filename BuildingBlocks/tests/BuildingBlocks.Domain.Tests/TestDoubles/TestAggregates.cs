@@ -10,7 +10,7 @@ internal sealed class TestEventSourcedAggregate
     {
     }
 
-    public void Raise(IDomainEvent domainEvent, IClock clock) => RaiseEvent(domainEvent, clock);
+    public void Raise(IDomainEvent domainEvent) => RaiseEvent(domainEvent);
 }
 
 /// <summary>A second event-sourced aggregate type for cross-type equality checks.</summary>
@@ -21,7 +21,7 @@ internal sealed class OtherEventSourcedAggregate
     {
     }
 
-    public void Raise(IDomainEvent domainEvent, IClock clock) => RaiseEvent(domainEvent, clock);
+    public void Raise(IDomainEvent domainEvent) => RaiseEvent(domainEvent);
 }
 
 /// <summary>Aggregate whose applied state never becomes identified, to test the guard.</summary>
@@ -32,5 +32,5 @@ internal sealed class NeverIdentifiedAggregate
     {
     }
 
-    public void Raise(IDomainEvent domainEvent, IClock clock) => RaiseEvent(domainEvent, clock);
+    public void Raise(IDomainEvent domainEvent) => RaiseEvent(domainEvent);
 }

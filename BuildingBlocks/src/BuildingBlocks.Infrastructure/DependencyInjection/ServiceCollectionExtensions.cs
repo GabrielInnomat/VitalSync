@@ -1,4 +1,5 @@
 using BuildingBlocks.Application;
+using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.Dispatching;
 using BuildingBlocks.Infrastructure.Events;
 using BuildingBlocks.Infrastructure.Messaging;
@@ -42,6 +43,7 @@ public static class ServiceCollectionExtensions
 
         configure(new BuildingBlocksOptions(services));
 
+        services.TryAddSingleton<IClock, systemDateTimeOffsetClock>();
         services.TryAddScoped<ISender, Sender>();
         services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(IPipelineBehavior<,>), typeof(ExceptionToResultBehavior<,>)));
         services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>)));
