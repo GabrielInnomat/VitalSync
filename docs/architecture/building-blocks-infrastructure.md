@@ -50,6 +50,7 @@ capability. Top-level namespaces/folders:
 | `Persistence/`         | Unit of work, EF Core generic repository, Marten ES repository |
 | `Events/`              | Domain-event publisher, projection runner                      |
 | `Messaging/`           | Wolverine/RabbitMQ integration-event transport                 |
+| `Time/`                | `IClock` implementation on top of `TimeProvider`               |
 | `DependencyInjection/` | `IServiceCollection` registration extensions                   |
 
 ---
@@ -229,8 +230,8 @@ services.AddBuildingBlocks(options =>
 ```
 
 - Registers `ISender`, the behaviors **in the canonical order** (§1), the unit
-  of work, repositories, the Publisher/outbox, the projection runner, and the
-  Wolverine transport.
+  of work, repositories, the Publisher/outbox, the projection runner, the
+  Wolverine transport, and the clock (§8).
 - `UseMartenEventSourcing` configures Marten with **string stream identities**
   (`StreamIdentity.AsString`, required by the `EntityKeyFormatter` stream-key
   scheme, §3) and **lightweight sessions** (no identity-map/change-tracking
@@ -254,6 +255,33 @@ builder.Host.UseWolverine(opts =>
     opts.ApplyBuildingBlockMessagingDefaults(rabbitMqUri); // only if UseWolverineMessaging was selected
 });
 ```
+
+## 8. Clock (`IClock` implementation)
+
+`IClock` is the narrow time port declared in `BuildingBlocks.Domain` ("the
+domain only ever needs *now*"). Infrastructure ships the single default
+implementation so no service has to write one:
+
+```csharp
+internal sealed class SystemClock(TimeProvider timeProvider) : IClock
+{
+    public DateTimeOffset Now => timeProvider.GetUtcNow().ToUniversalTime();
+}
+```
+
+- **UTC, always.** Everything that is persisted, projected, or transported
+  across a service boundary is UTC; time zones are a presentation concern and
+  belong in the frontend. The result is normalized to a zero offset, so the
+  promise holds even for a `TimeProvider` that reports the current instant with
+  an offset of its own.
+- **Built on `TimeProvider`**, not parallel to it. `IClock` stays the narrow
+  domain-facing port; `TimeProvider` — the broad infrastructure abstraction
+  including timers and time zones — never reaches the domain. Tests get the
+  full, proven time control of `FakeTimeProvider`
+  (`Microsoft.Extensions.TimeProvider.Testing`) instead of every test project
+  writing its own fake clock.
+- **Registered with `TryAdd`** (`TimeProvider.System` and `IClock`), so a host
+  or test can substitute either one. Singleton, because both are stateless.
 
 ## What deliberately does NOT live here
 

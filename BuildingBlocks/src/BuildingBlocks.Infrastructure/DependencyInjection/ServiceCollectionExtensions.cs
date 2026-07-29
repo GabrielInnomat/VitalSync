@@ -3,6 +3,7 @@ using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.Dispatching;
 using BuildingBlocks.Infrastructure.Events;
 using BuildingBlocks.Infrastructure.Messaging;
+using BuildingBlocks.Infrastructure.Time;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -14,8 +15,8 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection;
 /// <remarks>
 /// Hosts call <see cref="AddBuildingBlocks"/> once at composition time; everything else in this package is reached
 /// through the <c>Domain</c>/<c>Application</c> abstractions. The registration wires the dispatcher, the pipeline
-/// behaviors in the canonical order, the outbox-backed publisher with its projection runner, and a no-op messaging
-/// transport that <see cref="BuildingBlocksOptions.UseWolverineMessaging"/> replaces. The outbox itself is Wolverine's
+/// behaviors in the canonical order, the outbox-backed publisher with its projection runner, the default UTC clock,
+/// and a no-op messaging transport that <see cref="BuildingBlocksOptions.UseWolverineMessaging"/> replaces. The outbox itself is Wolverine's
 /// own transactional outbox (ADR-0023); the host wires it up via <see cref="WolverineOptionsExtensions"/> from its
 /// <c>UseWolverine</c> setup, and <see cref="DomainEventEnvelopeHandler"/> is the single handler that delivers into
 /// the publisher registered here.
@@ -43,7 +44,8 @@ public static class ServiceCollectionExtensions
 
         configure(new BuildingBlocksOptions(services));
 
-        services.TryAddSingleton<IClock, systemDateTimeOffsetClock>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<IClock, SystemClock>();
         services.TryAddScoped<ISender, Sender>();
         services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(IPipelineBehavior<,>), typeof(ExceptionToResultBehavior<,>)));
         services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>)));
