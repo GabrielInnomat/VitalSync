@@ -268,6 +268,16 @@ services.AddBuildingBlocks(options =>
 - The exact API shape of the options builder is illustrative and may evolve
   during implementation; the registration responsibilities above are
   normative.
+- `AddHandlersFrom` is **idempotent for multi-handler contracts**
+  (`IProjectionHandler<>`, `IIntegrationEventMapper`): scanning the same assembly
+  twice never registers a projection or mapper twice, so a projection runs at most
+  once per event, while two *different* handlers for the same event both stay
+  registered. For **single-handler contracts** (`ICommandHandler<>`,
+  `ICommandHandler<,>`, `IQueryHandler<,>`) it enforces exactly one handler:
+  discovering two *different* handlers for the same command or query throws at
+  registration (naming both types) rather than letting the container silently pick
+  one. A `ReflectionTypeLoadException` while scanning is rewrapped into a clear
+  `InvalidOperationException` (usually a missing package reference) (IMP-05).
 
 **Every host must additionally run Wolverine**, because domain events now flow
 through Wolverine's own transactional outbox even for purely in-context

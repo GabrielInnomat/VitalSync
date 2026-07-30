@@ -117,6 +117,11 @@ See `docs/architecture/communication.md` and the ADRs below.
   dispatcher** is used instead of MediatR (ADR-0015); the DI-based implementation
   lives in `BuildingBlocks.Infrastructure`.
 - Handlers and dispatch are **async-only** with a `CancellationToken`; no sync overloads.
+- **Handler registration** via `BuildingBlocksOptions.AddHandlersFrom(assembly)` is
+  idempotent for multi-handler contracts (`IProjectionHandler<>`,
+  `IIntegrationEventMapper`) and enforces **exactly one** handler per command/query —
+  two different handlers for the same `ICommand`/`IQuery` throw at registration, not
+  at request time (IMP-05).
 - **Commands** return `Result` or `Result<T>` (a **create** returns the new typed id,
   e.g. `Result<RecipeId>`; **delete/void** returns `Result`). **Queries** return `Result<T>`.
 - Expected domain errors (`BusinessRuleViolationException`, `DomainValidationException`)

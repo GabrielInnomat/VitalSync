@@ -9,6 +9,8 @@
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Application.Tests/BuildingBlocks.Application.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Domain.Tests/BuildingBlocks.Domain.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests/BuildingBlocks.Infrastructure.Tests.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests.ConflictingHandlers/BuildingBlocks.Infrastructure.Tests.ConflictingHandlers.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests.Fixtures/BuildingBlocks.Infrastructure.Tests.Fixtures.csproj" />
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/Aspire/">

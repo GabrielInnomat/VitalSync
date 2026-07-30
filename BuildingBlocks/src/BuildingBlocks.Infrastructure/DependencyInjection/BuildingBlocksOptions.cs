@@ -57,16 +57,21 @@ public sealed class BuildingBlocksOptions
     /// </remarks>
     public const int UnitOfWorkBehaviorOrder = 300;
 
-    private static readonly Type[] HandlerInterfaceDefinitions =
+    private static readonly Type[] SingleHandlerInterfaceDefinitions =
     [
         typeof(ICommandHandler<>),
         typeof(ICommandHandler<,>),
         typeof(IQueryHandler<,>),
+    ];
+
+    private static readonly Type[] MultiHandlerInterfaceDefinitions =
+    [
         typeof(IProjectionHandler<>),
     ];
 
     private readonly IServiceCollection _services;
     private readonly PipelineBehaviorRegistry _behaviorRegistry;
+    private readonly Dictionary<Type, Type> _singleHandlers = [];
     private PersistenceStyle _persistenceStyle;
 
     internal BuildingBlocksOptions(IServiceCollection services, PipelineBehaviorRegistry behaviorRegistry)
@@ -101,14 +106,37 @@ public sealed class BuildingBlocksOptions
     /// <summary>
     /// Scans an assembly and registers every command, query, projection handler, and integration-event mapper it contains.
     /// </summary>
+    /// <remarks>
+    /// Registration is idempotent for the multi-handler contracts (<see cref="IProjectionHandler{TEvent}"/> and
+    /// <see cref="IIntegrationEventMapper"/>): scanning the same assembly twice does not register a handler twice, so a
+    /// projection never runs more than once per event, while two <em>different</em> handlers for the same event both
+    /// remain registered. The single-handler contracts (<see cref="ICommandHandler{TCommand}"/>,
+    /// <see cref="ICommandHandler{TCommand, TResult}"/>, <see cref="IQueryHandler{TQuery, TResult}"/>) must resolve to
+    /// exactly one implementation; discovering two <em>different</em> handlers for the same command or query is a
+    /// modelling error and throws immediately, rather than letting the container silently pick one at request time.
+    /// </remarks>
     /// <param name="assembly">The assembly to scan for handler implementations.</param>
     /// <returns>The same options, for chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="assembly"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the assembly's types cannot be loaded (most often a missing package reference), or when two different handlers are found for the same command or query contract.</exception>
     public BuildingBlocksOptions AddHandlersFrom(Assembly assembly)
     {
         ArgumentNullException.ThrowIfNull(assembly);
 
-        foreach (var type in assembly.GetTypes())
+        Type[] types;
+        try
+        {
+            types = assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException exception)
+        {
+            throw new InvalidOperationException(
+                $"The types of assembly '{assembly.FullName}' could not be loaded. " +
+                "The most common cause is a missing package reference.",
+                exception);
+        }
+
+        foreach (var type in types)
         {
             if (type is not { IsClass: true, IsAbstract: false } || type.IsGenericTypeDefinition)
             {
@@ -119,17 +147,40 @@ public sealed class BuildingBlocksOptions
             {
                 if (contract == typeof(IIntegrationEventMapper))
                 {
-                    _services.AddScoped(typeof(IIntegrationEventMapper), type);
+                    _services.TryAddEnumerable(ServiceDescriptor.Scoped(typeof(IIntegrationEventMapper), type));
                 }
                 else if (contract.IsGenericType
-                    && Array.IndexOf(HandlerInterfaceDefinitions, contract.GetGenericTypeDefinition()) >= 0)
+                    && Array.IndexOf(MultiHandlerInterfaceDefinitions, contract.GetGenericTypeDefinition()) >= 0)
                 {
-                    _services.AddScoped(contract, type);
+                    _services.TryAddEnumerable(ServiceDescriptor.Scoped(contract, type));
+                }
+                else if (contract.IsGenericType
+                    && Array.IndexOf(SingleHandlerInterfaceDefinitions, contract.GetGenericTypeDefinition()) >= 0)
+                {
+                    RegisterSingleHandler(contract, type);
                 }
             }
         }
 
         return this;
+    }
+
+    private void RegisterSingleHandler(Type contract, Type implementation)
+    {
+        if (_singleHandlers.TryGetValue(contract, out var existing))
+        {
+            if (existing == implementation)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Two handlers were found for '{contract}': '{existing}' and '{implementation}'. " +
+                "A command or query must have exactly one handler.");
+        }
+
+        _singleHandlers.Add(contract, implementation);
+        _services.AddScoped(contract, implementation);
     }
 
     /// <summary>
