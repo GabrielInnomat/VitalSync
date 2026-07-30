@@ -27,7 +27,7 @@ An ADR documents a single architectural decision, its context, and its consequen
 | [0009](./0009-business-rules-and-domain-validation.md)    | Business rules and domain validation                    | Accepted                  |
 | [0010](./0010-aggregate-state-object.md)                  | Aggregate state object                                  | Accepted                  |
 | [0011](./0011-unified-aggregate-for-es-and-ef.md)         | Unified aggregate for event sourcing and EF Core        | Superseded by ADR-0012    |
-| [0012](./0012-optional-event-sourcing-aggregate.md)       | Optional event sourcing via a split aggregate hierarchy | Accepted                  |
+| [0012](./0012-optional-event-sourcing-aggregate.md)       | Optional event sourcing via a split aggregate hierarchy | Superseded by ADR-0025    |
 | [0013](./0013-xml-documentation-conventions.md)           | XML documentation conventions for Building Blocks       | Accepted                  |
 | [0014](./0014-replace-fluentassertions-with-xunit-asserts.md) | Replace FluentAssertions with standard xUnit asserts | Accepted                  |
 | [0015](./0015-hand-rolled-cqrs-mediator.md)               | Hand-rolled CQRS mediator instead of MediatR            | Accepted                  |
@@ -40,6 +40,8 @@ An ADR documents a single architectural decision, its context, and its consequen
 | [0022](./0022-event-driven-read-models.md)               | Event-driven read models via an outbox-backed publisher | Accepted                  |
 | [0023](./0023-wolverine-messaging-transport.md)           | Wolverine as the messaging transport (replaces MassTransit) | Accepted (supersedes ADR-0004) |
 | [0024](./0024-contract-placement-innermost-consumer.md)   | Contracts live in the innermost layer that consumes them | Accepted                  |
+| [0025](./0025-unified-state-fold-aggregate-model.md)      | Unified state-fold aggregate model with additive event sourcing | Accepted (supersedes ADR-0012) |
+| [0026](./0026-single-repository-contract.md)              | Single repository contract: add and get, no delete      | Accepted                  |
 
 ## Template
 

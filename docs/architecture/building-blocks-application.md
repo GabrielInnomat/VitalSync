@@ -113,34 +113,33 @@ pipeline behavior in `Infrastructure` — handlers never commit themselves.
 
 ```csharp
 public interface IRepository<TAggregate, in TKey>
-    where TAggregate : AggregateRoot<TKey>
+    where TAggregate : class, IAggregateRoot<TKey>
     where TKey : struct, IEntityKey
 {
     Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken ct);
     Task AddAsync(TAggregate aggregate, CancellationToken ct);
-    void Remove(TAggregate aggregate);
 }
 ```
+
+This is the **single** repository contract for all aggregates, regardless of how
+they are persisted ([ADR-0026](./decisions/0026-single-repository-contract.md)).
+The surface is deliberately minimal:
+
+- **No `Remove`** — VitalSync never hard-deletes; removal is a domain state
+  change (a soft delete) and therefore an ordinary update.
+- **No `Update`/`Save`** — aggregates returned by `GetByIdAsync` are tracked;
+  their changes flow through the `IUnitOfWork` at commit. This holds for both
+  implementations: EF Core relies on change tracking, and the event-store
+  implementation appends tracked aggregates' uncommitted events at commit.
 
 The `TKey : struct, IEntityKey` constraint ties the repository to the strongly
 typed identifier model of `BuildingBlocks.Domain` (ADR-0005): keys are value
 types implementing `IEntityKey`, never primitives.
 
-```csharp
-public interface IEventSourcedRepository<TAggregate, in TKey>
-    where TAggregate : class, IEventSourcedAggregateRoot<TKey>
-    where TKey : struct, IEntityKey
-{
-    Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken ct);
-    Task SaveAsync(TAggregate aggregate, CancellationToken ct);
-}
-```
-
-`IEventSourcedRepository` is the event-sourced counterpart of `IRepository`
-(ADR-0019): loading rehydrates the aggregate by replaying its event stream via
-`IEventSourcedAggregateRoot<TKey>.LoadFromHistory`, and saving appends the
-uncommitted domain events with expected-version optimistic concurrency asserted
-against the aggregate's `Version`.
+Because the contract is persistence-agnostic, handlers do not change when a
+context switches between state-stored (EF Core) and event-sourced (Marten)
+persistence — only the composition-layer registration does
+(ADR-0025/0026).
 
 ### Domain-event publishing & projections
 

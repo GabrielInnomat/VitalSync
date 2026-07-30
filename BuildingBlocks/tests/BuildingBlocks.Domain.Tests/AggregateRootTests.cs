@@ -1,4 +1,4 @@
-using BuildingBlocks.Domain.Tests.TestDoubles;
+﻿using BuildingBlocks.Domain.Tests.TestDoubles;
 
 namespace BuildingBlocks.Domain.Tests;
 
@@ -7,14 +7,7 @@ namespace BuildingBlocks.Domain.Tests;
 public sealed class AggregateRootTests
 {
     [Fact]
-    public void Constructor_WithEmptyId_ThrowsDomainValidationException()
-    {
-        var ex = Assert.Throws<DomainValidationException>(() => new TestAggregate(TestId.Empty));
-        Assert.Equal("The id of an aggregate cannot be empty.", ex.Message);
-    }
-
-    [Fact]
-    public void Constructor_WithValidId_SetsId()
+    public void Constructor_WithInitialState_DerivesIdFromState()
     {
         var id = new TestId(7);
 
@@ -32,23 +25,55 @@ public sealed class AggregateRootTests
     }
 
     [Fact]
-    public void AddDomainEvent_SurfacesEventInOrder()
+    public void RaiseEvent_AppliesEventToStateAndRecordsIt()
+    {
+        var aggregate = new TestAggregate(new TestId(1));
+
+        aggregate.Raise(new TestDomainEvent(5));
+
+        Assert.Equal(new TestId(5), aggregate.Id);
+        Assert.Equal(5, aggregate.CurrentState.Value);
+        Assert.Single(aggregate.DomainEvents);
+    }
+
+    [Fact]
+    public void RaiseEvent_Null_ThrowsArgumentNullException()
+    {
+        var aggregate = new TestAggregate(new TestId(1));
+
+        Assert.Throws<ArgumentNullException>(() => aggregate.Raise(null!));
+    }
+
+    [Fact]
+    public void RaiseEvent_SurfacesEventsInOrder()
     {
         var aggregate = new TestAggregate(new TestId(1));
         var first = new TestDomainEvent(1);
         var second = new TestDomainEvent(2);
 
-        aggregate.RaiseTestEvent(first);
-        aggregate.RaiseTestEvent(second);
+        aggregate.Raise(first);
+        aggregate.Raise(second);
 
         Assert.Equal([first, second], aggregate.DomainEvents);
+    }
+
+    [Fact]
+    public void RaiseEvent_WhenAppliedStateLeavesIdEmpty_ThrowsDomainValidationException()
+    {
+        var aggregate = new NeverIdentifiedAggregate();
+
+        var ex = Assert.Throws<DomainValidationException>(
+            () => aggregate.Raise(new TestDomainEvent(5)));
+        Assert.Equal(
+            "The aggregate's identity must be set to a non-empty value by the applied event.",
+            ex.Message);
     }
 
     [Fact]
     public void ClearDomainEvents_EmptiesTheCollection()
     {
         var aggregate = new TestAggregate(new TestId(1));
-        aggregate.RaiseTestEvent(new TestDomainEvent(1));
+        aggregate.Raise(new TestDomainEvent(1));
 
         ((IDomainEventsManager)aggregate).ClearDomainEvents();
 

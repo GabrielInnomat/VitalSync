@@ -105,7 +105,8 @@ public sealed class BuildingBlocksOptions
     /// transport's transactional outbox (ADR-0023), and wires the unit of work and the event-sourced repository on top
     /// of it. The host must still apply
     /// <see cref="WolverineOptionsExtensions.ApplyBuildingBlockDomainEventRouting"/> from its <c>UseWolverine</c>
-    /// setup for the outbox to actually be dispatched.
+    /// setup for the outbox to actually be dispatched. Both persistence styles register the same
+    /// <see cref="IRepository{TAggregate, TKey}"/> contract; select exactly one style per write database.
     /// </remarks>
     /// <param name="connectionString">The connection string of the context's write database.</param>
     /// <returns>The same options, for chaining.</returns>
@@ -123,7 +124,7 @@ public sealed class BuildingBlocksOptions
 
         _services.TryAddScoped<MartenAggregateTracker>();
         _services.TryAddScoped<IUnitOfWork, MartenUnitOfWork>();
-        _services.TryAddScoped(typeof(IEventSourcedRepository<,>), typeof(MartenEventSourcedRepository<,>));
+        _services.TryAddScoped(typeof(IRepository<,>), typeof(MartenEventSourcedRepository<,>));
         return this;
     }
 

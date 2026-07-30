@@ -1,36 +1,19 @@
-namespace BuildingBlocks.Domain.Tests.TestDoubles;
+﻿namespace BuildingBlocks.Domain.Tests.TestDoubles;
 
 /// <summary>
-/// Concrete event-sourced aggregate exposing <c>RaiseEvent</c> to the tests.
+/// Concrete event-sourced aggregate exposing <c>RaiseEvent</c> and the state to the tests.
 /// </summary>
-internal sealed class TestEventSourcedAggregate
-    : EventSourcedAggregateRoot<TestId, TestState>
+internal sealed class TestEventSourcedAggregate()
+    : EventSourcedAggregateRoot<TestId, TestState>(TestState.Empty)
 {
-    public TestEventSourcedAggregate() : base(TestState.Empty)
-    {
-    }
+    public TestState CurrentState => State;
 
     public void Raise(IDomainEvent domainEvent) => RaiseEvent(domainEvent);
 }
 
 /// <summary>A second event-sourced aggregate type for cross-type equality checks.</summary>
-internal sealed class OtherEventSourcedAggregate
-    : EventSourcedAggregateRoot<TestId, TestState>
+internal sealed class OtherEventSourcedAggregate()
+    : EventSourcedAggregateRoot<TestId, TestState>(TestState.Empty)
 {
-    public OtherEventSourcedAggregate() : base(TestState.Empty)
-    {
-    }
-
-    public void Raise(IDomainEvent domainEvent) => RaiseEvent(domainEvent);
-}
-
-/// <summary>Aggregate whose applied state never becomes identified, to test the guard.</summary>
-internal sealed class NeverIdentifiedAggregate
-    : EventSourcedAggregateRoot<TestId, NeverIdentifiedState>
-{
-    public NeverIdentifiedAggregate() : base(NeverIdentifiedState.Empty)
-    {
-    }
-
     public void Raise(IDomainEvent domainEvent) => RaiseEvent(domainEvent);
 }

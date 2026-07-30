@@ -20,12 +20,7 @@ The aggregate base is the **sole owner** of its domain events:
 - The event collection is exposed only as a read-only view (`IReadOnlyCollection<IDomainEvent> DomainEvents`).
 - Clearing is **not** part of the aggregate's public surface (see [ADR-0007](./0007-read-only-vs-managed-domain-events.md)).
 
-> **Implementation note (amendment 2026-07-22, supersedes the 2026-07-21 note):** This ADR originally referred to a single aggregate base `AggregateRoot<TKey>` with a `RaiseDomainEvent(...)` method. The 2026-07-21 amendment updated that to a single unified `AggregateRoot<TKey, TState>` base with `RaiseEvent(...)`. That unified base was subsequently **split into two bases** (see [ADR-0012](./0012-optional-event-sourcing-aggregate.md)):
->
-> - **`AggregateRoot<TKey>`** — state-modeled aggregates record events via the protected `AddDomainEvent(IDomainEvent)` method.
-> - **`EventSourcedAggregateRoot<TKey, TState>`** — event-modeled aggregates record events via the protected `RaiseEvent(IDomainEvent, IClock)` method, which also applies the event to the state.
->
-> The ownership rule described here is unchanged for both bases: events live in a private list, are added only through a `protected` method, and are exposed read-only. Only the type names and the specific raise method differ.
+> **Implementation note (amendment 2026-07-23, supersedes the 2026-07-22 note):** The aggregate hierarchy has been re-unified (see [ADR-0025](./0025-unified-state-fold-aggregate-model.md)): every aggregate derives from `AggregateRoot<TKey, TState>` and records events via the single protected `RaiseEvent(IDomainEvent)` method, which also folds the event into the state; `AddDomainEvent` no longer exists. The ownership rule described here is unchanged: events live in a private list, are added only through a `protected` method, and are exposed read-only.
 
 ## Consequences
 

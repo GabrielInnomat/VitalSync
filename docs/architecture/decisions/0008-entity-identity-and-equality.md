@@ -23,15 +23,13 @@ A complication arises from the decision to hold an aggregate's state in a dedica
 
 - **Identity equality.** Entities and aggregate roots are equal iff they are the same concrete type and have equal ids. `Equals(object?)` and `GetHashCode()` are `sealed`.
 
-> **Implementation note (amendment 2026-07-22):** The original wording referred to a single `Guid`-backed `IEntityKey` and a single aggregate base `AggregateRoot<TKey, TState>`. Both have since evolved (see [ADR-0012](./0012-optional-event-sourcing-aggregate.md)):
+> **Implementation note (amendment 2026-07-23, supersedes the 2026-07-22 note):** The original wording referred to a single `Guid`-backed `IEntityKey`. Both keys and the aggregate hierarchy have since evolved (see [ADR-0025](./0025-unified-state-fold-aggregate-model.md)):
 >
 > - **Keys are no longer `Guid`-locked.** `IEntityKey` is now a **non-generic marker** that also declares `bool IsEmpty { get; }`; `IEntityKey<TValue>` (where `TValue : notnull`) exposes the underlying `Value`. The value type may be `Guid`, `int`, `string`, or any `notnull` type. Each key defines its own `IsEmpty` rule (e.g. `Value == Guid.Empty`, `Value <= 0`, `string.IsNullOrWhiteSpace(Value)`).
 > - **Identity validation is type-agnostic.** The guards no longer inspect the raw value type; they call `id.IsEmpty` (or `State.Id.IsEmpty`), so the base classes stay value-type-agnostic. The previous "empty-GUID" wording should be read as "empty per the key's `IsEmpty` rule".
-> - **Aggregate roots split into two bases.**
->   - **`AggregateRoot<TKey>`** (state-modeled) assigns `Id` in the **constructor**, with the `IsEmpty` guard there — like `Entity<TKey>`.
->   - **`EventSourcedAggregateRoot<TKey, TState>`** (event-modeled) derives `Id` from its **state** (`Id => State.Id`); a new aggregate starts with a default `Id`, the first applied event sets it, and the `IsEmpty` check runs at every transition.
+> - **All aggregates derive identity from state.** `AggregateRoot<TKey, TState>` derives `Id` from its **state** (`Id => State.Id`); a new aggregate starts with a default `Id`, the first applied event sets it, and the `IsEmpty` check runs at every transition. `Entity<TKey>` still assigns `Id` in the **constructor**, with the `IsEmpty` guard there.
 >
-> The equality rule (same concrete type + equal ids, `sealed` `Equals`/`GetHashCode`) is unchanged and applies to `Entity<TKey>`, `AggregateRoot<TKey>`, and `EventSourcedAggregateRoot<TKey, TState>`.
+> The equality rule (same concrete type + equal ids, `sealed` `Equals`/`GetHashCode`) is unchanged; it is implemented **once**, in the shared `EntityBase<TKey>` base of `Entity<TKey>` and `AggregateRoot<TKey, TState>`.
 
 ## Consequences
 
