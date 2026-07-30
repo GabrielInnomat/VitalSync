@@ -339,6 +339,10 @@ Adding any further third-party dependency to the platform requires it to land
 
 `BuildingBlocks.Infrastructure.Tests` mirrors this project. Tests use xUnit
 (built-in asserts), NSubstitute, and EF Core InMemory where applicable
-(ADR-0014); Marten/Wolverine components are covered with integration tests
-against disposable PostgreSQL/RabbitMQ instances. See
+(ADR-0014). Dispatching, DI wiring, failure translation, serialization, and
+entity-key mapping are covered by fast in-memory tests against the real `Sender`
+and a DI container. Marten optimistic concurrency and strongly-typed key
+persistence are covered by integration tests against a disposable PostgreSQL
+instance via Testcontainers (skipped automatically when Docker is unavailable).
+A small set of architecture tests enforces the layer-dependency rules. See
 [Testing strategy](./testing-strategy.md).

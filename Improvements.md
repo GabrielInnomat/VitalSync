@@ -666,6 +666,7 @@ Damit sind IMP-01 (Stamping) und IMP-08 (Flush) strukturell für beide Pfade gel
 # IMP-09 - Kein Testprojekt für `BuildingBlocks.Infrastructure`
 
 - **Kritisch**
+-   - **Status**: gelöst. Das Testprojekt `BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests` existiert und ist in allen drei Stufen aufgebaut. **Stufe 1** (Dispatching/DI gegen den realen `Sender`): Failure-Übersetzung, `UnitOfWorkBehavior` (Commit bei Erfolg, kein Commit bei Fehler/Query, `DbUpdateConcurrencyException` → `Failure.Conflict`), Dispatcher-Auflösung, `AddHandlersFrom`-Registrierung und `FailureResults`-Laufzeittypen. **Stufe 2** (ohne Infrastruktur): `DomainEventEnvelopeSerializer`-Round-Trip mit typisierter ID, `decimal` und `DateTimeOffset`, Typauflösung, `EntityKeyFormatter` und `ApplyEntityKeyConversions`. **Stufe 3** (Testcontainers PostgreSQL): `MartenEventSourcedRepository`-Versionsarithmetik/Optimistic Concurrency und Entity-Key-Persistenz — skippt automatisch, wenn kein Docker verfügbar ist. Dazu **Architekturtests**, die die Schichtregeln per Reflection durchsetzen. Regressionstests für noch offene Punkte (IMP-05/06/07) sind als `Skip` mit Verweis auf das jeweilige IMP hinterlegt und werden aktiviert, sobald diese gelöst sind.
 
 ## Beschreibung
 

@@ -117,6 +117,7 @@ ADRs are immutable once accepted; to change a decision, add a superseding ADR. I
 ## Testing
 
 - Frameworks: **xUnit** (including built-in `Assert.*`), **NSubstitute**, **EF Core InMemory**. Do **not** use FluentAssertions — removed for licensing reasons (ADR-0014).
+- **Testcontainers (PostgreSQL)** backs the `BuildingBlocks.Infrastructure` integration tests (Marten optimistic concurrency, strongly-typed key persistence); guard them with `Skip`/`Assert.SkipUnless` so they skip when Docker is unavailable instead of failing.
 - Test projects mirror source structure 1:1 (e.g. `BuildingBlocks.Domain.Tests` for `BuildingBlocks.Domain`); domain tests use lightweight hand-written test doubles (`TestDoubles/`) rather than mocks — the domain has no infrastructure dependencies to mock. NSubstitute is reserved for application/persistence/messaging tests.
 - Categories: unit, domain, application-layer, persistence, integration, component-communication. See `docs/architecture/testing-strategy.md`.
 - Assert observable behavior, not internal details (e.g. "creating a recipe raises a `RecipeCreated` event").

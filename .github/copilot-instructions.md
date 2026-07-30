@@ -213,6 +213,10 @@ XML documentation is authored to a consistent standard — see
 - Frameworks: **xUnit** (including its built-in `Assert.*` assertions), **NSubstitute**,
   **EF Core InMemory**. Do **not** use FluentAssertions — it was removed for licensing
   reasons (see ADR-0014); express expectations with standard xUnit assertions.
+- **Testcontainers (PostgreSQL)** is used for `BuildingBlocks.Infrastructure` integration
+  tests (Marten optimistic concurrency, strongly-typed key persistence); these skip
+  automatically when Docker is unavailable, so keep them behind a `Skip`/`Assert.SkipUnless`
+  guard rather than letting them fail.
 - Test projects mirror source structure (e.g. `BuildingBlocks.Domain.Tests`).
 - Strategy covers unit, integration, domain, application-layer, persistence, and
   component-communication tests. See `docs/architecture/testing-strategy.md`.
