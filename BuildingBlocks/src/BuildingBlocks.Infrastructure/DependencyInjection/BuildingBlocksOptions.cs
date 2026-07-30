@@ -19,7 +19,9 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection;
 /// A host registers its handlers via <see cref="AddHandlersFrom"/>, exactly one persistence style per write
 /// database (<see cref="UseEfCorePersistence{TContext}"/> for state-stored contexts, ADR-0020, or
 /// <see cref="UseMartenEventSourcing"/> for event-sourced contexts, ADR-0019), and optionally the Wolverine transport
-/// for integration events via <see cref="UseWolverineMessaging"/> (ADR-0023). The methods only register services —
+/// for integration events via <see cref="UseWolverineMessaging"/> (ADR-0023). A microservice hosts exactly one
+/// bounded context and a bounded context uses exactly one persistence strategy, so selecting both persistence styles
+/// throws — a context that appears to need both is cut wrong and should be split. The methods only register services —
 /// nothing is built or connected until the host starts.
 /// </remarks>
 public sealed class BuildingBlocksOptions
@@ -33,10 +35,34 @@ public sealed class BuildingBlocksOptions
     ];
 
     private readonly IServiceCollection _services;
+    private PersistenceStyle _persistenceStyle;
 
     internal BuildingBlocksOptions(IServiceCollection services)
     {
         _services = services;
+    }
+
+    private enum PersistenceStyle
+    {
+        None = 0,
+        EfCore,
+        Marten,
+    }
+
+    private void SelectPersistenceStyle(PersistenceStyle style)
+    {
+        if (_persistenceStyle != PersistenceStyle.None && _persistenceStyle != style)
+        {
+            throw new InvalidOperationException(
+                "Two persistence strategies were configured for the same host (EF Core and Marten). " +
+                "A microservice hosts exactly one bounded context, and a bounded context uses exactly one " +
+                "persistence strategy (ADR-0019/0020/0021): state-stored via EF Core, or event-sourced via Marten. " +
+                "A commit cannot span both stores atomically because they live in separate databases (ADR-0020). " +
+                "A context that appears to need both is a sign it is cut wrong and should be split into two " +
+                "bounded contexts, each in its own microservice with its own single persistence strategy.");
+        }
+
+        _persistenceStyle = style;
     }
 
     /// <summary>
@@ -87,9 +113,12 @@ public sealed class BuildingBlocksOptions
     /// </remarks>
     /// <typeparam name="TContext">The write-database context type of the bounded context.</typeparam>
     /// <returns>The same options, for chaining.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when <see cref="UseMartenEventSourcing"/> was already selected for this host. A bounded context uses exactly one persistence strategy (ADR-0019/0020/0021); mixing EF Core and Marten is not supported.</exception>
     public BuildingBlocksOptions UseEfCorePersistence<TContext>()
         where TContext : DbContext
     {
+        SelectPersistenceStyle(PersistenceStyle.EfCore);
+
         _services.TryAddScoped<DbContext>(static provider => provider.GetRequiredService<TContext>());
         _services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork<TContext>>();
         _services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
@@ -111,9 +140,12 @@ public sealed class BuildingBlocksOptions
     /// <param name="connectionString">The connection string of the context's write database.</param>
     /// <returns>The same options, for chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="connectionString"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when <see cref="UseEfCorePersistence{TContext}"/> was already selected for this host. A bounded context uses exactly one persistence strategy (ADR-0019/0020/0021); mixing EF Core and Marten is not supported.</exception>
     public BuildingBlocksOptions UseMartenEventSourcing(string connectionString)
     {
         ArgumentNullException.ThrowIfNull(connectionString);
+
+        SelectPersistenceStyle(PersistenceStyle.Marten);
 
         _services.AddMarten(options =>
         {

@@ -57,6 +57,15 @@ Adopt a **one-engine, database-per-bounded-context** topology:
   database.** Marten's event tables (ADR-0019) and a context's EF Core relational
   tables live in separate databases, even when hosted on the same server, so they
   can be moved and scaled independently.
+- **One persistence strategy per bounded context.** A microservice hosts exactly
+  one bounded context, and that context uses **exactly one** persistence strategy —
+  either state-stored (EF Core) or event-sourced (Marten), never both. Because the
+  two stores live in separate databases, a single commit cannot span them
+  atomically; a context that seems to need both is **cut wrong** and should be split
+  into two bounded contexts, each in its own microservice with its own single
+  strategy. `AddBuildingBlocks` enforces this by **throwing at startup** if both
+  `UseEfCorePersistence<TContext>()` and `UseMartenEventSourcing(...)` are selected
+  for the same host.
 - **Future migration path (sanctioned, non-breaking):** moving a bounded context's
   database onto its **own dedicated server** ("server per context/service") is an
   explicitly supported evolution. Because each context already has its own

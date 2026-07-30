@@ -152,64 +152,30 @@ Das wiegt besonders schwer, weil „Event Sourcing selektiv, nur wo es fachliche
 
 ## Lösungsvorschlag
 
-**Schritt 1 — Konkrete Unit-of-Work-Implementierungen als Enumerable registrieren:**
+**Entscheidung:** Ein Microservice hostet genau einen Bounded Context, und ein Bounded Context nutzt **genau eine** Persistenzstrategie — entweder state-stored (EF Core) oder event-sourced (Marten), niemals beides. Da beide Stores in getrennten Datenbanken liegen (ADR-0020), kann ein Commit sie ohnehin nicht atomar überspannen. Ein Context, der beide Welten zu brauchen scheint, ist ein **Smell für einen falschen Schnitt** und gehört in zwei Contexts aufgeteilt. Die ADRs (0019/0020/0021) bleiben damit vollständig gültig.
+
+Statt eine nicht-atomare Mischung (`CompositeUnitOfWork`) zu ermöglichen, wird die Mischung deshalb **verboten und laut abgelehnt**: `BuildingBlocksOptions` verfolgt die gewählte Strategie und wirft, sobald sowohl `UseEfCorePersistence<TContext>()` als auch `UseMartenEventSourcing(...)` für denselben Host registriert werden.
 
 ```csharp
-// UseEfCorePersistence<TContext>
-_services.TryAddEnumerable(
-    ServiceDescriptor.Scoped<IUnitOfWorkParticipant, EfCoreUnitOfWork<TContext>>());
+private PersistenceStyle _persistenceStyle;
 
-// UseMartenEventSourcing
-_services.TryAddEnumerable(
-    ServiceDescriptor.Scoped<IUnitOfWorkParticipant, MartenUnitOfWork>());
-```
-
-`IUnitOfWorkParticipant` ist ein neuer, Infrastructure-interner Marker mit derselben Signatur wie `IUnitOfWork`. Die Trennung ist wichtig: Application-Code kennt weiterhin nur `IUnitOfWork` (genau eine Transaktionsklammer), die Infrastruktur weiß, dass diese Klammer aus mehreren Teilnehmern bestehen kann.
-
-**Schritt 2 — Komposition in `AddBuildingBlocks`:**
-
-```csharp
-internal sealed class CompositeUnitOfWork(IEnumerable<IUnitOfWorkParticipant> participants) : IUnitOfWork
+private void SelectPersistenceStyle(PersistenceStyle style)
 {
-    private readonly IUnitOfWorkParticipant[] _participants = [.. participants];
-
-    public async Task CommitAsync(CancellationToken cancellationToken)
+    if (_persistenceStyle != PersistenceStyle.None && _persistenceStyle != style)
     {
-        if (_participants.Length == 0)
-        {
-            return;
-        }
-
-        foreach (var participant in _participants)
-        {
-            await participant.CommitAsync(cancellationToken).ConfigureAwait(false);
-        }
+        throw new InvalidOperationException(
+            "Two persistence strategies were configured for the same host (EF Core and Marten). " +
+            "A microservice hosts exactly one bounded context, and a bounded context uses exactly one " +
+            "persistence strategy (ADR-0019/0020/0021) ...");
     }
-}
 
-services.TryAddScoped<IUnitOfWork, CompositeUnitOfWork>();
+    _persistenceStyle = style;
+}
 ```
 
-**Schritt 3 — die Konsistenzgrenze explizit machen.** Das ist der eigentlich wichtige Teil: `CompositeUnitOfWork` ist **keine** verteilte Transaktion. Zwei Teilnehmer bedeuten zwei getrennte Commits; fällt der Prozess zwischen ihnen aus, ist die eine Seite geschrieben und die andere nicht.
+`UseEfCorePersistence<TContext>()` ruft `SelectPersistenceStyle(PersistenceStyle.EfCore)` auf, `UseMartenEventSourcing(...)` ruft `SelectPersistenceStyle(PersistenceStyle.Marten)` auf. Damit wird aus dem bisherigen stillen Datenverlust (`TryAdd*`-No-Op) ein lauter Startfehler mit Handlungsanweisung. Die Dokumentation (ADR-0020, `docs/architecture/cqrs-and-event-sourcing.md`) hält die Ein-Strategie-pro-Context-Regel explizit fest.
 
-Drei Optionen, in absteigender Präferenz:
-
-1. **Vermeiden.** Die sauberste Lösung ist, dass ein Bounded Context genau eine Persistenzstrategie hat. Ein Context mit gemischten Aggregaten ist oft ein Hinweis darauf, dass er in zwei Contexts zerfallen sollte. `AddBuildingBlocks` sollte bei doppelter Registrierung deshalb **standardmäßig beim Start werfen**:
-
-    ```csharp
-    if (participants.Count > 1 && !options.AllowMultiplePersistenceStores)
-        throw new InvalidOperationException(
-            "Es wurden mehrere Persistenzstrategien registriert (EF Core und Marten). " +
-            "Ein Commit über beide ist nicht atomar. " +
-            "Trenne die Aggregate in getrennte Bounded Contexts oder aktiviere " +
-            "AllowMultiplePersistenceStores explizit.");
-    ```
-
-    Das macht aus einem stillen Datenverlust einen lauten Startfehler mit Handlungsanweisung.
-
-2. **Gemeinsame Transaktion.** Liegen Write-DB und Event Store auf **derselben** PostgreSQL-Instanz _und_ in derselben Datenbank, kann man eine `NpgsqlTransaction` erzeugen, sie über `dbContext.Database.UseTransaction(...)` und `session.Connection`/`session.BeginTransaction` an beide Teilnehmer hängen und gemeinsam committen. Das ist die einzige wirklich atomare Variante — funktioniert aber nur, wenn das Datenbank-Topologie-Design das zulässt.
-
-3. **Bewusst akzeptieren.** Reihenfolge fixieren (zuerst die Seite, deren Verlust rekonstruierbar ist), die Nicht-Atomarität in einem ADR festhalten und die betroffenen Commands idempotent auslegen.
+**Umgesetzt.**
 
 ---
 
