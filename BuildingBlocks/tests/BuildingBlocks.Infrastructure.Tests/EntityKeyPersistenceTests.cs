@@ -1,6 +1,8 @@
 using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
@@ -12,19 +14,24 @@ public sealed class EntityKeyPersistenceTests(PostgreSqlFixture fixture)
     {
         Assert.SkipUnless(fixture.Available, fixture.SkipReason);
 
+        // The persistence tests share one PostgreSQL database (PostgreSqlCollection), so this context uses a unique
+        // schema and creates its tables explicitly. EnsureCreated would no-op whenever the shared database already has
+        // any tables (e.g. Marten streams created by another test), leaving this table missing.
+        var schema = "recipes_" + Guid.NewGuid().ToString("N")[..8];
         var options = new DbContextOptionsBuilder<RecipeContext>()
             .UseNpgsql(fixture.ConnectionString)
             .Options;
         var id = new RecipeId(Guid.NewGuid());
 
-        await using (var context = new RecipeContext(options))
+        await using (var context = new RecipeContext(options, schema))
         {
-            await context.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
+            await context.GetService<IRelationalDatabaseCreator>()
+                .CreateTablesAsync(TestContext.Current.CancellationToken);
             context.Recipes.Add(new RecipeRow { Id = id, Name = "Pasta" });
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
-        await using (var context = new RecipeContext(options))
+        await using (var context = new RecipeContext(options, schema))
         {
             var found = await context.Recipes.FindAsync([id], TestContext.Current.CancellationToken);
 
@@ -34,12 +41,15 @@ public sealed class EntityKeyPersistenceTests(PostgreSqlFixture fixture)
         }
     }
 
-    private sealed class RecipeContext(DbContextOptions<RecipeContext> options) : DbContext(options)
+    private sealed class RecipeContext(DbContextOptions<RecipeContext> options, string schema) : DbContext(options)
     {
         public DbSet<RecipeRow> Recipes => Set<RecipeRow>();
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.HasDefaultSchema(schema);
             modelBuilder.ApplyEntityKeyConversions();
+        }
     }
 
     private sealed class RecipeRow
