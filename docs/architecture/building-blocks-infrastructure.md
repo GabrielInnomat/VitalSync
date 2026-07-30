@@ -7,10 +7,10 @@ implementations that are still **independent of any VitalSync domain logic**
 `BuildingBlocks.Domain` and `BuildingBlocks.Application` and is the **only**
 Building Block allowed to reference third-party packages.
 
-> **Status: specification.** This package is not yet implemented. This document
-> is the authoritative design it must be implemented against
-> (documentation-first). Where the implementation and this document diverge,
-> this document wins until amended.
+> **Status: implemented.** This document is the authoritative design for the
+> package. Where the implementation and this document diverge, treat the
+> divergence as a bug in one of them and reconcile via a PR (updating this
+> document if the design itself changed).
 
 > Related decisions:
 > [ADR-0015](./decisions/0015-hand-rolled-cqrs-mediator.md) (hand-rolled mediator),

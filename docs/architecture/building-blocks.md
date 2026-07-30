@@ -41,7 +41,7 @@ It depends **only** on `Domain`, and — like `Domain` — it references **no** 
 
 It depends on `Domain` and `Application`, and it is where every third-party dependency of the platform is localized. There are deliberately **no** separate `EventProcessing` or `Persistence` packages (see [ADR-0018](./decisions/0018-three-building-block-packages.md)).
 
-> Detailed reference: [BuildingBlocks.Infrastructure](./building-blocks-infrastructure.md) *(specification — not yet implemented)*.
+> Detailed reference: [BuildingBlocks.Infrastructure](./building-blocks-infrastructure.md).
 
 ## How they depend on each other
 

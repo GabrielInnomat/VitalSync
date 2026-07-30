@@ -1,6 +1,6 @@
 # VitalSync
 
-> A cloud-native, distributed platform unifying **nutrition**, **workout**, and **health analytics** in a single application.
+> A cloud-native, distributed platform unifying **nutrition**, **fitness**, and **health analytics** in a single application.
 
 VitalSync lets users manage nutrition- and workout-related information and derive meaningful insights from the collected data. It is built as a distributed system of independent microservices following Domain-Driven Design, CQRS, and selective Event Sourcing.
 
@@ -143,7 +143,7 @@ These Building Blocks are deliberately **independent of VitalSync** and reusable
 
 - [BuildingBlocks.Domain](./docs/architecture/building-blocks-domain.md)
 - [BuildingBlocks.Application](./docs/architecture/building-blocks-application.md)
-- [BuildingBlocks.Infrastructure](./docs/architecture/building-blocks-infrastructure.md) *(specification — not yet implemented)*
+- [BuildingBlocks.Infrastructure](./docs/architecture/building-blocks-infrastructure.md)
 
 ## Getting started
 
