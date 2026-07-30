@@ -227,12 +227,17 @@ Docker (for messaging infrastructure/containers).
 5. Add or update tests (mirror the project structure).
 6. Document `BuildingBlocks/src/*` per the XML documentation conventions (ADR-0013);
    don't add XML docs to tests or service code.
-7. If a change affects architecture, **add or update an ADR** using the template in
+7. If a change affects architecture, **add or superseed an ADR** using the template in
    `docs/architecture/decisions/README.md`.
 8. Match existing style; respect `.editorconfig` and `Directory.Build.props`.
-9. **do never push or commit directly to the `main` branch. **
+9. **Always comit and push directly to the `main` branch. **
 never work on separate branches, and never ask which
-   branch to use — `main` is always the target. keep the changes local.
+   branch to use — `main` is always the target. 
+10. Update this instruction file if you discover a gap or ambiguity in the guidance.
+11. If you are unsure about a decision, **ask a human** — Copilot is not the arbiter of
+
+   architecture or domain rules.
+12. Use always short and clear commit messages.
 
 ## Key documentation
 

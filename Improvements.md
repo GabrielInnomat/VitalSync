@@ -131,6 +131,7 @@ Das ist der eigentliche Gewinn: Aktuell muss jede Aggregat-Methode einen `IClock
 # IMP-02 - Kein `IUnitOfWork` bei gemischtem EF/Marten-Kontext
 
 - **Kritisch**
+-   - **Status**: gelöst.
 
 ## Beschreibung
 
