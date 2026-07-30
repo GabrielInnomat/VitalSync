@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
+using System.Reflection;
 using BuildingBlocks.Domain;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -42,15 +43,17 @@ public sealed class EntityKeyValueConverter<TKey, TValue>() : ValueConverter<TKe
 /// </summary>
 /// <remarks>
 /// Call <see cref="ApplyEntityKeyConversions"/> at the end of a write-database context's <c>OnModelCreating</c> to
-/// convert every mapped property whose CLR type implements <see cref="IEntityKey{TValue}"/> without configuring each
-/// property individually.
+/// convert every property whose CLR type implements <see cref="IEntityKey{TValue}"/> without configuring each
+/// property individually. Because a strongly typed key wraps a type EF Core cannot map on its own, the scan works
+/// over the entity's CLR properties rather than the already-discovered model properties; this ensures a strongly
+/// typed <b>primary key</b> is configured as well, which relational providers otherwise refuse to map.
 /// </remarks>
 public static class EntityKeyModelBuilderExtensions
 {
     private static readonly ConcurrentDictionary<Type, ValueConverter> Converters = new();
 
     /// <summary>
-    /// Applies the <see cref="EntityKeyValueConverter{TKey, TValue}"/> to every mapped strongly typed key property.
+    /// Applies the <see cref="EntityKeyValueConverter{TKey, TValue}"/> to every strongly typed key property.
     /// </summary>
     /// <param name="modelBuilder">The model builder whose entity types are inspected.</param>
     /// <returns>The same model builder, for chaining.</returns>
@@ -60,17 +63,23 @@ public static class EntityKeyModelBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
 
-        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes().ToList())
         {
-            foreach (var property in entityType.GetProperties())
+            var clrType = entityType.ClrType;
+            if (clrType is null)
             {
-                if (property.GetValueConverter() is not null)
+                continue;
+            }
+
+            foreach (var propertyInfo in clrType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (propertyInfo.GetIndexParameters().Length != 0 || propertyInfo.GetMethod is null)
                 {
                     continue;
                 }
 
                 var keyInterface = Array.Find(
-                    property.ClrType.GetInterfaces(),
+                    propertyInfo.PropertyType.GetInterfaces(),
                     static @interface => @interface.IsGenericType
                         && @interface.GetGenericTypeDefinition() == typeof(IEntityKey<>));
 
@@ -79,13 +88,19 @@ public static class EntityKeyModelBuilderExtensions
                     continue;
                 }
 
+                var propertyBuilder = modelBuilder.Entity(clrType).Property(propertyInfo.Name);
+                if (propertyBuilder.Metadata.GetValueConverter() is not null)
+                {
+                    continue;
+                }
+
                 var converter = Converters.GetOrAdd(
-                    property.ClrType,
+                    propertyInfo.PropertyType,
                     static (keyType, valueType) => (ValueConverter)Activator.CreateInstance(
                         typeof(EntityKeyValueConverter<,>).MakeGenericType(keyType, valueType))!,
                     keyInterface.GetGenericArguments()[0]);
 
-                property.SetValueConverter(converter);
+                propertyBuilder.HasConversion(converter);
             }
         }
 
