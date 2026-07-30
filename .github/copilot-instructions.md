@@ -81,6 +81,14 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   communication is **asynchronous** via RabbitMQ/Wolverine .
 - Layer separation (Domain / Application / Infrastructure / Persistence) is
   mandatory; keep dependencies pointing inward (domain has no infrastructure deps).
+- **Contract placement** (ADR-0024): a contract lives in the **innermost layer
+  whose language it speaks and that actually consumes it** — decided by its
+  *consumer*, not its implementor (implementations always live outside, per DIP).
+  Domain vocabulary (`IDomainEvent`, business rules, `IClock`) → `Domain`;
+  orchestration-facing contracts (`IRepository`, `IUnitOfWork`,
+  projection-handler / event-publisher abstractions, integration-event marker) →
+  `Application`; **all implementations** → `Infrastructure`, which defines no
+  use-case contracts of its own. New contract? Place it by asking who consumes it.
 
 See `docs/architecture/communication.md` and the ADRs below.
 
