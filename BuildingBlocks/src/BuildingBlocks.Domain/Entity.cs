@@ -1,4 +1,4 @@
-﻿namespace BuildingBlocks.Domain;
+namespace BuildingBlocks.Domain;
 
 /// <summary>
 /// Base class for domain entities that are compared by identity rather than by attribute values.

@@ -1,4 +1,4 @@
-﻿namespace BuildingBlocks.Domain;
+namespace BuildingBlocks.Domain;
 
 /// <summary>
 /// Base class for all aggregate roots, whose state changes are expressed by applying domain events to a state object.

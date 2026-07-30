@@ -41,9 +41,7 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configure);
 
         services.TryAddSingleton<IIntegrationEventTransport, NullIntegrationEventTransport>();
-
         configure(new BuildingBlocksOptions(services));
-
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<IClock, SystemClock>();
         services.TryAddScoped<ISender, Sender>();
