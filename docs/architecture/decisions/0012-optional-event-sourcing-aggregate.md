@@ -1,8 +1,11 @@
 # 0012. Optional event sourcing via a split aggregate hierarchy
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0025](./0025-unified-state-fold-aggregate-model.md)
 - **Date:** 2026-07-22
 - **Supersedes:** [ADR-0011](./0011-unified-aggregate-for-es-and-ef.md)
+- **Superseded:** 2026-07-30 by [ADR-0025](./0025-unified-state-fold-aggregate-model.md), which restores a single authoring model (`AggregateRoot<TKey, TState>` with a state fold for every aggregate) and makes event sourcing a purely additive capability (`EventSourcedAggregateRoot` adds only `Version` + `LoadFromHistory`), so switching an aggregate between the state-stored and event-sourced worlds is a base-class and composition change instead of a re-implementation.
+
+> **Note:** This decision is no longer in effect. See [ADR-0025](./0025-unified-state-fold-aggregate-model.md) for the current approach. The split hierarchy shared nothing between the two bases, which made the "selective event sourcing" strategy structurally unsupported: migrating an aggregate to event sourcing was a rewrite.
 
 ## Context
 

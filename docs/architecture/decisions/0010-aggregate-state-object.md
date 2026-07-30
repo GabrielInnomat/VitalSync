@@ -39,6 +39,8 @@ public interface IState<TSelf, out TKey>
 - Reading aggregate state at command-time goes through `State.X` (e.g. invariant checks read from `State`), a minor ergonomic shift.
 - State-modeled aggregates (`AggregateRoot<TKey>`) do not use a state object at all; this pattern is scoped to event-modeled aggregates (ADR-0012).
 
+> **Implementation note (amendment 2026-07-23):** With the re-unified hierarchy of [ADR-0025](./0025-unified-state-fold-aggregate-model.md), the state-object pattern described here applies to **every** aggregate: `AggregateRoot<TKey, TState>` folds events into the state, and the event-sourced base only adds `Version`/`LoadFromHistory`. The last consequence bullet ("state-modeled aggregates do not use a state object") is obsolete.
+
 ## Alternatives considered
 
 - **Apply-on-the-aggregate** (mutating methods directly on the aggregate): simplest, but produces the "two methods per event" growth and interleaves concerns in large aggregates.

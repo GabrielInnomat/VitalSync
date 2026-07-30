@@ -5,7 +5,7 @@ namespace BuildingBlocks.Domain;
 /// </summary>
 /// <remarks>
 /// This non-generic base exists so identity can be inspected without knowing the concrete value type: guard clauses in
-/// <see cref="Entity{TKey}"/> and <see cref="AggregateRoot{TKey}"/> check <see cref="IsEmpty"/> through this contract
+/// <see cref="Entity{TKey}"/> and <see cref="AggregateRoot{TKey, TState}"/> check <see cref="IsEmpty"/> through this contract
 /// rather than the underlying primitive. The strongly typed <see cref="IEntityKey{TValue}"/> derives from it to add the
 /// typed <see cref="IEntityKey{TValue}.Value"/>.
 /// </remarks>

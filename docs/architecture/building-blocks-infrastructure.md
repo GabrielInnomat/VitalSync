@@ -97,9 +97,10 @@ public interface IUnitOfWork   // contract lives in Application (ADR-0024)
     4. clear the aggregates' event collections.
 - **Optimistic-concurrency conflicts surface at commit, not before.** Both
   stores only detect a version conflict when the changes are flushed
-  (`SaveChanges` / `SaveChangesAsync`); repositories merely _stage_ changes and
-  therefore cannot observe these exceptions. The commit path — via the
-  `UnitOfWorkBehavior` (§1) — translates them into a `Conflict` failure.
+  (`SaveChanges` / `SaveChangesAsync`); repositories only hand aggregates to
+  the tracker and therefore cannot observe these exceptions. The commit path —
+  via the `UnitOfWorkBehavior` (§1) — translates them into a `Conflict`
+  failure.
 - Two implementations, one per persistence style, sharing the same behavior:
   an EF Core–backed unit of work and a Marten-session–backed unit of work.
   Wolverine's native Marten/EF Core integration provides the shared
@@ -107,50 +108,61 @@ public interface IUnitOfWork   // contract lives in Application (ADR-0024)
 
 ## 3. Generic repositories
 
-### EF Core repository (state-stored contexts, ADR-0020)
+Both persistence styles implement the **same** `IRepository<,>` contract from
+`Application` ([ADR-0026](./decisions/0026-single-repository-contract.md)):
 
 ```csharp
-public interface IRepository<TAggregate, TKey>   // contract lives in Application (ADR-0024)
-    where TAggregate : AggregateRoot<TKey>
+public interface IRepository<TAggregate, in TKey>   // contract lives in Application (ADR-0024)
+    where TAggregate : class, IAggregateRoot<TKey>
 {
     Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken ct);
     Task AddAsync(TAggregate aggregate, CancellationToken ct);
-    void Remove(TAggregate aggregate);
 }
 ```
 
 - Works against the context's **write database** only (ADR-0021).
-- Strongly typed identifiers (ADR-0005) are mapped via EF Core value converters
-  provided here as reusable conventions.
-- No `Update` method — aggregates are tracked; changes flow through the unit of
-  work.
+- No `Update`/`Save` method — retrieved aggregates are tracked; changes flow
+  through the unit of work.
+- No `Remove` method — removal is a soft-delete state change in the domain and
+  therefore an ordinary update (ADR-0026).
 - **No query methods beyond `GetByIdAsync`.** Queries never go through
   repositories: the read side reads its own read database directly
   (ADR-0021/0022).
+
+### EF Core repository (state-stored contexts, ADR-0020)
+
+- Strongly typed identifiers (ADR-0005) are mapped via EF Core value converters
+  provided here as reusable conventions.
+- Change tracking comes from the `DbContext`; the unit of work collects tracked
+  aggregates' events from the change tracker at commit.
 
 ### Marten event-sourced repository (ADR-0019)
 
 A small cluster of classes, using Marten as a **raw stream store**:
 
 - `MartenEventSourcedRepository<TAggregate, TKey>` — the repository itself;
-- `MartenAggregateTracker` — a scoped tracker the repository registers saved
-  aggregates with, so the Marten unit of work can collect their uncommitted
-  domain events for the outbox at commit time and defer clearing the event
-  collections until after a successful commit (§2);
+- `MartenAggregateTracker` — a scoped tracker the repository registers every
+  aggregate it hands out (loaded or added) with, mirroring EF Core's change
+  tracker; each `TrackedAggregate` entry carries accessors for the stream key
+  and the expected version, so the Marten unit of work can append the
+  uncommitted domain events, enroll them in the outbox at commit time, and
+  defer clearing the event collections until after a successful commit (§2);
 - `EntityKeyFormatter` — derives the stream key from the aggregate type and its
   strongly typed identifier (`{AggregateType}-{Id}`), since Marten streams are
   keyed by string (`StreamIdentity.AsString`) while aggregates use strongly
   typed keys (ADR-0005).
 
 - **Load:** `FetchStream(id)` → fold via
-  `((IEventSourcedAggregateRoot<TKey>)aggregate).LoadFromHistory(history)`.
-  Marten's `Apply`-on-aggregate convention is **never** used (preserves
-  ADR-0010 / ADR-0012).
-- **Save:** _stages_ an append of the uncommitted domain events to the stream
-  with expected-version optimistic concurrency asserted against the aggregate's
-  `Version`. A wrong expected version surfaces Marten's `ConcurrencyException`
-  only when the unit of work commits the session; the commit path
-  translates it into a `Failure` with category `Conflict`.
+  `((IEventSourcedAggregateRoot<TKey>)aggregate).LoadFromHistory(history)`,
+  then track the aggregate. Marten's `Apply`-on-aggregate convention is
+  **never** used (preserves ADR-0010 / ADR-0025).
+- **Add:** tracks the new aggregate; no session interaction happens in the
+  repository at all.
+- **Commit (unit of work):** appends each tracked aggregate's uncommitted
+  events to its stream with expected-version optimistic concurrency asserted
+  against the aggregate's `Version`. A wrong expected version surfaces Marten's
+  `ConcurrencyException` when the session is saved; the commit path translates
+  it into a `Failure` with category `Conflict`.
 - **Snapshotting is deferred** (ADR-0019): when a context later needs it, the
   repository reads the latest snapshot document, then folds only the stream tail
   via the aggregate's `FromState` seed — a purely additive change.

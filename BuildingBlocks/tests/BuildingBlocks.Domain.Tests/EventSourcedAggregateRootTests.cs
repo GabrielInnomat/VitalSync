@@ -13,7 +13,7 @@ public sealed class EventSourcedAggregateRootTests
         aggregate.Raise(new TestDomainEvent(5));
 
         Assert.Equal(new TestId(5), aggregate.Id);
-        Assert.Equal(5, aggregate.State.Value);
+        Assert.Equal(5, aggregate.CurrentState.Value);
         Assert.Single(aggregate.DomainEvents);
         Assert.Equal(1, ((IEventSourcedAggregateRoot<TestId>)aggregate).Version);
     }
@@ -63,19 +63,7 @@ public sealed class EventSourcedAggregateRootTests
 
         Assert.Equal(3, aggregate.DomainEvents.Count);
         Assert.Equal(3, ((IEventSourcedAggregateRoot<TestId>)aggregate).Version);
-        Assert.Equal(3, aggregate.State.Value);
-    }
-
-    [Fact]
-    public void RaiseEvent_WhenAppliedStateLeavesIdEmpty_ThrowsDomainValidationException()
-    {
-        var aggregate = new NeverIdentifiedAggregate();
-
-        var ex = Assert.Throws<DomainValidationException>(
-            () => aggregate.Raise(new TestDomainEvent(5)));
-        Assert.Equal(
-            "The aggregate's identity must be set to a non-empty value by the applied event.",
-            ex.Message);
+        Assert.Equal(3, aggregate.CurrentState.Value);
     }
 
     [Fact]
@@ -92,7 +80,7 @@ public sealed class EventSourcedAggregateRootTests
         ((IEventSourcedAggregateRoot<TestId>)aggregate).LoadFromHistory(history);
 
         Assert.Equal(new TestId(3), aggregate.Id);
-        Assert.Equal(3, aggregate.State.Value);
+        Assert.Equal(3, aggregate.CurrentState.Value);
         Assert.Equal(3, ((IEventSourcedAggregateRoot<TestId>)aggregate).Version);
         // Replayed history must not be exposed as uncommitted events.
         Assert.Empty(aggregate.DomainEvents);
@@ -123,7 +111,7 @@ public sealed class EventSourcedAggregateRootTests
 
         Assert.Equal(3, ((IEventSourcedAggregateRoot<TestId>)aggregate).Version);
         Assert.Single(aggregate.DomainEvents);
-        Assert.Equal(3, aggregate.State.Value);
+        Assert.Equal(3, aggregate.CurrentState.Value);
     }
 
     [Fact]

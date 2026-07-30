@@ -14,7 +14,7 @@ The platform is deliberately split into exactly **three** packages. The boundary
 
 ### `BuildingBlocks.Domain`
 
-`BuildingBlocks.Domain` is the pure core of the platform. It provides the tactical Domain-Driven Design primitives that every service's domain layer builds upon: entities, the two aggregate-root base classes, domain events, value objects, strongly typed identifiers, domain exceptions, business-rule and validation abstractions, and the `IClock` abstraction.
+`BuildingBlocks.Domain` is the pure core of the platform. It provides the tactical Domain-Driven Design primitives that every service's domain layer builds upon: entities, the unified aggregate-root base classes (state fold, with event sourcing additive — ADR-0025), domain events, value objects, strongly typed identifiers, domain exceptions, business-rule and validation abstractions, and the `IClock` abstraction.
 
 It is deliberately kept **pure**: it declares **no** package references and depends on nothing but the BCL. No framework, no infrastructure, no third party. This is what keeps the heart of every service clean and portable.
 

@@ -92,8 +92,15 @@ See `docs/architecture/communication.md` and the ADRs below.
 - **Entity identity and equality** follow ADR-0008.
 - **Business rules and domain validation** follow ADR-0009.
 - Aggregates use an **aggregate state object** (ADR-0010).
-- **Event sourcing is optional**, via a split aggregate hierarchy (ADR-0012, which
-  supersedes ADR-0011). Only apply ES where it adds business value.
+- **One aggregate authoring model** — every aggregate derives from the state-fold
+  base `AggregateRoot<TKey, TState>` and mutates only via `RaiseEvent`; the
+  **event-sourced base is additive** (`Version` + `LoadFromHistory` only), per
+  ADR-0025 (which supersedes ADR-0012). Only apply ES where the event history
+  carries business value.
+- **One repository contract**: `IRepository<TAggregate, TKey>` with `GetByIdAsync`
+  and `AddAsync` only (ADR-0026) — no `Remove` (removal is a soft-delete state
+  change), no `Save`/`Update` (retrieved aggregates are tracked; changes flow
+  through the unit of work). Both EF Core and Marten implement the same contract.
 
 ## Application / CQRS conventions (from accepted ADRs)
 
@@ -114,7 +121,7 @@ See `docs/architecture/communication.md` and the ADRs below.
 ## Persistence & event sourcing (from accepted ADRs)
 
 - **EF Core is the default**; **Event Sourcing is selective**, applied only where the
-  event history carries business value (ADR-0012).
+  event history carries business value (ADR-0025).
 - **Everything runs on PostgreSQL** — the single relational engine (ADR-0020).
   State-stored contexts use **EF Core via the Npgsql provider**; event-sourced
   contexts use **Marten on PostgreSQL** (ADR-0019).
@@ -130,11 +137,12 @@ See `docs/architecture/communication.md` and the ADRs below.
   non-breaking migration — a connection-string change plus a data move, touching no
   Domain/Application/Infrastructure code (ADR-0020/0021).
 - The **event store is Marten on PostgreSQL** (ADR-0019), used as a **raw event store**:
-  the event-sourced repository in `BuildingBlocks.Infrastructure` appends uncommitted
-  domain events (optimistic concurrency on `Version`) and, on load, fetches the raw
-  stream and folds it through the aggregate's own `LoadFromHistory`. Marten's
-  convention-based `Apply`-on-aggregate aggregation is **not** used, so the domain
-  (ADR-0010 / ADR-0012) stays untouched.
+  the event-sourced repository in `BuildingBlocks.Infrastructure` tracks aggregates
+  (loaded and added) and the Marten unit of work appends their uncommitted domain
+  events at commit (optimistic concurrency on `Version`); on load, the repository
+  fetches the raw stream and folds it through the aggregate's own `LoadFromHistory`.
+  Marten's convention-based `Apply`-on-aggregate aggregation is **not** used, so the
+  domain (ADR-0010 / ADR-0025) stays untouched.
 - The **event store and the state-stored store never co-locate in the same database**,
   even on the same server, so they can move and scale independently.
 - **Read models are event-driven, via an outbox-backed publisher** (ADR-0022), used

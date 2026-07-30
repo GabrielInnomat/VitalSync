@@ -142,15 +142,17 @@ infrastructure-only, implemented explicitly). See
 The consistency boundary and single entry point for an aggregate. It exposes
 **behavior (not setters)** to enforce invariants, **raises domain events** to
 announce business-relevant changes, and exposes those events **read-only** to
-other layers. VitalSync provides two aggregate bases:
+other layers. VitalSync provides a single authoring model with two bases:
 
-- `AggregateRoot<TKey>` — for **state-stored** (EF Core) aggregates; identity is
-  passed to the constructor; records events via `AddDomainEvent`.
-- `EventSourcedAggregateRoot<TKey, TState>` — for **event-sourced** aggregates;
-  identity is derived from state; records events via `RaiseEvent`.
+- `AggregateRoot<TKey, TState>` — the base for **every** aggregate; identity is
+  derived from state; state changes only via `RaiseEvent`, which folds the
+  event into the immutable state.
+- `EventSourcedAggregateRoot<TKey, TState>` — additive base for
+  **event-sourced** aggregates; adds only `Version` and `LoadFromHistory`.
 
-The author picks the base that matches the service's persistence strategy
-([ADR-0012](./architecture/decisions/0012-optional-event-sourcing-aggregate.md)).
+The author picks the event-sourced base only when the event history itself
+carries business value; the persistence style is chosen in the composition
+layer ([ADR-0025](./architecture/decisions/0025-unified-state-fold-aggregate-model.md)).
 
 ### Business Rule vs. Domain Validation
 
@@ -544,8 +546,13 @@ where **every** third-party dependency is localized. Nothing depends on
 
 ### Repository
 
-An abstraction for loading and saving aggregates. `Infrastructure` provides
-**generic repositories** for EF Core and for the Marten-based event store (see
+The single abstraction (`IRepository<TAggregate, TKey>`) for loading and adding
+aggregates — `GetByIdAsync` and `AddAsync` only; retrieved aggregates are
+tracked and their changes flow through the unit of work, and removal is a
+soft-delete state change, so there is no `Remove`, `Update`, or `Save`
+([ADR-0026](./architecture/decisions/0026-single-repository-contract.md)).
+`Infrastructure` provides **generic implementations** for EF Core and for the
+Marten-based event store (see
 [ADR-0019](./architecture/decisions/0019-event-store-technology-marten.md)).
 
 ---

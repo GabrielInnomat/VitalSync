@@ -82,11 +82,12 @@ database**, even on the same server, so they can move and scale independently. S
 
 When a context is event-sourced, its events are persisted in **Marten on
 PostgreSQL**, used as a **raw event store**: the event-sourced repository in
-`BuildingBlocks.Infrastructure` appends uncommitted domain events to the stream
-(with optimistic concurrency asserted against the aggregate's `Version`) and, on
-load, fetches the raw stream and folds it through the aggregate's own
+`BuildingBlocks.Infrastructure` tracks the aggregates it hands out, and the unit
+of work appends their uncommitted domain events to the stream at commit (with
+optimistic concurrency asserted against the aggregate's `Version`); on load, the
+repository fetches the raw stream and folds it through the aggregate's own
 `LoadFromHistory`. Marten's convention-based `Apply`-on-aggregate aggregation is
-**not** used, so the domain (ADR-0010 / ADR-0012) is untouched.
+**not** used, so the domain (ADR-0010 / ADR-0025) is untouched.
 
 **Snapshotting is deferred but non-breaking:** because a Marten snapshot is a
 separate document and the event schema is identical with or without snapshots,

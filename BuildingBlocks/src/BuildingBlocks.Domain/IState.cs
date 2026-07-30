@@ -5,8 +5,9 @@ namespace BuildingBlocks.Domain;
 /// </summary>
 /// <remarks>
 /// The state is an immutable snapshot: applying a domain event yields a new instance rather than mutating the current
-/// one, which is what allows an event-sourced aggregate to be rebuilt deterministically by replaying its history.
-/// Implement it as a record so equality and non-destructive mutation come for free.
+/// one. Every aggregate expresses its state changes through this fold; for event-sourced aggregates it additionally
+/// allows the state to be rebuilt deterministically by replaying the event history. Implement it as a record so
+/// equality and non-destructive mutation come for free.
 /// </remarks>
 /// <typeparam name="TSelf">The type of the state.</typeparam>
 /// <typeparam name="TKey">The type of the identity key.</typeparam>

@@ -787,6 +787,7 @@ Diese Tests sind billig und fangen genau die Erosion ab, die in einem wachsenden
 # IMP-10 - Zwei inkompatible Aggregat-Programmiermodelle
 
 - **Hoch**
+-   - **Status**: Gelöst (ADR-0025 / ADR-0026 — vereinheitlichtes State-Fold-Modell, ein Repository-Vertrag)
 
 ## Beschreibung
 
