@@ -379,9 +379,10 @@ processed only after its handlers succeed, otherwise it is retried. See
 
 ### RaiseEvent / LoadFromHistory
 
-The two ways an event-sourced aggregate's state changes: `RaiseEvent(e, clock)`
-stamps a new event, applies it to the state, validates identity, advances the
-version, and records it; `LoadFromHistory(history)` **replays** a persisted stream
+The two ways an event-sourced aggregate's state changes: `RaiseEvent(e)`
+applies the event to the state, validates identity, advances the
+version, and records it (`OccurredAt` is stamped later, at commit, by the unit of
+work); `LoadFromHistory(history)` **replays** a persisted stream
 to rebuild state ([rehydration](#rehydration), recording nothing). A
 **replay-misuse guard** prevents `LoadFromHistory` from running after uncommitted
 events exist.
@@ -589,8 +590,9 @@ for fast feedback.
 ### IClock
 
 An abstraction over "now" that makes time-dependent domain behavior
-**deterministic** and testable. On the event-sourced base, `RaiseEvent` stamps
-events through `IClock`.
+**deterministic** and testable. The infrastructure's unit of work uses it to stamp
+each domain event's `OccurredAt` with the transaction's commit time; the domain
+itself takes an `IClock` only where time is a **business** rule.
 
 ### Marten
 

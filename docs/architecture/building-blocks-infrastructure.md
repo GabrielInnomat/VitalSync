@@ -103,9 +103,12 @@ public interface IUnitOfWork   // contract lives in Application (ADR-0024)
 - On commit, in a **single write-database transaction**:
     1. persist aggregate changes (EF Core `SaveChanges` or Marten stream append);
     2. collect the aggregates' uncommitted domain events;
-    3. write those events to the **transactional outbox** in the write database
+    3. stamp each event's `OccurredAt` with the transaction's commit time (one
+       `IClock.Now` value shared by all events; already-stamped events are left
+       untouched, so replayed events keep their original time);
+    4. write those events to the **transactional outbox** in the write database
        (ADR-0022, ADR-0023) — atomically with the state change;
-    4. clear the aggregates' event collections.
+    5. clear the aggregates' event collections.
 - **Optimistic-concurrency conflicts surface at commit, not before.** Both
   stores only detect a version conflict when the changes are flushed
   (`SaveChanges` / `SaveChangesAsync`); repositories only hand aggregates to

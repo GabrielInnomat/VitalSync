@@ -65,6 +65,7 @@ Basis: ausschließlich der Implementierungscode (ohne XML-Doku, ohne `/docs`, oh
 # IMP-01 - `OccurredAt` wird im state-stored Pfad nie gesetzt
 
 - **Kritisch**
+-   - **Status**: gelöst. Der `DomainEventStamper` wird jetzt in beiden Unit-of-Work-Implementierungen (`EfCoreUnitOfWork`, `MartenUnitOfWork`) aufgerufen: pro Transaktion wird ein einziger `IClock.Now`-Wert an alle Domain Events gestempelt, bevor sie in die Outbox geschrieben werden. Im Marten-Pfad werden die **gestempelten** Events an den Stream angehängt, sodass der Replay die echten Zeitstempel rehydriert. Schritt 3 (`RaiseEvent` ohne `IClock`) ist durch das vereinheitlichte Aggregatmodell (ADR-0025) bereits erfüllt. Abgesichert durch `DomainEventStamperTests`.
 
 ## Beschreibung
 

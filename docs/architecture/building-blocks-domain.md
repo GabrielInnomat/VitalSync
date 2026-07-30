@@ -31,7 +31,7 @@ The block provides a **single aggregate authoring model**: every aggregate deriv
 | `IHasDomainEvents`                        | interface       | Read-only access to an aggregate's domain events.                                    |
 | `IDomainEventsManager`                    | interface       | Privileged contract that can **clear** events (infrastructure-only).                 |
 | `IDomainEvent`                            | interface       | Pure business event contract (`EventId`, `OccurredAt`).                              |
-| `DomainEvent`                             | abstract record | Convenience base supplying `EventId` and clock-based `OccurredAt`.                   |
+| `DomainEvent`                             | abstract record | Convenience base supplying `EventId`; `OccurredAt` is stamped at commit.             |
 | `IClock`                                  | interface       | Abstraction over "now" for deterministic time.                                       |
 | `IBusinessRule`                           | interface       | An invariant that can be _broken_.                                                   |
 | `IDomainValidationRule`                   | interface       | A validation constraint that can be _invalid_.                                       |
