@@ -2328,6 +2328,7 @@ Ergebnis: `FailureResults`, der `ConcurrentDictionary`, alle `Expression`-Aufruf
 # IMP-28 - Kein `IClock` im Container
 
 - **Mittel**
+-   - **Status**: Gelöst
 
 ## Beschreibung
 
