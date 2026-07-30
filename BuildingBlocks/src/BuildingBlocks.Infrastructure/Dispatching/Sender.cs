@@ -10,7 +10,8 @@ namespace BuildingBlocks.Infrastructure.Dispatching;
 /// <remarks>
 /// For each request the sender resolves the single matching handler and the registered
 /// <see cref="IPipelineBehavior{TRequest, TResponse}"/>s from the container and wraps the handler in the behavior
-/// chain; behaviors execute in explicit DI registration order (ADR-0015). Dispatch avoids reflection-heavy scanning:
+/// chain; behaviors execute in the explicit order recorded by <see cref="PipelineBehaviorRegistry"/> (ADR-0015) — lower
+/// orders wrap further out and execute earlier. Dispatch avoids reflection-heavy scanning:
 /// the closed-generic dispatcher for each request type is created once and cached for subsequent sends. Register the
 /// sender as a scoped service via <c>AddBuildingBlocks</c> so handlers resolve from the current scope.
 /// </remarks>
@@ -65,8 +66,14 @@ public sealed class Sender(IServiceProvider serviceProvider) : ISender
         RequestPipelineContinuation<TResponse> handler,
         IServiceProvider services)
     {
+        var registry = services.GetService<PipelineBehaviorRegistry>();
+        var behaviors = services.GetServices<IPipelineBehavior<TRequest, TResponse>>();
+        var ordered = registry is null
+            ? behaviors
+            : behaviors.OrderByDescending(behavior => registry.GetOrder(behavior.GetType()));
+
         var pipeline = handler;
-        foreach (var behavior in services.GetServices<IPipelineBehavior<TRequest, TResponse>>().Reverse())
+        foreach (var behavior in ordered)
         {
             var next = pipeline;
             var current = behavior;

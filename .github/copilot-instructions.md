@@ -124,7 +124,11 @@ See `docs/architecture/communication.md` and the ADRs below.
   errors bubble to a thin global handler (ADR-0017). `FailureCategory` is one of
   `Validation`, `BusinessRule`, `NotFound`, `Conflict` — transport status mapping is
   owned by the BFF/service host, never by `Application`.
-- Pipeline behaviors run in **explicit DI registration order**.
+- Pipeline behaviors run in an **explicit numeric order**: logging is outermost so
+  expected domain errors are logged as `Warning` (not `Error`), then exception-to-`Result`
+  translation, then the unit of work closest to the handler. Built-ins occupy fixed
+  slots; services add their own via `BuildingBlocksOptions.AddPipelineBehavior(type, order)`
+  (negative runs before built-ins, higher runs after).
 
 ## Persistence & event sourcing (from accepted ADRs)
 

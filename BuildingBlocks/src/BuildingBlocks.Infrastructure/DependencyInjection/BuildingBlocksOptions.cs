@@ -1,5 +1,6 @@
 using System.Reflection;
 using BuildingBlocks.Application;
+using BuildingBlocks.Infrastructure.Dispatching;
 using BuildingBlocks.Infrastructure.Messaging;
 using BuildingBlocks.Infrastructure.Persistence;
 using JasperFx.Events;
@@ -26,6 +27,36 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection;
 /// </remarks>
 public sealed class BuildingBlocksOptions
 {
+    /// <summary>
+    /// The execution order of the built-in logging behavior — the outermost built-in behavior.
+    /// </summary>
+    /// <remarks>
+    /// Logging wraps every other built-in so that failures translated further in (expected domain errors, concurrency
+    /// conflicts) are observed as failed results and logged at <c>Warning</c>, while only genuinely unexpected
+    /// exceptions surface as <c>Error</c>. Register a custom behavior with a smaller order to run outside logging.
+    /// </remarks>
+    public const int LoggingBehaviorOrder = 0;
+
+    /// <summary>
+    /// The execution order of the built-in exception-to-result translation behavior.
+    /// </summary>
+    /// <remarks>
+    /// Sits inside logging (<see cref="LoggingBehaviorOrder"/>) and outside the unit of work
+    /// (<see cref="UnitOfWorkBehaviorOrder"/>) so expected domain exceptions become failed results before logging sees
+    /// them and before any transaction is committed.
+    /// </remarks>
+    public const int ExceptionToResultBehaviorOrder = 100;
+
+    /// <summary>
+    /// The execution order of the built-in unit-of-work behavior — the innermost built-in behavior.
+    /// </summary>
+    /// <remarks>
+    /// Runs closest to the handler so exactly one unit of work spans the handler and commits only on success. The gap
+    /// to <see cref="ExceptionToResultBehaviorOrder"/> leaves room (for example order <c>200</c>) for a future
+    /// input-validation behavior that should run outside the transaction.
+    /// </remarks>
+    public const int UnitOfWorkBehaviorOrder = 300;
+
     private static readonly Type[] HandlerInterfaceDefinitions =
     [
         typeof(ICommandHandler<>),
@@ -35,11 +66,13 @@ public sealed class BuildingBlocksOptions
     ];
 
     private readonly IServiceCollection _services;
+    private readonly PipelineBehaviorRegistry _behaviorRegistry;
     private PersistenceStyle _persistenceStyle;
 
-    internal BuildingBlocksOptions(IServiceCollection services)
+    internal BuildingBlocksOptions(IServiceCollection services, PipelineBehaviorRegistry behaviorRegistry)
     {
         _services = services;
+        _behaviorRegistry = behaviorRegistry;
     }
 
     private enum PersistenceStyle
@@ -100,8 +133,51 @@ public sealed class BuildingBlocksOptions
     }
 
     /// <summary>
-    /// Enables EF Core persistence against the context's write database (state-stored contexts, ADR-0020).
+    /// Registers a custom open-generic pipeline behavior at an explicit position in the dispatch pipeline.
     /// </summary>
+    /// <remarks>
+    /// The pipeline wraps behaviors by ascending <paramref name="order"/>: a lower order runs further out (earlier),
+    /// a higher order sits closer to the handler. The built-in behaviors occupy fixed slots
+    /// (<see cref="LoggingBehaviorOrder"/>, <see cref="ExceptionToResultBehaviorOrder"/>,
+    /// <see cref="UnitOfWorkBehaviorOrder"/>); by convention give a behavior a negative order to run before all
+    /// built-ins, or an order above <see cref="UnitOfWorkBehaviorOrder"/> to run after them. Use this to place
+    /// cross-cutting concerns such as authorization, multi-tenancy, idempotency, or caching deterministically instead
+    /// of relying on registration order. <paramref name="openGenericBehavior"/> must be an open-generic type definition
+    /// with two type parameters that implements <see cref="IPipelineBehavior{TRequest, TResponse}"/>.
+    /// </remarks>
+    /// <param name="openGenericBehavior">The open-generic behavior type definition, for example <c>typeof(MyBehavior&lt;,&gt;)</c>.</param>
+    /// <param name="order">The execution order; lower values wrap further out and execute earlier.</param>
+    /// <returns>The same options, for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="openGenericBehavior"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="openGenericBehavior"/> is not an open-generic type definition, does not have exactly two type parameters, or does not implement <see cref="IPipelineBehavior{TRequest, TResponse}"/>.</exception>
+    public BuildingBlocksOptions AddPipelineBehavior(Type openGenericBehavior, int order)
+    {
+        ArgumentNullException.ThrowIfNull(openGenericBehavior);
+
+        if (!openGenericBehavior.IsGenericTypeDefinition || openGenericBehavior.GetGenericArguments().Length != 2)
+        {
+            throw new ArgumentException(
+                "A pipeline behavior must be an open-generic type definition with two type parameters " +
+                "(TRequest, TResponse), for example typeof(MyBehavior<,>).",
+                nameof(openGenericBehavior));
+        }
+
+        var implementsBehavior = Array.Exists(
+            openGenericBehavior.GetInterfaces(),
+            static @interface => @interface.IsGenericType
+                && @interface.GetGenericTypeDefinition() == typeof(IPipelineBehavior<,>));
+
+        if (!implementsBehavior)
+        {
+            throw new ArgumentException(
+                $"Type '{openGenericBehavior}' does not implement {typeof(IPipelineBehavior<,>)}.",
+                nameof(openGenericBehavior));
+        }
+
+        _behaviorRegistry.Register(openGenericBehavior, order);
+        _services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(IPipelineBehavior<,>), openGenericBehavior));
+        return this;
+    }
     /// <remarks>
     /// The host must register <typeparamref name="TContext"/> itself, via
     /// <c>AddDbContextWithWolverineIntegration&lt;TContext&gt;</c> (not plain <c>AddDbContext</c>) against the

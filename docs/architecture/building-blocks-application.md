@@ -86,8 +86,11 @@ public interface IPipelineBehavior<TRequest, TResponse>
 
 - Behaviors wrap handler execution to apply cross-cutting concerns (exception
   translation, logging, unit-of-work, etc.).
-- **Ordering is explicit registration order** (ADR-0015): behaviors run in the
-  order they are registered in DI. Registration lives in `Infrastructure`.
+- **Ordering is an explicit numeric `order`** (ADR-0015): each behavior is
+  registered with an order and the pipeline wraps them by ascending order (lower
+  wraps further out). Registration and the ordering live in `Infrastructure`;
+  hosts insert their own behaviors at a chosen position via
+  `BuildingBlocksOptions.AddPipelineBehavior(type, order)`.
 - The generic behaviors themselves (logging, unit-of-work, ExceptionToResult) live in
   `Infrastructure`; only the **contract** lives here.
 
@@ -187,8 +190,8 @@ public interface IIntegrationEventMapper
 Per [ADR-0017](./decisions/0017-application-error-handling-and-result.md):
 
 - The Domain **throws** `BusinessRuleViolationException` / `DomainValidationException`
-  (ADR-0009). An **`ExceptionToResultBehavior`** (registered first) translates these
-  into `Result.Failure`.
+  (ADR-0009). An **`ExceptionToResultBehavior`** (inside logging, outside the unit
+  of work) translates these into `Result.Failure`.
 - Handlers may also return `Result.Failure` directly for expected outcomes such as
   _not found_ or _conflict_.
 - **Unexpected** exceptions are **not** turned into `Result`; they bubble to a thin

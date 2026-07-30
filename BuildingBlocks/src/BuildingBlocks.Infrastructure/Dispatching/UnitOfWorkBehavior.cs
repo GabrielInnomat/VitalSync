@@ -15,7 +15,8 @@ namespace BuildingBlocks.Infrastructure.Dispatching;
 /// the behavior entirely, so no unit of work needs to be registered for query-only hosts. Optimistic-concurrency
 /// conflicts raised by the store on commit (Marten's <see cref="ConcurrencyException"/>, EF Core's
 /// <see cref="DbUpdateConcurrencyException"/>) are translated into a <see cref="FailureCategory.Conflict"/> failure
-/// per ADR-0019. Register this behavior <b>last</b>, closest to the handler.
+/// per ADR-0019. It is the <b>innermost</b> built-in behavior
+/// (<see cref="DependencyInjection.BuildingBlocksOptions.UnitOfWorkBehaviorOrder"/>), running closest to the handler.
 /// </remarks>
 /// <typeparam name="TRequest">The type of the request flowing through the pipeline.</typeparam>
 /// <typeparam name="TResponse">The type of the result produced by the pipeline.</typeparam>

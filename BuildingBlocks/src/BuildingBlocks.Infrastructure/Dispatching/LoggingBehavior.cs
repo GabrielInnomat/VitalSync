@@ -9,9 +9,10 @@ namespace BuildingBlocks.Infrastructure.Dispatching;
 /// </summary>
 /// <remarks>
 /// The behavior logs the request name, the outcome (success, or the distinct failure categories on failure), and the
-/// duration; it never logs request payloads, so sensitive command or query data cannot leak into logs by default.
-/// Register it second, inside the exception-translation behavior, so translated failures are logged as failed results
-/// while unexpected exceptions are still observed (logged as faulted, then rethrown).
+/// duration; it never logs request payloads, so sensitive command or query data cannot leak into logs by default. It is
+/// the <b>outermost</b> built-in behavior (<see cref="DependencyInjection.BuildingBlocksOptions.LoggingBehaviorOrder"/>),
+/// so failures translated further in (expected domain errors, concurrency conflicts) are logged as failed results at
+/// <c>Warning</c>, while genuinely unexpected exceptions are observed as <c>Error</c> (faulted) and rethrown.
 /// </remarks>
 /// <typeparam name="TRequest">The type of the request flowing through the pipeline.</typeparam>
 /// <typeparam name="TResponse">The type of the result produced by the pipeline.</typeparam>

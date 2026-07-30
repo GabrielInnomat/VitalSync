@@ -63,21 +63,32 @@ Implements the `ISender` contract from `BuildingBlocks.Application`
 - Resolves the single matching `ICommandHandler<...>` / `IQueryHandler<...>`
   from the DI container.
 - Wraps the handler in the registered `IPipelineBehavior<,>` chain.
-- **Behavior ordering is explicit registration order** — behaviors execute in
-  the order they are added to DI; no attribute- or convention-based ordering.
+- **Behavior ordering is an explicit numeric order** — each behavior is registered
+  with an `order`, and the sender wraps them by ascending order (lower orders wrap
+  further out and execute earlier); no attribute- or convention-based ordering, and
+  no reliance on registration call order. Hosts add their own behaviors at a chosen
+  position via `BuildingBlocksOptions.AddPipelineBehavior(type, order)`.
 - No reflection-heavy scanning at dispatch time; handler resolution should be
   cached (e.g. per closed generic type) after first use.
 
 ### Pipeline behaviors shipped here
 
-| Behavior                    | Position  | Responsibility                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| --------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ExceptionToResultBehavior` | **First** | Translates `DomainValidationException` / `BusinessRuleViolationException` into `Result.Failure` (ADR-0017). Unexpected exceptions pass through untouched.                                                                                                                                                                                                                                                                                      |
-| `LoggingBehavior`           | Second    | Structured logging of request name, outcome (success/failure categories), and duration. Never logs payload contents by default.                                                                                                                                                                                                                                                                                                                |
-| `UnitOfWorkBehavior`        | Last      | Commits the unit of work when a **command** completes successfully — including the atomic outbox write (see §2/§4). Queries and failed results are unaffected: nothing is committed, and query-only hosts need no `IUnitOfWork` registration. Translates the store's optimistic-concurrency exceptions raised on commit (Marten's `ConcurrencyException`, EF Core's `DbUpdateConcurrencyException`) into a `Failure` with category `Conflict`. |
+| Behavior                    | Order | Responsibility |
+| --------------------------- | ----- | -------------- |
+| `LoggingBehavior`           | `0` (outermost) | Structured logging of request name, outcome (success/failure categories), and duration. Never logs payload contents by default. Being outermost, translated failures (expected domain errors, concurrency conflicts) are logged at `Warning`, while only genuinely unexpected exceptions are logged at `Error` (faulted) and rethrown. |
+| `ExceptionToResultBehavior` | `100` | Translates `DomainValidationException` / `BusinessRuleViolationException` into `Result.Failure` (ADR-0017), before logging sees the outcome and before any transaction is opened. Unexpected exceptions pass through untouched. |
+| `UnitOfWorkBehavior`        | `300` (innermost) | Commits the unit of work when a **command** completes successfully — including the atomic outbox write (see §2/§4). Queries and failed results are unaffected: nothing is committed, and query-only hosts need no `IUnitOfWork` registration. Translates the store's optimistic-concurrency exceptions raised on commit (Marten's `ConcurrencyException`, EF Core's `DbUpdateConcurrencyException`) into a `Failure` with category `Conflict`. |
 
-The canonical registration order is therefore:
-`ExceptionToResult → Logging → UnitOfWork → handler`.
+The canonical execution order is therefore:
+`Logging → ExceptionToResult → UnitOfWork → handler`.
+
+Logging sits outermost so that expected domain errors surface as `Warning` (with
+their failure categories) rather than `Error`, keeping the error rate a meaningful
+alerting/SLO signal. The gap between `ExceptionToResult` (`100`) and
+`UnitOfWork` (`300`) leaves slot `200` free for a future input-validation behavior
+that must run outside the transaction. By convention, a host-supplied behavior uses
+a negative order to run before all built-ins, or an order above `300` to run after
+them.
 
 ## 2. Unit of work
 

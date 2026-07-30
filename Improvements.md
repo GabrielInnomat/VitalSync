@@ -183,6 +183,7 @@ private void SelectPersistenceStyle(PersistenceStyle style)
 # IMP-03 - Erwartete Domänenfehler werden als Error geloggt
 
 - **Kritisch**
+-   - **Status**: gelöst. Logging ist jetzt die äußerste Behavior-Schicht (explizite numerische Reihenfolge: `Logging(0) → ExceptionToResult(100) → UnitOfWork(300) → Handler`); erwartete Domänenfehler werden als `Warning` mit Kategorie geloggt, nur unerwartete Ausnahmen als `Error`. Die Reihenfolge ist über `BuildingBlocksOptions.AddPipelineBehavior(type, order)` ein expliziter Vertrag (löst zugleich IMP-16 Schritt 4).
 
 ## Beschreibung
 
@@ -1292,6 +1293,7 @@ Der Test iteriert über `Model.GetEntityTypes()`, filtert auf Aggregate-Roots un
 # IMP-16 - Kein Validierungs-Behavior, Mehrfachfehler nicht erzeugbar
 
 - **Hoch**
+-   - **Status**: teilweise gelöst. Schritt 4 (explizite Behavior-Reihenfolge via `AddPipelineBehavior(type, order)`) ist umgesetzt; Schritt 1-3 (`IRequestValidator` + `ValidationBehavior`, Mehrfach-/Feldvalidierung) stehen noch aus. Slot `200` ist dafür reserviert.
 
 ## Beschreibung
 

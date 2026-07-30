@@ -11,8 +11,10 @@ namespace BuildingBlocks.Infrastructure.Dispatching;
 /// <see cref="BusinessRuleViolationException"/> for expected errors, while callers consume a uniform
 /// <see cref="Result"/> channel; this behavior performs that translation, mapping validation failures to
 /// <see cref="FailureCategory.Validation"/> and broken invariants to <see cref="FailureCategory.BusinessRule"/>.
-/// Register it <b>first</b> so it wraps every other behavior and the handler. Any other exception is unexpected and
-/// passes through untouched to the host's global exception handler.
+/// It runs inside the logging behavior and outside the unit of work
+/// (<see cref="DependencyInjection.BuildingBlocksOptions.ExceptionToResultBehaviorOrder"/>), so expected domain
+/// exceptions become failed results before logging sees them and before any transaction is committed. Any other
+/// exception is unexpected and passes through untouched to the host's global exception handler.
 /// </remarks>
 /// <typeparam name="TRequest">The type of the request flowing through the pipeline.</typeparam>
 /// <typeparam name="TResponse">The type of the result produced by the pipeline.</typeparam>

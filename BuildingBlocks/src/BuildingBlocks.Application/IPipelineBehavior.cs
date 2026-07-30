@@ -7,8 +7,8 @@ namespace BuildingBlocks.Application;
 /// Behaviors form an ordered chain around each handler, enabling concerns such as exception-to-<see cref="Result"/>
 /// translation, logging, validation, and unit-of-work management without polluting handlers. Only the contract lives
 /// here; the concrete behaviors and their DI registration reside in <c>BuildingBlocks.Infrastructure</c>.
-/// Behaviors run in explicit DI registration order, so register the
-/// exception-translation behavior first.
+/// Behaviors run in an explicit numeric order (lower orders wrap further out); the built-in behaviors occupy fixed
+/// slots and hosts add their own via <c>BuildingBlocksOptions.AddPipelineBehavior</c>.
 /// </remarks>
 /// <typeparam name="TRequest">The type of the request flowing through the pipeline.</typeparam>
 /// <typeparam name="TResponse">The type of the response produced by the pipeline.</typeparam>

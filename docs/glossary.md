@@ -260,9 +260,11 @@ they return a `Task<…>` and accept a `CancellationToken`.
 ### Pipeline behavior
 
 A wrapper around handler execution that applies **cross-cutting concerns**
-(exception translation, logging, unit-of-work, validation). Behaviors run in
-**explicit registration order**; only the `IPipelineBehavior<TRequest, TResponse>`
-contract lives in `Application`, the concrete behaviors live in `Infrastructure`.
+(exception translation, logging, unit-of-work, validation). Behaviors run in an
+**explicit numeric order** (lower orders wrap further out); the built-ins occupy
+fixed slots and hosts add their own via `AddPipelineBehavior(type, order)`. Only
+the `IPipelineBehavior<TRequest, TResponse>` contract lives in `Application`, the
+concrete behaviors live in `Infrastructure`.
 
 ### Query
 

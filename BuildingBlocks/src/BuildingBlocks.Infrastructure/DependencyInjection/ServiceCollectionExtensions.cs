@@ -15,7 +15,7 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection;
 /// <remarks>
 /// Hosts call <see cref="AddBuildingBlocks"/> once at composition time; everything else in this package is reached
 /// through the <c>Domain</c>/<c>Application</c> abstractions. The registration wires the dispatcher, the pipeline
-/// behaviors in the canonical order, the outbox-backed publisher with its projection runner, the default UTC clock,
+/// behaviors with explicit orders, the outbox-backed publisher with its projection runner, the default UTC clock,
 /// and a no-op messaging transport that <see cref="BuildingBlocksOptions.UseWolverineMessaging"/> replaces. The outbox itself is Wolverine's
 /// own transactional outbox (ADR-0023); the host wires it up via <see cref="WolverineOptionsExtensions"/> from its
 /// <c>UseWolverine</c> setup, and <see cref="DomainEventEnvelopeHandler"/> is the single handler that delivers into
@@ -27,9 +27,12 @@ public static class ServiceCollectionExtensions
     /// Registers the Building Blocks platform services and applies the host's capability selection.
     /// </summary>
     /// <remarks>
-    /// Pipeline behaviors are registered in the canonical order mandated by ADR-0015/0017 — exception-to-result
-    /// translation first, then logging, then the unit of work closest to the handler — and execute in exactly that
-    /// registration order.
+    /// Pipeline behaviors are registered with explicit orders (ADR-0015): logging outermost
+    /// (<see cref="BuildingBlocksOptions.LoggingBehaviorOrder"/>) so translated failures are logged as warnings and only
+    /// unexpected exceptions as errors, then exception-to-result translation
+    /// (<see cref="BuildingBlocksOptions.ExceptionToResultBehaviorOrder"/>), then the unit of work closest to the
+    /// handler (<see cref="BuildingBlocksOptions.UnitOfWorkBehaviorOrder"/>). The sender wraps behaviors by ascending
+    /// order; hosts add their own at a chosen position via <see cref="BuildingBlocksOptions.AddPipelineBehavior"/>.
     /// </remarks>
     /// <param name="services">The service collection to register into.</param>
     /// <param name="configure">The callback that selects handlers, persistence style, and messaging via <see cref="BuildingBlocksOptions"/>.</param>
@@ -40,14 +43,19 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
 
+        var behaviorRegistry = new PipelineBehaviorRegistry();
+        services.TryAddSingleton(behaviorRegistry);
+
         services.TryAddSingleton<IIntegrationEventTransport, NullIntegrationEventTransport>();
-        configure(new BuildingBlocksOptions(services));
+        var options = new BuildingBlocksOptions(services, behaviorRegistry);
+        configure(options);
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<IClock, SystemClock>();
         services.TryAddScoped<ISender, Sender>();
-        services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(IPipelineBehavior<,>), typeof(ExceptionToResultBehavior<,>)));
-        services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>)));
-        services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(IPipelineBehavior<,>), typeof(UnitOfWorkBehavior<,>)));
+
+        options.AddPipelineBehavior(typeof(LoggingBehavior<,>), BuildingBlocksOptions.LoggingBehaviorOrder);
+        options.AddPipelineBehavior(typeof(ExceptionToResultBehavior<,>), BuildingBlocksOptions.ExceptionToResultBehaviorOrder);
+        options.AddPipelineBehavior(typeof(UnitOfWorkBehavior<,>), BuildingBlocksOptions.UnitOfWorkBehaviorOrder);
 
         services.TryAddScoped<ProjectionRunner>();
         services.TryAddScoped<IDomainEventPublisher, Publisher>();
