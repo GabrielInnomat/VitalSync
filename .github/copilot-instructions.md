@@ -249,11 +249,10 @@ Docker (for messaging infrastructure/containers).
 9. **Always comit and push directly to the `main` branch. **
 never work on separate branches, and never ask which
    branch to use — `main` is always the target. 
-10. Update this instruction file if you discover a gap or ambiguity in the guidance.
-11. If you are unsure about a decision, **ask a human** — Copilot is not the arbiter of
-
-   architecture or domain rules.
+10. Always update this instruction file if you discover a gap or ambiguity in the guidance.
+11. If you are unsure about a decision, **ask always a human** — Copilot is not the arbiter of architecture or domain rules.
 12. Use always short and clear commit messages.
+13. If you write code, always add or update unit tests / integration tests / architecture tests, and make sure they pass before committing.
 
 ## Key documentation
 
