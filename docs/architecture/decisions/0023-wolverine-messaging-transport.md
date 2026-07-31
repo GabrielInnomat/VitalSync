@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-07-27
 - **Supersedes:** [ADR-0004](./0004-asynchronous-messaging-between-services.md)
+- **Amended:** 2026-07-31 (broker topology for integration events — see the note below)
 
 ## Context
 
@@ -55,6 +56,39 @@ everything else from ADR-0004 intact.
   Wolverine lives **only** in `BuildingBlocks.Infrastructure` (and the service
   hosts). `BuildingBlocks.Domain` and `BuildingBlocks.Application` stay
   **framework-agnostic** and take **no** dependency on Wolverine.
+
+> **Broker topology (amendment 2026-07-31).** Connecting the transport does not
+> move anything: Wolverine routes a message only where a **routing rule** sends
+> it, and `PublishAsync` **silently discards** a message with no route. Until this
+> amendment no such rule existed, so integration events never reached the broker.
+> The topology is therefore fixed as follows.
+>
+> - **One topic exchange for the whole platform**, `vitalsync.integration-events`,
+>   provisioned automatically (`AutoProvision`). Consumers bind their own queue
+>   with a topic pattern (`nutrition.*`), so adding a subscriber never touches the
+>   publishing service.
+> - **The rule matches the `IIntegrationEvent` marker**, never all messages. This
+>   is load-bearing, not cosmetic: `DomainEventEnvelope` — which carries a
+>   context's raw domain events through the local outbox queue — does not
+>   implement the marker and therefore **cannot** be routed onto the broker.
+>   Publishing domain events across a context boundary would break ADR-0022's rule
+>   that integration events are the only cross-context signal. Pinned by
+>   `IntegrationEventRoutingTests`.
+> - **Every integration event carries an explicit
+>   `[Topic("<context>.<event>")]`** in kebab-case (`nutrition.recipe-created`).
+>   The routing key is thereby part of the published contract instead of being
+>   derived from the CLR namespace, where a rename would silently break consumer
+>   bindings.
+> - **Publishing side only.** Queue declaration, binding, and listening belong to
+>   the **subscribing** service and are deliberately not wired by Building Blocks;
+>   the consumer half is added when the first real subscriber exists.
+>
+> **Codegen dependency.** Wolverine 6 no longer ships the Roslyn compiler in its
+> core package, and its default `TypeLoadMode` compiles handler code at runtime.
+> `BuildingBlocks.Infrastructure` therefore references
+> `WolverineFx.RuntimeCompilation`, which self-activates, so hosts still configure
+> nothing (ADR-0027). Pre-generating code (`TypeLoadMode.Static`) to drop Roslyn
+> from production images is an additive optimisation for a later ADR.
 
 > **Scope note — Wolverine is the transport, not the mediator.** Wolverine is
 > adopted **only** as the inter-service messaging transport. It is **not** used

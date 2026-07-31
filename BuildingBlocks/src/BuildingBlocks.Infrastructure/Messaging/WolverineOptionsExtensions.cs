@@ -32,6 +32,16 @@ internal static class WolverineOptionsExtensions
     public const string DomainEventLocalQueueName = "building-blocks-domain-events";
 
     /// <summary>
+    /// The name of the RabbitMQ topic exchange every integration event is published to.
+    /// </summary>
+    /// <remarks>
+    /// One exchange for the whole platform (ADR-0023): consumers bind their own queue with a topic pattern
+    /// (<c>nutrition.*</c>) instead of every context owning an exchange, so adding a subscriber never touches the
+    /// publisher. Provisioned automatically by <c>AutoProvision</c>.
+    /// </remarks>
+    public const string IntegrationEventExchangeName = "vitalsync.integration-events";
+
+    /// <summary>
     /// Applies the routing every host needs for domain events to flow through Wolverine's transactional outbox.
     /// </summary>
     /// <remarks>
@@ -68,11 +78,18 @@ internal static class WolverineOptionsExtensions
     }
 
     /// <summary>
-    /// Applies the default RabbitMQ transport, retry, and dead-letter configuration.
+    /// Applies the default RabbitMQ transport, integration-event routing, retry, and dead-letter configuration.
     /// </summary>
     /// <remarks>
-    /// Only required for hosts that also select <c>UseWolverineMessaging</c> to publish integration events; a service
-    /// with purely in-context projections needs only <see cref="ApplyBuildingBlockDomainEventRouting"/>.
+    /// Connecting the transport is not enough to move anything: without a routing rule Wolverine finds no subscriber
+    /// for an integration event and <c>PublishAsync</c> silently drops it. The rule therefore matches on the
+    /// <see cref="IIntegrationEvent"/> marker rather than on all messages — <see cref="DomainEventEnvelope"/> does not
+    /// implement it and so cannot be matched onto the broker, which would leak a context's domain events across the
+    /// boundary that ADR-0022 draws. The topic (routing key) of each event comes from its
+    /// <c>[Topic("&lt;context&gt;.&lt;event&gt;")]</c> attribute, keeping the broker contract independent of the CLR
+    /// namespace; consumers bind a queue with a topic pattern. Only required for hosts that select
+    /// <c>UseWolverineMessaging</c>; a service with purely in-context projections needs only
+    /// <see cref="ApplyBuildingBlockDomainEventRouting"/>.
     /// </remarks>
     /// <param name="options">The Wolverine options being configured.</param>
     /// <param name="rabbitMqUri">The AMQP connection URI of the RabbitMQ broker (typically the Aspire-provided connection string).</param>
@@ -84,6 +101,10 @@ internal static class WolverineOptionsExtensions
         ArgumentNullException.ThrowIfNull(rabbitMqUri);
 
         options.UseRabbitMq(rabbitMqUri).AutoProvision();
+
+        options.Publish(publishing => publishing
+            .MessagesImplementing<IIntegrationEvent>()
+            .ToRabbitTopics(IntegrationEventExchangeName));
 
         options.Policies.OnException<Exception>()
             .RetryWithCooldown(

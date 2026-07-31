@@ -247,6 +247,30 @@ A small cluster of classes, using Marten as a **raw stream store**:
   ordering remain authoritative.
 - Retries and dead-lettering are configured here with sane, overridable
   defaults.
+- **Routing.** Connecting the transport moves nothing on its own — Wolverine
+  routes only what a routing rule matches, and `PublishAsync` silently discards
+  an unroutable message. `UseWolverineMessaging` therefore installs the rule
+  `MessagesImplementing<IIntegrationEvent>().ToRabbitTopics("vitalsync.integration-events")`.
+  Matching the marker rather than all messages is load-bearing: `DomainEventEnvelope`
+  does not implement `IIntegrationEvent` and so can never be routed onto the
+  broker (ADR-0022/0023, pinned by `IntegrationEventRoutingTests`). Each
+  integration event supplies its routing key via a mandatory
+  `[Topic("<context>.<event>")]` attribute.
+- **Consumer side not included.** Queue declaration, binding, and listening are
+  owned by the subscribing service; this package wires the publishing half only.
+
+### Runtime code generation
+
+The package references **`WolverineFx.RuntimeCompilation`**. Wolverine 6 removed
+the Roslyn compiler from its core package, while its default `TypeLoadMode`
+generates and compiles handler code at runtime — without the package the first
+handler codegen fails. The package self-activates when referenced, so hosts keep
+configuring nothing (ADR-0027) and the dependency reaches them transitively.
+
+The cost is Roslyn in the deployment. Pre-generating all code
+(`TypeLoadMode.Static` plus a `codegen write` build step per host) removes it and
+enables AOT; that is an additive optimisation deliberately deferred to its own
+ADR, not an oversight.
 
 ## 7. Dependency-injection wiring
 

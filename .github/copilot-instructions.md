@@ -194,7 +194,16 @@ See `docs/architecture/communication.md` and the ADRs below.
   models are **derived and rebuildable** by replaying events / re-running projections.
 - **In-context** projections use **domain** events directly; **integration** events
   (RabbitMQ) are the **only** cross-context signal — never read another context's
-  database.- **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
+  database.
+- **Broker topology** (ADR-0023 amendment): one topic exchange
+  `vitalsync.integration-events` for the whole platform. The publishing rule matches
+  `MessagesImplementing<IIntegrationEvent>()` — **never** all messages, so
+  `DomainEventEnvelope` cannot leak onto the broker. Every integration event **must**
+  carry `[Topic("<context>.<event>")]` in kebab-case (`nutrition.recipe-created`): the
+  routing key is part of the published contract, not derived from the CLR namespace.
+  Consumers own queue declaration and binding (`nutrition.*`); Building Blocks wires
+  the **publishing half only**. Beware: Wolverine **silently discards** a message with
+  no route, so a missing rule loses events without any error.- **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
   and the event schema is unchanged, so snapshots can be added per context later with
   **no event migration**.
 - **Building Blocks own the persistence & Wolverine wiring** (ADR-0027, "pit of
