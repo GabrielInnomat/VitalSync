@@ -18,10 +18,15 @@ internal sealed class WolverineWiringSettings
     public bool ApplyDomainEventRouting { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether Wolverine's EF Core transactional middleware is applied.
+    /// Gets or sets the write-database connection string backing Wolverine's durable message store for EF Core hosts.
     /// </summary>
-    /// <value><c>true</c> if EF Core persistence was selected; otherwise, <c>false</c>.</value>
-    public bool ApplyEfCoreOutbox { get; set; }
+    /// <remarks>
+    /// EF Core's outbox integration requires a database-backed Wolverine message store — without one the first
+    /// commit fails with "not using Database backed message persistence". Marten hosts get their store through
+    /// <c>IntegrateWithWolverine</c>, so this stays <see langword="null"/> for them.
+    /// </remarks>
+    /// <value>The write-database connection string when EF Core persistence was selected; otherwise, <see langword="null"/>.</value>
+    public string? EfCoreMessageStoreConnectionString { get; set; }
 
     /// <summary>
     /// Gets or sets the AMQP connection URI of the RabbitMQ broker.
@@ -33,5 +38,5 @@ internal sealed class WolverineWiringSettings
     /// Gets a value indicating whether the host's selection requires a running Wolverine runtime.
     /// </summary>
     /// <value><c>true</c> if any capability that flows through Wolverine was selected; otherwise, <c>false</c>.</value>
-    public bool RequiresWolverine => ApplyDomainEventRouting || ApplyEfCoreOutbox || RabbitMqUri is not null;
+    public bool RequiresWolverine => ApplyDomainEventRouting || EfCoreMessageStoreConnectionString is not null || RabbitMqUri is not null;
 }
