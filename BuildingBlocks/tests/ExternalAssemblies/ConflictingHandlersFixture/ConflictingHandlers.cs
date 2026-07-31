@@ -1,6 +1,6 @@
 using BuildingBlocks.Application;
 
-namespace BuildingBlocks.Infrastructure.Tests.ConflictingHandlersFixture;
+namespace ConflictingHandlersFixture;
 
 public sealed record ConflictingCommand : ICommand;
 

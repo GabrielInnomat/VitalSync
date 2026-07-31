@@ -11,9 +11,9 @@
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests/BuildingBlocks.Infrastructure.Tests.csproj" />
   </Folder>
   <Folder Name="/BuildingBlocks/tests/ExternalAssemblies/">
-    <Project Path="BuildingBlocks/tests/ExternalAssemblies/BuildingBlocks.Infrastructure.Tests.ConflictingHandlersFixture/BuildingBlocks.Infrastructure.Tests.ConflictingHandlersFixture.csproj" />
-    <Project Path="BuildingBlocks/tests/ExternalAssemblies/BuildingBlocks.Infrastructure.Tests.OrphanRequestsFixture/BuildingBlocks.Infrastructure.Tests.OrphanRequestsFixture.csproj" />
-    <Project Path="BuildingBlocks/tests/ExternalAssemblies/BuildingBlocks.Infrastructure.Tests.ValidHandlersFixture/BuildingBlocks.Infrastructure.Tests.ValidHandlersFixture.csproj" />
+    <Project Path="BuildingBlocks/tests/ExternalAssemblies/ConflictingHandlersFixture/ConflictingHandlersFixture.csproj" />
+    <Project Path="BuildingBlocks/tests/ExternalAssemblies/OrphanRequestsFixture/OrphanRequestsFixture.csproj" />
+    <Project Path="BuildingBlocks/tests/ExternalAssemblies/ValidHandlersFixture/ValidHandlersFixture.csproj" />
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/Aspire/">

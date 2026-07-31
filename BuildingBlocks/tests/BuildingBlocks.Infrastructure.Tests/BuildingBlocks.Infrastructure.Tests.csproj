@@ -30,9 +30,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\BuildingBlocks.Infrastructure\BuildingBlocks.Infrastructure.csproj" />
-    <ProjectReference Include="..\ExternalAssemblies\BuildingBlocks.Infrastructure.Tests.ConflictingHandlersFixture\BuildingBlocks.Infrastructure.Tests.ConflictingHandlersFixture.csproj" />
-    <ProjectReference Include="..\ExternalAssemblies\BuildingBlocks.Infrastructure.Tests.OrphanRequestsFixture\BuildingBlocks.Infrastructure.Tests.OrphanRequestsFixture.csproj" />
-    <ProjectReference Include="..\ExternalAssemblies\BuildingBlocks.Infrastructure.Tests.ValidHandlersFixture\BuildingBlocks.Infrastructure.Tests.ValidHandlersFixture.csproj" />
+    <ProjectReference Include="..\ExternalAssemblies\ConflictingHandlersFixture\ConflictingHandlersFixture.csproj" />
+    <ProjectReference Include="..\ExternalAssemblies\OrphanRequestsFixture\OrphanRequestsFixture.csproj" />
+    <ProjectReference Include="..\ExternalAssemblies\ValidHandlersFixture\ValidHandlersFixture.csproj" />
   </ItemGroup>
 
   <ItemGroup>

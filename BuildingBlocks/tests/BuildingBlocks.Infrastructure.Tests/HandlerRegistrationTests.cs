@@ -1,8 +1,8 @@
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.DependencyInjection;
-using BuildingBlocks.Infrastructure.Tests.ConflictingHandlersFixture;
-using BuildingBlocks.Infrastructure.Tests.ValidHandlersFixture;
+using ConflictingHandlersFixture;
 using Microsoft.Extensions.DependencyInjection;
+using ValidHandlersFixture;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 

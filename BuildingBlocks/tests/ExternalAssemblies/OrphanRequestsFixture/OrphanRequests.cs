@@ -1,6 +1,6 @@
 using BuildingBlocks.Application;
 
-namespace BuildingBlocks.Infrastructure.Tests.OrphanRequestsFixture;
+namespace OrphanRequestsFixture;
 
 public sealed record OrphanCommand : ICommand;
 

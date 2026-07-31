@@ -1,8 +1,8 @@
 using BuildingBlocks.Infrastructure.DependencyInjection;
-using BuildingBlocks.Infrastructure.Tests.OrphanRequestsFixture;
-using BuildingBlocks.Infrastructure.Tests.ValidHandlersFixture;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using OrphanRequestsFixture;
+using ValidHandlersFixture;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 

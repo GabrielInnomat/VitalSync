@@ -1,7 +1,7 @@
 using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 
-namespace BuildingBlocks.Infrastructure.Tests.ValidHandlersFixture;
+namespace ValidHandlersFixture;
 
 public sealed record RegistrationCommand : ICommand;
 
