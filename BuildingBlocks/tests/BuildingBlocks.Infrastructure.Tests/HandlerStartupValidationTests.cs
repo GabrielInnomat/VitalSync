@@ -1,3 +1,4 @@
+using AmbiguousRequestsFixture;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -32,6 +33,22 @@ public sealed class HandlerStartupValidationTests
 
         Assert.Contains(nameof(OrphanCommand), exception.Message, StringComparison.Ordinal);
         Assert.Contains(nameof(OrphanQuery), exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StartupValidation_RequestTypeWithMultipleResultContracts_FailsNamingTypeAndContracts()
+    {
+        using var provider = BuildProvider(options =>
+            options.AddHandlersFrom(typeof(AmbiguousQuery).Assembly));
+
+        var validator = GetValidator(provider);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(AmbiguousQuery), exception.Message, StringComparison.Ordinal);
+        Assert.Contains("IQuery<Int32>", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("IQuery<String>", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

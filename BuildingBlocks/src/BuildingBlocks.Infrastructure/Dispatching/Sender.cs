@@ -12,15 +12,19 @@ namespace BuildingBlocks.Infrastructure.Dispatching;
 /// <see cref="IPipelineBehavior{TRequest, TResponse}"/>s from the container and wraps the handler in the behavior
 /// chain; behaviors execute in the explicit order recorded by <see cref="PipelineBehaviorRegistry"/> (ADR-0015) — lower
 /// orders wrap further out and execute earlier. Dispatch avoids reflection-heavy scanning:
-/// the closed-generic dispatcher for each request type is created once and cached for subsequent sends. Register the
-/// sender as a scoped service via <c>AddBuildingBlocks</c> so handlers resolve from the current scope.
+/// the closed-generic dispatcher for each request/result type pair is created once and cached for subsequent sends.
+/// Register the sender as a scoped service via <c>AddBuildingBlocks</c> so handlers resolve from the current scope.
 /// </remarks>
 /// <param name="serviceProvider">The service provider used to resolve handlers and pipeline behaviors.</param>
 public sealed class Sender(IServiceProvider serviceProvider) : ISender
 {
+    // The result type participates in the produced closed-generic dispatcher, so it must be part of the cache key:
+    // a request type exposing two result contracts would otherwise resolve the wrong dispatcher on the second call (IMP-06).
+    private readonly record struct DispatcherKey(Type Request, Type Result);
+
     private static readonly ConcurrentDictionary<Type, CommandDispatcher> CommandDispatchers = new();
-    private static readonly ConcurrentDictionary<Type, object> CommandWithResultDispatchers = new();
-    private static readonly ConcurrentDictionary<Type, object> QueryDispatchers = new();
+    private static readonly ConcurrentDictionary<DispatcherKey, object> CommandWithResultDispatchers = new();
+    private static readonly ConcurrentDictionary<DispatcherKey, object> QueryDispatchers = new();
 
     /// <inheritdoc/>
     public Task<Result> Send(ICommand command, CancellationToken cancellationToken)
@@ -41,9 +45,9 @@ public sealed class Sender(IServiceProvider serviceProvider) : ISender
         ArgumentNullException.ThrowIfNull(command);
 
         var dispatcher = (CommandWithResultDispatcher<TResult>)CommandWithResultDispatchers.GetOrAdd(
-            command.GetType(),
-            static type => Activator.CreateInstance(
-                typeof(CommandWithResultDispatcher<,>).MakeGenericType(type, typeof(TResult)))!);
+            new DispatcherKey(command.GetType(), typeof(TResult)),
+            static key => Activator.CreateInstance(
+                typeof(CommandWithResultDispatcher<,>).MakeGenericType(key.Request, key.Result))!);
 
         return dispatcher.Dispatch(command, serviceProvider, cancellationToken);
     }
@@ -54,9 +58,9 @@ public sealed class Sender(IServiceProvider serviceProvider) : ISender
         ArgumentNullException.ThrowIfNull(query);
 
         var dispatcher = (QueryDispatcher<TResult>)QueryDispatchers.GetOrAdd(
-            query.GetType(),
-            static type => Activator.CreateInstance(
-                typeof(QueryDispatcher<,>).MakeGenericType(type, typeof(TResult)))!);
+            new DispatcherKey(query.GetType(), typeof(TResult)),
+            static key => Activator.CreateInstance(
+                typeof(QueryDispatcher<,>).MakeGenericType(key.Request, key.Result))!);
 
         return dispatcher.Dispatch(query, serviceProvider, cancellationToken);
     }

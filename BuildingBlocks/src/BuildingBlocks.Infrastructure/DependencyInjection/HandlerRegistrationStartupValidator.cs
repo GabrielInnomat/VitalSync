@@ -14,10 +14,13 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection;
 /// request dispatches the affected type. This check turns that whole failure class into a fail-fast startup error: it
 /// walks every <see cref="ICommand"/>, <see cref="ICommand{TResult}"/>, and <see cref="IQuery{TResult}"/>
 /// implementation in the scanned assemblies and resolves its handler contract from the container, failing the host
-/// with all unresolvable request types named. It is registered automatically by
+/// with all unresolvable request types named. It also rejects request types that implement more than one
+/// result-bearing contract (<see cref="ICommand{TResult}"/> / <see cref="IQuery{TResult}"/>): a command or query has
+/// exactly one result type, so such a type is a modeling error even though the sender dispatches it correctly
+/// (IMP-06). It is registered automatically by
 /// <see cref="ServiceCollectionExtensions.AddBuildingBlocks"/> unless the host sets
 /// <see cref="BuildingBlocksOptions.ValidateHandlersOnStart"/> to <see langword="false"/>. Duplicate handlers are
-/// already rejected at registration time, so this check only guards against absence.
+/// already rejected at registration time, so this check only guards against absence and ambiguity.
 /// </remarks>
 internal sealed class HandlerRegistrationStartupValidator : IHostedService
 {
@@ -42,7 +45,7 @@ internal sealed class HandlerRegistrationStartupValidator : IHostedService
     /// </summary>
     /// <param name="cancellationToken">A token that can be used to request cancellation of the operation.</param>
     /// <returns>A completed task when validation succeeds.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when at least one command or query has no resolvable handler; the message names every affected request type.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when at least one command or query has no resolvable handler or implements more than one result-bearing request contract; the message names every affected request type.</exception>
     public Task StartAsync(CancellationToken cancellationToken)
     {
         Validate();
@@ -59,6 +62,7 @@ internal sealed class HandlerRegistrationStartupValidator : IHostedService
     private void Validate()
     {
         var missing = new List<string>();
+        var ambiguous = new List<string>();
         using var scope = _serviceProvider.CreateScope();
 
         foreach (var assembly in _scannedAssemblies)
@@ -67,6 +71,15 @@ internal sealed class HandlerRegistrationStartupValidator : IHostedService
             {
                 if (type is not { IsClass: true, IsAbstract: false } || type.IsGenericTypeDefinition)
                 {
+                    continue;
+                }
+
+                var resultContracts = ResultContractsOf(type);
+                if (resultContracts.Length > 1)
+                {
+                    ambiguous.Add(
+                        $"'{type}' implements multiple result-bearing request contracts " +
+                        $"({string.Join(", ", resultContracts.Select(ContractName))})");
                     continue;
                 }
 
@@ -80,6 +93,13 @@ internal sealed class HandlerRegistrationStartupValidator : IHostedService
             }
         }
 
+        if (ambiguous.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "Handler registration validation failed at startup. A command or query has exactly one result " +
+                $"type; split the ambiguous request types into one type per result: {string.Join("; ", ambiguous)}.");
+        }
+
         if (missing.Count > 0)
         {
             throw new InvalidOperationException(
@@ -88,6 +108,15 @@ internal sealed class HandlerRegistrationStartupValidator : IHostedService
                 $"assembly is passed to AddHandlersFrom: {string.Join("; ", missing)}.");
         }
     }
+
+    private static Type[] ResultContractsOf(Type requestType) =>
+        [.. requestType.GetInterfaces()
+            .Where(contract => contract.IsGenericType &&
+                (contract.GetGenericTypeDefinition() == typeof(ICommand<>) ||
+                 contract.GetGenericTypeDefinition() == typeof(IQuery<>)))];
+
+    private static string ContractName(Type contract) =>
+        $"{contract.Name.Split('`')[0]}<{contract.GetGenericArguments()[0].Name}>";
 
     private static IEnumerable<Type> HandlerContractsOf(Type requestType)
     {

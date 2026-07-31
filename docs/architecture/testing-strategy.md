@@ -54,8 +54,9 @@ the results. For these cases:
   apply.
 
 Existing examples: `ValidHandlersFixture`, `ConflictingHandlersFixture`,
-`OrphanRequestsFixture` (used by `BuildingBlocks.Infrastructure.Tests` for handler
-registration and startup-validation tests).
+`OrphanRequestsFixture`, `AmbiguousRequestsFixture` (used by
+`BuildingBlocks.Infrastructure.Tests` for handler registration and
+startup-validation tests).
 
 ## What the current Building Blocks tests cover
 

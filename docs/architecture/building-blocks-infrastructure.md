@@ -68,8 +68,11 @@ Implements the `ISender` contract from `BuildingBlocks.Application`
   further out and execute earlier); no attribute- or convention-based ordering, and
   no reliance on registration call order. Hosts add their own behaviors at a chosen
   position via `BuildingBlocksOptions.AddPipelineBehavior(type, order)`.
-- No reflection-heavy scanning at dispatch time; handler resolution should be
-  cached (e.g. per closed generic type) after first use.
+- No reflection-heavy scanning at dispatch time; the closed-generic dispatcher is
+  cached **per request/result type pair** after first use (the result type is part
+  of the cache key, so a request type exposing two result contracts still resolves
+  the correct dispatcher — the startup validator rejects such types in scanned
+  assemblies anyway, since a command/query has exactly one result type).
 
 ### Pipeline behaviors shipped here
 

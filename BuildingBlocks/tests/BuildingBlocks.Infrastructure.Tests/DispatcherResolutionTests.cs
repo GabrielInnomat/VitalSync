@@ -41,7 +41,7 @@ public sealed class DispatcherResolutionTests
         Assert.Equal("thing", result.Value);
     }
 
-    [Fact(Skip = "Pending IMP-06: Sender caches command/query dispatchers by request type only, ignoring the result type; a request type exposing two result types resolves the wrong dispatcher on the second call.")]
+    [Fact]
     public async Task Send_SameRequestTypeWithDifferentResultTypes_ResolvesCorrectDispatcher()
     {
         var services = new ServiceCollection();

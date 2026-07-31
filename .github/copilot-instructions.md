@@ -124,7 +124,9 @@ See `docs/architecture/communication.md` and the ADRs below.
   at request time. **Startup handler validation is on by default**: a hosted service
   registered by `AddBuildingBlocks` verifies at host start that every command/query
   in the scanned assemblies resolves to a handler (fail-fast instead of
-  "no service registered" on the first request); opt out only deliberately via
+  "no service registered" on the first request) and rejects request types that
+  implement **more than one** `ICommand<>`/`IQuery<>` contract — a command or query
+  has exactly one result type (IMP-06); opt out only deliberately via
   `options.ValidateHandlersOnStart = false` (IMP-05).
 - **Commands** return `Result` or `Result<T>` (a **create** returns the new typed id,
   e.g. `Result<RecipeId>`; **delete/void** returns `Result`). **Queries** return `Result<T>`.

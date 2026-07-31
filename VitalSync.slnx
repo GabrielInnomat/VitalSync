@@ -11,6 +11,7 @@
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests/BuildingBlocks.Infrastructure.Tests.csproj" />
   </Folder>
   <Folder Name="/BuildingBlocks/tests/ExternalAssemblies/">
+    <Project Path="BuildingBlocks/tests/ExternalAssemblies/AmbiguousRequestsFixture/AmbiguousRequestsFixture.csproj" />
     <Project Path="BuildingBlocks/tests/ExternalAssemblies/ConflictingHandlersFixture/ConflictingHandlersFixture.csproj" />
     <Project Path="BuildingBlocks/tests/ExternalAssemblies/OrphanRequestsFixture/OrphanRequestsFixture.csproj" />
     <Project Path="BuildingBlocks/tests/ExternalAssemblies/ValidHandlersFixture/ValidHandlersFixture.csproj" />
