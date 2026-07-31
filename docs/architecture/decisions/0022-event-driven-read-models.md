@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-07-26
+- **Amended:** 2026-07-31 (integration-event publication is bound to the handler's message context — see the note below)
 
 ## Context
 
@@ -58,6 +59,26 @@ uniformly for event-sourced and state-stored contexts.
      **RabbitMQ/MassTransit** (ADR-0004).
 4. An outbox entry is marked processed **only after** its handlers succeed; on
    failure or crash it is **retried**, giving **at-least-once** delivery.
+
+> **Implementation note (amendment 2026-07-31):** Empirical verification (IMP-04 in
+> `Improvements.md`) showed that resolving the integration-event transport from DI
+> inside the envelope handler produced a **fresh, un-enrolled message context** —
+> integration events left the process immediately, outside the inbox transaction
+> (duplicates on redelivery) and without correlation propagation. The
+> integration-event path is therefore **bound to the handler's own message
+> context**: Wolverine injects `IMessageContext` into `DomainEventEnvelopeHandler`
+> as a handler parameter, and the `Publisher` receives the resulting
+> `IIntegrationEventSink` **explicitly as a parameter** (contract in
+> `BuildingBlocks.Application`; `WolverineIntegrationEventSink` /
+> `NullIntegrationEventSink` in Infrastructure). The former DI-resolved
+> `IIntegrationEventTransport` abstraction is removed. Step 4's "only after its
+> handlers succeed" now demonstrably includes integration events: they are held
+> back when a projection handler fails and only leave with the inbox transaction's
+> success. Additionally, both unit-of-work implementations flush the outbox
+> **immediately after a successful commit** (verified end-to-end in
+> `OutboxFlushOnCommitTests`); for EF Core hosts, `UseEfCorePersistence` registers
+> Wolverine's PostgreSQL-backed durable message store on the write database at
+> composition time, which the EF outbox requires.
 
 **Consequences of at-least-once — mandatory handler rules:**
 

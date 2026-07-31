@@ -1,6 +1,8 @@
+using BuildingBlocks.Application;
 using Wolverine;
 using Wolverine.EntityFrameworkCore;
 using Wolverine.ErrorHandling;
+using Wolverine.Postgresql;
 using Wolverine.RabbitMQ;
 
 namespace BuildingBlocks.Infrastructure.Messaging;
@@ -20,7 +22,14 @@ namespace BuildingBlocks.Infrastructure.Messaging;
 /// </remarks>
 internal static class WolverineOptionsExtensions
 {
-    private const string DomainEventLocalQueueName = "building-blocks-domain-events";
+    /// <summary>
+    /// The name of the local, durable, strictly sequential queue every domain event is routed through.
+    /// </summary>
+    /// <remarks>
+    /// Exposed so tests can address the queue this package configures instead of restating its name, which would
+    /// let the two drift apart silently.
+    /// </remarks>
+    public const string DomainEventLocalQueueName = "building-blocks-domain-events";
 
     /// <summary>
     /// Applies the routing every host needs for domain events to flow through Wolverine's transactional outbox.
@@ -42,6 +51,13 @@ internal static class WolverineOptionsExtensions
         ArgumentNullException.ThrowIfNull(options);
 
         options.Discovery.IncludeAssembly(typeof(DomainEventEnvelopeHandler).Assembly);
+
+        // The handler's dependencies are internal by design, which forces Wolverine's codegen into service
+        // location for exactly these registrations. Opt them in explicitly so the safe default
+        // (ServiceLocationPolicy.NotAllowed) stays intact for everything else instead of failing the first
+        // delivered domain event with an InvalidServiceLocationException.
+        options.CodeGeneration.AlwaysUseServiceLocationFor<IDomainEventPublisher>();
+        options.CodeGeneration.AlwaysUseServiceLocationFor<IIntegrationEventSinkFactory>();
 
         options.PublishMessage<DomainEventEnvelope>()
             .ToLocalQueue(DomainEventLocalQueueName)
@@ -80,20 +96,32 @@ internal static class WolverineOptionsExtensions
     }
 
     /// <summary>
-    /// Activates Wolverine's EF Core transactional middleware, required for <c>IDbContextOutbox&lt;TContext&gt;</c> to
-    /// enlist outgoing messages in the same transaction as a state-stored context's <c>SaveChanges</c>.
+    /// Activates Wolverine's EF Core transactional middleware and the options-side half of the PostgreSQL-backed
+    /// durable message store, required for <c>IDbContextOutbox&lt;TContext&gt;</c> to enlist outgoing messages in the
+    /// same transaction as a state-stored context's <c>SaveChanges</c>.
     /// </summary>
     /// <remarks>
-    /// Only required for hosts that select <c>UseEfCorePersistence</c>; a purely event-sourced host needs only
-    /// <see cref="ApplyBuildingBlockDomainEventRouting"/>.
+    /// The EF Core outbox refuses to run without a database-backed Wolverine message store ("not using Database
+    /// backed message persistence"). Its registration is split across the extension boundary: the service
+    /// registrations happen at composition time in <see cref="EfCoreMessageStoreRegistration"/> (this extension runs
+    /// after the provider is built, where they would be ineffective), while this method applies the parts that
+    /// mutate the live <see cref="WolverineOptions"/> — codegen persistence strategies and error policies via
+    /// <c>PersistMessagesWithPostgresql</c> (whose own duplicate service registrations are harmless no-ops here) and
+    /// the EF Core transactional middleware. The store lives on the context's own write database, keeping outbox
+    /// rows and aggregate state in the same database and transaction (ADR-0021/0022). Only required for hosts that
+    /// select <c>UseEfCorePersistence</c>; a purely event-sourced host gets its message store from Marten's
+    /// <c>IntegrateWithWolverine</c> and needs only <see cref="ApplyBuildingBlockDomainEventRouting"/>.
     /// </remarks>
     /// <param name="options">The Wolverine options being configured.</param>
+    /// <param name="connectionString">The connection string of the context's write database, which hosts the durable message store.</param>
     /// <returns>The same options, for chaining.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> is <see langword="null"/>.</exception>
-    public static WolverineOptions ApplyBuildingBlockEfCoreOutbox(this WolverineOptions options)
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> or <paramref name="connectionString"/> is <see langword="null"/>.</exception>
+    public static WolverineOptions ApplyBuildingBlockEfCoreOutbox(this WolverineOptions options, string connectionString)
     {
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(connectionString);
 
+        options.PersistMessagesWithPostgresql(connectionString);
         options.UseEntityFrameworkCoreTransactions();
 
         return options;

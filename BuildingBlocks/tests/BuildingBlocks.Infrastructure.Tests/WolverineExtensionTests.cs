@@ -31,7 +31,7 @@ public sealed class WolverineExtensionTests
 
         Assert.False(settings.RequiresWolverine);
         Assert.False(settings.ApplyDomainEventRouting);
-        Assert.False(settings.ApplyEfCoreOutbox);
+        Assert.Null(settings.EfCoreMessageStoreConnectionString);
         Assert.Null(settings.RabbitMqUri);
     }
 
@@ -44,7 +44,7 @@ public sealed class WolverineExtensionTests
         var settings = provider.GetRequiredService<WolverineWiringSettings>();
 
         Assert.True(settings.ApplyDomainEventRouting);
-        Assert.True(settings.ApplyEfCoreOutbox);
+        Assert.Equal(ConnectionString, settings.EfCoreMessageStoreConnectionString);
         Assert.Null(settings.RabbitMqUri);
     }
 
@@ -57,7 +57,7 @@ public sealed class WolverineExtensionTests
         var settings = provider.GetRequiredService<WolverineWiringSettings>();
 
         Assert.True(settings.ApplyDomainEventRouting);
-        Assert.False(settings.ApplyEfCoreOutbox);
+        Assert.Null(settings.EfCoreMessageStoreConnectionString);
         Assert.Null(settings.RabbitMqUri);
     }
 

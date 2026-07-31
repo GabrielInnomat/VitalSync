@@ -175,7 +175,12 @@ See `docs/architecture/communication.md` and the ADRs below.
   **in-context projection handlers** (updating the read DB) and, where selected, to
   the **integration-event path** on RabbitMQ via **Wolverine** (the same outbox
   already required for integration events is reused; Wolverine is transport-only,
-  **not** the CQRS mediator — ADR-0015/0023). Both persistence paths **flush the
+  **not** the CQRS mediator — ADR-0015/0023). Integration-event publication is
+  **bound to the handler's own `IMessageContext`** via the explicit
+  `IIntegrationEventSink` parameter on `IDomainEventPublisher` (ADR-0022
+  amendment) — never a DI-resolved `IMessageBus`, which produces an un-enrolled
+  context (duplicates on redelivery, broken trace correlation; see IMP-04 in
+  `Improvements.md`). Both persistence paths **flush the
   outbox immediately after a successful commit** (EF Core atomically via
   `SaveChangesAndFlushMessagesAsync`; Marten via the flush-on-commit listener that
   `IMartenOutbox.Enroll` registers) — the durability agent's polling is
@@ -189,8 +194,7 @@ See `docs/architecture/communication.md` and the ADRs below.
   models are **derived and rebuildable** by replaying events / re-running projections.
 - **In-context** projections use **domain** events directly; **integration** events
   (RabbitMQ) are the **only** cross-context signal — never read another context's
-  database.
-- **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
+  database.- **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
   and the event schema is unchanged, so snapshots can be added per context later with
   **no event migration**.
 - **Building Blocks own the persistence & Wolverine wiring** (ADR-0027, "pit of
@@ -198,7 +202,13 @@ See `docs/architecture/communication.md` and the ADRs below.
   registers the write DbContext **itself** via Wolverine's
   `AddDbContextWithWolverineIntegration` on Npgsql (never register the context in the
   host — Aspire hosts *enrich* it, e.g. `EnrichNpgsqlDbContext`, instead of
-  re-registering); `UseWolverineMessaging(rabbitMqUri)` takes the broker URI; a
+  re-registering) **and** registers Wolverine's PostgreSQL-backed durable message
+  store on the same write database at **composition time**
+  (`EfCoreMessageStoreRegistration`) — container-registered `IWolverineExtension`s
+  run only after the provider is built, where `options.Services.*` registrations
+  are silently ineffective, so service registrations must never be placed in the
+  extension (options-only mutations like codegen and policies belong there);
+  `UseWolverineMessaging(rabbitMqUri)` takes the broker URI; a
   registered `IWolverineExtension` auto-applies the matching Wolverine defaults, so
   the host writes an **empty** `UseWolverine()` call (the `Apply*` methods are
   `internal`). A startup validator fails the host when a selected capability requires

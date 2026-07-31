@@ -17,7 +17,7 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection;
 /// Hosts call <see cref="AddBuildingBlocks"/> once at composition time; everything else in this package is reached
 /// through the <c>Domain</c>/<c>Application</c> abstractions. The registration wires the dispatcher, the pipeline
 /// behaviors with explicit orders, the outbox-backed publisher with its projection runner, the default UTC clock,
-/// and a no-op messaging transport that <see cref="BuildingBlocksOptions.UseWolverineMessaging"/> replaces. The outbox itself is Wolverine's
+/// and a no-op integration-event sink factory that <see cref="BuildingBlocksOptions.UseWolverineMessaging"/> replaces. The outbox itself is Wolverine's
 /// own transactional outbox (ADR-0023); its configuration is applied automatically by a registered
 /// <see cref="BuildingBlocksWolverineExtension"/> when the host calls <c>UseWolverine</c> (ADR-0027), and
 /// <see cref="DomainEventEnvelopeHandler"/> is the single handler that delivers into the publisher registered here.
@@ -54,7 +54,7 @@ public static class ServiceCollectionExtensions
         var behaviorRegistry = new PipelineBehaviorRegistry();
         services.TryAddSingleton(behaviorRegistry);
 
-        services.TryAddSingleton<IIntegrationEventTransport, NullIntegrationEventTransport>();
+        services.TryAddSingleton<IIntegrationEventSinkFactory, NullIntegrationEventSinkFactory>();
         var options = new BuildingBlocksOptions(services, behaviorRegistry);
         configure(options);
 

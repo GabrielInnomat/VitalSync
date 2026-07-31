@@ -24,9 +24,9 @@ internal sealed class BuildingBlocksWolverineExtension(WolverineWiringSettings s
             options.ApplyBuildingBlockDomainEventRouting();
         }
 
-        if (settings.ApplyEfCoreOutbox)
+        if (settings.EfCoreMessageStoreConnectionString is { } efCoreConnectionString)
         {
-            options.ApplyBuildingBlockEfCoreOutbox();
+            options.ApplyBuildingBlockEfCoreOutbox(efCoreConnectionString);
         }
 
         if (settings.RabbitMqUri is { } rabbitMqUri)
