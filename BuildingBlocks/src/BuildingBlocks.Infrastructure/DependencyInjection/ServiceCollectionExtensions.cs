@@ -39,6 +39,8 @@ public static class ServiceCollectionExtensions
     /// to a handler, failing the host at startup instead of on the first request. Likewise, unless
     /// <see cref="BuildingBlocksOptions.ValidateWolverineOnStart"/> is <see langword="false"/>, a startup check fails
     /// the host when a selected capability requires Wolverine but <c>UseWolverine</c> was never called (ADR-0027).
+    /// When no <see cref="IUnitOfWork"/> is registered by the end of the call, a startup notice is logged that
+    /// commands are dispatched without a commit — valid for tests and gateway hosts, a misconfiguration elsewhere.
     /// </remarks>
     /// <param name="services">The service collection to register into.</param>
     /// <param name="configure">The callback that selects handlers, persistence style, and messaging via <see cref="BuildingBlocksOptions"/>.</param>
@@ -65,6 +67,11 @@ public static class ServiceCollectionExtensions
         if (options.ValidateWolverineOnStart && options.WolverineWiring.RequiresWolverine)
         {
             services.AddHostedService<WolverineWiringStartupValidator>();
+        }
+
+        if (!services.Any(descriptor => descriptor.ServiceType == typeof(IUnitOfWork)))
+        {
+            services.AddHostedService<MissingUnitOfWorkStartupLogger>();
         }
 
         services.TryAddSingleton(options.WolverineWiring);

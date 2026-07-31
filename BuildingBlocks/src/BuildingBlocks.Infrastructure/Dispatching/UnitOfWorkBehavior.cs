@@ -1,7 +1,6 @@
 using BuildingBlocks.Application;
 using JasperFx;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.Dispatching;
 
@@ -12,7 +11,11 @@ namespace BuildingBlocks.Infrastructure.Dispatching;
 /// Exactly one unit of work spans each command: the behavior invokes the rest of the pipeline and, when the handler
 /// returns a successful result, commits the <see cref="IUnitOfWork"/> — persisting the aggregate changes together with
 /// the transactional outbox write. On a failed result nothing is committed, which rolls the work back. Queries bypass
-/// the behavior entirely, so no unit of work needs to be registered for query-only hosts. Optimistic-concurrency
+/// the behavior entirely, so no unit of work needs to be registered for query-only hosts. The unit of work is an
+/// <b>optional</b> dependency: a host without configured persistence (handler unit tests, gateway/facade services,
+/// services with their own persistence) resolves it as <see langword="null"/> and commands pass through without a
+/// commit — the optionality is visible in the constructor signature instead of failing at dispatch time, and the
+/// behavior can be instantiated directly in tests without a container. Optimistic-concurrency
 /// conflicts raised by the store on commit (Marten's <see cref="ConcurrencyException"/>, EF Core's
 /// <see cref="DbUpdateConcurrencyException"/>) are translated into a <see cref="FailureCategory.Conflict"/> failure
 /// per ADR-0019. It is the <b>innermost</b> built-in behavior
@@ -20,8 +23,8 @@ namespace BuildingBlocks.Infrastructure.Dispatching;
 /// </remarks>
 /// <typeparam name="TRequest">The type of the request flowing through the pipeline.</typeparam>
 /// <typeparam name="TResponse">The type of the result produced by the pipeline.</typeparam>
-/// <param name="serviceProvider">The scoped service provider used to resolve the unit of work for commands.</param>
-public sealed class UnitOfWorkBehavior<TRequest, TResponse>(IServiceProvider serviceProvider)
+/// <param name="unitOfWork">The unit of work to commit for successful commands, or <see langword="null"/> when the host has no configured persistence.</param>
+public sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork? unitOfWork = null)
     : IPipelineBehavior<TRequest, TResponse>
     where TResponse : Result
 {
@@ -43,12 +46,10 @@ public sealed class UnitOfWorkBehavior<TRequest, TResponse>(IServiceProvider ser
 
         var response = await continuation(cancellationToken).ConfigureAwait(false);
 
-        if (!IsCommand || response.IsFailure)
+        if (unitOfWork is null || !IsCommand || response.IsFailure)
         {
             return response;
         }
-
-        var unitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
 
         try
         {

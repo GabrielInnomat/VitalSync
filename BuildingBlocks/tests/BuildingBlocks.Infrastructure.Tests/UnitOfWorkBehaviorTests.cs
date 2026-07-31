@@ -3,6 +3,9 @@ using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Dispatching;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
@@ -68,7 +71,7 @@ public sealed class UnitOfWorkBehaviorTests
         Assert.Equal(UnitOfWorkBehavior<ProbeCommand, Result>.ConcurrencyConflictCode, failure.Code);
     }
 
-    [Fact(Skip = "Pending IMP-07: UnitOfWorkBehavior resolves IUnitOfWork with GetRequiredService and throws when none is registered; a command-only host should pass through instead.")]
+    [Fact]
     public async Task SuccessfulCommand_WithoutRegisteredUnitOfWork_PassesThrough()
     {
         var services = new ServiceCollection();
@@ -82,6 +85,49 @@ public sealed class UnitOfWorkBehaviorTests
         var result = await sender.Send(new ProbeCommand(), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task Behavior_InstantiatedDirectlyWithoutUnitOfWork_PassesThrough()
+    {
+        var behavior = new UnitOfWorkBehavior<ProbeCommand, Result>();
+
+        var result = await behavior.Handle(
+            new ProbeCommand(),
+            _ => Task.FromResult(Result.Success()),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task MissingUnitOfWork_LogsStartupNotice()
+    {
+        var services = new ServiceCollection();
+        services.AddFakeLogging();
+        services.AddBuildingBlocks(_ => { });
+
+        using var provider = services.BuildServiceProvider();
+        var logger = Assert.Single(
+            provider.GetServices<IHostedService>(),
+            service => service is MissingUnitOfWorkStartupLogger);
+
+        await logger.StartAsync(CancellationToken.None);
+
+        var records = provider.GetRequiredService<FakeLogCollector>().GetSnapshot();
+        Assert.Contains(records, record =>
+            record.Level == LogLevel.Information &&
+            record.Message.Contains("No persistence configured", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RegisteredUnitOfWork_DoesNotAddStartupNotice()
+    {
+        using var provider = BuildProvider(new RecordingUnitOfWork(), new PassingCommandHandler());
+
+        Assert.DoesNotContain(
+            provider.GetServices<IHostedService>(),
+            service => service is MissingUnitOfWorkStartupLogger);
     }
 
     private static ServiceProvider BuildProvider(IUnitOfWork unitOfWork, ICommandHandler<ProbeCommand> handler)
