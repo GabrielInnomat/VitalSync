@@ -280,7 +280,8 @@ public sealed class BuildingBlocksOptions
     /// relational engine, ADR-0020), so outgoing messages enlist in the same transaction as the context's
     /// <c>SaveChanges</c> (ADR-0022/0023) — the host never registers the context and therefore cannot break the
     /// single-transaction guarantee with a plain <c>AddDbContext</c> (ADR-0027). Wolverine's EF Core transactional
-    /// middleware is applied automatically when the host calls <c>UseWolverine</c>. On top of that context this
+    /// middleware and its PostgreSQL-backed durable message store — which the EF Core outbox requires — are applied
+    /// automatically on the same write database when the host calls <c>UseWolverine</c>. On top of that context this
     /// method wires the unit of work and the generic repository. Use <paramref name="configureContext"/> for
     /// additional provider options; Aspire hosts enrich the registration afterwards (for example
     /// <c>EnrichNpgsqlDbContext</c>) rather than re-registering it.
@@ -310,8 +311,13 @@ public sealed class BuildingBlocksOptions
         _services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork<TContext>>();
         _services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
 
+        // The durable message store must be registered here, at composition time — container-registered
+        // Wolverine extensions run after the provider is built, where service registrations no longer take
+        // effect (see EfCoreMessageStoreRegistration).
+        EfCoreMessageStoreRegistration.Register(_services, connectionString);
+
         WolverineWiring.ApplyDomainEventRouting = true;
-        WolverineWiring.ApplyEfCoreOutbox = true;
+        WolverineWiring.EfCoreMessageStoreConnectionString = connectionString;
         return this;
     }
 
@@ -355,7 +361,8 @@ public sealed class BuildingBlocksOptions
     /// Enables the Wolverine/RabbitMQ transport for integration events (ADR-0023).
     /// </summary>
     /// <remarks>
-    /// Registers the Wolverine-backed transport so the publisher hands mapped integration events to the broker, and
+    /// Registers the Wolverine-backed sink factory so the envelope handler binds mapped integration events to the
+    /// handled message's context (enrolled in its outbox, correlation propagated), and
     /// records the broker URI so the RabbitMQ transport, retry, and dead-letter defaults are applied automatically
     /// when the host calls <c>UseWolverine</c> (ADR-0027) — the host passes the Aspire-provided connection string
     /// here and configures nothing else.
@@ -367,7 +374,7 @@ public sealed class BuildingBlocksOptions
     {
         ArgumentNullException.ThrowIfNull(rabbitMqUri);
 
-        _services.Replace(ServiceDescriptor.Scoped<IIntegrationEventTransport, WolverineIntegrationEventTransport>());
+        _services.Replace(ServiceDescriptor.Singleton<IIntegrationEventSinkFactory, WolverineIntegrationEventSinkFactory>());
         WolverineWiring.RabbitMqUri = rabbitMqUri;
         return this;
     }
