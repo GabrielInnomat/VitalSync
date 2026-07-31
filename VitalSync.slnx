@@ -16,6 +16,14 @@
     <Project Path="BuildingBlocks/tests/ExternalAssemblies/OrphanRequestsFixture/OrphanRequestsFixture.csproj" />
     <Project Path="BuildingBlocks/tests/ExternalAssemblies/ValidHandlersFixture/ValidHandlersFixture.csproj" />
   </Folder>
+  <Folder Name="/samples/" />
+  <Folder Name="/samples/StateStored/">
+    <Project Path="samples/StateStored/VitalSync.Sample.StateStored.Api/VitalSync.Sample.StateStored.Api.csproj" />
+    <Project Path="samples/StateStored/VitalSync.Sample.StateStored.Application/VitalSync.Sample.StateStored.Application.csproj" />
+    <Project Path="samples/StateStored/VitalSync.Sample.StateStored.Domain/VitalSync.Sample.StateStored.Domain.csproj" />
+    <Project Path="samples/StateStored/VitalSync.Sample.StateStored.Infrastructure/VitalSync.Sample.StateStored.Infrastructure.csproj" />
+    <Project Path="samples/StateStored/VitalSync.Sample.StateStored.MigrationService/VitalSync.Sample.StateStored.MigrationService.csproj" />
+  </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/Aspire/">
     <Project Path="src/Aspire/VitalSync.AppHost/VitalSync.AppHost.csproj" />
