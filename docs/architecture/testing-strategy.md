@@ -20,9 +20,22 @@ Automated tests are implemented for **both the Building Blocks and the individua
 | **xUnit**            | Test framework and assertions (`Assert.*`; see ADR-0014) |
 | **NSubstitute**      | Mocking/substitutes                                      |
 | **EF Core InMemory** | Fast persistence-layer tests                             |
-| **Testcontainers (PostgreSQL)** | Integration tests against a real PostgreSQL for Marten optimistic concurrency and strongly-typed key persistence; skipped automatically when Docker is unavailable |
+| **Testcontainers (PostgreSQL)** | Integration tests against a real PostgreSQL for Marten optimistic concurrency, strongly-typed key persistence, and outbox flush-on-commit; skipped automatically when Docker is unavailable |
+| **Testcontainers (RabbitMQ)** | Integration tests for integration-event routing to the platform topic exchange; skipped automatically when Docker is unavailable |
 
 > Integration and component-communication tests may additionally use containerized infrastructure (e.g., via Testcontainers) once the messaging platform is selected.
+
+### Container-backed tests must not skip in CI
+
+Skipping keeps the suite usable without Docker, but a build agent without Docker reports **success** while entire test classes never ran — the regressions they guard would land unnoticed. Setting the environment variable **`VITALSYNC_REQUIRE_CONTAINERS`** turns a failed container start into a failed run instead of a skip:
+
+```bash
+VITALSYNC_REQUIRE_CONTAINERS=1 dotnet test
+```
+
+Set it in every CI pipeline; leave it unset locally. Both fixtures (`PostgreSqlFixture`, `RabbitMqFixture`) honour it via `ContainerRequirement`.
+
+> There is no CI pipeline in this repository yet (`.github/workflows/` is empty). Whoever adds one must set this variable, otherwise the container-backed tests silently do nothing.
 
 > NSubstitute is used in the application/persistence/messaging tests; domain tests use lightweight hand-written test doubles instead.
 

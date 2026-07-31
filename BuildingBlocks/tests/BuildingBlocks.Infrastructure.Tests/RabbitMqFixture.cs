@@ -27,6 +27,7 @@ public sealed class RabbitMqFixture : IAsyncLifetime
         }
         catch (Exception exception)
         {
+            ContainerRequirement.ThrowIfRequired("RabbitMQ", exception);
             Available = false;
             SkipReason = $"RabbitMQ Testcontainer could not be started (Docker required): {exception.Message}";
         }

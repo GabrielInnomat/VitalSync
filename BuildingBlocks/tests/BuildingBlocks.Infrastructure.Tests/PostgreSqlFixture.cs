@@ -27,6 +27,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         }
         catch (Exception exception)
         {
+            ContainerRequirement.ThrowIfRequired("PostgreSQL", exception);
             Available = false;
             SkipReason = $"PostgreSQL Testcontainer could not be started (Docker required): {exception.Message}";
         }
