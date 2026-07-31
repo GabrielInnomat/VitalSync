@@ -42,6 +42,7 @@ An ADR documents a single architectural decision, its context, and its consequen
 | [0024](./0024-contract-placement-innermost-consumer.md)   | Contracts live in the innermost layer that consumes them | Accepted                  |
 | [0025](./0025-unified-state-fold-aggregate-model.md)      | Unified state-fold aggregate model with additive event sourcing | Accepted (supersedes ADR-0012) |
 | [0026](./0026-single-repository-contract.md)              | Single repository contract: add and get, no delete      | Accepted                  |
+| [0027](./0027-building-blocks-own-wolverine-wiring.md)    | Building Blocks own the persistence and Wolverine wiring | Accepted                 |
 
 ## Template
 

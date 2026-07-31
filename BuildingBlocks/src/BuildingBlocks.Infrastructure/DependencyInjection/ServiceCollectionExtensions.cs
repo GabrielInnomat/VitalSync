@@ -6,6 +6,7 @@ using BuildingBlocks.Infrastructure.Messaging;
 using BuildingBlocks.Infrastructure.Time;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection;
 
@@ -17,9 +18,9 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection;
 /// through the <c>Domain</c>/<c>Application</c> abstractions. The registration wires the dispatcher, the pipeline
 /// behaviors with explicit orders, the outbox-backed publisher with its projection runner, the default UTC clock,
 /// and a no-op messaging transport that <see cref="BuildingBlocksOptions.UseWolverineMessaging"/> replaces. The outbox itself is Wolverine's
-/// own transactional outbox (ADR-0023); the host wires it up via <see cref="WolverineOptionsExtensions"/> from its
-/// <c>UseWolverine</c> setup, and <see cref="DomainEventEnvelopeHandler"/> is the single handler that delivers into
-/// the publisher registered here.
+/// own transactional outbox (ADR-0023); its configuration is applied automatically by a registered
+/// <see cref="BuildingBlocksWolverineExtension"/> when the host calls <c>UseWolverine</c> (ADR-0027), and
+/// <see cref="DomainEventEnvelopeHandler"/> is the single handler that delivers into the publisher registered here.
 /// </remarks>
 public static class ServiceCollectionExtensions
 {
@@ -35,7 +36,9 @@ public static class ServiceCollectionExtensions
     /// order; hosts add their own at a chosen position via <see cref="BuildingBlocksOptions.AddPipelineBehavior"/>.
     /// Unless the host sets <see cref="BuildingBlocksOptions.ValidateHandlersOnStart"/> to <see langword="false"/>, a
     /// startup hosted service is registered that verifies every command and query in the scanned assemblies resolves
-    /// to a handler, failing the host at startup instead of on the first request.
+    /// to a handler, failing the host at startup instead of on the first request. Likewise, unless
+    /// <see cref="BuildingBlocksOptions.ValidateWolverineOnStart"/> is <see langword="false"/>, a startup check fails
+    /// the host when a selected capability requires Wolverine but <c>UseWolverine</c> was never called (ADR-0027).
     /// </remarks>
     /// <param name="services">The service collection to register into.</param>
     /// <param name="configure">The callback that selects handlers, persistence style, and messaging via <see cref="BuildingBlocksOptions"/>.</param>
@@ -58,6 +61,15 @@ public static class ServiceCollectionExtensions
             services.AddHostedService(provider =>
                 new HandlerRegistrationStartupValidator(provider, options.ScannedAssemblies));
         }
+
+        if (options.ValidateWolverineOnStart && options.WolverineWiring.RequiresWolverine)
+        {
+            services.AddHostedService<WolverineWiringStartupValidator>();
+        }
+
+        services.TryAddSingleton(options.WolverineWiring);
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IWolverineExtension, BuildingBlocksWolverineExtension>());
 
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<IClock, SystemClock>();

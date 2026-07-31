@@ -22,8 +22,10 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection;
 /// <see cref="UseMartenEventSourcing"/> for event-sourced contexts, ADR-0019), and optionally the Wolverine transport
 /// for integration events via <see cref="UseWolverineMessaging"/> (ADR-0023). A microservice hosts exactly one
 /// bounded context and a bounded context uses exactly one persistence strategy, so selecting both persistence styles
-/// throws — a context that appears to need both is cut wrong and should be split. The methods only register services —
-/// nothing is built or connected until the host starts.
+/// throws — a context that appears to need both is cut wrong and should be split. Each selection also records which
+/// Wolverine defaults it needs; a registered <see cref="BuildingBlocksWolverineExtension"/> applies them when the
+/// host calls <c>UseWolverine</c>, so the host performs no Wolverine configuration of its own (ADR-0027). The
+/// methods only register services — nothing is built or connected until the host starts.
 /// </remarks>
 public sealed class BuildingBlocksOptions
 {
@@ -95,6 +97,23 @@ public sealed class BuildingBlocksOptions
     /// </remarks>
     /// <value><c>true</c> if handler registration is verified at host startup; otherwise, <c>false</c>. The default is <c>true</c>.</value>
     public bool ValidateHandlersOnStart { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the Wolverine wiring is verified when the host starts.
+    /// </summary>
+    /// <remarks>
+    /// Enabled by default: when the host selects a capability that flows through Wolverine's transactional outbox
+    /// (a persistence style or <see cref="UseWolverineMessaging"/>), a startup check verifies that the host actually
+    /// called <c>UseWolverine</c> — the one wiring step that cannot be performed from a service collection — and
+    /// fails the host at startup with an actionable message instead of surfacing as a missing outbox on the first
+    /// commit in production (ADR-0027). Set to <see langword="false"/> only for hosts that intentionally run those
+    /// code paths without Wolverine (for example certain test hosts). The check runs as a hosted service, so it
+    /// never affects code that builds a bare service provider without starting a host.
+    /// </remarks>
+    /// <value><c>true</c> if the Wolverine wiring is verified at host startup; otherwise, <c>false</c>. The default is <c>true</c>.</value>
+    public bool ValidateWolverineOnStart { get; set; } = true;
+
+    internal WolverineWiringSettings WolverineWiring { get; } = new();
 
     internal IReadOnlyCollection<Assembly> ScannedAssemblies => _scannedAssemblies;
 
@@ -252,26 +271,47 @@ public sealed class BuildingBlocksOptions
         _services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(IPipelineBehavior<,>), openGenericBehavior));
         return this;
     }
+    /// <summary>
+    /// Enables EF Core persistence against the context's write database (state-stored contexts, ADR-0020).
+    /// </summary>
     /// <remarks>
-    /// The host must register <typeparamref name="TContext"/> itself, via
-    /// <c>AddDbContextWithWolverineIntegration&lt;TContext&gt;</c> (not plain <c>AddDbContext</c>) against the
-    /// write-database connection string of the ADR-0021 pair, and must apply
-    /// <see cref="WolverineOptionsExtensions.ApplyBuildingBlockEfCoreOutbox"/> from its <c>UseWolverine</c> setup —
-    /// both are required for <see cref="IDbContextOutbox{TContext}"/> to enlist outgoing messages in the same
-    /// transaction as <typeparamref name="TContext"/>'s <c>SaveChanges</c> (ADR-0022/0023). This method wires the unit
-    /// of work and the generic repository on top of that context.
+    /// Registers <typeparamref name="TContext"/> itself, via Wolverine's
+    /// <c>AddDbContextWithWolverineIntegration&lt;TContext&gt;</c> on the Npgsql provider (PostgreSQL is the single
+    /// relational engine, ADR-0020), so outgoing messages enlist in the same transaction as the context's
+    /// <c>SaveChanges</c> (ADR-0022/0023) — the host never registers the context and therefore cannot break the
+    /// single-transaction guarantee with a plain <c>AddDbContext</c> (ADR-0027). Wolverine's EF Core transactional
+    /// middleware is applied automatically when the host calls <c>UseWolverine</c>. On top of that context this
+    /// method wires the unit of work and the generic repository. Use <paramref name="configureContext"/> for
+    /// additional provider options; Aspire hosts enrich the registration afterwards (for example
+    /// <c>EnrichNpgsqlDbContext</c>) rather than re-registering it.
     /// </remarks>
     /// <typeparam name="TContext">The write-database context type of the bounded context.</typeparam>
+    /// <param name="connectionString">The connection string of the context's write database (the write half of the ADR-0021 pair).</param>
+    /// <param name="configureContext">An optional callback for additional context configuration beyond the Npgsql provider setup.</param>
     /// <returns>The same options, for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="connectionString"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">Thrown when <see cref="UseMartenEventSourcing"/> was already selected for this host. A bounded context uses exactly one persistence strategy (ADR-0019/0020/0021); mixing EF Core and Marten is not supported.</exception>
-    public BuildingBlocksOptions UseEfCorePersistence<TContext>()
+    public BuildingBlocksOptions UseEfCorePersistence<TContext>(
+        string connectionString,
+        Action<DbContextOptionsBuilder>? configureContext = null)
         where TContext : DbContext
     {
+        ArgumentNullException.ThrowIfNull(connectionString);
+
         SelectPersistenceStyle(PersistenceStyle.EfCore);
+
+        _services.AddDbContextWithWolverineIntegration<TContext>(builder =>
+        {
+            builder.UseNpgsql(connectionString);
+            configureContext?.Invoke(builder);
+        });
 
         _services.TryAddScoped<DbContext>(static provider => provider.GetRequiredService<TContext>());
         _services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork<TContext>>();
         _services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
+
+        WolverineWiring.ApplyDomainEventRouting = true;
+        WolverineWiring.ApplyEfCoreOutbox = true;
         return this;
     }
 
@@ -282,9 +322,8 @@ public sealed class BuildingBlocksOptions
     /// Registers Marten with string stream identities and lightweight sessions on the given write-database connection
     /// string of the ADR-0021 pair, integrates it with Wolverine so a session can be enrolled in the messaging
     /// transport's transactional outbox (ADR-0023), and wires the unit of work and the event-sourced repository on top
-    /// of it. The host must still apply
-    /// <see cref="WolverineOptionsExtensions.ApplyBuildingBlockDomainEventRouting"/> from its <c>UseWolverine</c>
-    /// setup for the outbox to actually be dispatched. Both persistence styles register the same
+    /// of it. The domain-event routing is applied automatically when the host calls <c>UseWolverine</c>
+    /// (ADR-0027). Both persistence styles register the same
     /// <see cref="IRepository{TAggregate, TKey}"/> contract; select exactly one style per write database.
     /// </remarks>
     /// <param name="connectionString">The connection string of the context's write database.</param>
@@ -307,6 +346,8 @@ public sealed class BuildingBlocksOptions
         _services.TryAddScoped<MartenAggregateTracker>();
         _services.TryAddScoped<IUnitOfWork, MartenUnitOfWork>();
         _services.TryAddScoped(typeof(IRepository<,>), typeof(MartenEventSourcedRepository<,>));
+
+        WolverineWiring.ApplyDomainEventRouting = true;
         return this;
     }
 
@@ -314,15 +355,20 @@ public sealed class BuildingBlocksOptions
     /// Enables the Wolverine/RabbitMQ transport for integration events (ADR-0023).
     /// </summary>
     /// <remarks>
-    /// Registers the Wolverine-backed transport so the publisher hands mapped integration events to the broker. The
-    /// host must additionally run Wolverine (e.g. <c>UseWolverine</c>) and is expected to apply
-    /// <see cref="WolverineOptionsExtensions.ApplyBuildingBlockMessagingDefaults"/> for the RabbitMQ connection,
-    /// retries, and dead-lettering.
+    /// Registers the Wolverine-backed transport so the publisher hands mapped integration events to the broker, and
+    /// records the broker URI so the RabbitMQ transport, retry, and dead-letter defaults are applied automatically
+    /// when the host calls <c>UseWolverine</c> (ADR-0027) — the host passes the Aspire-provided connection string
+    /// here and configures nothing else.
     /// </remarks>
+    /// <param name="rabbitMqUri">The AMQP connection URI of the RabbitMQ broker (typically the Aspire-provided connection string).</param>
     /// <returns>The same options, for chaining.</returns>
-    public BuildingBlocksOptions UseWolverineMessaging()
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="rabbitMqUri"/> is <see langword="null"/>.</exception>
+    public BuildingBlocksOptions UseWolverineMessaging(Uri rabbitMqUri)
     {
+        ArgumentNullException.ThrowIfNull(rabbitMqUri);
+
         _services.Replace(ServiceDescriptor.Scoped<IIntegrationEventTransport, WolverineIntegrationEventTransport>());
+        WolverineWiring.RabbitMqUri = rabbitMqUri;
         return this;
     }
 }

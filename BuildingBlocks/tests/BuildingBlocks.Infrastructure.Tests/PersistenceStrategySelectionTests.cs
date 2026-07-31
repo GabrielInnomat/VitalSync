@@ -14,7 +14,7 @@ public sealed class PersistenceStrategySelectionTests
         var services = new ServiceCollection();
 
         var exception = Record.Exception(() =>
-            services.AddBuildingBlocks(options => options.UseEfCorePersistence<TestDbContext>()));
+            services.AddBuildingBlocks(options => options.UseEfCorePersistence<TestDbContext>(ConnectionString)));
 
         Assert.Null(exception);
     }
@@ -37,8 +37,8 @@ public sealed class PersistenceStrategySelectionTests
 
         var exception = Record.Exception(() =>
             services.AddBuildingBlocks(options => options
-                .UseEfCorePersistence<TestDbContext>()
-                .UseEfCorePersistence<TestDbContext>()));
+                .UseEfCorePersistence<TestDbContext>(ConnectionString)
+                .UseEfCorePersistence<TestDbContext>(ConnectionString)));
 
         Assert.Null(exception);
     }
@@ -50,7 +50,7 @@ public sealed class PersistenceStrategySelectionTests
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
             services.AddBuildingBlocks(options => options
-                .UseEfCorePersistence<TestDbContext>()
+                .UseEfCorePersistence<TestDbContext>(ConnectionString)
                 .UseMartenEventSourcing(ConnectionString)));
 
         Assert.Contains("persistence strateg", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -64,7 +64,7 @@ public sealed class PersistenceStrategySelectionTests
         Assert.Throws<InvalidOperationException>(() =>
             services.AddBuildingBlocks(options => options
                 .UseMartenEventSourcing(ConnectionString)
-                .UseEfCorePersistence<TestDbContext>()));
+                .UseEfCorePersistence<TestDbContext>(ConnectionString)));
     }
 
     private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options);

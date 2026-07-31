@@ -9,8 +9,9 @@ namespace BuildingBlocks.Infrastructure.Messaging;
 /// <remarks>
 /// Wolverine is used strictly as the transport — never as the in-process mediator (ADR-0015/0023): the publisher hands
 /// each mapped integration event to Wolverine's <see cref="IMessageBus"/>, which delivers it to the RabbitMQ broker
-/// with the retry and dead-letter policies configured on the host. Requires the host to run Wolverine, typically via
-/// <see cref="WolverineOptionsExtensions.ApplyBuildingBlockMessagingDefaults"/>.
+/// with the retry and dead-letter policies applied automatically by <see cref="BuildingBlocksWolverineExtension"/>
+/// (via <see cref="WolverineOptionsExtensions.ApplyBuildingBlockMessagingDefaults"/>) when the host calls
+/// <c>UseWolverine</c>.
 /// </remarks>
 /// <param name="messageBus">The Wolverine message bus resolved from the current scope.</param>
 public sealed class WolverineIntegrationEventTransport(IMessageBus messageBus) : IIntegrationEventTransport

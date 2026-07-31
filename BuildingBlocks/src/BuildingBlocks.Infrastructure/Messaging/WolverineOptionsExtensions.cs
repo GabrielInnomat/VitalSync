@@ -10,15 +10,15 @@ namespace BuildingBlocks.Infrastructure.Messaging;
 /// </summary>
 /// <remarks>
 /// Every service host that persists through this package's unit-of-work implementations must run Wolverine
-/// (ADR-0023), because domain events now flow through Wolverine's own transactional outbox even when they never leave
+/// (ADR-0023), because domain events flow through Wolverine's own transactional outbox even when they never leave
 /// the process (in-context projections, ADR-0022) — RabbitMQ is only needed for the subset of events selected as
-/// integration events. Hosts call <see cref="ApplyBuildingBlockDomainEventRouting"/> unconditionally from their
-/// <c>UseWolverine</c> setup; <see cref="ApplyBuildingBlockMessagingDefaults"/> and
-/// <see cref="ApplyBuildingBlockEfCoreOutbox"/> are added on top when the host also publishes integration events to
-/// RabbitMQ or persists through EF Core, respectively. Anything configured afterwards on the same options overrides
-/// these defaults.
+/// integration events. Hosts never call these methods themselves: <see cref="BuildingBlocksWolverineExtension"/>
+/// applies exactly the combination matching the host's capability selection when Wolverine bootstraps (ADR-0027) —
+/// <see cref="ApplyBuildingBlockDomainEventRouting"/> whenever a persistence style was selected,
+/// <see cref="ApplyBuildingBlockEfCoreOutbox"/> for state-stored contexts, and
+/// <see cref="ApplyBuildingBlockMessagingDefaults"/> when integration events are published to RabbitMQ.
 /// </remarks>
-public static class WolverineOptionsExtensions
+internal static class WolverineOptionsExtensions
 {
     private const string DomainEventLocalQueueName = "building-blocks-domain-events";
 
@@ -34,7 +34,7 @@ public static class WolverineOptionsExtensions
     /// envelope to a durable, strictly sequential local queue so redelivery after a crash cannot reorder a single
     /// aggregate's events relative to one another (ADR-0022's per-aggregate ordering rule).
     /// </remarks>
-    /// <param name="options">The Wolverine options being configured by the host.</param>
+    /// <param name="options">The Wolverine options being configured.</param>
     /// <returns>The same options, for chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> is <see langword="null"/>.</exception>
     public static WolverineOptions ApplyBuildingBlockDomainEventRouting(this WolverineOptions options)
@@ -58,7 +58,7 @@ public static class WolverineOptionsExtensions
     /// Only required for hosts that also select <c>UseWolverineMessaging</c> to publish integration events; a service
     /// with purely in-context projections needs only <see cref="ApplyBuildingBlockDomainEventRouting"/>.
     /// </remarks>
-    /// <param name="options">The Wolverine options being configured by the host.</param>
+    /// <param name="options">The Wolverine options being configured.</param>
     /// <param name="rabbitMqUri">The AMQP connection URI of the RabbitMQ broker (typically the Aspire-provided connection string).</param>
     /// <returns>The same options, for chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> or <paramref name="rabbitMqUri"/> is <see langword="null"/>.</exception>
@@ -87,7 +87,7 @@ public static class WolverineOptionsExtensions
     /// Only required for hosts that select <c>UseEfCorePersistence</c>; a purely event-sourced host needs only
     /// <see cref="ApplyBuildingBlockDomainEventRouting"/>.
     /// </remarks>
-    /// <param name="options">The Wolverine options being configured by the host.</param>
+    /// <param name="options">The Wolverine options being configured.</param>
     /// <returns>The same options, for chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> is <see langword="null"/>.</exception>
     public static WolverineOptions ApplyBuildingBlockEfCoreOutbox(this WolverineOptions options)

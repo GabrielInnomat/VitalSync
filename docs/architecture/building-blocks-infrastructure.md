@@ -205,8 +205,8 @@ A small cluster of classes, using Marten as a **raw stream store**:
   own outbox, not by any custom drain loop.
 - The envelope is routed to a durable, strictly sequential local queue, so a
   single aggregate's events cannot be reordered relative to one another by a
-  crash-triggered redelivery (see §7,
-  `WolverineOptionsExtensions.ApplyBuildingBlockDomainEventRouting`).
+  crash-triggered redelivery (applied automatically by the registered
+  Wolverine extension, see §7 / ADR-0027).
 
 ## 5. Projection runner (domain-event dispatching)
 
@@ -249,20 +249,30 @@ for hosts, e.g.:
 services.AddBuildingBlocks(options =>
 {
     options.AddHandlersFrom(typeof(SomeHandler).Assembly);
-    options.UseEfCorePersistence<NutritionWriteDbContext>();   // or:
-    options.UseMartenEventSourcing("ConnectionStrings:NutritionWrite");
-    options.UseWolverineMessaging();
+    options.UseEfCorePersistence<NutritionWriteDbContext>(writeConnectionString);   // or:
+    options.UseMartenEventSourcing(writeConnectionString);
+    options.UseWolverineMessaging(rabbitMqUri);
 });
 ```
 
 - Registers `ISender`, the behaviors **in the canonical order** (§1), the unit
   of work, repositories, the Publisher/outbox, the projection runner, the
   Wolverine transport, and the clock (§8).
+- `UseEfCorePersistence<TContext>(connectionString, configureContext?)`
+  **registers the write-database context itself** via Wolverine's
+  `AddDbContextWithWolverineIntegration` on the Npgsql provider (ADR-0027) —
+  the host never registers the context and therefore cannot break the
+  single-transaction outbox guarantee with a plain `AddDbContext`. Aspire
+  hosts *enrich* the registration afterwards (e.g. `EnrichNpgsqlDbContext`)
+  instead of re-registering it.
 - `UseMartenEventSourcing` configures Marten with **string stream identities**
   (`StreamIdentity.AsString`, required by the `EntityKeyFormatter` stream-key
   scheme, §3) and **lightweight sessions** (no identity-map/change-tracking
   overhead — appends are staged explicitly by the repository), and integrates
   the session with Wolverine so it can be enrolled in the transactional outbox.
+- `UseWolverineMessaging(rabbitMqUri)` takes the broker URI (typically the
+  Aspire-provided connection string) so the RabbitMQ defaults can be applied
+  automatically (ADR-0027).
 - Connection strings follow the write/read pair naming of ADR-0021
   (e.g. `NutritionWrite` / `NutritionRead`).
 - The exact API shape of the options builder is illustrative and may evolve
@@ -289,18 +299,29 @@ services.AddBuildingBlocks(options =>
   host (`IHostedService`), so bare service providers in unit tests are
   unaffected (IMP-05).
 
-**Every host must additionally run Wolverine**, because domain events now flow
-through Wolverine's own transactional outbox even for purely in-context
-projections (§4), not only for integration events:
+**Every host whose selection flows through the outbox must additionally run
+Wolverine** — but the call is empty: a registered `IWolverineExtension`
+(`BuildingBlocksWolverineExtension`, ADR-0027) applies exactly the combination
+of defaults matching the capability selection (domain-event routing whenever a
+persistence style was selected, the EF Core transactional middleware for
+state-stored contexts, the RabbitMQ defaults when messaging was selected):
 
 ```csharp
-builder.Host.UseWolverine(opts =>
-{
-    opts.ApplyBuildingBlockDomainEventRouting();       // always required
-    opts.ApplyBuildingBlockEfCoreOutbox();              // only if UseEfCorePersistence was selected
-    opts.ApplyBuildingBlockMessagingDefaults(rabbitMqUri); // only if UseWolverineMessaging was selected
-});
+builder.Host.UseWolverine();   // Building Block defaults are applied automatically
 ```
+
+- The underlying `Apply*` methods are `internal`; hosts have no Wolverine
+  configuration surface and cannot forget or mismatch a call. A host needing
+  additional Wolverine configuration registers its own `IWolverineExtension`.
+- **Startup Wolverine validation is on by default** (ADR-0027): when a selected
+  capability requires Wolverine but `UseWolverine` was never called — the one
+  wiring step that cannot be performed from a service collection — a hosted
+  service fails the host at startup with an actionable message, instead of
+  surfacing as a missing outbox on the first commit in production. Opt out via
+  `options.ValidateWolverineOnStart = false`.
+- A service that selects **no** persistence and **no** messaging needs no
+  Wolverine at all; a service with purely in-context projections needs no
+  RabbitMQ (the domain-event route is a local durable queue).
 
 ## 8. Clock (`IClock` implementation)
 

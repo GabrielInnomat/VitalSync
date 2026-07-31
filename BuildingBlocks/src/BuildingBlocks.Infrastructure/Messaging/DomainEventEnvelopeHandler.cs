@@ -11,7 +11,8 @@ namespace BuildingBlocks.Infrastructure.Messaging;
 /// concrete type or which bounded context raised it, is delivered here once Wolverine's transactional outbox
 /// dispatches the enrolled <see cref="DomainEventEnvelope"/> after the write transaction commits. From here it flows
 /// through the unchanged <see cref="IDomainEventPublisher"/> to in-context projection handlers and the
-/// integration-event path. Discovered via <see cref="WolverineOptionsExtensions.ApplyBuildingBlockMessagingDefaults"/>,
+/// integration-event path. Discovered via <see cref="WolverineOptionsExtensions.ApplyBuildingBlockDomainEventRouting"/>
+/// (applied automatically by <see cref="BuildingBlocksWolverineExtension"/>),
 /// which adds this package's assembly to Wolverine's handler discovery regardless of which service hosts it.
 /// </remarks>
 /// <param name="publisher">The publisher that fans the unwrapped domain event out to its handlers.</param>

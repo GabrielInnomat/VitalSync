@@ -1005,6 +1005,7 @@ entfällt ersatzlos. Die Registrierung wird dadurch einheitlich — alle vier Ha
 # IMP-13 - Messaging-Konfiguration ohne Guard-Rails, stiller Datenverlust
 
 - **Hoch**
+-   - **Status**: teilweise gelöst durch **ADR-0027** („Building Blocks own the persistence and Wolverine wiring"). **Schritt 1 ist umgesetzt** — sogar strenger als vorgeschlagen: `UseEfCorePersistence<TContext>(connectionString, configureContext?)` registriert den DbContext selbst via `AddDbContextWithWolverineIntegration` (Npgsql), `UseWolverineMessaging(rabbitMqUri)` nimmt die Broker-URI entgegen, und eine registrierte `BuildingBlocksWolverineExtension` (`IWolverineExtension`) wendet beim `UseWolverine()`-Aufruf des Hosts automatisch genau die passende Kombination an (Domain-Event-Routing bei gewählter Persistenz, EF-Outbox-Middleware bei EF, RabbitMQ-Defaults bei Messaging). Die `Apply*`-Methoden sind `internal` — es gibt keinen Escape-Hatch-Standardweg mehr, den man falsch kombinieren könnte. Zusätzlich prüft ein `WolverineWiringStartupValidator` (Opt-out via `options.ValidateWolverineOnStart = false`) beim Host-Start, ob `UseWolverine` aufgerufen wurde, wenn eine gewählte Capability Wolverine benötigt. Abgesichert durch `WolverineExtensionTests` und `WolverineWiringStartupValidationTests`. **Offen bleiben** Schritt 2 in seiner vollen Form (Mapper-ohne-Transport-Prüfung), Schritt 3 (`UseNoMessaging` statt stillem Null-Transport-Default), Schritt 4 (`AutoProvision` umgebungsabhängig) und Schritt 5 (differenzierte Retry-Policy).
 
 ## Beschreibung
 

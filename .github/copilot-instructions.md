@@ -187,6 +187,18 @@ See `docs/architecture/communication.md` and the ADRs below.
 - **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
   and the event schema is unchanged, so snapshots can be added per context later with
   **no event migration**.
+- **Building Blocks own the persistence & Wolverine wiring** (ADR-0027, "pit of
+  success"): `UseEfCorePersistence<TContext>(connectionString, configureContext?)`
+  registers the write DbContext **itself** via Wolverine's
+  `AddDbContextWithWolverineIntegration` on Npgsql (never register the context in the
+  host — Aspire hosts *enrich* it, e.g. `EnrichNpgsqlDbContext`, instead of
+  re-registering); `UseWolverineMessaging(rabbitMqUri)` takes the broker URI; a
+  registered `IWolverineExtension` auto-applies the matching Wolverine defaults, so
+  the host writes an **empty** `UseWolverine()` call (the `Apply*` methods are
+  `internal`). A startup validator fails the host when a selected capability requires
+  Wolverine but `UseWolverine` was never called (opt-out:
+  `options.ValidateWolverineOnStart = false`). A service selecting no persistence and
+  no messaging needs no Wolverine; in-context projections need no RabbitMQ.
 - PostgreSQL is provisioned as a first-party **.NET Aspire** resource.
 
 ADRs are immutable once accepted; to change a decision, add a superseding ADR.
