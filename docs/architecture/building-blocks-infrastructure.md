@@ -278,6 +278,16 @@ services.AddBuildingBlocks(options =>
   registration (naming both types) rather than letting the container silently pick
   one. A `ReflectionTypeLoadException` while scanning is rewrapped into a clear
   `InvalidOperationException` (usually a missing package reference) (IMP-05).
+- **Startup handler validation is on by default**: `AddBuildingBlocks` registers a
+  hosted service that, when the host starts, resolves the handler for every
+  `ICommand`/`ICommand<>`/`IQuery<>` implementation found in the scanned
+  assemblies and fails the host with every unresolvable request type named —
+  turning "no service registered" production errors into fail-fast startup
+  errors. The service host needs no extra wiring; a host that intentionally
+  registers handlers outside the assembly scan can opt out via
+  `options.ValidateHandlersOnStart = false`. The check runs only inside a real
+  host (`IHostedService`), so bare service providers in unit tests are
+  unaffected (IMP-05).
 
 **Every host must additionally run Wolverine**, because domain events now flow
 through Wolverine's own transactional outbox even for purely in-context

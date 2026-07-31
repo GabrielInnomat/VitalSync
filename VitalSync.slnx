@@ -11,6 +11,7 @@
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests/BuildingBlocks.Infrastructure.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests.ConflictingHandlers/BuildingBlocks.Infrastructure.Tests.ConflictingHandlers.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests.Fixtures/BuildingBlocks.Infrastructure.Tests.Fixtures.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests.OrphanRequests/BuildingBlocks.Infrastructure.Tests.OrphanRequests.csproj" />
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/Aspire/">

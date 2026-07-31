@@ -33,6 +33,9 @@ public static class ServiceCollectionExtensions
     /// (<see cref="BuildingBlocksOptions.ExceptionToResultBehaviorOrder"/>), then the unit of work closest to the
     /// handler (<see cref="BuildingBlocksOptions.UnitOfWorkBehaviorOrder"/>). The sender wraps behaviors by ascending
     /// order; hosts add their own at a chosen position via <see cref="BuildingBlocksOptions.AddPipelineBehavior"/>.
+    /// Unless the host sets <see cref="BuildingBlocksOptions.ValidateHandlersOnStart"/> to <see langword="false"/>, a
+    /// startup hosted service is registered that verifies every command and query in the scanned assemblies resolves
+    /// to a handler, failing the host at startup instead of on the first request.
     /// </remarks>
     /// <param name="services">The service collection to register into.</param>
     /// <param name="configure">The callback that selects handlers, persistence style, and messaging via <see cref="BuildingBlocksOptions"/>.</param>
@@ -49,6 +52,13 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IIntegrationEventTransport, NullIntegrationEventTransport>();
         var options = new BuildingBlocksOptions(services, behaviorRegistry);
         configure(options);
+
+        if (options.ValidateHandlersOnStart)
+        {
+            services.AddHostedService(provider =>
+                new HandlerRegistrationStartupValidator(provider, options.ScannedAssemblies));
+        }
+
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<IClock, SystemClock>();
         services.TryAddScoped<ISender, Sender>();

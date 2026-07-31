@@ -121,7 +121,11 @@ See `docs/architecture/communication.md` and the ADRs below.
   idempotent for multi-handler contracts (`IProjectionHandler<>`,
   `IIntegrationEventMapper`) and enforces **exactly one** handler per command/query —
   two different handlers for the same `ICommand`/`IQuery` throw at registration, not
-  at request time (IMP-05).
+  at request time. **Startup handler validation is on by default**: a hosted service
+  registered by `AddBuildingBlocks` verifies at host start that every command/query
+  in the scanned assemblies resolves to a handler (fail-fast instead of
+  "no service registered" on the first request); opt out only deliberately via
+  `options.ValidateHandlersOnStart = false` (IMP-05).
 - **Commands** return `Result` or `Result<T>` (a **create** returns the new typed id,
   e.g. `Result<RecipeId>`; **delete/void** returns `Result`). **Queries** return `Result<T>`.
 - Expected domain errors (`BusinessRuleViolationException`, `DomainValidationException`)

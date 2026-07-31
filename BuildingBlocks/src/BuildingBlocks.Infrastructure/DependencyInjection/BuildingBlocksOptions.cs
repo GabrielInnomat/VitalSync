@@ -72,6 +72,7 @@ public sealed class BuildingBlocksOptions
     private readonly IServiceCollection _services;
     private readonly PipelineBehaviorRegistry _behaviorRegistry;
     private readonly Dictionary<Type, Type> _singleHandlers = [];
+    private readonly HashSet<Assembly> _scannedAssemblies = [];
     private PersistenceStyle _persistenceStyle;
 
     internal BuildingBlocksOptions(IServiceCollection services, PipelineBehaviorRegistry behaviorRegistry)
@@ -79,6 +80,23 @@ public sealed class BuildingBlocksOptions
         _services = services;
         _behaviorRegistry = behaviorRegistry;
     }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether handler registration is verified when the host starts.
+    /// </summary>
+    /// <remarks>
+    /// Enabled by default: a startup check resolves the handler for every <see cref="ICommand"/>,
+    /// <see cref="ICommand{TResult}"/>, and <see cref="IQuery{TResult}"/> implementation found in the assemblies given
+    /// to <see cref="AddHandlersFrom"/>, so a missing or unregistered handler fails the host at startup with the
+    /// offending request types named — instead of surfacing as "no service registered" on the first request in
+    /// production. Set to <see langword="false"/> only when a host intentionally registers handlers outside the
+    /// assembly scan and the check would report false positives. The check runs as a hosted service, so it never
+    /// affects code that builds a bare service provider without starting a host (for example unit tests).
+    /// </remarks>
+    /// <value><c>true</c> if handler registration is verified at host startup; otherwise, <c>false</c>. The default is <c>true</c>.</value>
+    public bool ValidateHandlersOnStart { get; set; } = true;
+
+    internal IReadOnlyCollection<Assembly> ScannedAssemblies => _scannedAssemblies;
 
     private enum PersistenceStyle
     {
@@ -114,6 +132,9 @@ public sealed class BuildingBlocksOptions
     /// <see cref="ICommandHandler{TCommand, TResult}"/>, <see cref="IQueryHandler{TQuery, TResult}"/>) must resolve to
     /// exactly one implementation; discovering two <em>different</em> handlers for the same command or query is a
     /// modelling error and throws immediately, rather than letting the container silently pick one at request time.
+    /// Scanned assemblies are additionally recorded for the startup handler check
+    /// (<see cref="ValidateHandlersOnStart"/>), which verifies at host start that every command and query found in
+    /// them resolves to a handler.
     /// </remarks>
     /// <param name="assembly">The assembly to scan for handler implementations.</param>
     /// <returns>The same options, for chaining.</returns>
@@ -135,6 +156,8 @@ public sealed class BuildingBlocksOptions
                 "The most common cause is a missing package reference.",
                 exception);
         }
+
+        _scannedAssemblies.Add(assembly);
 
         foreach (var type in types)
         {
