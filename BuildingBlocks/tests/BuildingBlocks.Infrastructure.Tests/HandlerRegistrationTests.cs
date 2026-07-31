@@ -1,7 +1,7 @@
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.DependencyInjection;
-using BuildingBlocks.Infrastructure.Tests.ConflictingHandlers;
-using BuildingBlocks.Infrastructure.Tests.Fixtures;
+using BuildingBlocks.Infrastructure.Tests.ConflictingHandlersFixture;
+using BuildingBlocks.Infrastructure.Tests.ValidHandlersFixture;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.Tests;

@@ -9,9 +9,11 @@
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Application.Tests/BuildingBlocks.Application.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Domain.Tests/BuildingBlocks.Domain.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests/BuildingBlocks.Infrastructure.Tests.csproj" />
-    <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests.ConflictingHandlers/BuildingBlocks.Infrastructure.Tests.ConflictingHandlers.csproj" />
-    <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests.Fixtures/BuildingBlocks.Infrastructure.Tests.Fixtures.csproj" />
-    <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests.OrphanRequests/BuildingBlocks.Infrastructure.Tests.OrphanRequests.csproj" />
+  </Folder>
+  <Folder Name="/BuildingBlocks/tests/ExternalAssemblies/">
+    <Project Path="BuildingBlocks/tests/ExternalAssemblies/BuildingBlocks.Infrastructure.Tests.ConflictingHandlersFixture/BuildingBlocks.Infrastructure.Tests.ConflictingHandlersFixture.csproj" />
+    <Project Path="BuildingBlocks/tests/ExternalAssemblies/BuildingBlocks.Infrastructure.Tests.OrphanRequestsFixture/BuildingBlocks.Infrastructure.Tests.OrphanRequestsFixture.csproj" />
+    <Project Path="BuildingBlocks/tests/ExternalAssemblies/BuildingBlocks.Infrastructure.Tests.ValidHandlersFixture/BuildingBlocks.Infrastructure.Tests.ValidHandlersFixture.csproj" />
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/Aspire/">

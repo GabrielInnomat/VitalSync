@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\BuildingBlocks.Application\BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\BuildingBlocks.Application\BuildingBlocks.Application.csproj" />
   </ItemGroup>
 
 </Project>

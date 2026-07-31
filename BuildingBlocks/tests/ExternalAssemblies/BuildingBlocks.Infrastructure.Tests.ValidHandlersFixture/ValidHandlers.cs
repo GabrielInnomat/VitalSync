@@ -1,12 +1,8 @@
 using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 
-namespace BuildingBlocks.Infrastructure.Tests.Fixtures;
+namespace BuildingBlocks.Infrastructure.Tests.ValidHandlersFixture;
 
-// A self-contained assembly of valid, non-conflicting handlers used to exercise
-// AddHandlersFrom assembly scanning (IMP-05). It is kept separate from the main
-// test assembly so a scan sees exactly these handlers and is not affected by the
-// intentional fixture duplicates other tests declare.
 public sealed record RegistrationCommand : ICommand;
 
 public sealed record RegistrationQuery : IQuery<int>;
