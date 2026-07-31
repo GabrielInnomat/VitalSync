@@ -23,6 +23,7 @@
     <Project Path="samples/StateStored/VitalSync.Sample.StateStored.Domain/VitalSync.Sample.StateStored.Domain.csproj" />
     <Project Path="samples/StateStored/VitalSync.Sample.StateStored.Infrastructure/VitalSync.Sample.StateStored.Infrastructure.csproj" />
     <Project Path="samples/StateStored/VitalSync.Sample.StateStored.MigrationService/VitalSync.Sample.StateStored.MigrationService.csproj" />
+    <Project Path="samples/StateStored/VitalSync.Sample.StateStored.Tests/VitalSync.Sample.StateStored.Tests.csproj" />
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/Aspire/">
