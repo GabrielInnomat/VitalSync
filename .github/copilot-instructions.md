@@ -175,7 +175,11 @@ See `docs/architecture/communication.md` and the ADRs below.
   **in-context projection handlers** (updating the read DB) and, where selected, to
   the **integration-event path** on RabbitMQ via **Wolverine** (the same outbox
   already required for integration events is reused; Wolverine is transport-only,
-  **not** the CQRS mediator — ADR-0015/0023). Delivery is **at-least-once**, so
+  **not** the CQRS mediator — ADR-0015/0023). Both persistence paths **flush the
+  outbox immediately after a successful commit** (EF Core atomically via
+  `SaveChangesAndFlushMessagesAsync`; Marten via the flush-on-commit listener that
+  `IMartenOutbox.Enroll` registers) — the durability agent's polling is
+  crash-recovery only. Delivery is **at-least-once**, so
   projection handlers **must
   be idempotent and per-aggregate order-aware** (track a last-processed
   position/version); reads are **eventually consistent** with writes.

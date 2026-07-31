@@ -199,7 +199,12 @@ A small cluster of classes, using Marten as a **raw stream store**:
   its concrete type for faithful round-tripping.
 - **Dispatch:** after commit, Wolverine delivers each envelope to the single
   `DomainEventEnvelopeHandler` this package registers, which unwraps it and
-  calls the **Publisher**. The Publisher dispatches the unwrapped event to:
+  calls the **Publisher**. Both persistence paths flush the outbox
+  **immediately after a successful commit** (commit first, then flush): EF Core
+  atomically via `SaveChangesAndFlushMessagesAsync`, Marten via the
+  flush-on-commit session listener that `IMartenOutbox.Enroll` registers — the
+  durability agent's polling is crash-recovery fallback only, not the normal
+  delivery path. The Publisher dispatches the unwrapped event to:
     - **in-context projection handlers** (via the projection runner, §5), which
       update the context's **read database**;
     - the **integration-event path** (§6) for events selected for cross-service

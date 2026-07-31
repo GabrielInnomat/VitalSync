@@ -11,7 +11,10 @@ namespace BuildingBlocks.Infrastructure.Persistence;
 /// Marten-backed unit of work for event-sourced bounded contexts.
 /// </summary>
 /// <remarks>
-/// Committing enrolls the session's <see cref="IMartenOutbox"/> for the current <see cref="IDocumentSession"/>, then,
+/// Committing enrolls the session's <see cref="IMartenOutbox"/> for the current <see cref="IDocumentSession"/> —
+/// enrollment also registers Wolverine's flush-on-commit session listener, so outgoing messages are handed to the
+/// transports immediately after a successful save (commit first, then flush), symmetric with the EF Core path's
+/// <c>SaveChangesAndFlushMessagesAsync</c>; the durability agent remains the crash-recovery fallback only. Then,
 /// for every aggregate tracked by the <see cref="MartenAggregateTracker"/>, stamps its uncommitted domain events with
 /// the commit time (a single <see cref="IClock.Now"/> value shared by the whole transaction; see
 /// <see cref="DomainEventStamper"/>), appends the stamped events to its stream with expected-version optimistic
