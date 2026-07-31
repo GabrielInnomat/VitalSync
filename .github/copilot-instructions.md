@@ -239,6 +239,11 @@ XML documentation is authored to a consistent standard — see
   automatically when Docker is unavailable, so keep them behind a `Skip`/`Assert.SkipUnless`
   guard rather than letting them fail.
 - Test projects mirror source structure (e.g. `BuildingBlocks.Domain.Tests`).
+- Fixture types that must live **outside** the test assembly (e.g. for assembly-scanning
+  tests) go in a dedicated project under
+  `BuildingBlocks/tests/ExternalAssemblies/<ShortName>Fixture/` — keep folder/project names
+  **short** (Windows `MAX_PATH`), reference them from the test project via `ProjectReference`,
+  add them to `VitalSync.slnx`, no XML docs. See `docs/architecture/testing-strategy.md`.
 - Strategy covers unit, integration, domain, application-layer, persistence, and
   component-communication tests. See `docs/architecture/testing-strategy.md`.
 - Add/extend tests alongside any behavioral change.

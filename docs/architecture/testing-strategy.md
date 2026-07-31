@@ -33,6 +33,30 @@ Automated tests are implemented for **both the Building Blocks and the individua
 - **Read-only event access is enforced and tested** — outside layers must not be able to mutate an aggregate's domain events.
 - **Fast feedback first** — unit/domain/application/persistence tests run quickly; heavier integration tests run as needed.
 
+## External fixture assemblies
+
+Some tests need types that live in a **separate compiled assembly** from the test project
+itself — most notably assembly-scanning tests (`AddHandlersFrom(assembly)`, startup handler
+validation), where scanning the test assembly would pick up unrelated test types and pollute
+the results. For these cases:
+
+- **Where:** always place the fixture project under
+  `BuildingBlocks/tests/ExternalAssemblies/<FixtureName>/` — one small project per fixture
+  scenario. Reference it from the consuming test project via `ProjectReference` and add it
+  to `VitalSync.slnx` (under the `ExternalAssemblies` solution folder).
+- **Naming:** keep folder and project names **short** (e.g. `ValidHandlersFixture`, *not*
+  `BuildingBlocks.Infrastructure.Tests.ValidHandlersFixture`). Long duplicated names have
+  broken the Windows 260-character `MAX_PATH` limit before (build failure on checkout and
+  compile). The root namespace equals the project name.
+- **Rules:** fixture projects set `IsPackable=false`, reference only what the scenario needs
+  (typically `BuildingBlocks.Domain` / `BuildingBlocks.Application`), contain **no tests**
+  themselves, and are test code — the XML-documentation requirement (ADR-0013) does **not**
+  apply.
+
+Existing examples: `ValidHandlersFixture`, `ConflictingHandlersFixture`,
+`OrphanRequestsFixture` (used by `BuildingBlocks.Infrastructure.Tests` for handler
+registration and startup-validation tests).
+
 ## What the current Building Blocks tests cover
 
 - **Domain**: strongly typed id equality and compile-time distinctness, aggregate event raising/clearing, read-only exposure of domain events, entity identity equality, value object structural equality.
