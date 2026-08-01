@@ -13,7 +13,6 @@ builder.Services.AddSampleStateStoredInfrastructure(
     new Uri(builder.Configuration.GetConnectionString("messaging")!));
 
 builder.Services.AddCodeFirstGrpc();
-builder.Services.AddCodeFirstGrpcReflection();
 
 builder.Host.UseWolverine(options =>
     options.UseBuildingBlocksEfCorePersistence(
@@ -22,7 +21,6 @@ builder.Host.UseWolverine(options =>
 var app = builder.Build();
 
 app.MapGrpcService<WidgetGrpcService>();
-app.MapCodeFirstGrpcReflectionService();
 app.MapDefaultEndpoints();
 
 await app.RunAsync().ConfigureAwait(false);

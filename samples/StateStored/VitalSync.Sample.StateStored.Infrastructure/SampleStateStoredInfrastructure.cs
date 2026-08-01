@@ -27,7 +27,12 @@ public static class SampleStateStoredInfrastructure
         // the outbox guaranteed to enlist in the same transaction as SaveChanges.
         services.AddBuildingBlocks(options =>
         {
+            // Two assemblies: command and query handlers live in Application, projection handlers and the
+            // integration-event mapper in Infrastructure. The scan covers IProjectionHandler<> and
+            // IIntegrationEventMapper as well, so neither needs registering by hand - which matters because a
+            // forgotten projection fails silently: the read model simply never updates.
             options.AddHandlersFrom(typeof(CreateWidget).Assembly);
+            options.AddHandlersFrom(typeof(SampleStateStoredInfrastructure).Assembly);
             options.UseEfCorePersistence<WidgetWriteDbContext>(writeConnectionString);
             options.UseWolverineMessaging(rabbitMqUri);
         });
@@ -37,9 +42,6 @@ public static class SampleStateStoredInfrastructure
         services.AddDbContext<WidgetReadDbContext>(builder => builder.UseNpgsql(readConnectionString));
 
         services.AddScoped<IWidgetReadStore, WidgetReadStore>();
-        services.AddScoped<IProjectionHandler<WidgetCreated>, WidgetCreatedProjection>();
-        services.AddScoped<IProjectionHandler<WidgetRenamed>, WidgetRenamedProjection>();
-        services.AddSingleton<IIntegrationEventMapper, WidgetIntegrationEventMapper>();
 
         return services;
     }
