@@ -25,8 +25,11 @@ public sealed class WidgetCreatedProjection(WidgetReadDbContext context) : IProj
                 RenameCount = 0,
             });
         }
-        else
+        else if (existing.RenameCount == 0)
         {
+            // Only while no rename has been projected does this event still own the name. Writing it back
+            // unconditionally would let a redelivered create - or one arriving after a rename - resurrect
+            // the original name, so the create handler needs the same business ordinal as the rename one.
             existing.Name = domainEvent.Name;
         }
 
