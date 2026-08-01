@@ -65,7 +65,15 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
                 services.AddScoped<IProjectionHandler<FlushProbeStarted>, FlushProbeProjection>();
                 services.AddSingleton<FlushDeliverySignal>();
             })
-            .UseWolverine(ConfigureFlushOnlyDurability)
+            .UseWolverine(options =>
+            {
+                ConfigureFlushOnlyDurability(options);
+
+                // The one line a state-stored host has to supply itself: Wolverine 3.0 forbids a
+                // container-registered extension from modifying the service collection, which both halves
+                // of the EF outbox do (ADR-0027 amendment).
+                options.UseBuildingBlocksEfCorePersistence(fixture.ConnectionString);
+            })
             .StartAsync(TestContext.Current.CancellationToken);
 
         var id = Guid.NewGuid();

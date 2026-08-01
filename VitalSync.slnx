@@ -22,6 +22,7 @@
   <Folder Name="/samples/StateStored/">
     <Project Path="samples/StateStored/VitalSync.Sample.StateStored.Api/VitalSync.Sample.StateStored.Api.csproj" />
     <Project Path="samples/StateStored/VitalSync.Sample.StateStored.Application/VitalSync.Sample.StateStored.Application.csproj" />
+    <Project Path="samples/StateStored/VitalSync.Sample.StateStored.Contracts/VitalSync.Sample.StateStored.Contracts.csproj" />
     <Project Path="samples/StateStored/VitalSync.Sample.StateStored.Domain/VitalSync.Sample.StateStored.Domain.csproj" />
     <Project Path="samples/StateStored/VitalSync.Sample.StateStored.Infrastructure/VitalSync.Sample.StateStored.Infrastructure.csproj" />
     <Project Path="samples/StateStored/VitalSync.Sample.StateStored.MigrationService/VitalSync.Sample.StateStored.MigrationService.csproj" />

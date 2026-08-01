@@ -1,8 +1,6 @@
 using BuildingBlocks.Application;
 using Wolverine;
-using Wolverine.EntityFrameworkCore;
 using Wolverine.ErrorHandling;
-using Wolverine.Postgresql;
 using Wolverine.RabbitMQ;
 
 namespace BuildingBlocks.Infrastructure.Messaging;
@@ -17,7 +15,6 @@ namespace BuildingBlocks.Infrastructure.Messaging;
 /// integration events. Hosts never call these methods themselves: <see cref="BuildingBlocksWolverineExtension"/>
 /// applies exactly the combination matching the host's capability selection when Wolverine bootstraps (ADR-0027) —
 /// <see cref="ApplyBuildingBlockDomainEventRouting"/> whenever a persistence style was selected,
-/// <see cref="ApplyBuildingBlockEfCoreOutbox"/> for state-stored contexts, and
 /// <see cref="ApplyBuildingBlockMessagingDefaults"/> when integration events are published to RabbitMQ.
 /// </remarks>
 internal static class WolverineOptionsExtensions
@@ -116,35 +113,4 @@ internal static class WolverineOptionsExtensions
         return options;
     }
 
-    /// <summary>
-    /// Activates Wolverine's EF Core transactional middleware and the options-side half of the PostgreSQL-backed
-    /// durable message store, required for <c>IDbContextOutbox&lt;TContext&gt;</c> to enlist outgoing messages in the
-    /// same transaction as a state-stored context's <c>SaveChanges</c>.
-    /// </summary>
-    /// <remarks>
-    /// The EF Core outbox refuses to run without a database-backed Wolverine message store ("not using Database
-    /// backed message persistence"). Its registration is split across the extension boundary: the service
-    /// registrations happen at composition time in <see cref="EfCoreMessageStoreRegistration"/> (this extension runs
-    /// after the provider is built, where they would be ineffective), while this method applies the parts that
-    /// mutate the live <see cref="WolverineOptions"/> — codegen persistence strategies and error policies via
-    /// <c>PersistMessagesWithPostgresql</c> (whose own duplicate service registrations are harmless no-ops here) and
-    /// the EF Core transactional middleware. The store lives on the context's own write database, keeping outbox
-    /// rows and aggregate state in the same database and transaction (ADR-0021/0022). Only required for hosts that
-    /// select <c>UseEfCorePersistence</c>; a purely event-sourced host gets its message store from Marten's
-    /// <c>IntegrateWithWolverine</c> and needs only <see cref="ApplyBuildingBlockDomainEventRouting"/>.
-    /// </remarks>
-    /// <param name="options">The Wolverine options being configured.</param>
-    /// <param name="connectionString">The connection string of the context's write database, which hosts the durable message store.</param>
-    /// <returns>The same options, for chaining.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> or <paramref name="connectionString"/> is <see langword="null"/>.</exception>
-    public static WolverineOptions ApplyBuildingBlockEfCoreOutbox(this WolverineOptions options, string connectionString)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(connectionString);
-
-        options.PersistMessagesWithPostgresql(connectionString);
-        options.UseEntityFrameworkCoreTransactions();
-
-        return options;
-    }
 }

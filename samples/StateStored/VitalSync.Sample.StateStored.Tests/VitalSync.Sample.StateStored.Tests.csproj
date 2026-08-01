@@ -19,11 +19,14 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.76.0" />
+    <PackageReference Include="protobuf-net.Grpc" Version="1.2.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\VitalSync.Sample.StateStored.Domain\VitalSync.Sample.StateStored.Domain.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.StateStored.Infrastructure\VitalSync.Sample.StateStored.Infrastructure.csproj" />
+    <ProjectReference Include="..\VitalSync.Sample.StateStored.Contracts\VitalSync.Sample.StateStored.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

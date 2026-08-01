@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-07-31
+- **Amended:** 2026-08-01 (one exception for the EF Core outbox — see the note below)
 
 ## Context
 
@@ -23,6 +24,32 @@ The asymmetry made this worse: `UseMartenEventSourcing(connectionString)` alread
 (impossible to get wrong), while `UseEfCorePersistence<TContext>()` trusted the host. Documentation warned about
 all three failure modes, but a guarantee that relies on documentation is not a guarantee (compare IMP-05's
 startup validation: fail fast, don't document pitfalls).
+
+> **Amendment (2026-08-01) — the EF Core outbox is the one thing a host must wire itself.**
+> The first real consumer of Building Blocks (the walking skeleton under `samples/`) showed that this ADR
+> cannot hold in full. Wolverine 3.0 forbids an `IWolverineExtension` resolved from the container from
+> modifying the service collection:
+>
+> > *As of Wolverine 3.0, it's no longer supported to alter IoC service registrations through Wolverine
+> > extensions that are themselves registered in the IoC container* → *The service collection cannot be
+> > modified because it is read-only.*
+>
+> Both halves of the EF Core outbox do exactly that — `PersistMessagesWithPostgresql` and
+> `UseEntityFrameworkCoreTransactions` — so applying them from `BuildingBlocksWolverineExtension` crashes a
+> real ASP.NET Core host at startup. A state-stored host therefore calls **one** method itself:
+>
+> ```csharp
+> builder.Host.UseWolverine(opts => opts.UseBuildingBlocksEfCorePersistence(writeConnectionString));
+> ```
+>
+> Everything else — handler discovery, the durable domain-event queue, the RabbitMQ transport and its
+> routing — is still applied automatically by the extension, and event-sourced hosts still need nothing at
+> all (Marten supplies their message store through `IntegrateWithWolverine`).
+>
+> This replaces `EfCoreMessageStoreRegistration`, ~70 lines of reflection into Wolverine internals that tried
+> to register the message store at composition time. It only ever solved half the problem: the service
+> registrations, not the options-side middleware. The tests did not catch the other half because they build
+> hosts in a way that leaves the service collection mutable — only a real web host is strict.
 
 ## Decision
 

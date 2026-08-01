@@ -5,7 +5,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
+    <PackageReference Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.2.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\src\Aspire\VitalSync.ServiceDefaults\VitalSync.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\VitalSync.Sample.StateStored.Contracts\VitalSync.Sample.StateStored.Contracts.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.StateStored.Infrastructure\VitalSync.Sample.StateStored.Infrastructure.csproj" />
   </ItemGroup>
 

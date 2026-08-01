@@ -83,6 +83,7 @@ public sealed class EfCoreAggregateRoundTripTests(PostgreSqlFixture fixture)
             .UseWolverine(options =>
             {
                 options.Durability.Mode = DurabilityMode.Solo;
+                options.UseBuildingBlocksEfCorePersistence(fixture.ConnectionString);
                 options.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
             })
             .StartAsync(TestContext.Current.CancellationToken);

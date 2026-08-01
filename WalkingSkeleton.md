@@ -268,7 +268,31 @@ darf die Exception aus `Main` herauslaufen.
   derselben Write-Datenbank an. Die EF-Migration darf dieses Schema **nicht** kennen,
   sonst räumt sie beim nächsten Lauf die Outbox ab.
 
-### Schritt 5 — Api + gRPC
+### Schritt 5 — **erledigt**, mit dem entscheidenden Befund
+
+Code-first gRPC-Vertrag in eigener Bibliothek (`…​.Contracts`), `WidgetGrpcService` als
+dünner Adapter auf `ISender`, `Failure → StatusCode` im Host, Server-Reflection, und
+vier Smoke-Tests, die über einen echten gRPC-Kanal laufen und ohne
+`SAMPLE_API_URL` überspringen.
+
+**Abnahmekriterium 11 ist gefallen — ADR-0027 trägt nicht vollständig.** Wolverine 3.0
+verbietet einer container-registrierten `IWolverineExtension`, die Service-Collection
+zu ändern; beide Hälften des EF-Outbox tun genau das. Der Host ruft deshalb **eine**
+Zeile selbst auf (`UseBuildingBlocksEfCorePersistence`); ADR-0027 hat dazu ein
+Amendment. `EfCoreMessageStoreRegistration` (~70 Zeilen Reflection) ist ersatzlos
+gelöscht — es löste ohnehin nur die halbe Aufgabe, und die Tests merkten es nicht,
+weil sie ihre Hosts mit noch änderbarer Service-Collection bauen.
+
+Alle übrigen Kriterien wurden am laufenden System belegt: Zeilen in der Write-DB,
+acht `wolverine.*`-Tabellen in **derselben** Datenbank, Read-Modelle in der Read-DB,
+`GetWidget` aus der Read-DB, leerer Name → `InvalidArgument` **ohne** geschriebene
+Zeile, und der Topic-Exchange `vitalsync.integration-events` auf RabbitMQ.
+
+Ein Projekt mehr als geplant: `VitalSync.Sample.StateStored.Contracts`. CA1515 hat es
+erzwungen — öffentliche Typen gehören nicht in eine Anwendung, ein gRPC-Vertrag ist
+aber öffentlich per Definition.
+
+### Schritt 5 — ursprüngliche Planung
 
 - Code-first gRPC-Service als **dünner Adapter** auf `ISender` (ADR-0023 Scope Note).
 - `Failure → StatusCode`-Übersetzung im Host — laut CLAUDE.md gehört Transport-Mapping

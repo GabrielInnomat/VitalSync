@@ -312,11 +312,6 @@ public sealed class BuildingBlocksOptions
         _services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork<TContext>>();
         _services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
 
-        // The durable message store must be registered here, at composition time — container-registered
-        // Wolverine extensions run after the provider is built, where service registrations no longer take
-        // effect (see EfCoreMessageStoreRegistration).
-        EfCoreMessageStoreRegistration.Register(_services, connectionString);
-
         WolverineWiring.ApplyDomainEventRouting = true;
         WolverineWiring.EfCoreMessageStoreConnectionString = connectionString;
         return this;
