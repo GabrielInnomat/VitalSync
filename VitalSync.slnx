@@ -22,6 +22,7 @@
   <Folder Name="/samples/EventSourced/">
     <Project Path="samples/EventSourced/VitalSync.Sample.EventSourced.Application/VitalSync.Sample.EventSourced.Application.csproj" />
     <Project Path="samples/EventSourced/VitalSync.Sample.EventSourced.Domain/VitalSync.Sample.EventSourced.Domain.csproj" />
+    <Project Path="samples/EventSourced/VitalSync.Sample.EventSourced.Infrastructure/VitalSync.Sample.EventSourced.Infrastructure.csproj" />
     <Project Path="samples/EventSourced/VitalSync.Sample.EventSourced.Tests/VitalSync.Sample.EventSourced.Tests.csproj" />
   </Folder>
   <Folder Name="/samples/StateStored/">
