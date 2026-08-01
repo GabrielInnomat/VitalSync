@@ -15,7 +15,7 @@ namespace BuildingBlocks.Domain;
 /// </remarks>
 /// <typeparam name="TKey">The type of the identity key.</typeparam>
 /// <typeparam name="TState">The type of the aggregate root's state.</typeparam>
-public abstract class AggregateRoot<TKey, TState> : EntityBase<TKey>, IAggregateRoot<TKey>, IDomainEventsManager
+public abstract class AggregateRoot<TKey, TState> : EntityBase<TKey>, IAggregateRoot<TKey>, IDomainEventsManager, IStateOwner
     where TKey : struct, IEntityKey
     where TState : IState<TState, TKey>
 {
@@ -111,5 +111,32 @@ public abstract class AggregateRoot<TKey, TState> : EntityBase<TKey>, IAggregate
     void IDomainEventsManager.ClearDomainEvents()
     {
         _domainEvents.Clear();
+    }
+
+    /// <inheritdoc/>
+    Type IStateOwner.StateType => typeof(TState);
+
+    /// <inheritdoc/>
+    object IStateOwner.State => State;
+
+    /// <inheritdoc/>
+    void IStateOwner.Restore(object state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        if (state is not TState typedState)
+        {
+            throw new ArgumentException(
+                $"The state must be of type '{typeof(TState)}', but was '{state.GetType()}'.",
+                nameof(state));
+        }
+
+        if (typedState.Id.IsEmpty)
+        {
+            throw new DomainValidationException(
+                "The restored state must carry a non-empty identity.");
+        }
+
+        State = typedState;
     }
 }

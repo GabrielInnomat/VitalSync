@@ -308,6 +308,7 @@ public sealed class BuildingBlocksOptions
         });
 
         _services.TryAddScoped<DbContext>(static provider => provider.GetRequiredService<TContext>());
+        _services.TryAddScoped<EfCoreAggregateTracker>();
         _services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork<TContext>>();
         _services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
 

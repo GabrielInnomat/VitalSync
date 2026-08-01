@@ -25,24 +25,32 @@ namespace BuildingBlocks.Infrastructure.Persistence;
 /// </remarks>
 /// <typeparam name="TContext">The write-database context type of the bounded context.</typeparam>
 /// <param name="outbox">The Wolverine outbox bound to the write-database context whose tracked changes are committed.</param>
+/// <param name="tracker">The tracker holding the aggregates that took part in the current command.</param>
 /// <param name="clock">The clock supplying the commit time stamped onto each domain event.</param>
-public sealed class EfCoreUnitOfWork<TContext>(IDbContextOutbox<TContext> outbox, IClock clock) : IUnitOfWork
+public sealed class EfCoreUnitOfWork<TContext>(
+    IDbContextOutbox<TContext> outbox,
+    EfCoreAggregateTracker tracker,
+    IClock clock) : IUnitOfWork
     where TContext : DbContext
 {
     /// <inheritdoc/>
     public async Task CommitAsync(CancellationToken cancellationToken)
     {
-        var aggregates = outbox.DbContext.ChangeTracker.Entries()
-            .Select(entry => entry.Entity)
-            .OfType<IDomainEventsManager>()
-            .Where(aggregate => aggregate.DomainEvents.Count > 0)
-            .ToList();
+        var entries = tracker.Entries;
+
+        // State objects are immutable, so every applied event replaced the aggregate's state and left the instance
+        // EF Core tracks behind. Copying the current values over is what turns the fold into an UPDATE; without it
+        // the change tracker would see nothing to save.
+        foreach (var entry in entries)
+        {
+            outbox.DbContext.Entry(entry.PersistedState).CurrentValues.SetValues(entry.StateOwner.State);
+        }
 
         var occurredAt = clock.Now;
 
-        foreach (var aggregate in aggregates)
+        foreach (var entry in entries)
         {
-            foreach (var domainEvent in aggregate.DomainEvents)
+            foreach (var domainEvent in entry.Aggregate.DomainEvents)
             {
                 var stamped = DomainEventStamper.Stamp(domainEvent, occurredAt);
                 await outbox.PublishAsync(DomainEventEnvelopeSerializer.Wrap(stamped)).ConfigureAwait(false);
@@ -51,9 +59,6 @@ public sealed class EfCoreUnitOfWork<TContext>(IDbContextOutbox<TContext> outbox
 
         await outbox.SaveChangesAndFlushMessagesAsync(cancellationToken).ConfigureAwait(false);
 
-        foreach (var aggregate in aggregates)
-        {
-            aggregate.ClearDomainEvents();
-        }
+        tracker.ClearDomainEvents();
     }
 }

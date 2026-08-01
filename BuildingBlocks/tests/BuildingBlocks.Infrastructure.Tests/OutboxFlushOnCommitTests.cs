@@ -2,6 +2,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Messaging;
+using BuildingBlocks.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -83,7 +84,7 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
         var delivered = await host.Services.GetRequiredService<FlushDeliverySignal>()
             .Delivered.WaitAsync(DeliveryTimeout, TestContext.Current.CancellationToken);
         var started = Assert.IsType<FlushProbeStarted>(delivered);
-        Assert.Equal(id, started.ProbeId);
+        Assert.Equal(id, started.ProbeId.Value);
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
@@ -169,15 +170,16 @@ public sealed class FlushCounter() : EventSourcedAggregateRoot<FlushCounterId, F
 
 public sealed record StartFlushProbe(Guid Id) : ICommand;
 
-public sealed class StartFlushProbeHandler(FlushProbeContext context) : ICommandHandler<StartFlushProbe>
+// Goes through IRepository like production code: EF Core tracks the aggregate's state, so the unit of work
+// collects domain events from the aggregate tracker rather than from the change tracker.
+public sealed class StartFlushProbeHandler(IRepository<FlushProbe, FlushProbeId> repository)
+    : ICommandHandler<StartFlushProbe>
 {
-    public Task<Result> Handle(StartFlushProbe command, CancellationToken cancellationToken)
+    public async Task<Result> Handle(StartFlushProbe command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var row = new FlushProbeRow { Id = command.Id, Name = "probe" };
-        row.Start();
-        context.Rows.Add(row);
-        return Task.FromResult(Result.Success());
+        await repository.AddAsync(FlushProbe.Create(new FlushProbeId(command.Id)), cancellationToken);
+        return Result.Success();
     }
 }
 
@@ -190,37 +192,76 @@ public sealed class FlushProbeProjection(FlushDeliverySignal signal) : IProjecti
     }
 }
 
-public sealed record FlushProbeStarted(Guid ProbeId) : DomainEvent;
+public sealed record FlushProbeStarted(FlushProbeId ProbeId) : DomainEvent;
 
-public sealed class FlushProbeRow : IDomainEventsManager
+public sealed record FlushProbeRenamed(FlushProbeId ProbeId, string Name) : DomainEvent;
+
+public sealed record RenameFlushProbe(Guid Id, string Name) : ICommand;
+
+public sealed class RenameFlushProbeHandler(IRepository<FlushProbe, FlushProbeId> repository)
+    : ICommandHandler<RenameFlushProbe>
 {
-    private readonly List<IDomainEvent> _domainEvents = [];
+    public async Task<Result> Handle(RenameFlushProbe command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
 
-    public Guid Id { get; set; }
+        var probe = await repository.GetByIdAsync(new FlushProbeId(command.Id), cancellationToken);
+        if (probe is null)
+        {
+            return Failure.NotFound("probe.not_found", "No probe with that id exists.");
+        }
 
-    public string Name { get; set; } = string.Empty;
+        probe.Rename(command.Name);
+        return Result.Success();
+    }
+}
 
-    public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+public readonly record struct FlushProbeId(Guid Value) : IEntityKey<Guid>
+{
+    public bool IsEmpty => Value == Guid.Empty;
+}
 
-    public void Start() => _domainEvents.Add(new FlushProbeStarted(Id));
+public sealed record FlushProbeState(FlushProbeId Id, string Name) : IState<FlushProbeState, FlushProbeId>
+{
+    public static FlushProbeState Empty => new(default, string.Empty);
 
-    public void ClearDomainEvents() => _domainEvents.Clear();
+    public FlushProbeState Apply(IDomainEvent domainEvent) => domainEvent switch
+    {
+        FlushProbeStarted started => this with { Id = started.ProbeId, Name = "probe" },
+        FlushProbeRenamed renamed => this with { Name = renamed.Name },
+        _ => this,
+    };
+}
+
+public sealed class FlushProbe() : AggregateRoot<FlushProbeId, FlushProbeState>(FlushProbeState.Empty)
+{
+    public string Name => State.Name;
+
+    public static FlushProbe Create(FlushProbeId id)
+    {
+        var probe = new FlushProbe();
+        probe.RaiseEvent(new FlushProbeStarted(id));
+        return probe;
+    }
+
+    public void Rename(string name) => RaiseEvent(new FlushProbeRenamed(Id, name));
 }
 
 public sealed class FlushProbeContext(DbContextOptions<FlushProbeContext> options) : DbContext(options)
 {
-    public DbSet<FlushProbeRow> Rows => Set<FlushProbeRow>();
+    public DbSet<FlushProbeState> Probes => Set<FlushProbeState>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
-        modelBuilder.Entity<FlushProbeRow>(entity =>
+        modelBuilder.Entity<FlushProbeState>(entity =>
         {
             entity.ToTable("flush_probe_rows");
-            entity.HasKey(row => row.Id);
-            entity.Property(row => row.Id).HasColumnName("id");
-            entity.Property(row => row.Name).HasColumnName("name");
-            entity.Ignore(row => row.DomainEvents);
+            entity.HasKey(state => state.Id);
+            entity.Property(state => state.Id).HasColumnName("id");
+            entity.Property(state => state.Name).HasColumnName("name");
         });
+
+        modelBuilder.ApplyEntityKeyConversions();
     }
 }
