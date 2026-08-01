@@ -20,9 +20,12 @@
     <Project Path="samples/VitalSync.Samples.AppHost/VitalSync.Samples.AppHost.csproj" />
   </Folder>
   <Folder Name="/samples/EventSourced/">
+    <Project Path="samples/EventSourced/VitalSync.Sample.EventSourced.Api/VitalSync.Sample.EventSourced.Api.csproj" />
     <Project Path="samples/EventSourced/VitalSync.Sample.EventSourced.Application/VitalSync.Sample.EventSourced.Application.csproj" />
+    <Project Path="samples/EventSourced/VitalSync.Sample.EventSourced.Contracts/VitalSync.Sample.EventSourced.Contracts.csproj" />
     <Project Path="samples/EventSourced/VitalSync.Sample.EventSourced.Domain/VitalSync.Sample.EventSourced.Domain.csproj" />
     <Project Path="samples/EventSourced/VitalSync.Sample.EventSourced.Infrastructure/VitalSync.Sample.EventSourced.Infrastructure.csproj" />
+    <Project Path="samples/EventSourced/VitalSync.Sample.EventSourced.MigrationService/VitalSync.Sample.EventSourced.MigrationService.csproj" />
     <Project Path="samples/EventSourced/VitalSync.Sample.EventSourced.Tests/VitalSync.Sample.EventSourced.Tests.csproj" />
   </Folder>
   <Folder Name="/samples/StateStored/">

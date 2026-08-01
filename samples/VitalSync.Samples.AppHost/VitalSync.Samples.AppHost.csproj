@@ -14,6 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\EventSourced\VitalSync.Sample.EventSourced.Api\VitalSync.Sample.EventSourced.Api.csproj" />
+    <ProjectReference Include="..\EventSourced\VitalSync.Sample.EventSourced.MigrationService\VitalSync.Sample.EventSourced.MigrationService.csproj" />
     <ProjectReference Include="..\StateStored\VitalSync.Sample.StateStored.Api\VitalSync.Sample.StateStored.Api.csproj" />
     <ProjectReference Include="..\StateStored\VitalSync.Sample.StateStored.MigrationService\VitalSync.Sample.StateStored.MigrationService.csproj" />
   </ItemGroup>

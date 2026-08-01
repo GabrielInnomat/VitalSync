@@ -8,10 +8,10 @@ namespace VitalSync.Sample.StateStored.Tests;
 // Drives the running service through the whole chain: gRPC -> ISender -> aggregate -> EF commit with the
 // outbox in one transaction -> projection into the read database -> query served from there.
 //
-// Skipped unless SAMPLE_API_URL points at a running instance, because it needs the Aspire host up:
+// Skipped unless SAMPLE_STATESTORED_API_URL points at a running instance, because it needs the Aspire host up:
 //
 //   dotnet run --project samples/VitalSync.Samples.AppHost
-//   SAMPLE_API_URL=https://localhost:<port> dotnet run --project samples/StateStored/VitalSync.Sample.StateStored.Tests
+//   SAMPLE_STATESTORED_API_URL=https://localhost:<port> dotnet run --project samples/StateStored/VitalSync.Sample.StateStored.Tests
 //
 // It doubles as the reference for how the BFF will consume the service: the same contract assembly, a
 // channel, and CreateGrpcService<T>() - no generated stubs anywhere.
@@ -108,10 +108,10 @@ public sealed class SampleApiSmokeTests
 
     private static IWidgetService? CreateClient(out string skipReason)
     {
-        var url = Environment.GetEnvironmentVariable("SAMPLE_API_URL");
+        var url = Environment.GetEnvironmentVariable("SAMPLE_STATESTORED_API_URL");
         if (string.IsNullOrWhiteSpace(url))
         {
-            skipReason = "SAMPLE_API_URL is not set; start the Aspire host and point it at the API.";
+            skipReason = "SAMPLE_STATESTORED_API_URL is not set; start the Aspire host and point it at the API.";
             return null;
         }
 

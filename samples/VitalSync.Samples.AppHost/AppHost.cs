@@ -31,4 +31,26 @@ builder.AddProject<Projects.VitalSync_Sample_StateStored_Api>("statestored-api")
     .WaitForCompletion(migrations)
     .WithHttpHealthCheck("/health");
 
+// The event-sourced half of the skeleton. Two hosts are not optional: BuildingBlocksOptions forbids mixing
+// EF Core and Marten in one host (ADR-0019/0020/0021), and each bounded context owns its own database pair.
+var eventSourcedWriteDb = postgres.AddDatabase("eventsourced-write", "eventsourced_write");
+var eventSourcedReadDb = postgres.AddDatabase("eventsourced-read", "eventsourced_read");
+
+// Only the read database is migrated. Marten builds the event-store schema in the write database itself, and
+// Wolverine's Marten-backed message store comes with it - so unlike the state-stored pair, the write half has
+// no migration step at all.
+var eventSourcedMigrations = builder
+    .AddProject<Projects.VitalSync_Sample_EventSourced_MigrationService>("eventsourced-migrations")
+    .WithReference(eventSourcedReadDb)
+    .WaitFor(eventSourcedReadDb);
+
+builder.AddProject<Projects.VitalSync_Sample_EventSourced_Api>("eventsourced-api")
+    .WithReference(eventSourcedWriteDb)
+    .WaitFor(eventSourcedWriteDb)
+    .WithReference(eventSourcedReadDb)
+    .WithReference(messaging)
+    .WaitFor(messaging)
+    .WaitForCompletion(eventSourcedMigrations)
+    .WithHttpHealthCheck("/health");
+
 builder.Build().Run();
