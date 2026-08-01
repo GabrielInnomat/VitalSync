@@ -1,4 +1,4 @@
-using System.Runtime.Serialization;
+using ProtoBuf;
 using ProtoBuf.Grpc;
 using ProtoBuf.Grpc.Configuration;
 
@@ -12,8 +12,8 @@ namespace VitalSync.Sample.StateStored.Contracts;
 // question is still open for the integration event (ADR-0024), which stays in Infrastructure until stage 3
 // gives it a second consumer.
 //
-// [Service] is protobuf-net.Grpc's own marker; [ServiceContract] would work too but drags in the WCF
-// primitives package for nothing.
+// The numbers in [ProtoMember] are field identities on the wire, not a sort order: renumbering an existing
+// field silently reinterprets old payloads. protobuf-net.BuildTools checks them at build time.
 [Service]
 public interface IWidgetService
 {
@@ -24,51 +24,53 @@ public interface IWidgetService
     ValueTask<WidgetReply> GetAsync(GetWidgetRequest request, CallContext context = default);
 }
 
-[DataContract]
+[ProtoContract]
 public sealed class CreateWidgetRequest
 {
-    [DataMember(Order = 1)]
+    [ProtoMember(1)]
     public string Name { get; set; } = string.Empty;
 }
 
-[DataContract]
+[ProtoContract]
 public sealed class CreateWidgetReply
 {
-    [DataMember(Order = 1)]
+    [ProtoMember(1)]
     public string WidgetId { get; set; } = string.Empty;
 }
 
-[DataContract]
+[ProtoContract]
 public sealed class RenameWidgetRequest
 {
-    [DataMember(Order = 1)]
+    [ProtoMember(1)]
     public string WidgetId { get; set; } = string.Empty;
 
-    [DataMember(Order = 2)]
+    [ProtoMember(2)]
     public string Name { get; set; } = string.Empty;
 }
 
-[DataContract]
+// Empty on purpose: the operation has no result beyond success, and a message type leaves room to add one
+// without changing the signature.
+[ProtoContract]
 public sealed class RenameWidgetReply
 {
 }
 
-[DataContract]
+[ProtoContract]
 public sealed class GetWidgetRequest
 {
-    [DataMember(Order = 1)]
+    [ProtoMember(1)]
     public string WidgetId { get; set; } = string.Empty;
 }
 
-[DataContract]
+[ProtoContract]
 public sealed class WidgetReply
 {
-    [DataMember(Order = 1)]
+    [ProtoMember(1)]
     public string WidgetId { get; set; } = string.Empty;
 
-    [DataMember(Order = 2)]
+    [ProtoMember(2)]
     public string Name { get; set; } = string.Empty;
 
-    [DataMember(Order = 3)]
+    [ProtoMember(3)]
     public int RenameCount { get; set; }
 }
