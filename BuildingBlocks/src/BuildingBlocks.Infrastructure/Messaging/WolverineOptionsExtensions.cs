@@ -66,6 +66,14 @@ internal static class WolverineOptionsExtensions
         options.CodeGeneration.AlwaysUseServiceLocationFor<IDomainEventPublisher>();
         options.CodeGeneration.AlwaysUseServiceLocationFor<IIntegrationEventSinkFactory>();
 
+        // ISender for the same reason, one step further out: a service that subscribes to another context's
+        // integration events translates them into commands, and the only sanctioned way to dispatch one is
+        // ISender. Its implementation takes an IServiceProvider, which is service location by definition, so
+        // Wolverine refuses to generate the handler and the first message across the boundary is lost -
+        // logged, marked handled, never retried. Opting in here rather than in each subscribing host keeps
+        // that trap out of every service that ever consumes an integration event (ADR-0023/0027).
+        options.CodeGeneration.AlwaysUseServiceLocationFor<ISender>();
+
         options.PublishMessage<DomainEventEnvelope>()
             .ToLocalQueue(DomainEventLocalQueueName)
             .Sequential()

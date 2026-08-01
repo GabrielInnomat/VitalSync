@@ -1,7 +1,10 @@
+using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.Dispatching;
 using BuildingBlocks.Infrastructure.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.Tests;
@@ -96,6 +99,32 @@ public sealed class WolverineExtensionTests
             endpoint => endpoint.Uri.ToString().Contains("building-blocks-domain-events", StringComparison.Ordinal));
     }
 
+    // Found by the walking skeleton's stage 3: a service that subscribes to another context's integration
+    // events dispatches them with ISender, whose implementation takes an IServiceProvider. Without this
+    // opt-in Wolverine refuses to generate the handler (ServiceLocationPolicy.NotAllowed), logs it once, and
+    // marks the message handled - the first message across a context boundary is lost without a retry and
+    // without a dead letter.
+    [Fact]
+    public async Task Configure_WithDomainEventRouting_LetsAHandlerDependOnISender()
+    {
+        using var host = await Host.CreateDefaultBuilder()
+            .ConfigureServices(services => services.AddScoped<ISender, Sender>())
+            .UseWolverine(options =>
+            {
+                new BuildingBlocksWolverineExtension(new WolverineWiringSettings { ApplyDomainEventRouting = true })
+                    .Configure(options);
+                options.Discovery.IncludeAssembly(typeof(WolverineExtensionTests).Assembly);
+            })
+            .StartAsync(TestContext.Current.CancellationToken);
+
+        // Generating the handler is the assertion. Without the opt-in in the extension, Wolverine refuses with
+        // InvalidServiceLocationException because Sender takes an IServiceProvider - and at runtime that means
+        // the message is logged once, marked handled, and never retried. There is no public way to inspect the
+        // rule, so the only honest check is to make Wolverine generate such a handler.
+        await host.Services.GetRequiredService<IMessageBus>()
+            .InvokeAsync(new SenderDependentProbe(), TestContext.Current.CancellationToken);
+    }
+
     [Fact]
     public void Configure_WithBrokerUri_AddsTheRabbitMqTransport()
     {
@@ -131,4 +160,16 @@ public sealed class WolverineExtensionTests
     }
 
     private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options);
+}
+
+/// <summary>The message of the probe handler below; it exists only to be dispatched once.</summary>
+public sealed record SenderDependentProbe;
+
+/// <summary>
+/// Stands in for the integration-event consumers real services write: a Wolverine handler whose only job is
+/// to turn a message into a command, which requires <see cref="ISender"/>.
+/// </summary>
+public sealed class SenderDependentProbeHandler
+{
+    public static Task Handle(SenderDependentProbe probe, ISender sender) => Task.CompletedTask;
 }
