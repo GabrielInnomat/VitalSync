@@ -21,6 +21,6 @@ public sealed class Widget() : AggregateRoot<WidgetId, WidgetState>(WidgetState.
     {
         RuleChecker.Check(new WidgetNameMustNotBeEmpty(name));
 
-        RaiseEvent(new WidgetRenamed(Id, name));
+        RaiseEvent(new WidgetRenamed(Id, name, RenameCount + 1));
     }
 }

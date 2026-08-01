@@ -5,6 +5,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Needed for IDesignTimeDbContextFactory so `dotnet ef` can build the model without booting the
+         host. PrivateAssets="all" cannot be used here: it also cuts the transitive edge to
+         EntityFrameworkCore.Relational, and referencing projects then fail to load it at runtime.
+         The tidier arrangement is to move the factories to the MigrationService and scaffold with
+         that project as the startup project; see WalkingSkeleton.md. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\src\BuildingBlocks.Infrastructure\BuildingBlocks.Infrastructure.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.StateStored.Application\VitalSync.Sample.StateStored.Application.csproj" />
   </ItemGroup>

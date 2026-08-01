@@ -9,7 +9,7 @@ public sealed record WidgetState(WidgetId Id, string Name, int RenameCount) : IS
     public WidgetState Apply(IDomainEvent domainEvent) => domainEvent switch
     {
         WidgetCreated created => this with { Id = created.WidgetId, Name = created.Name },
-        WidgetRenamed renamed => this with { Name = renamed.Name, RenameCount = RenameCount + 1 },
+        WidgetRenamed renamed => this with { Name = renamed.Name, RenameCount = renamed.RenameCount },
         _ => this,
     };
 }

@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\VitalSync.Sample.StateStored.Domain\VitalSync.Sample.StateStored.Domain.csproj" />
+    <ProjectReference Include="..\VitalSync.Sample.StateStored.Infrastructure\VitalSync.Sample.StateStored.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
