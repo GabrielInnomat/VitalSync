@@ -58,6 +58,16 @@ public static class ServiceCollectionExtensions
         var options = new BuildingBlocksOptions(services, behaviorRegistry);
         configure(options);
 
+        // A subscription needs a transport to listen on. Without this check the host starts happily and simply never
+        // receives anything, which is indistinguishable from an upstream context that has not published yet.
+        if (options.WolverineWiring.Subscription is not null && options.WolverineWiring.RabbitMqUri is null)
+        {
+            throw new InvalidOperationException(
+                "SubscribeToIntegrationEvents was selected without UseWolverineMessaging. Subscribing declares a " +
+                "queue on the RabbitMQ broker and binds it to the platform exchange, so the transport must be " +
+                "configured as well (ADR-0023).");
+        }
+
         if (options.ValidateHandlersOnStart)
         {
             services.AddHostedService(provider =>

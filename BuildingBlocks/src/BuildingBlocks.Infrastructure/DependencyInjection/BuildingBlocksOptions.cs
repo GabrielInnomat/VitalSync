@@ -374,4 +374,66 @@ public sealed class BuildingBlocksOptions
         WolverineWiring.RabbitMqUri = rabbitMqUri;
         return this;
     }
+
+    /// <summary>
+    /// Subscribes the service to other contexts' integration events on its own queue (ADR-0023).
+    /// </summary>
+    /// <remarks>
+    /// The mirror image of <see cref="UseWolverineMessaging"/>: that method wires publishing, this one wires
+    /// consuming. Declaring the queue, binding it to the platform exchange, enabling the durable inbox, and making
+    /// the consumers discoverable happen together, because each is silent on its own — an unbound queue never fills,
+    /// and a message whose consumer was never found is reported once, marked handled, and dropped without a retry or
+    /// a dead letter. The exchange name stays inside Building Blocks, so a subscriber cannot bind to the wrong one.
+    /// <para>
+    /// <paramref name="consumerAssembly"/> is given explicitly rather than reusing the assemblies passed to
+    /// <see cref="AddHandlersFrom"/>: Wolverine discovers handlers by naming convention, and a CQRS handler such as
+    /// <c>CreateRecipeHandler</c> would be mistaken for a Wolverine message handler for <c>CreateRecipe</c>. Pass the
+    /// assembly that holds the service's integration-event consumers — normally its Infrastructure project — and keep
+    /// its Application assembly out.
+    /// </para>
+    /// <para>
+    /// Call at most once: a service owns exactly one queue, and bind as many topic patterns to it as it has upstream
+    /// contexts. The routing keys are the ones publishers declare with <c>[Topic("&lt;context&gt;.&lt;event&gt;")]</c>,
+    /// so <c>nutrition.*</c> subscribes to everything the nutrition context publishes.
+    /// </para>
+    /// </remarks>
+    /// <param name="queueName">The name of this service's queue, for example <c>fitness.integration-events</c>.</param>
+    /// <param name="consumerAssembly">The assembly holding the service's Wolverine consumers.</param>
+    /// <param name="topicPatterns">One or more routing-key patterns to bind, for example <c>nutrition.*</c>.</param>
+    /// <returns>The same options, for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="queueName"/>, <paramref name="consumerAssembly"/>, or <paramref name="topicPatterns"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="queueName"/> is empty or white space, or when <paramref name="topicPatterns"/> is empty or contains a blank pattern — a queue bound to nothing would receive nothing, without any error.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the method is called more than once. A service hosts one bounded context and owns one queue; bind additional topic patterns to that queue instead.</exception>
+    public BuildingBlocksOptions SubscribeToIntegrationEvents(
+        string queueName,
+        Assembly consumerAssembly,
+        params string[] topicPatterns)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+        ArgumentNullException.ThrowIfNull(consumerAssembly);
+        ArgumentNullException.ThrowIfNull(topicPatterns);
+
+        if (topicPatterns.Length == 0 || Array.Exists(topicPatterns, string.IsNullOrWhiteSpace))
+        {
+            throw new ArgumentException(
+                "At least one non-blank topic pattern is required. A queue with no binding receives nothing, " +
+                "and neither the broker nor Wolverine reports that as an error.",
+                nameof(topicPatterns));
+        }
+
+        if (WolverineWiring.Subscription is not null)
+        {
+            throw new InvalidOperationException(
+                "SubscribeToIntegrationEvents was called more than once. A microservice hosts exactly one bounded " +
+                "context and owns exactly one queue (ADR-0023); bind every topic pattern it consumes to that one " +
+                "queue in a single call instead.");
+        }
+
+        WolverineWiring.Subscription = new IntegrationEventSubscription(
+            queueName,
+            [.. topicPatterns],
+            consumerAssembly);
+
+        return this;
+    }
 }

@@ -121,4 +121,41 @@ internal static class WolverineOptionsExtensions
         return options;
     }
 
+    /// <summary>
+    /// Applies the subscribing half: the service's own queue, its bindings to the platform exchange, and its consumers.
+    /// </summary>
+    /// <remarks>
+    /// The three parts are applied together because each is useless — and silent — without the others: an unbound
+    /// queue never fills, and a message whose consumer was never discovered is reported once, marked handled, and
+    /// dropped without a retry or a dead letter. The queue uses a durable inbox so a restart between delivery and
+    /// handling cannot lose a message. The exchange is <see cref="IntegrationEventExchangeName"/>, the same constant
+    /// the publishing side uses, so a subscriber never restates it and the two halves cannot drift apart. Requires
+    /// <see cref="ApplyBuildingBlockMessagingDefaults"/> to have run first, which
+    /// <see cref="BuildingBlocksWolverineExtension"/> guarantees by ordering.
+    /// </remarks>
+    /// <param name="options">The Wolverine options being configured.</param>
+    /// <param name="subscription">The queue, topic patterns, and consumer assembly recorded by the host's selection.</param>
+    /// <returns>The same options, for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> or <paramref name="subscription"/> is <see langword="null"/>.</exception>
+    public static WolverineOptions ApplyBuildingBlockSubscription(
+        this WolverineOptions options,
+        IntegrationEventSubscription subscription)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(subscription);
+
+        // Wolverine scans the entry assembly only, which is the host - never the Infrastructure project a service's
+        // consumers live in.
+        options.Discovery.IncludeAssembly(subscription.ConsumerAssembly);
+
+        options.ListenToRabbitQueue(subscription.QueueName).UseDurableInbox();
+
+        var exchange = options.UseRabbitMq().BindExchange(IntegrationEventExchangeName);
+        foreach (var topicPattern in subscription.TopicPatterns)
+        {
+            exchange.ToQueue(subscription.QueueName, bindingKey: topicPattern);
+        }
+
+        return options;
+    }
 }

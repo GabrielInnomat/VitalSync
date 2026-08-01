@@ -32,5 +32,12 @@ internal sealed class BuildingBlocksWolverineExtension(WolverineWiringSettings s
         {
             options.ApplyBuildingBlockMessagingDefaults(rabbitMqUri);
         }
+
+        // After the transport, never before: the subscription binds to it. AddBuildingBlocks has already rejected a
+        // subscription without a broker URI, so reaching this line means the transport exists.
+        if (settings.Subscription is { } subscription)
+        {
+            options.ApplyBuildingBlockSubscription(subscription);
+        }
     }
 }

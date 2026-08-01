@@ -1,3 +1,4 @@
+using System.Reflection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Dispatching;
@@ -14,6 +15,8 @@ public sealed class WolverineExtensionTests
     private const string ConnectionString = "Host=localhost;Database=test;Username=test;Password=test";
 
     private static readonly Uri RabbitMqUri = new("amqp://guest:guest@localhost:5672");
+
+    private static readonly Assembly TestAssembly = typeof(WolverineExtensionTests).Assembly;
 
     [Fact]
     public void AddBuildingBlocks_RegistersTheWolverineExtension()
@@ -131,6 +134,77 @@ public sealed class WolverineExtensionTests
         var options = ConfigureOptions(new WolverineWiringSettings { RabbitMqUri = RabbitMqUri });
 
         Assert.Contains(options.Transports, transport => transport.Protocol == "rabbitmq");
+    }
+
+    [Fact]
+    public void SubscriptionSelection_RecordsQueueBindingsAndConsumerAssembly()
+    {
+        using var provider = BuildProvider(options => options
+            .UseWolverineMessaging(RabbitMqUri)
+            .SubscribeToIntegrationEvents("fitness.integration-events", TestAssembly, "nutrition.*", "analytics.*"));
+
+        var subscription = provider.GetRequiredService<WolverineWiringSettings>().Subscription;
+
+        Assert.NotNull(subscription);
+        Assert.Equal("fitness.integration-events", subscription!.QueueName);
+        Assert.Equal(["nutrition.*", "analytics.*"], subscription.TopicPatterns);
+        Assert.Equal(TestAssembly, subscription.ConsumerAssembly);
+    }
+
+    // Subscribing without the transport would start cleanly and simply never receive anything, which looks
+    // exactly like an upstream context that has not published yet.
+    [Fact]
+    public void Subscription_WithoutMessaging_FailsAtCompositionTime()
+    {
+        var thrown = Assert.Throws<InvalidOperationException>(() =>
+            BuildProvider(options =>
+                options.SubscribeToIntegrationEvents("fitness.integration-events", TestAssembly, "nutrition.*")));
+
+        Assert.Contains("UseWolverineMessaging", thrown.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Subscription_CalledTwice_Throws()
+    {
+        var thrown = Assert.Throws<InvalidOperationException>(() =>
+            BuildProvider(options => options
+                .UseWolverineMessaging(RabbitMqUri)
+                .SubscribeToIntegrationEvents("first", TestAssembly, "nutrition.*")
+                .SubscribeToIntegrationEvents("second", TestAssembly, "fitness.*")));
+
+        Assert.Contains("one queue", thrown.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Subscription_WithNoTopicPattern_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            BuildProvider(options => options
+                .UseWolverineMessaging(RabbitMqUri)
+                .SubscribeToIntegrationEvents("fitness.integration-events", TestAssembly)));
+    }
+
+    [Fact]
+    public void Subscription_WithABlankTopicPattern_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            BuildProvider(options => options
+                .UseWolverineMessaging(RabbitMqUri)
+                .SubscribeToIntegrationEvents("fitness.integration-events", TestAssembly, "  ")));
+    }
+
+    [Fact]
+    public void Configure_WithSubscription_ListensOnTheQueue()
+    {
+        var options = ConfigureOptions(new WolverineWiringSettings
+        {
+            RabbitMqUri = RabbitMqUri,
+            Subscription = new IntegrationEventSubscription("fitness.integration-events", ["nutrition.*"], TestAssembly),
+        });
+
+        Assert.Contains(
+            options.Transports.SelectMany(transport => transport.Endpoints()),
+            endpoint => endpoint.Uri.ToString().Contains("fitness.integration-events", StringComparison.Ordinal));
     }
 
     [Fact]

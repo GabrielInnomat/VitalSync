@@ -5,7 +5,7 @@ ihn gibt, **was** bereits erledigt ist, **was** als Nächstes kommt und **welche
 noch offen sind. Gedacht als Übergabe: wer hier weitermacht, soll ohne den
 ursprünglichen Gesprächsverlauf auskommen.
 
-Stand: 2026-08-01 (Etappen 1 und 2 abgeschlossen)
+Stand: 2026-08-01 (alle drei Etappen abgeschlossen)
 
 ---
 
@@ -34,12 +34,12 @@ Drei Etappen, jede einzeln lauffähig und commitbar:
 | ------ | ------------------------------------------------------------------------- | ------------- |
 | 1      | `StateStored` — EF Core, ein Aggregat, gRPC, Aspire, Migrationen          | **erledigt**  |
 | 2      | `EventSourced` — dieselbe Struktur auf Marten                             | **erledigt**  |
-| 3      | Kreuzverkehr — Integration Event von Etappe 1 nach Etappe 2 über RabbitMQ | offen         |
+| 3      | Kreuzverkehr — Integration Event von Etappe 1 nach Etappe 2 über RabbitMQ | **erledigt**  |
 
 ```
 samples/
 ├── VitalSync.Samples.AppHost/                    eigener Aspire-Host (nicht der produktive!)
-├── VitalSync.Sample.Contracts/                   Integration-Event-Verträge, beide Services (Etappe 3)
+├── VitalSync.Sample.Contracts/                   Integration-Event-Verträge mit mehr als einem Konsumenten
 ├── StateStored/                                  EF Core
 │   ├── VitalSync.Sample.StateStored.Domain
 │   ├── VitalSync.Sample.StateStored.Application
@@ -68,7 +68,7 @@ Wegwerf-Code abhängen. Beim Aufräumen wird genau ein Ordner gelöscht.
 | Migrationen       | eigener MigrationService-Worker, Api wartet per `WaitForCompletion`                                                                          |
 | Routing-Topologie | ein Topic-Exchange `vitalsync.integration-events`                                                                                            |
 | Topic-Namen       | explizites `[Topic("<kontext>.<event>")]` in kebab-case, **ohne** Startup-Validator (offen, siehe §9)                                        |
-| Umfang Messaging  | nur Publish-Seite; Subscribe kommt in Etappe 3                                                                                               |
+| Umfang Messaging  | zuerst nur Publish-Seite; die Subscribe-Seite kam in Etappe 3 und liegt seither ebenfalls in BuildingBlocks (ADR-0023-Amendment)             |
 | gRPC              | code-first (ADR-0003) — die Bibliothekswahl (`protobuf-net.Grpc`) trifft der Sample faktisch für die Plattform und verdient später einen ADR |
 
 ---
@@ -93,6 +93,10 @@ c79af52  Validate the gRPC contract at build time
 ad2275d  Add the read side and Marten wiring of the event-sourced sample
 0d83f8c  Stop a redelivered create from undoing a rename in the read model
 738d9fb  Complete the event-sourced sample with gRPC, migrations and Aspire
+66a81b6  Record stage 2 of the walking skeleton and map the samples folder
+abaeae3  Share the widget contract and mirror it into the event-sourced context
+133864e  Let a subscribing handler dispatch commands with ISender
+cab79bc  Subscribe the event-sourced service and prove the context crossing
 ```
 
 Die Messaging- und Persistenz-Commits wurden einzeln in temporären Worktrees gebaut
@@ -117,10 +121,16 @@ Rechtfertigung des Durchstichs in einem Satz.
 
 ## 4. Stand
 
-Etappen 1 und 2 sind **abgeschlossen**, Arbeitsbaum sauber, **194 Tests grün**, Build
-ohne Warnungen. Neun davon sind Smoke-Tests gegen ein laufendes System, die ohne
-gesetzte `SAMPLE_*_API_URL` überspringen (siehe §11); mit laufendem AppHost laufen auch
-sie grün.
+Alle drei Etappen sind **abgeschlossen**, Arbeitsbaum sauber, **209 Tests grün**, Build
+ohne Warnungen. Elf davon sind Smoke-Tests gegen ein laufendes System, die ohne gesetzte
+`SAMPLE_*_API_URL` überspringen (siehe §11); mit laufenden Services laufen auch sie
+grün.
+
+Damit hat der Durchstich seine Aufgabe erfüllt: **jede** Behauptung, die ADR-0027 über
+die Verdrahtung aufstellt, ist entweder belegt oder mit einem Amendment korrigiert, und
+BuildingBlocks hat erstmals echte Konsumenten. Der Ordner `samples/` kann gelöscht
+werden, sobald der erste echte Service steht — mit Ausnahme der Erkenntnisse in diesem
+Dokument.
 
 ---
 
@@ -232,9 +242,9 @@ Zwei Entwurfsentscheidungen dabei:
   bei Redelivery driften. Die Projektion vergleicht stattdessen
   `existing.RenameCount < event.RenameCount` — das deckt Redelivery **und**
   Reihenfolgevertauschung ab.
-- **Der Integration-Event-Vertrag liegt vorläufig in Infrastructure.** Mit Etappe 3
-  kommt ein Konsument hinzu, dann wandert er nach `Sample.Contracts` — erst dann hat
-  ADR-0024 überhaupt einen zweiten Konsumenten zu bewerten.
+- **Der Integration-Event-Vertrag lag vorläufig in Infrastructure.** Mit Etappe 3 kam
+  ein Konsument hinzu, und er ist nach `VitalSync.Sample.Contracts` gewandert — erst
+  dann hatte ADR-0024 überhaupt einen zweiten Konsumenten zu bewerten.
 
 Werkzeug: `dotnet ef` muss in **Version 10** vorliegen — die global installierte 9.0.8
 ist zu alt für die EF-10-Runtime. Das lokale Tool-Manifest, das das früher sicherstellte,
@@ -456,7 +466,7 @@ Publish-Hälfte durchgängig funktioniert.
 
 ---
 
-## 8. Etappe 3 — Kreuzverkehr
+## 8. Etappe 3 — Kreuzverkehr — **erledigt**
 
 ```
 StateStored.Api ── Command ──▶ EF-Commit (Aggregat + Outbox, eine Transaktion)
@@ -469,20 +479,98 @@ EventSourced.Api ◀── eigene Queue, gebunden mit sample.*
                                          └──▶ Projection ──▶ eventsourced-read
 ```
 
-Erzwingt die Entscheidung, ob `BuildingBlocksOptions` ein
-`SubscribeToIntegrationEvents(...)` braucht — heute verdrahtet BuildingBlocks nur die
-Publish-Hälfte, der Konsument müsste Queue-Deklaration und Binding selbst machen.
+Ein im state-stored Kontext angelegtes Widget erscheint als gespiegeltes Gadget im
+event-sourceten — ohne gemeinsame Datenbank und ohne synchronen Aufruf.
 
-Nach Etappe 2 ist genau **diese** Hälfte alles, was noch fehlt: beide Services
-publizieren nachweislich auf den Topic Exchange (`sample.widget-created` bzw.
-`sample.gadget-retired`), und dass eine mit `sample.*` gebundene Queue die Nachrichten
-bekommt, wurde mit einer Probe-Queue von Hand belegt. Was fehlt, ist der Konsument im
-Produktionscode.
+### Die Entscheidung, die diese Etappe erzwungen hat
 
-Ausserdem zu prüfen: **at-least-once über die Servicegrenze** und ob die Projektionen
-tatsächlich idempotent sind. Für die kontextinternen Projektionen ist das inzwischen
-durch Tests abgedeckt (`WidgetProjectionTests`, `GadgetProjectionTests`) — und genau
-dort steckte auch ein echter Fehler (§7).
+`BuildingBlocksOptions` hat jetzt ein **`SubscribeToIntegrationEvents(...)`**. Der Weg
+dahin war bewusst empirisch: erst wurde die Subscribe-Hälfte **im Service-Host**
+verdrahtet, in Betrieb genommen und gemessen, dann verschoben.
+
+Was Variante „Service verdrahtet selbst" gekostet hat:
+
+- **12 Zeilen** im `Program.cs` jedes Konsumenten (Discovery, Queue, durable Inbox,
+  Exchange-Binding).
+- Den **Exchange-Namen als Literal**, weil BuildingBlocks seine Konstante `internal`
+  hält — ein Konsument konnte den Wert, den er treffen muss, nicht referenzieren.
+- **Abnahmekriterium 11 aus Etappe 2** (blankes `UseWolverine()`) war wieder weg.
+- Und der eigentliche Fehler (siehe unten) steckte trotzdem in BuildingBlocks, war für
+  den Service also gar nicht behebbar.
+
+Nach dem Verschieben nennt der Service nur noch Queue-Name, Consumer-Assembly und
+Topic-Pattern; der Host steht wieder auf `builder.Host.UseWolverine();`. ADR-0023 hat
+dazu ein Amendment (das alte „Publish-Hälfte only" ist damit abgelöst).
+
+### Der Befund, der die Etappe fast versenkt hätte
+
+Die ersten vier Integration Events über die Kontextgrenze gingen **spurlos verloren**.
+Die Queue war korrekt gebunden, die Nachrichten kamen an, der Inbox-Status war
+`Handled` — und es passierte nichts. Keine Exception beim Aufrufer, keine Dead Letter,
+kein Retry.
+
+Ursache: Wolverine konnte den Handler nicht generieren.
+
+```
+InvalidServiceLocationException: Found service locations while generating code for
+Message Handler for WidgetCreatedIntegrationEvent, but ServiceLocationPolicy.NotAllowed
+is in effect
+```
+
+`ISender` ist genau der Typ, den **jeder** Integration-Event-Konsument braucht (ADR-0023
+Scope Note: der Handler ist ein dünner Adapter auf `ISender`), und seine Implementierung
+nimmt einen `IServiceProvider` — für Wolverines Codegen ist das Service Location. Es ist
+derselbe Fehlermodus, den Etappe 1 für `IDomainEventPublisher` und
+`IIntegrationEventSinkFactory` gefunden hat, nur eine Ebene weiter außen. `ISender` ist
+jetzt ebenfalls opt-in, in `ApplyBuildingBlockDomainEventRouting`.
+
+**Wie es gefunden wurde:** nicht im Debugger, sondern indem die beiden Services aus dem
+Aspire-Host herausgenommen und von Hand gegen dieselben Container gestartet wurden —
+Aspire schickt Service-Logs nur ins Dashboard, und genau die eine `fail:`-Zeile hing
+daran. Das Vorgehen steht in §11.
+
+### Abnahmekriterien Etappe 3
+
+| #   | Nachweis                                                                          | Status |
+| --- | --------------------------------------------------------------------------------- | ------ |
+| 1   | Widget im StateStored-Kontext angelegt → Gadget-Stream im EventSourced-Kontext     | belegt |
+| 2   | Beide Kontexte teilen **nur** den Identifikator, keine Datenbank, keinen Aufruf    | belegt |
+| 3   | Read-Modell des Konsumenten zeigt den gespiegelten Namen                           | belegt |
+| 4   | Umbenennung im Konsumenten reist **nicht** zurück (der Spiegel ist einseitig)      | belegt |
+| 5   | Queue `eventsourced.integration-events`, gebunden mit `sample.*` — von BuildingBlocks | belegt |
+| 6   | `Program.cs` ohne Wolverine-Konfiguration außer `UseWolverine()`                   | belegt |
+| 7   | Wiederholte Zustellung erzeugt kein zweites Gadget                                 | Test   |
+
+Kriterium 7 ist durch `MirrorWidgetTests` abgedeckt, nicht am laufenden System: eine
+Redelivery lässt sich von außen nicht zuverlässig erzwingen. Die Idempotenz ruht auf
+einer Entscheidung, nicht auf Bookkeeping — **das gespiegelte Aggregat übernimmt die
+Identität des Originals**. Eine frisch erzeugte Id würde bei jeder Wiederholung ein
+weiteres Gadget anlegen.
+
+### Weitere Befunde
+
+- **Ein Kontext bekommt seine eigenen Integration Events zurück.** `sample.*` matcht
+  auch `sample.gadget-retired`, das der Konsument selbst publiziert. Hier folgenlos
+  (kein Handler), aber wer unter einem Präfix publiziert **und** konsumiert, muss damit
+  rechnen. Steht jetzt im ADR-0023-Amendment.
+- **Die Consumer-Assembly muss explizit angegeben werden.** Naheliegend wäre, die
+  Assemblies aus `AddHandlersFrom` wiederzuverwenden — das wäre ein Fehler: Wolverine
+  erkennt Handler an der Namenskonvention und würde `CreateGadgetHandler` als
+  Wolverine-Handler für `CreateGadget` registrieren, also am `ISender`-Pipeline vorbei
+  dispatchen.
+- **CA1711 und Wolverines Konvention kollidieren.** Wolverine sucht Typen auf `Handler`
+  oder `Consumer`, CA1711 reserviert das Suffix `EventHandler` für Delegates. `Consumer`
+  ist der einzige Name, der beides erfüllt.
+- **Die Result/Exception-Grenze kippt am Transportrand.** Innerhalb des Services ist ein
+  Fehlschlag ein Wert; im Wolverine-Handler bestätigt ein normales Return die Nachricht.
+  Der Konsument muss werfen, sonst ist eine fehlgeschlagene Nachricht still weg.
+- **ADR-0024 wurde zum ersten Mal wirklich angewandt.** `WidgetCreatedIntegrationEvent`
+  ist nach `VitalSync.Sample.Contracts` gewandert, weil es jetzt einen zweiten
+  Konsumenten hat. `GadgetRetiredIntegrationEvent` ist **bewusst** dort geblieben, wo es
+  war — es hat keinen. Symmetrie wäre genau die Begründung, die ADR-0024 ablehnt.
+- **Das geteilte Vertragspaket referenziert Wolverine**, wegen `[Topic]`. Ein
+  publizierter Vertrag benennt damit seinen Transport. Preis dafür, dass der Routing Key
+  Vertragsbestandteil ist statt aus dem CLR-Namespace abgeleitet.
 
 ---
 
@@ -529,7 +617,8 @@ dort steckte auch ein echter Fehler (§7).
   denn mehrere Handler pro Event und Events ganz ohne Projektion sind beide legitim.
 - **Der gRPC-Vertrag liegt noch beim Service.** `VitalSync.Sample.StateStored.Contracts`
   ist die richtige Struktur, aber sobald der BFF ihn konsumiert, stellt sich die Frage
-  nach einem geteilten Paket. Für das Integration Event ist sie noch ganz offen.
+  nach einem geteilten Paket. Für das Integration Event ist sie mit Etappe 3 beantwortet
+  (`VitalSync.Sample.Contracts`), für den gRPC-Vertrag nicht.
 
 ### Aus Etappe 2
 
@@ -551,6 +640,28 @@ dort steckte auch ein echter Fehler (§7).
   Praktisch unauffällig; ob es sich richtig anfühlt, dass die Write-Seite ihr Schema zur
   Laufzeit selbst baut (Marten und Wolverine tun das beide), ist eine Entscheidung, die
   spätestens beim ersten echten event-sourceten Service ansteht.
+
+### Aus Etappe 3
+
+- **Geteilte Identität über die Kontextgrenze ist eine Modellierungsentscheidung, keine
+  Regel.** Der Spiegel ist nur deshalb idempotent, weil das Gadget die Widget-Id
+  übernimmt. Das ist für ein Spiegelbild angemessen, aber kein allgemeines Verfahren:
+  ein Kontext, der aus einem fremden Ereignis ein **eigenes** Aggregat mit eigener
+  Identität ableitet, braucht echtes Idempotenz-Bookkeeping (verarbeitete `EventId`s pro
+  Konsument). Das gibt es heute nicht.
+- **Retry und Dead-Lettering sind unbelegt.** Die Policy steht in
+  `ApplyBuildingBlockMessagingDefaults`, aber kein Test und kein Lauf hat je eine
+  Nachricht scheitern lassen. Der Konsument wirft bei einem fehlgeschlagenen Command —
+  ob daraus tatsächlich drei Wiederholungen und danach die Error-Queue werden, ist
+  angenommen, nicht gesehen.
+- **Ein Kontext konsumiert seine eigenen Integration Events**, wenn sein Topic-Pattern
+  sie matcht. Folgenlos, solange kein Handler existiert. Ob BuildingBlocks das aktiv
+  ausfiltern sollte (etwa über eine Absender-Kennung im Envelope), ist offen.
+- **Die Verbindung Vertrag → Konsument ist unbewacht.** Es gibt jetzt Tests, die eine
+  vergessene Consumer-Assembly fangen (`SubscriptionDiscoveryTests`), aber nichts prüft,
+  dass die gebundenen Topic-Pattern zu den `[Topic]`-Attributen der Verträge passen, die
+  der Service konsumieren will. Ein Tippfehler im Pattern verhält sich wie ein
+  Upstream-Kontext, der noch nichts publiziert hat.
 
 ### Vorbestehend
 
@@ -625,6 +736,21 @@ reicht nicht und es gibt kein Tool-Manifest mehr. Ohne globalen Zustand anzufass
 dotnet tool install dotnet-ef --version 10.0.10 --tool-path .tools
 ```
 
+**Service-Logs sehen.** Aspire schickt die Ausgabe der Services nur ins Dashboard; auf
+der Konsole und in den DCP-Logdateien steht sie nicht. Genau daran hing die eine
+`fail:`-Zeile, die Etappe 3 erklärt hat. Wer eine Ursache sucht, nimmt die Services aus
+dem AppHost heraus und startet sie von Hand gegen dieselben Container — der AppHost darf
+dafür beendet werden, die Container laufen weiter:
+
+```bash
+docker inspect $(docker ps --format "{{.Names}}" | grep postgres) --format '{{range .Config.Env}}{{println .}}{{end}}' | grep POSTGRES_PASSWORD
+```
+
+Danach die Verbindungszeichenfolgen als `ConnectionStrings__<name>` setzen und
+`dotnet run` auf das Api-Projekt. **Achtung:** `dotnet run` wendet `launchSettings.json`
+an und überschreibt damit `ASPNETCORE_URLS` — die Services hören auf den dort
+eingetragenen Ports (54230/54240), nicht auf einem selbst gewählten.
+
 ---
 
 ## 12. Arbeitsweise, die sich bewährt hat
@@ -639,3 +765,11 @@ dotnet tool install dotnet-ef --version 10.0.10 --tool-path .tools
 - **Erst den unbequemen Test schreiben, dann die Projektion.** Beide echten Fehler in
   Etappe 2 kamen aus Tests, die eine Zustellung wiederholen oder vertauschen. Eine
   Projektion, die nur den Happy Path sieht, ist immer grün — auch wenn sie driftet.
+- **Die unbequeme Variante erst bauen, dann verschieben.** Die Entscheidung über die
+  Subscribe-Hälfte wurde nicht hergeleitet, sondern gemessen: Variante „Service
+  verdrahtet selbst" lief zuerst, und erst danach stand fest, was sie kostet. Der
+  Umbau danach war klein, die Begründung dafür belastbar.
+- **Wenn nichts passiert und nichts weh tut, fehlen die Logs.** Eine still verworfene
+  Nachricht sieht exakt aus wie eine, die nie gesendet wurde. In Etappe 3 kostete es
+  drei Fehlversuche, bis klar war, dass nicht der Code das Problem war, sondern dass
+  niemand die Service-Ausgabe sah.

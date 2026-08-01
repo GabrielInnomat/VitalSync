@@ -215,9 +215,15 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   `DomainEventEnvelope` cannot leak onto the broker. Every integration event **must**
   carry `[Topic("<context>.<event>")]` in kebab-case (`nutrition.recipe-created`): the
   routing key is part of the published contract, not derived from the CLR namespace.
-  Consumers own queue declaration and binding (`nutrition.*`); Building Blocks wires
-  the **publishing half only**. Beware: Wolverine **silently discards** a message with
-  no route, so a missing rule loses events without any error.
+  Consumers subscribe via `options.SubscribeToIntegrationEvents(queue, consumerAssembly,
+  patterns)` — Building Blocks wires **both halves**, so the subscribing host still
+  calls only a bare `UseWolverine()`. Pass the service's **Infrastructure** assembly,
+  never its Application assembly: Wolverine discovers handlers by naming convention and
+  would mistake `CreateRecipeHandler` for a message handler. Beware: Wolverine
+  **silently discards** a message with no route, and a message whose consumer was never
+  discovered is marked handled and dropped without a retry or a dead letter — both
+  failures are invisible. Note that `nutrition.*` also matches the subscriber's own
+  published events.
 - **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
   and the event schema is unchanged, so snapshots can be added per context later with
   **no event migration**.

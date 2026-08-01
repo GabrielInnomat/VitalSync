@@ -31,6 +31,14 @@ public static class SampleEventSourcedInfrastructure
             // this is where ADR-0027 is expected to hold without an exception.
             options.UseMartenEventSourcing(writeConnectionString);
             options.UseWolverineMessaging(rabbitMqUri);
+
+            // The subscribing half. The assembly is this one and not the Application assembly on purpose:
+            // Wolverine discovers handlers by naming convention, so it would mistake CreateGadgetHandler for a
+            // message handler of CreateGadget. The exchange is not named here - Building Blocks owns it.
+            options.SubscribeToIntegrationEvents(
+                "eventsourced.integration-events",
+                typeof(SampleEventSourcedInfrastructure).Assembly,
+                "sample.*");
         });
 
         services.AddDbContext<GadgetReadDbContext>(builder => builder.UseNpgsql(readConnectionString));

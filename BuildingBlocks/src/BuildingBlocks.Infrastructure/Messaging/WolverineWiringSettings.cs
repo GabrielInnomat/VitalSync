@@ -35,8 +35,23 @@ internal sealed class WolverineWiringSettings
     public Uri? RabbitMqUri { get; set; }
 
     /// <summary>
+    /// Gets or sets the subscribing half of this service's integration-event wiring.
+    /// </summary>
+    /// <remarks>
+    /// Set when the host calls <c>SubscribeToIntegrationEvents</c>; <see langword="null"/> for services that only
+    /// publish. A subscription additionally requires <see cref="RabbitMqUri"/>, since there is nothing to listen on
+    /// without the transport — <c>AddBuildingBlocks</c> rejects that combination at composition time.
+    /// </remarks>
+    /// <value>The subscription to apply, or <see langword="null"/> when the host consumes no integration events.</value>
+    public IntegrationEventSubscription? Subscription { get; set; }
+
+    /// <summary>
     /// Gets a value indicating whether the host's selection requires a running Wolverine runtime.
     /// </summary>
     /// <value><c>true</c> if any capability that flows through Wolverine was selected; otherwise, <c>false</c>.</value>
-    public bool RequiresWolverine => ApplyDomainEventRouting || EfCoreMessageStoreConnectionString is not null || RabbitMqUri is not null;
+    public bool RequiresWolverine =>
+        ApplyDomainEventRouting
+        || EfCoreMessageStoreConnectionString is not null
+        || RabbitMqUri is not null
+        || Subscription is not null;
 }

@@ -82,6 +82,42 @@ everything else from ADR-0004 intact.
 > - **Publishing side only.** Queue declaration, binding, and listening belong to
 >   the **subscribing** service and are deliberately not wired by Building Blocks;
 >   the consumer half is added when the first real subscriber exists.
+>   _Superseded by the subscribing-half amendment below._
+
+> **Subscribing half (amendment 2026-08-01).** The first real subscriber now exists
+> (stage 3 of the walking skeleton), and wiring it in the service host was tried
+> first and rejected. Building Blocks therefore owns **both** halves.
+>
+> - **`BuildingBlocksOptions.SubscribeToIntegrationEvents(queueName, consumerAssembly, topicPatterns)`**
+>   is the mirror image of `UseWolverineMessaging`. It declares the service's queue,
+>   binds it to `vitalsync.integration-events` with the given patterns, enables the
+>   **durable inbox**, and adds the consumer assembly to Wolverine's handler
+>   discovery. The subscribing host stays at a bare `UseWolverine()` (ADR-0027).
+> - **The four parts are one call because each fails silently alone.** An unbound
+>   queue never fills. A bound queue whose consumers were never discovered reports
+>   "no handler" once, marks the envelope handled, and drops it — no retry, no dead
+>   letter. Measured, not reasoned: with the wiring in the host, four integration
+>   events were lost this way before the cause was found in a log line.
+> - **The consumer assembly is explicit, never the assemblies from `AddHandlersFrom`.**
+>   Wolverine discovers handlers by naming convention, so a CQRS handler such as
+>   `CreateRecipeHandler` would be picked up as a Wolverine message handler for
+>   `CreateRecipe` and dispatched outside the `ISender` pipeline. Pass the service's
+>   Infrastructure assembly; keep its Application assembly out.
+> - **A subscription without `UseWolverineMessaging` throws at composition time.**
+>   There is nothing to listen on, and the silent version of that mistake is
+>   indistinguishable from an upstream context that has not published yet.
+> - **`ISender` is opted into service location** by the domain-event routing, because
+>   Wolverine cannot construct it (it takes an `IServiceProvider`) and otherwise
+>   refuses to generate **any** handler that dispatches a command — which is every
+>   integration-event consumer, per the scope note below.
+> - **The exchange name stays internal to Building Blocks.** A subscriber that had to
+>   restate it could bind to the wrong one, and nothing would report it.
+> - **One queue per service.** A second `SubscribeToIntegrationEvents` call throws; a
+>   service that consumes several contexts binds several patterns to its one queue.
+> - **Consequence to know:** a pattern like `sample.*` also matches the subscriber's
+>   **own** published events, which are then delivered back to it. Harmless when no
+>   handler exists, but a context that both publishes and consumes under one prefix
+>   must expect its own messages.
 >
 > **Codegen dependency.** Wolverine 6 no longer ships the Roslyn compiler in its
 > core package, and its default `TypeLoadMode` compiles handler code at runtime.
