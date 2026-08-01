@@ -32,7 +32,7 @@ Drei Etappen, jede einzeln lauffähig und commitbar:
 
 | Etappe | Inhalt                                                                    | Status        |
 | ------ | ------------------------------------------------------------------------- | ------------- |
-| 1      | `StateStored` — EF Core, ein Aggregat, gRPC, Aspire, Migrationen          | **in Arbeit** |
+| 1      | `StateStored` — EF Core, ein Aggregat, gRPC, Aspire, Migrationen          | **erledigt**  |
 | 2      | `EventSourced` — dieselbe Struktur auf Marten                             | offen         |
 | 3      | Kreuzverkehr — Integration Event von Etappe 1 nach Etappe 2 über RabbitMQ | offen         |
 
@@ -46,6 +46,7 @@ samples/
 │   ├── VitalSync.Sample.StateStored.Infrastructure
 │   ├── VitalSync.Sample.StateStored.Api               (gRPC, code-first)
 │   ├── VitalSync.Sample.StateStored.MigrationService
+│   ├── VitalSync.Sample.StateStored.Contracts       (gRPC-Vertrag, vom BFF referenzierbar)
 │   └── VitalSync.Sample.StateStored.Tests
 └── EventSourced/                                 Marten (Etappe 2, analog)
 ```
@@ -64,13 +65,13 @@ Wegwerf-Code abhängen. Beim Aufräumen wird genau ein Ordner gelöscht.
 | Persistenz        | **beide** — je ein Service für EF Core und Marten                                                                                            |
 | Migrationen       | eigener MigrationService-Worker, Api wartet per `WaitForCompletion`                                                                          |
 | Routing-Topologie | ein Topic-Exchange `vitalsync.integration-events`                                                                                            |
-| Topic-Namen       | explizites `[Topic("<kontext>.<event>")]` in kebab-case, **ohne** Startup-Validator                                                          |
+| Topic-Namen       | explizites `[Topic("<kontext>.<event>")]` in kebab-case, **ohne** Startup-Validator (offen, siehe §9)                                        |
 | Umfang Messaging  | nur Publish-Seite; Subscribe kommt in Etappe 3                                                                                               |
 | gRPC              | code-first (ADR-0003) — die Bibliothekswahl (`protobuf-net.Grpc`) trifft der Sample faktisch für die Plattform und verdient später einen ADR |
 
 ---
 
-## 3. Was bereits gepusht ist
+## 3. Commit-Historie
 
 ```
 afb70d5  Bind integration-event publication to the handler's message context
@@ -78,41 +79,39 @@ afb70d5  Bind integration-event publication to the handler's message context
 816d72d  Make container-backed tests fail instead of skip in CI
 51a09ef  Add project skeleton for the state-stored sample service
 78e6324  Add Widget aggregate and its CQRS slice to the state-stored sample
+4d8d492  Persist the aggregate's state instead of the aggregate itself
+935183b  Complete the read side and migrations of the state-stored sample
+795c619  Add the walking-skeleton plan and findings as a working document
+d98fc9a  Wire the state-stored sample into its own Aspire host
+16a0d63  Let the host wire the EF Core outbox, and complete the gRPC slice
+accec33  Pin that the aggregate and its outbox entry share one command
+ae0a415  Discover the sample's projections by scanning, and drop gRPC reflection
+c79af52  Validate the gRPC contract at build time
 ```
 
-Jeder der ersten drei Commits wurde einzeln in einem temporären Worktree gebaut und
-getestet — sie sind einzeln per `git revert` zurücknehmbar.
+Die Messaging- und Persistenz-Commits wurden einzeln in temporären Worktrees gebaut
+und getestet, sind also einzeln per `git revert` zurücknehmbar. **Achtung:** dafür
+braucht der Worktree einen **kurzen Pfad** — die Sample-Projektnamen sind lang genug,
+dass `obj\Debug\net10.0\…` unter einem tiefen Verzeichnis die 260-Zeichen-Grenze von
+Windows reißt. MSBuild meldet das irreführend als `MSB3030` („Datei konnte nicht
+kopiert werden"), nicht als Pfadfehler.
 
-**Inhaltlich behoben:** Integration Events erreichten den Broker nie (keine
+**Was inhaltlich behoben wurde:** Integration Events erreichten den Broker nie (keine
 Routing-Regel, Wolverine verwirft routenlose Nachrichten stillschweigend); die erste
 Domain-Event-Zustellung scheiterte immer (`ServiceLocationPolicy.NotAllowed`); der
-EF-Persistenzpfad konnte nie committen (kein datenbankgestützter Message Store).
+EF-Persistenzpfad konnte nie committen; der produktive Aspire-AppHost war nicht
+startfähig; und ein Aggregat war mit EF Core überhaupt nicht abbildbar (§5).
+
+**Keiner dieser Fehler war durch Build oder Testsuite sichtbar.** Das ist die
+Rechtfertigung des Durchstichs in einem Satz.
 
 ---
 
-## 4. Was uncommitted im Arbeitsbaum liegt
+## 4. Stand
 
-Die Lösung des EF-Mapping-Problems aus §5. **Noch nicht committet**, bewusst zur
-Durchsicht.
-
-```
-M  BuildingBlocks/src/BuildingBlocks.Domain/AggregateRoot.cs
-M  BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/BuildingBlocksOptions.cs
-M  BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreRepository.cs
-M  BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreUnitOfWork.cs
-M  BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests/OutboxFlushOnCommitTests.cs
-M  samples/StateStored/VitalSync.Sample.StateStored.Tests/VitalSync.Sample.StateStored.Tests.csproj
-?  BuildingBlocks/src/BuildingBlocks.Domain/IStateOwner.cs
-?  BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreAggregateTracker.cs
-?  BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests/EfCoreAggregateRoundTripTests.cs
-?  samples/StateStored/VitalSync.Sample.StateStored.Infrastructure/Write/WidgetWriteDbContext.cs
-?  samples/StateStored/VitalSync.Sample.StateStored.Tests/WidgetWriteModelTests.cs
-```
-
-**164 Tests grün**, Build ohne Warnungen.
-
-Empfehlung beim Committen: **zwei** Commits — der BuildingBlocks-Teil getrennt vom
-Sample-Teil.
+Etappe 1 ist **abgeschlossen**, Arbeitsbaum sauber, **167 Tests grün**, Build ohne
+Warnungen. Vier davon sind Smoke-Tests, die ohne gesetztes `SAMPLE_API_URL`
+überspringen (siehe §11).
 
 ---
 
@@ -301,21 +300,55 @@ aber öffentlich per Definition.
 
 ### Abnahmekriterien Etappe 1
 
-| #   | Nachweis                                                                           | Status       |
-| --- | ---------------------------------------------------------------------------------- | ------------ |
-| 1   | AppHost startet, alle Ressourcen healthy                                           | offen        |
-| 2   | Migration-Worker läuft durch; Tabellen in beiden DBs                               | offen        |
-| 3   | `CreateWidget` per grpcurl liefert eine Id                                         | offen        |
-| 4   | Zeile in `statestored-write.public.widgets`                                        | offen        |
-| 5   | `wolverine.*`-Tabellen in **derselben** Datenbank (eine Transaktion)               | offen        |
-| 6   | Read-Modell in `statestored-read` innerhalb von Millisekunden, nicht durch Polling | offen        |
-| 7   | `GetWidget` liefert die projizierte Sicht aus der Read-DB                          | offen        |
-| 8   | Leerer Name → `InvalidArgument`, **keine** Zeile geschrieben                       | offen        |
-| 9   | Integration Event im Exchange `vitalsync.integration-events`                       | offen        |
-| 10  | `dotnet nuget why` zeigt `WolverineFx.RuntimeCompilation` transitiv                | **erledigt** |
-| 11  | `Program.cs` ohne Wolverine-Konfiguration außer `UseWolverine()`                   | offen        |
+Alle am **laufenden System** geprüft, nicht am Build.
 
-**Kriterium 11 ist das eigentliche Urteil über ADR-0027.**
+| #   | Nachweis                                                              | Status          |
+| --- | --------------------------------------------------------------------- | --------------- |
+| 1   | AppHost startet, alle Ressourcen healthy                              | belegt          |
+| 2   | Migration-Worker läuft durch; Tabellen in beiden DBs                  | belegt          |
+| 3   | `CreateWidget` per gRPC liefert eine Id                               | belegt          |
+| 4   | Zeilen in `statestored_write.public.widgets`                          | belegt          |
+| 5   | 8 `wolverine.*`-Tabellen in **derselben** Datenbank                   | belegt          |
+| 6   | Read-Modell in `statestored_read`, ohne Warten auf Polling            | belegt          |
+| 7   | `GetWidget` liefert die projizierte Sicht aus der Read-DB             | belegt          |
+| 8   | Leerer Name → `InvalidArgument`, **keine** Zeile geschrieben          | belegt          |
+| 9   | Topic-Exchange `vitalsync.integration-events` auf RabbitMQ            | belegt          |
+| 10  | `dotnet nuget why` zeigt `WolverineFx.RuntimeCompilation` transitiv   | belegt          |
+| 11  | `Program.cs` ohne Wolverine-Konfiguration außer `UseWolverine()`      | **gescheitert** |
+
+Kriterium 3 wurde nicht mit `grpcurl` geprüft (nicht installiert), sondern mit einem
+typisierten code-first-Client aus dem Testprojekt — der zugleich zeigt, wie der BFF den
+Service konsumieren wird.
+
+Kriterium 8 ist doppelt belegt: der abgelehnte Aufruf hinterließ **keine** Zeile,
+sichtbar daran, dass nach drei Create-Versuchen nur zwei Zeilen existierten.
+
+---
+
+### Nacharbeiten nach Etappe 1
+
+Drei kleine Commits, ausgelöst durch Rückfragen statt durch Testläufe:
+
+- **`EfCoreOutboxAtomicityTests`** (`accec33`) — ADR-0022 verspricht, dass Aggregat und
+  Outbox-Eintrag gemeinsam committen. Das war nur in einer Logzeile beobachtet, nie
+  behauptet. Der Test zeichnet über einen EF-Interceptor das ausgeführte SQL auf und
+  verlangt **genau einen** Command, der beide Tabellen berührt.
+  Nebenbefund aus der Mutationsprobe: `IDbContextOutbox.PublishAsync` hängt den Envelope
+  bereits beim Publizieren an den ChangeTracker — ein zusätzliches `SaveChanges` danach
+  trennt nichts.
+- **Projektionen per Scan** (`ae0a415`) — `AddHandlersFrom` erfasst `IProjectionHandler<>`
+  und `IIntegrationEventMapper` **schon immer**; der Sample zeigte nur auf die
+  Application-Assembly, während beide in Infrastructure liegen. Eine Zeile mehr, drei
+  Handregistrierungen weniger, und eine stille Fehlerquelle weniger: eine vergessene
+  Projektion wirft nicht, sie aktualisiert das Read-Modell einfach nie.
+- **`protobuf-net.BuildTools`** (`c79af52`) — Analyzer, der den gRPC-Vertrag zur Buildzeit
+  prüft, plus Umstellung auf `[ProtoContract]`/`[ProtoMember(n)]`. Die Zahl ist eine
+  **Feldidentität auf der Leitung**, keine Sortierung; `Order` legte das Gegenteil nahe.
+  Nachgewiesen: doppelte Nummer → `error PBN0003`.
+
+Die gRPC-Server-Reflection wurde wieder entfernt. Sie war für `grpcurl` gedacht, das gar
+nicht verfügbar war, und hätte nur das Service-Schema offengelegt. Falls sie zum Debuggen
+zurückkommt, gehört sie hinter `IsDevelopment()`.
 
 ---
 
@@ -379,6 +412,23 @@ tatsächlich idempotent sind.
   `EntityFrameworkCore.Relational`, und Konsumenten scheitern zur Laufzeit mit
   `FileNotFoundException`. Sauberer wäre, die Design-Time-Factories in den
   MigrationService zu verschieben und mit diesem als Startup-Projekt zu scaffolden.
+
+### Aus Etappe 1 offen geblieben
+
+- **Vergessenes `[Topic]` fällt nicht auf.** Ein `IIntegrationEvent` ohne das Attribut
+  bekommt von Wolverine einen aus dem CLR-Typnamen abgeleiteten Routing Key, landet damit
+  unter einem Schlüssel, den kein Konsument gebunden hat, und verschwindet still. Der
+  naheliegende Schutz wäre ein Startup-Validator analog zu
+  `HandlerRegistrationStartupValidator`, der die gescannten Assemblies nach
+  `IIntegrationEvent`-Typen ohne `[Topic]` durchsucht. **Noch nicht umgesetzt.**
+- **Fehlkonfiguration ist ungleich abgedeckt.** Für Commands und Queries gibt es Tests,
+  die Mehrdeutigkeit und fehlende Handler mit Exceptions festnageln
+  (`HandlerRegistrationTests`, `HandlerStartupValidationTests`, vier Fixture-Assemblies).
+  Für Projektionen und Mapper existiert nur der Happy Path — bei Projektionen zu Recht,
+  denn mehrere Handler pro Event und Events ganz ohne Projektion sind beide legitim.
+- **Der gRPC-Vertrag liegt noch beim Service.** `VitalSync.Sample.StateStored.Contracts`
+  ist die richtige Struktur, aber sobald der BFF ihn konsumiert, stellt sich die Frage
+  nach einem geteilten Paket. Für das Integration Event ist sie noch ganz offen.
 
 ### Vorbestehend
 
