@@ -5,7 +5,7 @@ ihn gibt, **was** bereits erledigt ist, **was** als Nächstes kommt und **welche
 noch offen sind. Gedacht als Übergabe: wer hier weitermacht, soll ohne den
 ursprünglichen Gesprächsverlauf auskommen.
 
-Stand: 2026-08-01
+Stand: 2026-08-01 (Etappen 1 und 2 abgeschlossen)
 
 ---
 
@@ -33,7 +33,7 @@ Drei Etappen, jede einzeln lauffähig und commitbar:
 | Etappe | Inhalt                                                                    | Status        |
 | ------ | ------------------------------------------------------------------------- | ------------- |
 | 1      | `StateStored` — EF Core, ein Aggregat, gRPC, Aspire, Migrationen          | **erledigt**  |
-| 2      | `EventSourced` — dieselbe Struktur auf Marten                             | offen         |
+| 2      | `EventSourced` — dieselbe Struktur auf Marten                             | **erledigt**  |
 | 3      | Kreuzverkehr — Integration Event von Etappe 1 nach Etappe 2 über RabbitMQ | offen         |
 
 ```
@@ -48,7 +48,9 @@ samples/
 │   ├── VitalSync.Sample.StateStored.MigrationService
 │   ├── VitalSync.Sample.StateStored.Contracts       (gRPC-Vertrag, vom BFF referenzierbar)
 │   └── VitalSync.Sample.StateStored.Tests
-└── EventSourced/                                 Marten (Etappe 2, analog)
+└── EventSourced/                                 Marten — dieselben sieben Projekte,
+    └── … (Domain, Application, Infrastructure,       ein Aggregat `Gadget` statt `Widget`
+           Api, MigrationService, Contracts, Tests)
 ```
 
 **Zwei Hosts sind nicht optional:** `BuildingBlocksOptions.SelectPersistenceStyle`
@@ -87,6 +89,10 @@ d98fc9a  Wire the state-stored sample into its own Aspire host
 accec33  Pin that the aggregate and its outbox entry share one command
 ae0a415  Discover the sample's projections by scanning, and drop gRPC reflection
 c79af52  Validate the gRPC contract at build time
+001fdea  Add the event-sourced sample's aggregate and CQRS slice
+ad2275d  Add the read side and Marten wiring of the event-sourced sample
+0d83f8c  Stop a redelivered create from undoing a rename in the read model
+738d9fb  Complete the event-sourced sample with gRPC, migrations and Aspire
 ```
 
 Die Messaging- und Persistenz-Commits wurden einzeln in temporären Worktrees gebaut
@@ -100,7 +106,9 @@ kopiert werden"), nicht als Pfadfehler.
 Routing-Regel, Wolverine verwirft routenlose Nachrichten stillschweigend); die erste
 Domain-Event-Zustellung scheiterte immer (`ServiceLocationPolicy.NotAllowed`); der
 EF-Persistenzpfad konnte nie committen; der produktive Aspire-AppHost war nicht
-startfähig; und ein Aggregat war mit EF Core überhaupt nicht abbildbar (§5).
+startfähig; ein Aggregat war mit EF Core überhaupt nicht abbildbar (§5); und eine
+redelivered Create-Projektion machte eine Umbenennung im Read-Modell wieder rückgängig
+(§7).
 
 **Keiner dieser Fehler war durch Build oder Testsuite sichtbar.** Das ist die
 Rechtfertigung des Durchstichs in einem Satz.
@@ -109,9 +117,10 @@ Rechtfertigung des Durchstichs in einem Satz.
 
 ## 4. Stand
 
-Etappe 1 ist **abgeschlossen**, Arbeitsbaum sauber, **167 Tests grün**, Build ohne
-Warnungen. Vier davon sind Smoke-Tests, die ohne gesetztes `SAMPLE_API_URL`
-überspringen (siehe §11).
+Etappen 1 und 2 sind **abgeschlossen**, Arbeitsbaum sauber, **194 Tests grün**, Build
+ohne Warnungen. Neun davon sind Smoke-Tests gegen ein laufendes System, die ohne
+gesetzte `SAMPLE_*_API_URL` überspringen (siehe §11); mit laufendem AppHost laufen auch
+sie grün.
 
 ---
 
@@ -227,9 +236,9 @@ Zwei Entwurfsentscheidungen dabei:
   kommt ein Konsument hinzu, dann wandert er nach `Sample.Contracts` — erst dann hat
   ADR-0024 überhaupt einen zweiten Konsumenten zu bewerten.
 
-Werkzeug: `dotnet ef` läuft über ein **lokales** Tool-Manifest
-(`.config/dotnet-tools.json`, Version 10.0.10). Die global installierte 9.0.8 ist zu
-alt für die EF-10-Runtime.
+Werkzeug: `dotnet ef` muss in **Version 10** vorliegen — die global installierte 9.0.8
+ist zu alt für die EF-10-Runtime. Das lokale Tool-Manifest, das das früher sicherstellte,
+wurde in `7b22dc8` entfernt (siehe §7).
 
 ### Schritt 4 — **erledigt**
 
@@ -352,17 +361,98 @@ zurückkommt, gehört sie hinter `IsDevelopment()`.
 
 ---
 
-## 7. Etappe 2 — EventSourced (Marten)
+## 7. Etappe 2 — EventSourced (Marten) — **erledigt**
 
-Dieselbe Projektstruktur, `UseMartenEventSourcing` statt `UseEfCorePersistence`.
+Dieselbe Projektstruktur, dasselbe Vorgehen, ein Aggregat `Gadget` statt `Widget`.
+Der Unterschied im Produktionscode ist **eine Zeile**: `UseMartenEventSourcing(...)`
+statt `UseEfCorePersistence<TContext>(...)`.
 
-- Aggregat leitet von `EventSourcedAggregateRoot` ab (`Version`, `LoadFromHistory`).
-- **Vom EF-Mapping-Problem nicht betroffen** — Marten speichert Events, kein
-  Schlüssel-Mapping.
-- Migrations-Worker ist bewusst **asymmetrisch**: nur der Read-Kontext braucht
-  EF-Migrationen; Martens Schema und der Wolverine-Store kommen aus den Bibliotheken.
-  Wenn sich diese Asymmetrie unangenehm anfühlt, ist das eine Erkenntnis über unsere
-  Verdrahtung, nicht über Aspire.
+Was zusätzlich anders ist, ist bewusst gewählt, nicht erzwungen:
+
+- **Ein drittes Event `GadgetRetired` und eine Geschäftsregel.** Etappe 1 hatte nur eine
+  Validierungsregel, damit war der Pfad `BusinessRuleViolationException → FailureCategory.BusinessRule`
+  nie am laufenden System belegt. Jetzt ist er es (`FailedPrecondition` über gRPC).
+  Zurückziehen ist zudem eine Zustandsänderung, kein Löschen — passend zu ADR-0026 und
+  in einem Event Store ohnehin die einzige Option.
+- **Nur der Read-Kontext hat Migrationen.** Der Migrations-Worker ist deshalb halb so
+  groß wie sein Gegenstück, und die Write-Datenbank hat kein `__EFMigrationsHistory`.
+
+### Was das Aggregat angeht: die ADR-0025-Behauptung hält
+
+`Gadget` ist Zeile für Zeile so geschrieben wie ein state-stored Aggregat — dieselben
+`RaiseEvent`-Aufrufe, derselbe State-Fold, dieselben Regeln. Die Basisklasse trägt
+`Version` und `LoadFromHistory` und sonst nichts. Vom EF-Mapping-Problem (§5) ist die
+Seite gar nicht betroffen: Marten speichert Events, es gibt keinen Schlüssel zu mappen.
+
+Eine Nebenwirkung, die man kennen muss: `MartenEventSourcedRepository` verlangt
+`new()`, weil es die Rehydrierung als „leeres Aggregat + Stream falten" umsetzt. Der
+parameterlose Konstruktor ist also **Pflicht**, nicht Kosmetik.
+
+### Abnahmekriterien Etappe 2
+
+Alle am **laufenden System** geprüft.
+
+| #   | Nachweis                                                                            | Status     |
+| --- | ----------------------------------------------------------------------------------- | ---------- |
+| 1   | AppHost startet beide Services nebeneinander, alle Ressourcen healthy               | belegt     |
+| 2   | Migrations-Worker migriert **nur** die Read-DB und beendet sich                     | belegt     |
+| 3   | `CreateGadget` per gRPC liefert eine Id                                             | belegt     |
+| 4   | Streams `Gadget/{guid}` in `eventsourced_write.mt_streams`, Events in `mt_events`   | belegt     |
+| 5   | `wolverine_*`-Tabellen in **derselben** Datenbank wie der Event Store               | belegt     |
+| 6   | Read-Modell in `eventsourced_read.gadgets`, ohne Warten auf Polling                 | belegt     |
+| 7   | Zweimaliges Umbenennen: Stream wird geladen, gefaltet, auf Version 3 angehängt      | belegt     |
+| 8   | Leerer Name → `InvalidArgument`, **kein** Stream angelegt                           | belegt     |
+| 9   | Zweimaliges Zurückziehen → `FailedPrecondition` (Geschäftsregel, nicht Validierung) | belegt     |
+| 10  | Integration Event **tatsächlich am Broker**, Routing Key `sample.gadget-retired`    | belegt     |
+| 11  | `Program.cs` ohne Wolverine-Konfiguration außer `UseWolverine()`                    | **belegt** |
+
+Kriterium 11 ist das in Etappe 1 gescheiterte Kriterium. Auf der Marten-Seite hält
+ADR-0027 **vollständig**: der Host ruft `builder.Host.UseWolverine();` ohne Argument auf
+und startet. Marten bringt seinen Message Store über `IntegrateWithWolverine` aus der
+Service-Collection mit, also bleibt für den Host nichts übrig. Die Ausnahme im
+ADR-0027-Amendment ist damit nachweislich auf den EF-Core-Pfad begrenzt und keine
+allgemeine Schwäche der Verdrahtung.
+
+Kriterium 10 geht über das entsprechende Kriterium 9 aus Etappe 1 hinaus: dort war nur
+belegt, dass der Exchange **existiert**. Hier wurde eine Probe-Queue mit `sample.*`
+gebunden, ein Retire ausgelöst und die Nachricht aus der Queue gelesen — mit Routing
+Key, Correlation-Id und JSON-Payload. Das ist der erste echte Beleg, dass die
+Publish-Hälfte durchgängig funktioniert.
+
+### Befunde
+
+- **Event Sourcing löst die Reihenfolgefrage nicht.** Das war die Hoffnung aus §9: ein
+  event-sourced Aggregat *hat* eine Version, also könnten Projektionen endlich
+  ADR-0022s „per-aggregate order-aware" erfüllen. Empirisch falsch. Die Version steht in
+  `mt_events.version`, aber der Projektionshandler bekommt ein nacktes `IDomainEvent` —
+  im Event-JSON steht keine Sequenznummer. Die Sample-Projektionen behelfen sich mit
+  derselben fachlichen Ordnungsgröße wie auf der State-Stored-Seite. **Die
+  Architekturfrage bleibt offen und gilt für beide Persistenzstile gleichermaßen.**
+  Verschärfend: `Version` ist explizit implementiert, das Aggregat sieht sie also selbst
+  nicht und könnte sie nicht einmal freiwillig ins Event schreiben (nur über einen Cast
+  auf `IEventSourcedAggregateRoot<TKey>`).
+- **Ein echter Fehler, in beiden Samples.** Beim Schreiben der Projektionstests fiel auf,
+  dass die Create-Projektion ihren Namen bei jeder Zustellung zurückschrieb: eine
+  redelivered `WidgetCreated`/`GadgetCreated` machte damit eine bereits projizierte
+  Umbenennung rückgängig. Behoben (`0d83f8c`), indem die Create-Projektion denselben
+  fachlichen Ordinalwert prüft wie die Rename-Projektion. Mutationsprobe: Fix
+  zurückgenommen → zwei Tests rot.
+- **Wolverine-Tabellen liegen bei Marten im `public`-Schema** derselben Write-Datenbank
+  (`wolverine_*`), nicht in einem eigenen `wolverine`-Schema wie im EF-Pfad. Die Warnung
+  aus Etappe 1 („die EF-Migration darf das Wolverine-Schema nicht kennen") hat hier kein
+  Gegenstück, weil es keine Write-Migration gibt.
+- **Typisierte Schlüssel serialisieren ihre berechneten Member ins Event.** Im Store
+  steht `"GadgetId": {"Value": "…", "IsEmpty": false}` — `IsEmpty` ist eine berechnete
+  Eigenschaft und landet dauerhaft im Eventstrom. Harmlos beim Lesen, aber Events sind
+  unveränderlich: was einmal drinsteht, bleibt drin.
+- **Integration Events gehen mit `delivery_mode: 1` an RabbitMQ**, also nicht persistent.
+  Bis zur Übergabe schützt der Outbox; danach würde ein Broker-Neustart die Nachricht
+  verlieren.
+- **`.config/dotnet-tools.json` existiert nicht mehr** (in `7b22dc8` entfernt). Das
+  global installierte `dotnet-ef` ist 9.0.8 und damit zu alt für die EF-10-Runtime; die
+  Read-Migration wurde mit einem in ein temporäres Verzeichnis installierten
+  `dotnet-ef 10.0.10` erzeugt (`--tool-path`). Wer regelmäßig Migrationen scaffoldet,
+  sollte das Manifest wiederherstellen.
 
 ---
 
@@ -383,8 +473,16 @@ Erzwingt die Entscheidung, ob `BuildingBlocksOptions` ein
 `SubscribeToIntegrationEvents(...)` braucht — heute verdrahtet BuildingBlocks nur die
 Publish-Hälfte, der Konsument müsste Queue-Deklaration und Binding selbst machen.
 
+Nach Etappe 2 ist genau **diese** Hälfte alles, was noch fehlt: beide Services
+publizieren nachweislich auf den Topic Exchange (`sample.widget-created` bzw.
+`sample.gadget-retired`), und dass eine mit `sample.*` gebundene Queue die Nachrichten
+bekommt, wurde mit einer Probe-Queue von Hand belegt. Was fehlt, ist der Konsument im
+Produktionscode.
+
 Ausserdem zu prüfen: **at-least-once über die Servicegrenze** und ob die Projektionen
-tatsächlich idempotent sind.
+tatsächlich idempotent sind. Für die kontextinternen Projektionen ist das inzwischen
+durch Tests abgedeckt (`WidgetProjectionTests`, `GadgetProjectionTests`) — und genau
+dort steckte auch ein echter Fehler (§7).
 
 ---
 
@@ -401,12 +499,15 @@ tatsächlich idempotent sind.
 ### Aus Schritt 3
 
 - **Reihenfolge über Events hinweg ist durch nichts garantiert.** ADR-0022 verlangt
-  „per-aggregate order-aware" Projektionen, aber ein state-stored Aggregat hat **keine
-  Version** — nur `EventSourcedAggregateRoot` führt eine. Die Sample-Projektionen
-  behelfen sich mit `RenameCount` als fachlicher Ordnungsgröße; das ist kein
-  allgemeines Verfahren. **Offene Architekturfrage:** braucht jedes Domain Event eine
-  Sequenznummer pro Aggregat, damit Projektionen die ADR-0022-Regel überhaupt erfüllen
-  können?
+  „per-aggregate order-aware" Projektionen, aber der Handler bekommt ein nacktes
+  `IDomainEvent` ohne Sequenznummer. Etappe 2 hat gezeigt, dass Event Sourcing das
+  **nicht** löst: die Streamversion bleibt im Event Store, und `Version` ist auf dem
+  Aggregat explizit implementiert, also für die Domäne unsichtbar. Beide Samples behelfen
+  sich mit `RenameCount` als fachlicher Ordnungsgröße; das ist kein allgemeines
+  Verfahren, und für ein Event ohne solche Größe (`GadgetRetired`) trägt es nur, weil der
+  Zustandsübergang terminal ist. **Offene Architekturfrage, jetzt für beide
+  Persistenzstile:** braucht jedes Domain Event eine Sequenznummer pro Aggregat — und wenn
+  ja, wer stempelt sie, wo state-stored Aggregate gar keine Version führen?
 - **`Microsoft.EntityFrameworkCore.Design` verträgt kein `PrivateAssets="all"`** in
   einem Projekt, das von anderen referenziert wird — es kappt die transitive Kante zu
   `EntityFrameworkCore.Relational`, und Konsumenten scheitern zur Laufzeit mit
@@ -430,16 +531,32 @@ tatsächlich idempotent sind.
   ist die richtige Struktur, aber sobald der BFF ihn konsumiert, stellt sich die Frage
   nach einem geteilten Paket. Für das Integration Event ist sie noch ganz offen.
 
+### Aus Etappe 2
+
+- **Integration Events sind nicht persistent** (`delivery_mode: 1`). Der Outbox schützt
+  bis zur Übergabe an den Broker; danach verliert ein RabbitMQ-Neustart die Nachricht.
+  Zu entscheiden, ob die Publish-Defaults in `WolverineOptionsExtensions` auf persistente
+  Zustellung wechseln — und ob das mit Quorum-Queues auf Konsumentenseite einhergehen
+  muss.
+- **Typisierte Schlüssel serialisieren berechnete Member in den Eventstrom**
+  (`"GadgetId": {"Value": "…", "IsEmpty": false}`). Events sind unveränderlich, also ist
+  das eine dauerhafte Entscheidung. Ein `[JsonIgnore]` auf `IsEmpty` oder ein
+  Marten-Serializer-Konverter für `IEntityKey<>` wäre der naheliegende Weg — beides
+  betrifft BuildingBlocks, nicht den Sample.
+- **Optimistische Nebenläufigkeit ist auf der Marten-Seite verdrahtet, aber nicht
+  belegt.** Der Repository-Pfad hängt mit erwarteter Version an; dass ein Konflikt als
+  `FailureCategory.Conflict` beim Aufrufer ankommt, prüft bisher nur ein
+  BuildingBlocks-Integrationstest, kein Sample-Szenario.
+- **Der Migrations-Worker ist asymmetrisch** — nur der Read-Kontext hat Migrationen.
+  Praktisch unauffällig; ob es sich richtig anfühlt, dass die Write-Seite ihr Schema zur
+  Laufzeit selbst baut (Marten und Wolverine tun das beide), ist eine Entscheidung, die
+  spätestens beim ersten echten event-sourceten Service ansteht.
+
 ### Vorbestehend
 
 - **`ApplyEntityKeyConversions` erfasst keine Complex Types** — es läuft nur über
   `Model.GetEntityTypes()`. Nach der neuen Lösung nicht mehr akut, bleibt aber eine
   Lücke im Helper.
-- **`EfCoreMessageStoreRegistration`** — 70 Zeilen Reflection in Wolverine-Interna.
-  Nötig, weil container-registrierte `IWolverineExtension`s nach dem Provider-Bau
-  laufen und keine Services mehr beitragen können. Der Guard erkennt nur Form-, keine
-  Verhaltensänderungen. **Etappe 1 sollte beantworten, ob eine Zeile im Host das
-  ersetzen könnte** — dann fällt der Hack ersatzlos weg.
 - **Keine CI-Pipeline** — `.github/workflows/` ist leer. Wer eine anlegt, **muss**
   `VITALSYNC_REQUIRE_CONTAINERS=1` setzen, sonst überspringen alle
   Testcontainers-Tests still und der Lauf ist trotzdem grün.
@@ -486,6 +603,28 @@ Container-Tests in CI erzwingen:
 VITALSYNC_REQUIRE_CONTAINERS=1 dotnet test
 ```
 
+Beide Sample-Services starten (ein AppHost, zwei Services, ein Postgres-Server, ein
+RabbitMQ):
+
+```bash
+dotnet run --project samples/VitalSync.Samples.AppHost
+```
+
+Die Smoke-Tests laufen gegen das laufende System und überspringen ohne URL. Jeder
+Service hat seine **eigene** Variable — die Ports stehen in den `launchSettings.json`
+der beiden Api-Projekte (54230 bzw. 54240):
+
+```bash
+SAMPLE_STATESTORED_API_URL=https://localhost:54230 SAMPLE_EVENTSOURCED_API_URL=https://localhost:54240 dotnet test samples
+```
+
+EF-Migrationen scaffolden braucht `dotnet-ef` **10.x**; die global installierte 9.0.8
+reicht nicht und es gibt kein Tool-Manifest mehr. Ohne globalen Zustand anzufassen:
+
+```bash
+dotnet tool install dotnet-ef --version 10.0.10 --tool-path .tools
+```
+
 ---
 
 ## 12. Arbeitsweise, die sich bewährt hat
@@ -497,3 +636,6 @@ VITALSYNC_REQUIRE_CONTAINERS=1 dotnet test
   Fehlermeldungen sind aussagekräftiger als jede Herleitung.
 - **Kleine, einzeln verifizierte Commits.** Jeder Commit sollte für sich bauen und
   grün sein — sonst ist er nicht zurücknehmbar.
+- **Erst den unbequemen Test schreiben, dann die Projektion.** Beide echten Fehler in
+  Etappe 2 kamen aus Tests, die eine Zustellung wiederholen oder vertauschen. Eine
+  Projektion, die nur den Happy Path sieht, ist immer grün — auch wenn sie driftet.

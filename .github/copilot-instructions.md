@@ -45,6 +45,10 @@ VitalSync/
 │       ├── Nutrition/VitalSync.Nutrition.Api/
 │       ├── Fitness/VitalSync.Fitness.Api/
 │       └── Analytics/VitalSync.Analytics.Api/
+├── samples/                         # THROWAWAY walking skeleton — see WalkingSkeleton.md
+│   ├── VitalSync.Samples.AppHost/   # its own Aspire host; the production one must not depend on it
+│   ├── StateStored/                 # EF Core end-to-end slice (Widget)
+│   └── EventSourced/                # Marten end-to-end slice (Gadget)
 ├── docs/architecture/               # Architecture docs, ADRs (decisions/), glossary, user stories
 └── tests/VitalSync.Tests/           # Cross-cutting / integration tests
 ```
@@ -55,6 +59,7 @@ Guidance for finding things:
 - **Business logic** → the relevant service under `src/Services/<Domain>/`.
 - **UI** → `src/Frontend/`.
 - **Entry point / running the system** → `src/Aspire/`.
+- **How Building Blocks is actually consumed** → `samples/`. It is a deliberately business-empty vertical slice that exists to prove the wiring works, and it is meant to be deleted once it has answered its questions. Never add business value there, and never let production code depend on it. `WalkingSkeleton.md` records what it proved and what is still open.
 
 ## Architecture & communication rules (do not violate)
 
