@@ -17,6 +17,7 @@
     <Project Path="BuildingBlocks/tests/ExternalAssemblies/ValidHandlersFixture/ValidHandlersFixture.csproj" />
   </Folder>
   <Folder Name="/samples/">
+    <Project Path="samples/VitalSync.Sample.Contracts/VitalSync.Sample.Contracts.csproj" />
     <Project Path="samples/VitalSync.Samples.AppHost/VitalSync.Samples.AppHost.csproj" />
   </Folder>
   <Folder Name="/samples/EventSourced/">

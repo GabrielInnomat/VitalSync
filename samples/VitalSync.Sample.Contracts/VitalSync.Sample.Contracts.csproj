@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The IIntegrationEvent marker lives in Application; the [Topic] attribute is Wolverine's. That second
+         reference is the price of making the routing key part of the contract instead of deriving it from
+         the CLR namespace (ADR-0023 amendment) - a published contract that names its transport. -->
+    <ProjectReference Include="..\..\BuildingBlocks\src\BuildingBlocks.Application\BuildingBlocks.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WolverineFx" Version="6.23.0" />
+  </ItemGroup>
+
+</Project>
