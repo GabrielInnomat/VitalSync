@@ -1,12 +1,16 @@
-# CLAUDE.md
+# Claude instructions
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What VitalSync is
 
-A cloud-native, distributed platform unifying **nutrition**, **fitness**, and **health analytics** behind a single Blazor UI. Built as independent ASP.NET Core microservices using **DDD**, **CQRS**, and **selective Event Sourcing**.
+A cloud-native, distributed platform unifying **nutrition**, **fitness**, and
+**health analytics** behind a single Blazor UI. Built as independent ASP.NET Core
+microservices using **DDD**, **CQRS**, and **selective Event Sourcing**.
 
-Core principle: Technical/architectural decisions are mandatory and stable. Business/domain details are refined iteratively as the project evolves (it is early-stage: `src/Services/*` currently contain only placeholder API projects). When a change affects architecture, add or superseed an ADR.
+> Core principle: **the architecture is fixed, the domain is fluid.**
+> Technical/architectural decisions are mandatory. Business/domain details are
+> refined iteratively. When a change affects architecture, add or update an ADR.
 
 ## Build, test, run
 
@@ -30,7 +34,7 @@ VitalSync/
 │   ├── src/
 │   │   ├── BuildingBlocks.Domain/          # Aggregates, entities, domain events, typed IDs, business rules
 │   │   ├── BuildingBlocks.Application/     # CQRS abstractions (commands/queries/handlers), Result/Failure
-│   │   └── BuildingBlocks.Infrastructure/  # DI-based dispatcher, event sourcing (Marten), EF Core persistence,
+│   │   ├── BuildingBlocks.Infrastructure/  # Cross-cutting infrastructure (e.g. DI-based dispatcher, event sourcing via Marten, persistence, messaging)
 │   │                                       # outbox, projections, Wolverine/RabbitMQ transport
 │   └── tests/                      # Mirrors src/ with *.Tests projects (Domain.Tests, Application.Tests)
 ├── src/                             # VitalSync APPLICATION
@@ -39,7 +43,8 @@ VitalSync/
 │   ├── Frontend/VitalSync.Web/      # Blazor client (UI only — no business logic)
 │   └── Services/                    # One folder per microservice (currently placeholder Api projects)
 │       ├── Nutrition/VitalSync.Nutrition.Api/
-│       └── Fitness/VitalSync.Fitness.Api/
+│       ├── Fitness/VitalSync.Fitness.Api/
+│       └── Analytics/VitalSync.Analytics.Api/
 ├── docs/architecture/               # Architecture docs, ADRs (decisions/), glossary, user stories
 └── tests/VitalSync.Tests/           # Cross-cutting / integration tests
 ```
@@ -54,59 +59,168 @@ Guidance for finding things:
 ## Architecture & communication rules (do not violate)
 
 - The Blazor frontend communicates **exclusively** through the **BFF**.
-- The BFF exposes **REST** to the frontend and talks to microservices via **code-first gRPC**.
-- Microservices **never** call each other synchronously. All inter-service communication is **asynchronous**, via RabbitMQ/Wolverine.
-- Layer separation (Domain / Application / Infrastructure / Persistence) is mandatory; dependencies point inward — the domain has no infrastructure dependencies.
+- The BFF exposes **REST** to the frontend and talks to microservices via
+  **code-first gRPC**.
+- Microservices **never** call each other synchronously. All inter-service
+  communication is **asynchronous** via RabbitMQ/Wolverine.
+- Layer separation (Domain / Application / Infrastructure / Persistence) is
+  mandatory; keep dependencies pointing inward (domain has no infrastructure deps).
+- **Contract placement** (ADR-0024): a contract lives in the **innermost layer
+  whose language it speaks and that actually consumes it** — decided by its
+  _consumer_, not its implementor (implementations always live outside, per DIP).
+  Domain vocabulary (`IDomainEvent`, business rules, `IClock`) → `Domain`;
+  orchestration-facing contracts (`IRepository`, `IUnitOfWork`,
+  projection-handler / event-publisher abstractions, integration-event marker) →
+  `Application`; **all implementations** → `Infrastructure`, which defines no
+  use-case contracts of its own. New contract? Place it by asking who consumes it.
 
-See `docs/architecture/communication.md`.
+See `docs/architecture/communication.md` and the ADRs below.
 
 ## Technology stack
 
-| Concern                 | Choice                                                                                                                                   |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Orchestration           | .NET Aspire 13                                                                                                                           |
-| Frontend                | Blazor (UI only)                                                                                                                         |
-| Backend-for-Frontend    | REST (to frontend) + code-first gRPC (to services)                                                                                       |
-| Microservices           | ASP.NET Core, one per business area                                                                                                      |
-| Inter-service messaging | RabbitMQ via Wolverine (ADR-0023, supersedes ADR-0004); transport-only, not the CQRS mediator                                            |
-| Persistence             | EF Core on PostgreSQL by default; Marten (event sourcing) on PostgreSQL where ES adds value (ADR-0019/0020)                              |
-| Database topology       | PostgreSQL; a write + read database pair per bounded context (ADR-0021); shared server now, server-per-context possible later (ADR-0020) |
-| Read models             | Event-driven projections in each context's read DB via an outbox-backed publisher (ADR-0022)                                             |
-| Patterns                | DDD, CQRS, Event Sourcing (selective)                                                                                                    |
-| Testing                 | xUnit (incl. built-in asserts), NSubstitute, EF Core InMemory — **no FluentAssertions** (ADR-0014)                                       |
+| Concern                 | Choice                                                                                                                 |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Orchestration           | .NET Aspire 13                                                                                                         |
+| Frontend                | Blazor                                                                                                                 |
+| Backend-for-Frontend    | REST (to frontend) + code-first gRPC (to services)                                                                     |
+| Microservices           | ASP.NET Core, one per bounded context                                                                                  |
+| Inter-service messaging | RabbitMQ via Wolverine                                                                                                 |
+| Persistence             | EF Core on PostgreSQL by default; Marten (event sourcing) on PostgreSQL where ES adds value                            |
+| Database topology       | PostgreSQL; a **write + read database pair** per bounded context; shared server now, server-per-context possible later |
+| Read models             | Event-driven projections in each context's read DB via an outbox-backed publisher                                      |
+| Patterns                | DDD, CQRS, Event Sourcing (selective)                                                                                  |
+| Testing                 | xUnit (incl. built-in asserts), NSubstitute, EF Core InMemory — **no FluentAssertions** (ADR-0014)                     |
 
-## Domain / DDD conventions (from accepted ADRs)
+Language: **C#**. Solution file: `VitalSync.slnx`. Shared build config in
+`Directory.Build.props` and `.editorconfig`.
 
-- Strongly typed aggregate identifiers (ADR-0005) — no raw `Guid`/`int` IDs.
-- The aggregate owns its domain events (ADR-0006); read-only vs. managed exposure per ADR-0007.
-- Entity identity and equality follow ADR-0008; business rules/domain validation follow ADR-0009.
-- Aggregates use an aggregate state object (ADR-0010).
-- Event sourcing is optional, via a split aggregate hierarchy — `AggregateRoot` vs `EventSourcedAggregateRoot` (ADR-0012, supersedes ADR-0011). Apply ES only where it adds business value.
+## Business domains
+
+- **Nutrition** — ingredients & nutritional values, recipes, meal plans, shopping
+  lists, nutrient-intake calculation.
+- **Fitness** — exercises, workout plans, workout-session tracking, energy/calorie
+  expenditure.
+- **Analytics** — insights derived from nutrition and fitness data.
+
+Bounded-context decomposition is iterative — see `docs/architecture/domain-model.md`.
+
+## Domain / DDD conventions
+
+- Use **strongly typed aggregate identifiers** — no raw `Guid`/`int` IDs.
+- The **aggregate owns its domain events** (ADR-0006); expose read-only vs. managed
+  domain events per ADR-0007.
+- **Entity identity and equality** follow ADR-0008.
+- **Business rules and domain validation** follow ADR-0009.
+- Aggregates use an **aggregate state object** (ADR-0010).
+- **One aggregate authoring model** — every aggregate derives from the state-fold
+  base `AggregateRoot<TKey, TState>` and mutates only via `RaiseEvent`; the
+  **event-sourced base is additive** (`Version` + `LoadFromHistory` only), per
+  ADR-0025 (which supersedes ADR-0012). Only apply ES where the event history
+  carries business value.
+- **One repository contract**: `IRepository<TAggregate, TKey>` with `GetByIdAsync`
+  and `AddAsync` only (ADR-0026) — no `Remove` (removal is a soft-delete state
+  change), no `Save`/`Update` (retrieved aggregates are tracked; changes flow
+  through the unit of work). Both EF Core and Marten implement the same contract.
 
 ## Application / CQRS conventions (from accepted ADRs)
 
-- CQRS abstractions and the `Result`/`Failure` model live in `BuildingBlocks.Application` (depends only on `Domain`). A **hand-rolled dispatcher** is used instead of MediatR (ADR-0015); the DI-based implementation (`Sender`, pipeline behaviors) lives in `BuildingBlocks.Infrastructure`.
+- CQRS abstractions and the `Result` / `Failure` model live in
+  **`BuildingBlocks.Application`** (depends only on `Domain`). A **hand-rolled
+  dispatcher** is used instead of MediatR (ADR-0015); the DI-based implementation
+  lives in `BuildingBlocks.Infrastructure`.
 - Handlers and dispatch are **async-only** with a `CancellationToken`; no sync overloads.
-- **Commands** return `Result` or `Result<T>` (create returns the new typed id, e.g. `Result<RecipeId>`; delete/void returns `Result`). **Queries** return `Result<T>`.
-- Expected domain errors (`BusinessRuleViolationException`, `DomainValidationException`) are translated to `Result.Failure` by an Application pipeline behavior (`ExceptionToResultBehavior`); unexpected errors bubble to a thin global handler (ADR-0017). `FailureCategory` is one of `Validation`, `BusinessRule`, `NotFound`, `Conflict` — transport status mapping is owned by the BFF/service host, never by `Application`.
-- Pipeline behaviors run in explicit DI registration order (see `ServiceCollectionExtensions`).
-- Contracts live in the innermost layer that consumes them (ADR-0024).
+- **Handler registration** via `BuildingBlocksOptions.AddHandlersFrom(assembly)` is
+  idempotent for multi-handler contracts (`IProjectionHandler<>`,
+  `IIntegrationEventMapper`) and enforces **exactly one** handler per command/query —
+  two different handlers for the same `ICommand`/`IQuery` throw at registration, not
+  at request time. **Startup handler validation is on by default**: a hosted service
+  registered by `AddBuildingBlocks` verifies at host start that every command/query
+  in the scanned assemblies resolves to a handler (fail-fast instead of
+  "no service registered" on the first request) and rejects request types that
+  implement **more than one** `ICommand<>`/`IQuery<>` contract — a command or query
+  has exactly one result type; opt out only deliberately via
+  `options.ValidateHandlersOnStart = false`.
+- **Commands** return `Result` or `Result<T>` (a **create** returns the new typed id,
+  e.g. `Result<RecipeId>`; **delete/void** returns `Result`). **Queries** return `Result<T>`.
+- Expected domain errors (`BusinessRuleViolationException`, `DomainValidationException`)
+  are **translated to `Result.Failure`** by an Application pipeline behavior; unexpected
+  errors bubble to a thin global handler (ADR-0017). `FailureCategory` is one of
+  `Validation`, `BusinessRule`, `NotFound`, `Conflict` — transport status mapping is
+  owned by the BFF/service host, never by `Application`.
+- Pipeline behaviors run in an **explicit numeric order**: logging is outermost so
+  expected domain errors are logged as `Warning` (not `Error`), then exception-to-`Result`
+  translation, then the unit of work closest to the handler. Built-ins occupy fixed
+  slots; services add their own via `BuildingBlocksOptions.AddPipelineBehavior(type, order)`
+  (negative runs before built-ins, higher runs after).
 
 ## Persistence & event sourcing (from accepted ADRs)
 
 - EF Core is the default; Event Sourcing is selective, applied only where the event history carries business value (ADR-0012).
-- Everything runs on PostgreSQL (ADR-0020). State-stored contexts use EF Core via Npgsql; event-sourced contexts use Marten on PostgreSQL (ADR-0019).
-- Each bounded context owns a write + read database pair (ADR-0021). The write database holds authoritative state (EF Core tables, or Marten event streams); the read database holds query-optimized read models. Databases are never shared across contexts — no cross-database foreign keys, joins, or transactions (cross-context consistency is via integration events). In Aspire, one server resource hosts two `AddDatabase(...)` calls per context (e.g. `nutrition-write`, `nutrition-read`), each with its own connection string. Moving a database to its own server later is a sanctioned, non-breaking migration touching no Domain/Application/Infrastructure code.
-- The event store is Marten on PostgreSQL (ADR-0019), used as a **raw event store**: `MartenEventSourcedRepository` appends uncommitted domain events (optimistic concurrency on `Version`) and, on load, fetches the raw stream and folds it through the aggregate's own `LoadFromHistory`. Marten's convention-based `Apply`-on-aggregate aggregation is **not** used, so the domain (ADR-0010/0012) stays untouched.
-- The event store and the state-stored store never co-locate in the same database, even on the same server.
-- Read models are event-driven via an outbox-backed publisher (ADR-0022), used uniformly for ES and state-stored contexts: domain events flow through Wolverine's transactional outbox in the write transaction; after commit the outbox is flushed immediately (EF Core atomically via `SaveChangesAndFlushMessagesAsync`; Marten via the flush-on-commit listener that `IMartenOutbox.Enroll` registers — the durability agent's polling is crash-recovery only) and `DomainEventEnvelopeHandler` invokes `Publisher`, which dispatches events to in-context `IProjectionHandler`s (via `ProjectionRunner`, updating the read DB) and, where selected, to the integration-event path on RabbitMQ via Wolverine. Integration-event publication is bound to the handler's own `IMessageContext` through the explicit `IIntegrationEventSink` parameter (ADR-0022 amendment; never a DI-resolved bus — that produced duplicates and broke trace correlation, see IMP-04). Wolverine is transport-only, not the CQRS mediator (ADR-0015/0023). Delivery is **at-least-once**, so projection handlers must be idempotent and per-aggregate order-aware (track a last-processed position/version); reads are eventually consistent with writes.
-- Read models are owned by each service, not a Building Block — the service owns its read-model schema, projection handlers, and queries; Infrastructure ships only the plumbing (Publisher, outbox, dispatch loop, projection runner, transport). Read models are derived and rebuildable by replaying events / re-running projections.
-- In-context projections use domain events directly; integration events (RabbitMQ) are the only cross-context signal — never read another context's database.
+- **Everything runs on PostgreSQL** — the single relational engine (ADR-0020).
+  State-stored contexts use **EF Core via the Npgsql provider**; event-sourced
+  contexts use **Marten on PostgreSQL** (ADR-0019).
+- **Each bounded context owns a write + read database pair** (ADR-0021). The **write
+  database** holds the authoritative state (EF Core tables, or Marten event streams);
+  the **read database** holds query-optimized read models. Databases are **never
+  shared across contexts**, with **no cross-database foreign keys, joins, or
+  transactions** (cross-context consistency is via integration events). Today all
+  context databases live on **one shared PostgreSQL server** (in Aspire: one server
+  resource with **two `AddDatabase(...)` calls per context**, e.g. `nutrition-write`
+  and `nutrition-read`, each with its own named connection string). Moving either
+  database of a context onto its **own dedicated server** later is a sanctioned,
+  non-breaking migration — a connection-string change plus a data move, touching no
+  Domain/Application/Infrastructure code (ADR-0020/0021).
+- The **event store is Marten on PostgreSQL** (ADR-0019), used as a **raw event store**:
+  the event-sourced repository in `BuildingBlocks.Infrastructure` tracks aggregates
+  (loaded and added) and the Marten unit of work appends their uncommitted domain
+  events at commit (optimistic concurrency on `Version`); on load, the repository
+  fetches the raw stream and folds it through the aggregate's own `LoadFromHistory`.
+  Marten's convention-based `Apply`-on-aggregate aggregation is **not** used, so the
+  domain (ADR-0010 / ADR-0025) stays untouched.
+- The **event store and the state-stored store never co-locate in the same database**,
+  even on the same server, so they can move and scale independently.
+- **Read models are event-driven, via an outbox-backed publisher** (ADR-0022), used
+  uniformly for ES and state-stored contexts: domain events are written to a
+  **transactional outbox** in the write transaction; after commit the **Publisher**
+  (in `BuildingBlocks.Infrastructure`) drains the outbox and dispatches events to
+  **in-context projection handlers** (updating the read DB) and, where selected, to
+  the **integration-event path** on RabbitMQ via **Wolverine** (the same outbox
+  already required for integration events is reused; Wolverine is transport-only,
+  **not** the CQRS mediator — ADR-0015/0023). Integration-event publication is
+  **bound to the handler's own `IMessageContext`** via the explicit
+  `IIntegrationEventSink` parameter on `IDomainEventPublisher` (ADR-0022
+  amendment) — never a DI-resolved `IMessageBus`, which produces an un-enrolled
+  context (duplicates on redelivery, broken trace correlation). Both persistence
+  paths **flush the outbox immediately after a successful commit** (EF Core
+  atomically via `SaveChangesAndFlushMessagesAsync`; Marten via the flush-on-commit
+  listener that `IMartenOutbox.Enroll` registers) — the durability agent's polling
+  is crash-recovery only. Delivery is **at-least-once**, so projection handlers
+  **must be idempotent and per-aggregate order-aware** (track a last-processed
+  position/version); reads are **eventually consistent** with writes.
+- **Read models are owned by each service, not a Building Block** — the service owns
+  its read-model schema, projection handlers, and queries; Infrastructure ships only
+  the plumbing (Publisher, outbox, dispatch loop, projection runner, transport). Read
+  models are **derived and rebuildable** by replaying events / re-running projections.
+- **In-context** projections use **domain** events directly; **integration** events
+  (RabbitMQ) are the **only** cross-context signal — never read another context's
+  database.
+- **Broker topology** (ADR-0023 amendment): one topic exchange
+  `vitalsync.integration-events` for the whole platform. The publishing rule matches
+  `MessagesImplementing<IIntegrationEvent>()` — **never** all messages, so
+  `DomainEventEnvelope` cannot leak onto the broker. Every integration event **must**
+  carry `[Topic("<context>.<event>")]` in kebab-case (`nutrition.recipe-created`): the
+  routing key is part of the published contract, not derived from the CLR namespace.
+  Consumers own queue declaration and binding (`nutrition.*`); Building Blocks wires
+  the **publishing half only**. Beware: Wolverine **silently discards** a message with
+  no route, so a missing rule loses events without any error.
+- **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
+  and the event schema is unchanged, so snapshots can be added per context later with
+  **no event migration**.
 - ADR-0027 has exactly one exception (amended 2026-08-01): a **state-stored** host must call `opts.UseBuildingBlocksEfCorePersistence(writeConnectionString)` inside its own `UseWolverine(...)`. Wolverine 3.0 forbids a container-registered `IWolverineExtension` from modifying the service collection, and both halves of the EF outbox do that. Everything else stays automatic, and event-sourced hosts need nothing.
-- Broker topology (ADR-0023 amendment): all integration events go to the single topic exchange `vitalsync.integration-events`. The publishing rule matches `MessagesImplementing<IIntegrationEvent>()` — never all messages, so `DomainEventEnvelope` cannot leak onto the broker. Every integration event **must** carry `[Topic("<context>.<event>")]` in kebab-case (e.g. `nutrition.recipe-created`); the routing key is part of the published contract, not derived from the namespace. Consumers own queue declaration and binding (`nutrition.*`); Building Blocks wires the publishing half only. Note that Wolverine silently discards messages with no route — a missing routing rule loses events without an error.- Snapshotting is deferred but additive: a Marten snapshot is a separate document and the event schema is unchanged, so snapshots can be added per context later with no event migration.
-- PostgreSQL is provisioned as a first-party .NET Aspire resource.
+- PostgreSQL is provisioned as a first-party **.NET Aspire** resource.
 
-ADRs are immutable once accepted; to change a decision, add a superseding ADR. Index: `docs/architecture/decisions/README.md`.
+ADRs are immutable once accepted; to change a decision, add a superseding ADR.
+Index: `docs/architecture/decisions/README.md`.
 
 ## XML documentation conventions (ADR-0013)
 
@@ -120,9 +234,15 @@ ADRs are immutable once accepted; to change a decision, add a superseding ADR. I
 - Frameworks: **xUnit** (including built-in `Assert.*`), **NSubstitute**, **EF Core InMemory**. Do **not** use FluentAssertions — removed for licensing reasons (ADR-0014).
 - **Testcontainers (PostgreSQL)** backs the `BuildingBlocks.Infrastructure` integration tests (Marten optimistic concurrency, strongly-typed key persistence); guard them with `Skip`/`Assert.SkipUnless` so they skip when Docker is unavailable instead of failing.
 - Test projects mirror source structure 1:1 (e.g. `BuildingBlocks.Domain.Tests` for `BuildingBlocks.Domain`); domain tests use lightweight hand-written test doubles (`TestDoubles/`) rather than mocks — the domain has no infrastructure dependencies to mock. NSubstitute is reserved for application/persistence/messaging tests.
-- Categories: unit, domain, application-layer, persistence, integration, component-communication. See `docs/architecture/testing-strategy.md`.
 - Assert observable behavior, not internal details (e.g. "creating a recipe raises a `RecipeCreated` event").
 - Add/extend tests alongside any behavioral change.
+- Fixture types that must live **outside** the test assembly (e.g. for assembly-scanning
+  tests) go in a dedicated project under
+  `BuildingBlocks/tests/ExternalAssemblies/<ShortName>Fixture/` — keep folder/project names
+  **short** (Windows `MAX_PATH`), reference them from the test project via `ProjectReference`,
+  add them to `VitalSync.slnx`, no XML docs. See `docs/architecture/testing-strategy.md`.
+- Strategy covers unit, integration, domain, application-layer, persistence, and
+  component-communication tests. See `docs/architecture/testing-strategy.md`.
 
 ## When contributing
 
@@ -134,16 +254,20 @@ ADRs are immutable once accepted; to change a decision, add a superseding ADR. I
 6. Document `BuildingBlocks/src/*` per the XML documentation conventions (ADR-0013); don't add XML docs to tests or service code.
 7. If a change affects architecture, add or update an ADR using the template in `docs/architecture/decisions/README.md`.
 8. Match existing style; respect `.editorconfig` and `Directory.Build.props`.
-9. Always publish changes directly to the `main` branch.
+9. **Always commit and push directly to the `main` branch** — never work on separate branches, and never ask which branch to use; `main` is always the target.
+10. Always update the instruction files in `.github/*.md` and `.claude/*.md` if you discover a gap or ambiguity in the guidance.
+11. If you are unsure about a decision, **always ask a human** — Copilot is not the arbiter of architecture or domain rules.
+12. Always use short and clear commit messages.
+13. If you write code, always add or update unit tests / integration tests / architecture tests, and make sure they pass before committing.
+14. Always check all `*.md` files in the repository and update them if needed.
 
 ## Key documentation
 
 - Architecture overview — `docs/architecture/overview.md`
 - Communication — `docs/architecture/communication.md`
-- Building Blocks — `docs/architecture/building-blocks.md` (+ `-domain.md`, `-application.md`, `-infrastructure.md`)
+- Building Blocks — `docs/architecture/building-blocks.md`
 - Domain model — `docs/architecture/domain-model.md`
 - CQRS & Event Sourcing — `docs/architecture/cqrs-and-event-sourcing.md`
 - Testing strategy — `docs/architecture/testing-strategy.md`
 - ADRs — `docs/architecture/decisions/README.md`
 - Glossary — `docs/glossary.md`
-- User stories — `docs/userStories/`

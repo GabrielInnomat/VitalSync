@@ -1,8 +1,6 @@
-# Copilot instructions — VitalSync
+# Copilot instructions
 
-These instructions orient Copilot (chat and coding agent) so it can navigate and
-contribute to VitalSync **without rediscovering the architecture file-by-file**.
-Read this first, then consult the linked docs before making changes.
+This file provides guidance to Copilot (chat and coding agent) when working with code in this repository.
 
 ## What VitalSync is
 
@@ -14,63 +12,49 @@ microservices using **DDD**, **CQRS**, and **selective Event Sourcing**.
 > Technical/architectural decisions are mandatory. Business/domain details are
 > refined iteratively. When a change affects architecture, add or update an ADR.
 
-## Tech stack
+## Build, test, run
 
-| Concern                 | Choice                                                    |
-| ----------------------- | --------------------------------------------------------- |
-| Orchestration           | .NET Aspire 13                                            |
-| Frontend                | Blazor (UI only)                                         |
-| Backend-for-Frontend    | REST (to frontend) + code-first gRPC (to services)      |
-| Microservices           | ASP.NET Core, one per business area                      |
-| Inter-service messaging | RabbitMQ via Wolverine (MIT; runs side-by-side with Marten, ADR-0023) |
-| Persistence             | EF Core on PostgreSQL; Event Sourcing via Marten on PostgreSQL where it adds business value (ADR-0019/0020) |
-| Database topology       | PostgreSQL; a **write + read database pair** per bounded context (ADR-0021); shared server now, server-per-context possible later (ADR-0020) |
-| Read models             | Event-driven projections in each context's read DB via an outbox-backed publisher (ADR-0022) |
-| Patterns                | DDD, CQRS, Event Sourcing (selective)                    |
-| Testing                 | xUnit (incl. built-in asserts), NSubstitute, EF Core InMemory |
+```bash
+dotnet build                                        # build the solution (VitalSync.slnx)
+dotnet test                                         # run all tests
+dotnet test --filter "FullyQualifiedName~AggregateRootTests"   # run a single test class
+dotnet test BuildingBlocks/tests/BuildingBlocks.Domain.Tests   # run one test project
+dotnet run --project src/Aspire/VitalSync.AppHost   # run the full system via Aspire
+```
 
-Language: **C#**. Solution file: `VitalSync.slnx`. Shared build config in
-`Directory.Build.props` and `.editorconfig`.
+Prerequisites: .NET SDK aligned with .NET Aspire 13, the Aspire 13 workload, and Docker (for messaging/database infrastructure).
 
-## Repository map (where to look)
+Global build settings (`Directory.Build.props`) apply solution-wide: nullable + implicit usings enabled, `latest-all` analysis level, **warnings treated as errors**, and `GenerateDocumentationFile` on. Respect `.editorconfig` at each level (root, `src/`, `tests/`, and a stricter one under `BuildingBlocks/src/*` — see XML docs below).
+
+## Repository map
 
 ```text
 VitalSync/
 ├── BuildingBlocks/                 # Reusable, VitalSync-INDEPENDENT platform
 │   ├── src/
-│   │   ├── BuildingBlocks.Domain/          # Aggregates, entities, domain events, IDs, rules
-│   │   ├── BuildingBlocks.Application/      # CQRS abstractions (commands/queries/handlers), Result/Failure
+│   │   ├── BuildingBlocks.Domain/          # Aggregates, entities, domain events, typed IDs, business rules
+│   │   ├── BuildingBlocks.Application/     # CQRS abstractions (commands/queries/handlers), Result/Failure
 │   │   ├── BuildingBlocks.Infrastructure/  # Cross-cutting infrastructure (e.g. DI-based dispatcher, event sourcing via Marten, persistence, messaging)
-│   └── tests/                          # Mirrors src/ with *.Tests projects
-├── src/                            # VitalSync APPLICATION
-│   ├── Aspire/                     # .NET Aspire AppHost & ServiceDefaults (entry point)
-│   ├── Bff/                        # Backend-for-Frontend (REST out, gRPC in)
-│   ├── Frontend/                   # Blazor client (UI only)
-│   └── Services/                   # One folder per microservice
-│       ├── Nutrition/
-│       ├── Fitness/
-│       └── Analytics/
-├── docs/                           # Architecture, ADRs, glossary, user stories
-└── tests/                          # Cross-cutting / integration tests
+│   │                                       # outbox, projections, Wolverine/RabbitMQ transport
+│   └── tests/                      # Mirrors src/ with *.Tests projects (Domain.Tests, Application.Tests)
+├── src/                             # VitalSync APPLICATION
+│   ├── Aspire/                      # .NET Aspire AppHost & ServiceDefaults (entry point)
+│   ├── Bff/                         # Backend-for-Frontend (REST out, gRPC in)
+│   ├── Frontend/VitalSync.Web/      # Blazor client (UI only — no business logic)
+│   └── Services/                    # One folder per microservice (currently placeholder Api projects)
+│       ├── Nutrition/VitalSync.Nutrition.Api/
+│       ├── Fitness/VitalSync.Fitness.Api/
+│       └── Analytics/VitalSync.Analytics.Api/
+├── docs/architecture/               # Architecture docs, ADRs (decisions/), glossary, user stories
+└── tests/VitalSync.Tests/           # Cross-cutting / integration tests
 ```
 
 Guidance for finding things:
-- **Shared/reusable concepts** (base aggregate, domain event, typed IDs, CQRS
-  interfaces, `Result`) → `BuildingBlocks/src/...`. These must stay framework-agnostic and
-  independent of VitalSync.
+
+- **Shared/reusable concepts** (base aggregate, domain event, typed IDs, CQRS interfaces, `Result`) → `BuildingBlocks/src/...`. Must stay framework-agnostic and independent of VitalSync itself.
 - **Business logic** → the relevant service under `src/Services/<Domain>/`.
-- **UI** → `src/Frontend/` (never put business logic here).
+- **UI** → `src/Frontend/`.
 - **Entry point / running the system** → `src/Aspire/`.
-
-## Business domains
-
-- **Nutrition** — ingredients & nutritional values, recipes, meal plans, shopping
-  lists, nutrient-intake calculation.
-- **Fitness** — exercises, workout plans, workout-session tracking, energy/calorie
-  expenditure.
-- **Analytics & Reporting** — insights derived from nutrition and fitness data.
-
-Bounded-context decomposition is iterative — see `docs/architecture/domain-model.md`.
 
 ## Architecture & communication rules (do not violate)
 
@@ -78,7 +62,7 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 - The BFF exposes **REST** to the frontend and talks to microservices via
   **code-first gRPC**.
 - Microservices **never** call each other synchronously. All inter-service
-  communication is **asynchronous** via RabbitMQ/Wolverine .
+  communication is **asynchronous** via RabbitMQ/Wolverine.
 - Layer separation (Domain / Application / Infrastructure / Persistence) is
   mandatory; keep dependencies pointing inward (domain has no infrastructure deps).
 - **Contract placement** (ADR-0024): a contract lives in the **innermost layer
@@ -92,9 +76,37 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 
 See `docs/architecture/communication.md` and the ADRs below.
 
-## Domain / DDD conventions (from accepted ADRs)
+## Technology stack
 
-- Use **strongly typed aggregate identifiers** (ADR-0005) — no raw `Guid`/`int` IDs.
+| Concern                 | Choice                                                                                                                  |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Orchestration           | .NET Aspire 13                                                                                                          |
+| Frontend                | Blazor                                                                                                                  |
+| Backend-for-Frontend    | REST (to frontend) + code-first gRPC (to services)                                                                      |
+| Microservices           | ASP.NET Core, one per bounded context                                                                                   |
+| Inter-service messaging | RabbitMQ via Wolverine                                                                                                  |
+| Persistence             | EF Core on PostgreSQL by default; Marten (event sourcing) on PostgreSQL where ES adds value                             |
+| Database topology       | PostgreSQL; a **write + read database pair** per bounded context; shared server now, server-per-context possible later  |
+| Read models             | Event-driven projections in each context's read DB via an outbox-backed publisher                                       |
+| Patterns                | DDD, CQRS, Event Sourcing (selective)                                                                                   |
+| Testing                 | xUnit (incl. built-in asserts), NSubstitute, EF Core InMemory — **no FluentAssertions** (ADR-0014)                      |
+
+Language: **C#**. Solution file: `VitalSync.slnx`. Shared build config in
+`Directory.Build.props` and `.editorconfig`.
+
+## Business domains
+
+- **Nutrition** — ingredients & nutritional values, recipes, meal plans, shopping
+  lists, nutrient-intake calculation.
+- **Fitness** — exercises, workout plans, workout-session tracking, energy/calorie
+  expenditure.
+- **Analytics** — insights derived from nutrition and fitness data.
+
+Bounded-context decomposition is iterative — see `docs/architecture/domain-model.md`.
+
+## Domain / DDD conventions
+
+- Use **strongly typed aggregate identifiers** — no raw `Guid`/`int` IDs.
 - The **aggregate owns its domain events** (ADR-0006); expose read-only vs. managed
   domain events per ADR-0007.
 - **Entity identity and equality** follow ADR-0008.
@@ -126,8 +138,8 @@ See `docs/architecture/communication.md` and the ADRs below.
   in the scanned assemblies resolves to a handler (fail-fast instead of
   "no service registered" on the first request) and rejects request types that
   implement **more than one** `ICommand<>`/`IQuery<>` contract — a command or query
-  has exactly one result type (IMP-06); opt out only deliberately via
-  `options.ValidateHandlersOnStart = false` (IMP-05).
+  has exactly one result type; opt out only deliberately via
+  `options.ValidateHandlersOnStart = false`.
 - **Commands** return `Result` or `Result<T>` (a **create** returns the new typed id,
   e.g. `Result<RecipeId>`; **delete/void** returns `Result`). **Queries** return `Result<T>`.
 - Expected domain errors (`BusinessRuleViolationException`, `DomainValidationException`)
@@ -143,8 +155,7 @@ See `docs/architecture/communication.md` and the ADRs below.
 
 ## Persistence & event sourcing (from accepted ADRs)
 
-- **EF Core is the default**; **Event Sourcing is selective**, applied only where the
-  event history carries business value (ADR-0025).
+- EF Core is the default; Event Sourcing is selective, applied only where the event history carries business value (ADR-0012).
 - **Everything runs on PostgreSQL** — the single relational engine (ADR-0020).
   State-stored contexts use **EF Core via the Npgsql provider**; event-sourced
   contexts use **Marten on PostgreSQL** (ADR-0019).
@@ -179,14 +190,12 @@ See `docs/architecture/communication.md` and the ADRs below.
   **bound to the handler's own `IMessageContext`** via the explicit
   `IIntegrationEventSink` parameter on `IDomainEventPublisher` (ADR-0022
   amendment) — never a DI-resolved `IMessageBus`, which produces an un-enrolled
-  context (duplicates on redelivery, broken trace correlation; see IMP-04 in
-  `Improvements.md`). Both persistence paths **flush the
-  outbox immediately after a successful commit** (EF Core atomically via
-  `SaveChangesAndFlushMessagesAsync`; Marten via the flush-on-commit listener that
-  `IMartenOutbox.Enroll` registers) — the durability agent's polling is
-  crash-recovery only. Delivery is **at-least-once**, so
-  projection handlers **must
-  be idempotent and per-aggregate order-aware** (track a last-processed
+  context (duplicates on redelivery, broken trace correlation). Both persistence
+  paths **flush the outbox immediately after a successful commit** (EF Core
+  atomically via `SaveChangesAndFlushMessagesAsync`; Marten via the flush-on-commit
+  listener that `IMartenOutbox.Enroll` registers) — the durability agent's polling
+  is crash-recovery only. Delivery is **at-least-once**, so projection handlers
+  **must be idempotent and per-aggregate order-aware** (track a last-processed
   position/version); reads are **eventually consistent** with writes.
 - **Read models are owned by each service, not a Building Block** — the service owns
   its read-model schema, projection handlers, and queries; Infrastructure ships only
@@ -203,27 +212,11 @@ See `docs/architecture/communication.md` and the ADRs below.
   routing key is part of the published contract, not derived from the CLR namespace.
   Consumers own queue declaration and binding (`nutrition.*`); Building Blocks wires
   the **publishing half only**. Beware: Wolverine **silently discards** a message with
-  no route, so a missing rule loses events without any error.- **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
+  no route, so a missing rule loses events without any error.
+- **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
   and the event schema is unchanged, so snapshots can be added per context later with
   **no event migration**.
-- **Building Blocks own the persistence & Wolverine wiring** (ADR-0027, "pit of
-  success"): `UseEfCorePersistence<TContext>(connectionString, configureContext?)`
-  registers the write DbContext **itself** via Wolverine's
-  `AddDbContextWithWolverineIntegration` on Npgsql (never register the context in the
-  host — Aspire hosts *enrich* it, e.g. `EnrichNpgsqlDbContext`, instead of
-  re-registering) **and** registers Wolverine's PostgreSQL-backed durable message
-  store on the same write database at **composition time**
-  (`EfCoreMessageStoreRegistration`) — container-registered `IWolverineExtension`s
-  run only after the provider is built, where `options.Services.*` registrations
-  are silently ineffective, so service registrations must never be placed in the
-  extension (options-only mutations like codegen and policies belong there);
-  `UseWolverineMessaging(rabbitMqUri)` takes the broker URI; a
-  registered `IWolverineExtension` auto-applies the matching Wolverine defaults, so
-  the host writes an **empty** `UseWolverine()` call (the `Apply*` methods are
-  `internal`). A startup validator fails the host when a selected capability requires
-  Wolverine but `UseWolverine` was never called (opt-out:
-  `options.ValidateWolverineOnStart = false`). A service selecting no persistence and
-  no messaging needs no Wolverine; in-context projections need no RabbitMQ.
+- ADR-0027 has exactly one exception (amended 2026-08-01): a **state-stored** host must call `opts.UseBuildingBlocksEfCorePersistence(writeConnectionString)` inside its own `UseWolverine(...)`. Wolverine 3.0 forbids a container-registered `IWolverineExtension` from modifying the service collection, and both halves of the EF outbox do that. Everything else stays automatic, and event-sourced hosts need nothing.
 - PostgreSQL is provisioned as a first-party **.NET Aspire** resource.
 
 ADRs are immutable once accepted; to change a decision, add a superseding ADR.
@@ -231,39 +224,18 @@ Index: `docs/architecture/decisions/README.md`.
 
 ## XML documentation conventions (ADR-0013)
 
-XML documentation is authored to a consistent standard — see
-`docs/architecture/decisions/0013-xml-documentation-conventions.md`.
-
-- **Scope:** XML docs are required **only under `BuildingBlocks/src/*`**. Do **not** add
-  them to `BuildingBlocks/tests/*` or to any application/service code outside
-  `BuildingBlocks`. The requirement is enforced by the `BuildingBlocks` `.editorconfig`
-  (`dotnet_diagnostic.CS1591.severity = warning`); never copy that setting into test or
-  service projects.
-- **`<remarks>` — why / how / when.** For every public/protected member, include **at most
-  one** `<remarks>` covering any *useful* subset of: **why** it exists, **how** to use it,
-  **when** to use it. Include only the parts that add insight; never restate the `<summary>`.
-  - Required on **types** and on **methods/constructors** (omit only in the rare case where
-    nothing beyond the summary can be said).
-  - Optional on **trivial properties** (`Id`, `Message`, `Value`, `IsEmpty`, …) and
-    **equality/boilerplate** (`Equals`, `GetHashCode`, `==`, `!=`) — add only when insightful.
-  - Exempt for explicitly implemented members using `<inheritdoc/>`.
-- **Formatting:** `<summary>` is one sentence; booleans use `<c>true</c> if …; otherwise, <c>false</c>.`;
-  null is always `<see langword="null"/>`; use `<see cref>` / `<typeparamref>` / `<paramref>` for
-  references; document exceptions with `<exception cref="...">Thrown when …</exception>`.
-- **Canonical phrasings:** describe the same concept the same way every time (e.g. `TKey` →
-  "The type of the identity key."; `Id` → "Gets the unique identifier of the {entity|aggregate root}.").
-  See ADR-0013 for the full glossary.
+- **Scope:** XML docs are required **only under `BuildingBlocks/src/*`**. Do not add them to `BuildingBlocks/tests/*` or to any application/service code outside `BuildingBlocks`. Enforced by that folder's `.editorconfig` (`dotnet_diagnostic.CS1591.severity = warning`) — never copy that setting into test or service projects.
+- **`<remarks>`** — why / how / when. For every public/protected member, include at most one `<remarks>` covering any _useful_ subset of why it exists, how to use it, when to use it; never restate the `<summary>`. Required on types and on methods/constructors (omit only when nothing beyond the summary can be said). Optional on trivial properties (`Id`, `Message`, `Value`, `IsEmpty`, …) and equality/boilerplate (`Equals`, `GetHashCode`, `==`, `!=`). Exempt for explicitly implemented members using `<inheritdoc/>`.
+- **Formatting:** `<summary>` is one sentence; booleans use `<c>true</c> if …; otherwise, <c>false</c>.`; null is always `<see langword="null"/>`; use `<see cref>`/`<typeparamref>`/`<paramref>`; document exceptions with `<exception cref="...">Thrown when …</exception>`.
+- **Canonical phrasings** describe the same concept the same way every time (e.g. `TKey` → "The type of the identity key."; `Id` → "Gets the unique identifier of the {entity|aggregate root}."). Full glossary in ADR-0013.
 
 ## Testing
 
-- Frameworks: **xUnit** (including its built-in `Assert.*` assertions), **NSubstitute**,
-  **EF Core InMemory**. Do **not** use FluentAssertions — it was removed for licensing
-  reasons (see ADR-0014); express expectations with standard xUnit assertions.
-- **Testcontainers (PostgreSQL)** is used for `BuildingBlocks.Infrastructure` integration
-  tests (Marten optimistic concurrency, strongly-typed key persistence); these skip
-  automatically when Docker is unavailable, so keep them behind a `Skip`/`Assert.SkipUnless`
-  guard rather than letting them fail.
-- Test projects mirror source structure (e.g. `BuildingBlocks.Domain.Tests`).
+- Frameworks: **xUnit** (including built-in `Assert.*`), **NSubstitute**, **EF Core InMemory**. Do **not** use FluentAssertions — removed for licensing reasons (ADR-0014).
+- **Testcontainers (PostgreSQL)** backs the `BuildingBlocks.Infrastructure` integration tests (Marten optimistic concurrency, strongly-typed key persistence); guard them with `Skip`/`Assert.SkipUnless` so they skip when Docker is unavailable instead of failing.
+- Test projects mirror source structure 1:1 (e.g. `BuildingBlocks.Domain.Tests` for `BuildingBlocks.Domain`); domain tests use lightweight hand-written test doubles (`TestDoubles/`) rather than mocks — the domain has no infrastructure dependencies to mock. NSubstitute is reserved for application/persistence/messaging tests.
+- Assert observable behavior, not internal details (e.g. "creating a recipe raises a `RecipeCreated` event").
+- Add/extend tests alongside any behavioral change.
 - Fixture types that must live **outside** the test assembly (e.g. for assembly-scanning
   tests) go in a dedicated project under
   `BuildingBlocks/tests/ExternalAssemblies/<ShortName>Fixture/` — keep folder/project names
@@ -271,39 +243,23 @@ XML documentation is authored to a consistent standard — see
   add them to `VitalSync.slnx`, no XML docs. See `docs/architecture/testing-strategy.md`.
 - Strategy covers unit, integration, domain, application-layer, persistence, and
   component-communication tests. See `docs/architecture/testing-strategy.md`.
-- Add/extend tests alongside any behavioral change.
 
-## Build & run
+## When contributing
 
-```bash
-dotnet build                                          # build the solution
-dotnet run --project src/Aspire/VitalSync.AppHost     # run via Aspire AppHost
-dotnet test                                           # run tests
-```
-
-Prerequisites: .NET SDK (aligned with Aspire 13), the .NET Aspire 13 workload, and
-Docker (for messaging infrastructure/containers).
-
-## When contributing (checklist for Copilot)
-
-1. Put reusable, VitalSync-agnostic concepts in `BuildingBlocks`; put domain logic
-   in the matching `src/Services/<Domain>` project.
-2. Respect the communication rules (Frontend → BFF → services; async between services).
-3. Follow the DDD/CQRS/ES ADR conventions listed above.
+1. Put reusable, VitalSync-agnostic concepts in `BuildingBlocks`; put domain logic in the matching `src/Services/<Domain>` project.
+2. Respect the communication rules (Frontend → BFF → services; async only between services).
+3. Follow the DDD/CQRS/ES ADR conventions above.
 4. Keep layer boundaries clean; don't leak infrastructure into the domain.
 5. Add or update tests (mirror the project structure).
-6. Document `BuildingBlocks/src/*` per the XML documentation conventions (ADR-0013);
-   don't add XML docs to tests or service code.
-7. If a change affects architecture, **add or superseed an ADR** using the template in
-   `docs/architecture/decisions/README.md`.
+6. Document `BuildingBlocks/src/*` per the XML documentation conventions (ADR-0013); don't add XML docs to tests or service code.
+7. If a change affects architecture, add or update an ADR using the template in `docs/architecture/decisions/README.md`.
 8. Match existing style; respect `.editorconfig` and `Directory.Build.props`.
-9. **Always comit and push directly to the `main` branch. **
-never work on separate branches, and never ask which
-   branch to use — `main` is always the target. 
-10. Always update this instruction file if you discover a gap or ambiguity in the guidance.
-11. If you are unsure about a decision, **ask always a human** — Copilot is not the arbiter of architecture or domain rules.
-12. Use always short and clear commit messages.
+9. **Always commit and push directly to the `main` branch** — never work on separate branches, and never ask which branch to use; `main` is always the target.
+10. Always update the instruction files in `.github/*.md` and `.claude/*.md` if you discover a gap or ambiguity in the guidance.
+11. If you are unsure about a decision, **always ask a human** — Copilot is not the arbiter of architecture or domain rules.
+12. Always use short and clear commit messages.
 13. If you write code, always add or update unit tests / integration tests / architecture tests, and make sure they pass before committing.
+14. Always check all `*.md` files in the repository and update them if needed.
 
 ## Key documentation
 
@@ -315,4 +271,3 @@ never work on separate branches, and never ask which
 - Testing strategy — `docs/architecture/testing-strategy.md`
 - ADRs — `docs/architecture/decisions/README.md`
 - Glossary — `docs/glossary.md`
-- User stories — `docs/userStories/`
