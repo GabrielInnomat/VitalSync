@@ -1,0 +1,21 @@
+<!-- Must match the Aspire.Hosting.* package versions below, and must stay in sync with
+     src/Aspire/VitalSync.AppHost: MSBuild resolves one version per SDK per build (MSB4240). -->
+<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <UserSecretsId>7f0a1c2e-58d4-4a1b-9c3f-2ad6b0e91f47</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.4.6" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="13.4.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\StateStored\VitalSync.Sample.StateStored.Api\VitalSync.Sample.StateStored.Api.csproj" />
+    <ProjectReference Include="..\StateStored\VitalSync.Sample.StateStored.MigrationService\VitalSync.Sample.StateStored.MigrationService.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -232,7 +232,32 @@ Werkzeug: `dotnet ef` läuft über ein **lokales** Tool-Manifest
 (`.config/dotnet-tools.json`, Version 10.0.10). Die global installierte 9.0.8 ist zu
 alt für die EF-10-Runtime.
 
-### Schritt 4 — MigrationService + AppHost
+### Schritt 4 — **erledigt**
+
+`VitalSync.Samples.AppHost` (ein Postgres-Server mit `statestored-write` und
+`statestored-read`, dazu RabbitMQ) und der MigrationService, der beide Kontexte
+migriert und sich beendet. Kriterium 1 und 2 sind **empirisch belegt**: der Host
+wurde gestartet, beide Datenbanken existieren mit `__EFMigrationsHistory` und
+`widgets`, der Migrationsprozess war danach beendet und die Api lief.
+
+Drei Befunde:
+
+- **Der produktive AppHost war nicht lauffähig.** `Aspire.AppHost.Sdk/13.1.0` zieht
+  ein `Aspire.Hosting.AppHost`, das die installierte DCP-Version ablehnt: „requires a
+  newer version of the Aspire.Hosting.AppHost package". Beide AppHosts stehen jetzt
+  auf `13.4.6`.
+- **Die SDK-Version muss in allen AppHosts identisch sein.** MSBuild löst pro Build
+  genau eine Version je SDK auf und ignoriert die andere mit `MSB4240` — welche
+  gewinnt, hängt von der Auflösungsreihenfolge ab.
+- **CA1848 erzwingt `LoggerMessage`-Delegaten** auch in einem dreizeiligen Worker. Der
+  MigrationService verzichtet deshalb auf eigenes Logging; EF protokolliert die
+  angewandten Migrationen ohnehin.
+
+Der Worker migriert und **beendet sich**, statt den Host laufen zu lassen: `WaitForCompletion`
+hängt daran, und ein Fehlschlag muss als Exit-Code ungleich null sichtbar werden — deshalb
+darf die Exception aus `Main` herauslaufen.
+
+### Schritt 4 — ursprüngliche Planung
 
 - Worker registriert beide `DbContext`e **direkt** per `AddDbContext`, **nicht** über
   `AddBuildingBlocks` — er braucht kein Wolverine, keine Outbox, keinen Dispatcher.
