@@ -138,7 +138,9 @@ registriert (ADR-0027, Amendment) — der Statustext beschrieb einen überholten
 ## Lösungsvorschlag
 
 Umgesetzt. Der verbleibende Preis dieser Lösung — der Host muss den Connection String ein zweites Mal
-angeben, ohne dass ihn jemand abgleicht — ist als [hacky.md Nr. 8](hacky.md) erfasst.
+angeben, ohne dass ihn jemand abgleicht — war als [hacky.md Nr. 8](hacky.md) erfasst und ist seit dem
+2026-08-03 ebenfalls weg: Building Blocks setzt den `UseWolverine`-Aufruf selbst ab und nimmt den
+String aus der `UseEfCorePersistence`-Auswahl (zweites ADR-0027-Amendment, [todo.md](todo.md) TODO-06).
 
 ---
 

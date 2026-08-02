@@ -254,8 +254,8 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   carry `[Topic("<context>.<event>")]` in kebab-case (`nutrition.recipe-created`): the
   routing key is part of the published contract, not derived from the CLR namespace.
   Consumers subscribe via `options.SubscribeToIntegrationEvents(queue, consumerAssembly,
-  patterns)` — Building Blocks wires **both halves**, so the subscribing host still
-  calls only a bare `UseWolverine()`. Pass the service's **Infrastructure** assembly,
+  patterns)` — Building Blocks wires **both halves**, so the subscribing host adds
+  nothing of its own. Pass the service's **Infrastructure** assembly,
   never its Application assembly: Wolverine discovers handlers by naming convention and
   would mistake `CreateRecipeHandler` for a message handler. Beware: Wolverine
   **silently discards** a message with no route, and a message whose consumer was never
@@ -267,7 +267,7 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 - **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
   and the event schema is unchanged, so snapshots can be added per context later with
   **no event migration**.
-- ADR-0027 has exactly one exception (amended 2026-08-01): a **state-stored** host must call `opts.UseBuildingBlocksEfCorePersistence(writeConnectionString)` inside its own `UseWolverine(...)`. Wolverine 3.0 forbids a container-registered `IWolverineExtension` from modifying the service collection, and both halves of the EF outbox do that. Everything else stays automatic, and event-sourced hosts need nothing.
+- **A service host registers through the host-builder overload** `builder.AddBuildingBlocks(options => …, configureWolverine?)` (ADR-0027 amendment 2026-08-03) and calls **no `UseWolverine` at all** — Building Blocks issues it, and applies the EF Core outbox from the write connection string the host already named in `UseEfCorePersistence`. **The write database is named exactly once**; the earlier requirement to repeat it in the host's own `UseWolverine(...)` is gone, and with it the silent failure of outbox and aggregates landing in different databases. Wolverine permits only one `UseWolverine`, so host-specific transport settings go in the optional `configureWolverine` callback. The `IServiceCollection` overload plus a manual `UseWolverine(opts => opts.UseBuildingBlocksEfCorePersistence(cs))` still exists for tests and hosts that wire Wolverine themselves — that path, and only that one, names the database twice.
 - PostgreSQL is provisioned as a first-party **.NET Aspire** resource.
 
 ADRs are immutable once accepted; to change a decision, add a superseding ADR.

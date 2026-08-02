@@ -38,7 +38,7 @@ eine Entscheidung, keinen Code.
 | TODO-03 | `AssemblyQualifiedName` als Persistenz-Contract                | **P1** | offen             | hacky-1, IMP-22                       |
 | TODO-04 | Stream-Key hängt am CLR-Klassennamen                           | **P1** | offen             | hacky-2, IMP-23                       |
 | TODO-05 | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | **P1** | offen             | hacky-5                               |
-| TODO-06 | Connection String zweimal, ohne Abgleich                       | **P1** | offen             | hacky-8, IMP-13                       |
+| TODO-06 | Connection String zweimal, ohne Abgleich                       | **P1** | gelöst            | hacky-8, IMP-13                       |
 | TODO-07 | Integration Events sind nicht persistent                       | **P1** | offen             | WS-08                                 |
 | TODO-08 | Topic-Validierung und Kontextkennung                           | **P1** | offen             | WS-05, WS-13, WS-14                   |
 | TODO-09 | Keine CI-Pipeline                                              | **P1** | offen             | WS-16                                 |
@@ -267,7 +267,7 @@ Kleinster P1-Punkt der Liste, sofort machbar.
 
 # TODO-06, Connection String zweimal, ohne Abgleich
 
-**P1 · offen · hacky-8 + IMP-13 (Teil)**
+**P1 · gelöst · hacky-8 + IMP-13 (Teil)**
 
 `UseEfCorePersistence(cs)` legt den String in `EfCoreMessageStoreConnectionString` ab und nutzt
 ihn ausschließlich für ein `RequiresWolverine`-Bool
@@ -280,24 +280,36 @@ Zugriff auf die ServiceCollection), ist nachvollziehbar. Dass sie **ungeprüft**
 zwei Tippfehler auseinander, und die Outbox sitzt in einer anderen Datenbank als die Aggregate —
 die ADR-0022-Atomaritätsgarantie ist dann still weg.
 
-## Lösungsvorschlag
+## Gelöst — die zweite Nennung gibt es nicht mehr
 
-Der Wert liegt in DI bereit, also beim Start vergleichen:
+Der ursprüngliche Vorschlag war, die beiden Strings beim Start zu **vergleichen**. Umgesetzt wurde
+stattdessen die Ursache: Building Blocks ruft `UseWolverine` selbst auf.
 
 ```csharp
-// WolverineWiringStartupValidator
-if (settings.EfCoreMessageStoreConnectionString is { } declared
-    && appliedStore is { } applied
-    && !string.Equals(Normalize(declared), Normalize(applied), StringComparison.Ordinal))
+// BuildingBlocks.Infrastructure.DependencyInjection.HostApplicationBuilderExtensions
+builder.UseWolverine(options =>
 {
-    throw new InvalidOperationException(
-        "UseEfCorePersistence und UseBuildingBlocksEfCorePersistence zeigen auf unterschiedliche " +
-        "Write-Datenbanken. Outbox und Aggregate müssen in einer Transaktion liegen (ADR-0022).");
-}
+    if (wiring.EfCoreMessageStoreConnectionString is { } writeConnectionString)
+    {
+        options.UseBuildingBlocksEfCorePersistence(writeConnectionString);
+    }
+
+    configureWolverine?.Invoke(options);
+});
 ```
 
-`Normalize` über `NpgsqlConnectionStringBuilder`, damit Formatierungsunterschiede nicht falsch
-anschlagen. **Bestes Aufwand-Nutzen-Verhältnis der ganzen Liste.**
+Der Host registriert über `builder.AddBuildingBlocks(options => …)` auf `IHostApplicationBuilder`
+und benennt die Write-Datenbank **einmal**, in `UseEfCorePersistence`. Kein Reflection: die
+Wolverine-3.0-Schranke gilt nur für container-registrierte Extensions, ein `UseWolverine`-Callback
+darf die ServiceCollection ändern.
+
+Belegt durch `HostBuilderWiringTests` — insbesondere, dass Wolverines `DatabaseSettings.ConnectionString`
+genau die Datenbank ist, die `UseEfCorePersistence` ausgewählt hat. Beide Sample-Hosts rufen kein
+`UseWolverine` mehr auf. ADR-0027 hat dazu ein zweites Amendment (2026-08-03).
+
+**Rest:** Der `IServiceCollection`-Weg plus manuelles `UseWolverine` bleibt für Tests und Hosts, die
+Wolverine selbst verdrahten — nur dort wird der String noch zweimal genannt, jetzt aber sichtbar als
+bewusste Ausnahme statt als Normalfall.
 
 ---
 
@@ -1393,8 +1405,8 @@ unbelegt und gehört hier vermerkt statt im AppHost still vorausgesetzt.
 
 ## Empfohlene Reihenfolge
 
-1. **TODO-09** (CI) und **TODO-06** (Connection-String-Abgleich) zuerst — beide klein, beide
-   sichern alles Weitere ab.
+1. **TODO-09** (CI) zuerst — klein und sichert alles Weitere ab. (**TODO-06** stand hier
+   gleichauf und ist erledigt: die zweite Nennung des Connection Strings existiert nicht mehr.)
 2. **TODO-10** und **TODO-13** entscheiden (Konflikte, kein Code), dann **TODO-05**.
 3. **TODO-02 → TODO-03 → TODO-04** als ein Persistenzformat-Paket. Danach ist jede Änderung daran
    eine Datenmigration, also **vor** dem ersten echten Service.

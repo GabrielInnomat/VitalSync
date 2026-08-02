@@ -48,6 +48,25 @@ public static class ServiceCollectionExtensions
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> or <paramref name="configure"/> is <see langword="null"/>.</exception>
     public static IServiceCollection AddBuildingBlocks(this IServiceCollection services, Action<BuildingBlocksOptions> configure)
     {
+        AddBuildingBlocksCore(services, configure);
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the platform services exactly as <see cref="AddBuildingBlocks"/> does and hands back the resulting
+    /// Wolverine wiring selection.
+    /// </summary>
+    /// <remarks>
+    /// The host-builder overload in <see cref="HostApplicationBuilderExtensions"/> needs to know what was selected
+    /// before it configures Wolverine — above all the write-database connection string, which it must not ask the host
+    /// for a second time (ADR-0027 amendment). Everything else about the registration is identical.
+    /// </remarks>
+    /// <param name="services">The service collection to register into.</param>
+    /// <param name="configure">The callback that selects handlers, persistence style, and messaging.</param>
+    /// <returns>The wiring selection recorded by the host's capability choices.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> or <paramref name="configure"/> is <see langword="null"/>.</exception>
+    internal static WolverineWiringSettings AddBuildingBlocksCore(IServiceCollection services, Action<BuildingBlocksOptions> configure)
+    {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
 
@@ -99,6 +118,6 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<ProjectionRunner>();
         services.TryAddScoped<IDomainEventPublisher, Publisher>();
 
-        return services;
+        return options.WolverineWiring;
     }
 }

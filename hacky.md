@@ -11,7 +11,7 @@
 | 5   | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | offen  |
 | 6   | `CurrentValues.SetValues` kopiert nur Skalare                  | offen  |
 | 7   | `DomainEventStamper` erkennt „unstamped" über Sentinel         | offen  |
-| 8   | Connection String zweimal, ohne Abgleich                       | offen  |
+| 8   | Connection String zweimal, ohne Abgleich                       | gelöst |
 | 9   | `AddBuildingBlocks` ist nicht idempotent                       | offen  |
 | 10  | `RuleChecker` schluckt `null`                                  | offen  |
 | 11  | Optionale Constructor-Injection für `IUnitOfWork`              | offen  |
@@ -255,7 +255,13 @@ implementieren. Dann ist der Vertrag sichtbar statt durch einen Typtest geraten.
 
 ---
 
-# 8, Connection String zweimal, ohne Abgleich
+# 8, Connection String zweimal, ohne Abgleich — **gelöst (2026-08-03)**
+
+> Nicht durch den Abgleich unten, sondern durch Wegfall der zweiten Nennung: Building Blocks setzt
+> den `UseWolverine`-Aufruf seit dem zweiten ADR-0027-Amendment selbst ab
+> (`builder.AddBuildingBlocks(…)` auf `IHostApplicationBuilder`) und nimmt den Connection String aus
+> der bereits getroffenen `UseEfCorePersistence`-Auswahl. Details in [todo.md](todo.md), TODO-06.
+> Der ursprüngliche Befund bleibt zur Nachvollziehbarkeit stehen.
 
 `UseEfCorePersistence(cs)` legt `EfCoreMessageStoreConnectionString` ab und nutzt es
 ausschließlich für ein `RequiresWolverine`-Bool. Der Host muss denselben String ein zweites Mal

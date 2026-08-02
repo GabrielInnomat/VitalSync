@@ -334,25 +334,41 @@ services.AddBuildingBlocks(options =>
   unaffected (IMP-05).
 
 **Every host whose selection flows through the outbox must additionally run
-Wolverine** — but the call is empty: a registered `IWolverineExtension`
-(`BuildingBlocksWolverineExtension`, ADR-0027) applies exactly the combination
-of defaults matching the capability selection (domain-event routing whenever a
-persistence style was selected, the EF Core transactional middleware for
-state-stored contexts, the RabbitMQ defaults when messaging was selected):
+Wolverine** — and since the ADR-0027 amendment of 2026-08-03 the host does not
+even issue that call. Registering through the **host-builder overload** hands
+both steps to Building Blocks:
 
 ```csharp
-builder.Host.UseWolverine();   // Building Block defaults are applied automatically
+builder.AddBuildingBlocks(options =>
+{
+    options.AddHandlersFrom(typeof(CreateRecipe).Assembly);
+    options.UseEfCorePersistence<NutritionWriteDbContext>(writeConnectionString);
+    options.UseWolverineMessaging(rabbitMqUri);
+});
+// no UseWolverine call - the write database was named once, above
 ```
 
-- The underlying `Apply*` methods are `internal`; hosts have no Wolverine
-  configuration surface and cannot forget or mismatch a call. A host needing
-  additional Wolverine configuration registers its own `IWolverineExtension`.
+- It calls `UseWolverine` when the selection needs a runtime and applies the EF
+  Core outbox against the **same** connection string `UseEfCorePersistence`
+  recorded, so outbox rows and aggregate state cannot end up in different
+  databases. Wolverine allows exactly one `UseWolverine`, so host-specific
+  transport settings belong in the overload's optional
+  `Action<WolverineOptions>` parameter rather than a second call.
+- The remaining defaults come from a registered `IWolverineExtension`
+  (`BuildingBlocksWolverineExtension`, ADR-0027): domain-event routing whenever
+  a persistence style was selected, and the RabbitMQ transport, retry, and
+  dead-letter defaults when messaging was selected. The underlying `Apply*`
+  methods are `internal`; hosts have no Wolverine configuration surface and
+  cannot forget or mismatch a call.
+- The `IServiceCollection` overload remains for tests and hosts that wire
+  Wolverine themselves; those call `UseWolverine(opts =>
+  opts.UseBuildingBlocksEfCorePersistence(writeConnectionString))` and are the
+  only place that still names the write database twice.
 - **Startup Wolverine validation is on by default** (ADR-0027): when a selected
-  capability requires Wolverine but `UseWolverine` was never called — the one
-  wiring step that cannot be performed from a service collection — a hosted
-  service fails the host at startup with an actionable message, instead of
-  surfacing as a missing outbox on the first commit in production. Opt out via
-  `options.ValidateWolverineOnStart = false`.
+  capability requires Wolverine but no runtime is registered — reachable only on
+  that manual path now — a hosted service fails the host at startup with an
+  actionable message, instead of surfacing as a missing outbox on the first
+  commit in production. Opt out via `options.ValidateWolverineOnStart = false`.
 - A service that selects **no** persistence and **no** messaging needs no
   Wolverine at all; a service with purely in-context projections needs no
   RabbitMQ (the domain-event route is a local durable queue).

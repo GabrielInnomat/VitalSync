@@ -35,10 +35,11 @@ internal sealed class WolverineWiringStartupValidator(IServiceProvider servicePr
         {
             throw new InvalidOperationException(
                 "The selected Building Block capabilities (persistence and/or integration-event messaging) require " +
-                "Wolverine, but no Wolverine runtime is registered. Call UseWolverine() on the host builder — the " +
-                "Building Blocks apply their own Wolverine configuration automatically via a registered " +
-                "IWolverineExtension, so the call needs no Building Block-specific setup. To run without this " +
-                "check, set BuildingBlocksOptions.ValidateWolverineOnStart to false.");
+                "Wolverine, but no Wolverine runtime is registered. Register through the host-builder overload — " +
+                "builder.AddBuildingBlocks(...) — which calls UseWolverine() and applies the Building Block " +
+                "configuration itself. A host that deliberately wires Wolverine on top of the IServiceCollection " +
+                "overload calls UseWolverine() on the host builder instead. To run without this check, set " +
+                "BuildingBlocksOptions.ValidateWolverineOnStart to false.");
         }
     }
 }

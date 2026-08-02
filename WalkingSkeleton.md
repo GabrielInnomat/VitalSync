@@ -302,6 +302,14 @@ Amendment. `EfCoreMessageStoreRegistration` (~70 Zeilen Reflection) ist ersatzlo
 gelöscht — es löste ohnehin nur die halbe Aufgabe, und die Tests merkten es nicht,
 weil sie ihre Hosts mit noch änderbarer Service-Collection bauen.
 
+> **Nachtrag 2026-08-03:** Kriterium 11 steht wieder — und schärfer als ursprünglich
+> formuliert. Die Wolverine-Schranke gilt nur für **container-registrierte** Extensions,
+> nicht für einen `UseWolverine`-Callback. Building Blocks setzt diesen Aufruf seit dem
+> zweiten ADR-0027-Amendment selbst ab (`builder.AddBuildingBlocks(…)` auf
+> `IHostApplicationBuilder`) und holt sich den Connection String aus der bereits
+> getroffenen Auswahl. Der Host ruft jetzt **gar kein** `UseWolverine` mehr auf, und die
+> Write-Datenbank wird genau einmal benannt — das war zugleich TODO-06.
+
 Alle übrigen Kriterien wurden am laufenden System belegt: Zeilen in der Write-DB,
 acht `wolverine.*`-Tabellen in **derselben** Datenbank, Read-Modelle in der Read-DB,
 `GetWidget` aus der Read-DB, leerer Name → `InvalidArgument` **ohne** geschriebene

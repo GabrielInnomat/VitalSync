@@ -1,5 +1,6 @@
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using VitalSync.Sample.EventSourced.Application;
 using VitalSync.Sample.EventSourced.Domain;
 using VitalSync.Sample.EventSourced.Infrastructure;
@@ -61,13 +62,12 @@ public sealed class SampleRegistrationTests
     // Nothing here connects: the registrations are what is under test.
     private static ServiceProvider BuildProvider()
     {
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSampleEventSourcedInfrastructure(
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddSampleEventSourcedInfrastructure(
             "Host=localhost;Database=unused-write;Username=postgres;Password=postgres",
             "Host=localhost;Database=unused-read",
             new Uri("amqp://localhost"));
 
-        return services.BuildServiceProvider();
+        return builder.Services.BuildServiceProvider();
     }
 }

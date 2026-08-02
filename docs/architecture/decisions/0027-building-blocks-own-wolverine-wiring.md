@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-07-31
 - **Amended:** 2026-08-01 (one exception for the EF Core outbox — see the note below)
+- **Amended:** 2026-08-03 (Building Blocks owns the `UseWolverine` call; the exception no longer reaches the host)
 
 ## Context
 
@@ -50,6 +51,31 @@ startup validation: fail fast, don't document pitfalls).
 > to register the message store at composition time. It only ever solved half the problem: the service
 > registrations, not the options-side middleware. The tests did not catch the other half because they build
 > hosts in a way that leaves the service collection mutable — only a real web host is strict.
+
+> **Amendment (2026-08-03) — the exception is back inside Building Blocks; the host names its write database once.**
+> The 2026-08-01 amendment left the host repeating the write connection string: once in
+> `UseEfCorePersistence(cs)` and once in its own `UseWolverine(opts => opts.UseBuildingBlocksEfCorePersistence(cs))`.
+> Nothing compared the two, so two typos apart the outbox sat in a different database than the aggregates and the
+> ADR-0022 atomicity guarantee was gone without a symptom (TODO-06).
+>
+> The Wolverine 3.0 restriction stands unchanged — it forbids a **container-registered** extension from touching the
+> service collection, not a `UseWolverine` callback. So Building Blocks issues that call itself, from an
+> `IHostApplicationBuilder` overload:
+>
+> ```csharp
+> builder.AddBuildingBlocks(options => options.UseEfCorePersistence<NutritionWriteDbContext>(writeConnectionString));
+> ```
+>
+> It calls `UseWolverine` when the selection needs a runtime, applies the EF Core outbox from the connection string
+> **already recorded** by `UseEfCorePersistence`, and takes an optional `Action<WolverineOptions>` for host-specific
+> transport settings. Wolverine allows exactly one `UseWolverine`, so a host using this overload must not call it
+> again — that callback is the way in. The `IServiceCollection` overload and the public
+> `UseBuildingBlocksEfCorePersistence(cs)` remain for hosts and tests that wire Wolverine themselves; only those
+> still name the database twice.
+>
+> With this, point 3 below ("the one remaining failure mode") can no longer occur on the builder path, and the
+> host contract stated at the end of the Decision section shrinks further: **`AddBuildingBlocks(…)` and nothing
+> else** — no `UseWolverine()` call at all, for either persistence style.
 
 ## Decision
 

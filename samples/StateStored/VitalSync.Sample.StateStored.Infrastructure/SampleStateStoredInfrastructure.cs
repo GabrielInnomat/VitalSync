@@ -2,6 +2,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using VitalSync.Sample.StateStored.Application;
 using VitalSync.Sample.StateStored.Domain;
 using VitalSync.Sample.StateStored.Infrastructure.Integration;
@@ -13,19 +14,23 @@ namespace VitalSync.Sample.StateStored.Infrastructure;
 public static class SampleStateStoredInfrastructure
 {
     /// <summary>
-    /// Registers everything the sample service needs; the host adds only <c>UseWolverine()</c> on top.
+    /// Registers everything the sample service needs; the host adds nothing on top.
     /// </summary>
-    public static IServiceCollection AddSampleStateStoredInfrastructure(
-        this IServiceCollection services,
+    public static IHostApplicationBuilder AddSampleStateStoredInfrastructure(
+        this IHostApplicationBuilder builder,
         string writeConnectionString,
         string readConnectionString,
         Uri rabbitMqUri)
     {
-        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(builder);
+
+        var services = builder.Services;
 
         // The write context is registered by Building Blocks, never by the host (ADR-0027): only then is
-        // the outbox guaranteed to enlist in the same transaction as SaveChanges.
-        services.AddBuildingBlocks(options =>
+        // the outbox guaranteed to enlist in the same transaction as SaveChanges. Taking the builder rather
+        // than the collection is what lets Building Blocks own UseWolverine too - the write connection string
+        // is named once, here, and the EF outbox reads it back from this selection.
+        builder.AddBuildingBlocks(options =>
         {
             // Two assemblies: command and query handlers live in Application, projection handlers and the
             // integration-event mapper in Infrastructure. The scan covers IProjectionHandler<> and
@@ -43,6 +48,6 @@ public static class SampleStateStoredInfrastructure
 
         services.AddScoped<IWidgetReadStore, WidgetReadStore>();
 
-        return services;
+        return builder;
     }
 }

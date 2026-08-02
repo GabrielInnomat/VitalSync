@@ -1,5 +1,6 @@
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using VitalSync.Sample.StateStored.Application;
 using VitalSync.Sample.StateStored.Domain;
 using VitalSync.Sample.StateStored.Infrastructure;
@@ -43,13 +44,12 @@ public sealed class SampleRegistrationTests
     // are enough.
     private static ServiceProvider BuildProvider()
     {
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSampleStateStoredInfrastructure(
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddSampleStateStoredInfrastructure(
             "Host=localhost;Database=unused-write",
             "Host=localhost;Database=unused-read",
             new Uri("amqp://localhost"));
 
-        return services.BuildServiceProvider();
+        return builder.Services.BuildServiceProvider();
     }
 }
