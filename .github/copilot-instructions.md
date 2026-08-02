@@ -41,10 +41,12 @@ VitalSync/
 │   ├── Aspire/                      # .NET Aspire AppHost & ServiceDefaults (entry point)
 │   ├── Bff/                         # Backend-for-Frontend (REST out, gRPC in)
 │   ├── Frontend/VitalSync.Web/      # Blazor client (UI only — no business logic)
-│   └── Services/                    # One folder per microservice (currently placeholder Api projects)
-│       ├── Nutrition/VitalSync.Nutrition.Api/
-│       ├── Fitness/VitalSync.Fitness.Api/
-│       └── Analytics/VitalSync.Analytics.Api/
+│   └── Services/                    # One folder per microservice; Api + MigrationService per context,
+│       ├── Nutrition/               #   both still skeletons without domain code
+│       │   ├── VitalSync.Nutrition.Api/
+│       │   └── VitalSync.Nutrition.MigrationService/
+│       ├── Fitness/                 # same two projects
+│       └── Analytics/               # same two projects
 ├── samples/                         # THROWAWAY walking skeleton — see WalkingSkeleton.md
 │   ├── VitalSync.Samples.AppHost/   # its own Aspire host; the production one must not depend on it
 │   ├── StateStored/                 # EF Core end-to-end slice (Widget)
@@ -188,6 +190,12 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   database of a context onto its **own dedicated server** later is a sanctioned,
   non-breaking migration — a connection-string change plus a data move, touching no
   Domain/Application/Infrastructure code (ADR-0020/0021).
+  The **production AppHost does exactly this today** for all three contexts
+  (`src/Aspire/VitalSync.AppHost/AppHost.cs`) and follows the walking skeleton's
+  migration pattern: **one `MigrationService` worker per context**, referenced by both
+  databases, and the service starts only after it via `.WaitForCompletion(...)`.
+  A new context therefore means: two `AddDatabase(...)` calls, one migration worker,
+  one service — never a single shared database.
 - **State-stored contexts persist the aggregate's state object**, not the aggregate
   (ADR-0025/0026 amendments): `EfCoreRepository` loads the state via
   `FindAsync(stateType, [id])` and rehydrates an empty aggregate around it, and the

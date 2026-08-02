@@ -617,10 +617,21 @@ verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Impro
 | WS-16 | Keine CI-Pipeline                                              | vorbestehend | offen     |
 | WS-17 | Zeitbasierte Negativassertion im Sink-Test                     | vorbestehend | teilweise |
 
-Zusätzlich weiterhin offen und hier nur referenziert: **der produktive AppHost
-widerspricht ADR-0021** — er legt je _eine_ Datenbank pro Service an (`nutritionDb`,
-`fitnessDb`, [AppHost.cs:11-12](src/Aspire/VitalSync.AppHost/AppHost.cs:11)) statt des
-geforderten Write/Read-Paars. Eigene Aufgabe, nicht Teil des Durchstichs.
+**Erledigt (Commit `e44ae9b`, 2026-08-02):** Der produktive AppHost widersprach
+ADR-0021, weil er je _eine_ Datenbank pro Service anlegte (`nutritionDb`, `fitnessDb`).
+Er provisioniert jetzt für alle drei Kontexte ein Write/Read-Paar (`nutrition-write` /
+`nutrition-read` usw.) auf einem gemeinsamen Postgres-Server und übernimmt zugleich das
+Migrations-Muster des Durchstichs: pro Kontext ein MigrationService-Worker, die Api
+startet per `WaitForCompletion` danach
+([AppHost.cs:11-66](src/Aspire/VitalSync.AppHost/AppHost.cs:11)). Analytics ist damit
+erstmals als Service verdrahtet.
+
+Neu offen aus demselben Commit — siehe [todo.md](todo.md), TODO-45 und TODO-46:
+
+- Nutrition- und Fitness-Api prüfen weiterhin die **alten** Connection-Namen
+  (`nutritionDb`, `fitnessDb`), die es im AppHost nicht mehr gibt.
+- Die drei MigrationService-Worker sind leere Hüllen (`Host.CreateApplicationBuilder`,
+  `Build()`, kein `Run()`); `WaitForCompletion` ist damit heute eine Zusage ohne Inhalt.
 
 ---
 

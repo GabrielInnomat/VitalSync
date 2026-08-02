@@ -15,6 +15,25 @@ VitalSync is composed of four logical tiers:
 Blazor ──REST──> BFF ──gRPC──> Microservices ──async messaging──> Microservices
 ```
 
+## Runtime composition
+
+The system is composed and run by the .NET Aspire AppHost
+(`src/Aspire/VitalSync.AppHost`, see [ADR-0002](./decisions/0002-use-dotnet-aspire-13-for-orchestration.md)):
+
+| Resource                                                        | Role                                                                                    |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `messaging` (RabbitMQ)                                          | the asynchronous backbone between services                                              |
+| `postgres`                                                      | the single relational engine, one shared server for now                                 |
+| `<context>-write` / `<context>-read`                            | the database pair each bounded context owns ([ADR-0021](./decisions/0021-write-read-database-pair-per-context.md)) |
+| `<context>-migration-service`                                   | a worker that migrates that context's databases and exits; the service waits for it     |
+| `nutrition-service`, `fitness-service`, `analytics-service`     | the microservices, each gated on a `/health` check                                      |
+| `backend-for-frontend`                                          | fans out to the three services                                                          |
+| `web-frontend`                                                  | the Blazor client — the only externally reachable endpoint                               |
+
+Adding a bounded context means adding this same set: two databases, one migration
+worker, one service. Services and migration workers currently exist as skeletons
+without domain code.
+
 ## Architectural principles
 
 - **Domain-Driven Design (DDD)** in every microservice.

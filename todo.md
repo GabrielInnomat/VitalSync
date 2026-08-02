@@ -9,6 +9,8 @@ Zusammenführung der drei Befunddokumente, Stand 2026-08-02:
 | [WalkingSkeleton.md](WalkingSkeleton.md) §9   | 17       | 17          |
 | **Summe roh**                                 | **78**   | **64**      |
 | **nach Zusammenführung von Überschneidungen** |          | **43**      |
+| Nachtrag AppHost `e44ae9b` (TODO-45, TODO-46) | 2        | 2           |
+| **Summe geführt**                             |          | **45**      |
 
 Die 14 in `Improvements.md` als gelöst verifizierten Punkte wurden nicht übernomen.
 
@@ -75,6 +77,8 @@ eine Entscheidung, keinen Code.
 | TODO-42 | Uneinheitliche Projektstruktur                                 | **P4** | offen             | IMP-44                                |
 | TODO-43 | Irreführende Test- und Methodennamen                           | **P4** | offen             | IMP-45, IMP-48                        |
 | TODO-44 | Bewusste Ausnahmen dokumentieren                               | **P4** | wird nicht gelöst | IMP-35, IMP-46                        |
+| TODO-45 | Api-Readiness prüft nicht mehr existierende Connection-Namen   | **P1** | offen             | AppHost `e44ae9b`                     |
+| TODO-46 | Die MigrationService-Worker sind leere Hüllen                  | **P2** | offen             | AppHost `e44ae9b`                     |
 
 ---
 
@@ -1326,6 +1330,77 @@ feststeht; Service Location nur, wo der Typ erst zur Laufzeit bekannt ist."
 
 ---
 
+# TODO-45, Api-Readiness prüft nicht mehr existierende Connection-Namen
+
+**P1 · offen · AppHost `e44ae9b`**
+
+```csharp
+builder.AddNpgSqlReadinessCheck(connectionName: "nutritionDb", name: "nutritionDb");
+```
+
+([Nutrition Program.cs:5](src/Services/Nutrition/VitalSync.Nutrition.Api/Program.cs:5),
+[Fitness Program.cs:5](src/Services/Fitness/VitalSync.Fitness.Api/Program.cs:5))
+
+Der AppHost provisioniert seit `e44ae9b` `nutrition-write`/`nutrition-read` bzw.
+`fitness-write`/`fitness-read`. Die Ressourcen `nutritionDb` und `fitnessDb` gibt es nicht mehr,
+also liefert `GetConnectionString(...)` `null` — und `AddNpgSqlReadinessCheck` reicht das mit
+`connectionString!` ungeprüft an den Health Check weiter
+([AspireExtensions.cs:98-103](src/Aspire/VitalSync.ServiceDefaults/AspireExtensions.cs:98)).
+Folge: Der `/health`-Check wird nie healthy, `WithHttpHealthCheck` hält den Service unten, und der
+BFF wartet per `WaitFor` unbegrenzt. Der Build meldet nichts, weil der Name ein String ist.
+
+Analytics ist nicht betroffen, prüft dafür aber **gar nichts** — der Service verwendet noch das
+Default-Template (`AddControllers`, `UseHttpsRedirection`) statt des Musters der beiden anderen.
+
+## Lösungsvorschlag
+
+Namen korrigieren und den stillen Fehlschlag zumachen — Letzteres ist der eigentliche Punkt:
+
+```csharp
+// Program.cs je Service
+builder.AddNpgSqlReadinessCheck(connectionName: "nutrition-write", name: "nutrition-write");
+builder.AddNpgSqlReadinessCheck(connectionName: "nutrition-read", name: "nutrition-read");
+
+// AspireExtensions.AddNpgSqlReadinessCheck
+var connectionString = builder.Configuration.GetConnectionString(connectionName)
+    ?? throw new InvalidOperationException(
+        $"Keine Verbindungszeichenfolge '{connectionName}'. Referenziert der AppHost die Ressource?");
+```
+
+Aus einem Dauer-Timeout wird damit eine Startup-Exception mit dem fehlenden Namen im Text.
+
+---
+
+# TODO-46, Die MigrationService-Worker sind leere Hüllen
+
+**P2 · offen · AppHost `e44ae9b`**
+
+```csharp
+var builder = Host.CreateApplicationBuilder(args);
+builder.AddServiceDefaults();
+builder.Build();          // kein Run(), kein Migrationslauf
+```
+
+([Nutrition MigrationService Program.cs](src/Services/Nutrition/VitalSync.Nutrition.MigrationService/Program.cs),
+identisch für Fitness und Analytics)
+
+Der Prozess endet sofort mit Exit-Code 0, also ist `WaitForCompletion` im AppHost erfüllt und die
+Api startet — gegen leere Datenbanken. Solange es keine Aggregate gibt, fällt das nicht auf;
+sobald der erste `DbContext` existiert, ist es ein Start gegen fehlende Tabellen.
+
+Erwartet wird das Muster aus dem Durchstich
+([WalkingSkeleton.md §Schritt 4](WalkingSkeleton.md)): ein `BackgroundService`, der migriert und
+danach `IHostApplicationLifetime.StopApplication()` ruft, ohne `AddBuildingBlocks` — der Worker
+braucht weder Wolverine noch Outbox noch Dispatcher.
+
+## Lösungsvorschlag
+
+Beim ersten echten Aggregat des jeweiligen Kontexts nachziehen, nicht vorher: der Worker braucht
+den `DbContext`, den es noch nicht gibt. Bis dahin gilt die Zusage `WaitForCompletion` als
+unbelegt und gehört hier vermerkt statt im AppHost still vorausgesetzt.
+
+---
+
 ## Empfohlene Reihenfolge
 
 1. **TODO-09** (CI) und **TODO-06** (Connection-String-Abgleich) zuerst — beide klein, beide
@@ -1335,3 +1410,6 @@ feststeht; Service Location nur, wo der Typ erst zur Laufzeit bekannt ist."
    eine Datenmigration, also **vor** dem ersten echten Service.
 4. **TODO-01** vor dem ersten Aggregat mit Kindkollektion.
 5. **TODO-07** und **TODO-08** schließen die stillen Lücken im Messaging.
+6. **TODO-45** sobald ein Service tatsächlich gestartet wird — heute fällt es nur deshalb nicht
+   auf, weil niemand den produktiven AppHost hochfährt. **TODO-46** dagegen erst mit dem ersten
+   Aggregat des jeweiligen Kontexts.

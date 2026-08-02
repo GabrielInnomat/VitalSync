@@ -127,10 +127,11 @@ VitalSync/
 │   ├── Aspire/                  # .NET Aspire AppHost & ServiceDefaults
 │   ├── Bff/                     # Backend-for-Frontend
 │   ├── Frontend/                # Blazor client
-│   └── Services/                # One folder per microservice
-│       ├── Nutrition/
+│   └── Services/                # One folder per microservice; each has an
+│       ├── Nutrition/           #   Api and a MigrationService project
 │       ├── Fitness/
 │       └── Analytics/
+├── samples/                     # Throwaway walking skeleton (own Aspire host)
 ├── docs/                        # Architecture & decision records
 └── tests/                       # Cross-cutting / integration tests
 ```
@@ -166,6 +167,15 @@ dotnet build
 ```bash
 dotnet run --project src/Aspire/VitalSync.AppHost
 ```
+
+The AppHost composes the whole system:
+
+- **RabbitMQ** (`messaging`, management plugin) and **PostgreSQL** (`postgres`, pgAdmin), both with a data volume.
+- A **write/read database pair per bounded context** — `nutrition-write` / `nutrition-read`, `fitness-write` / `fitness-read`, `analytics-write` / `analytics-read` — on that one shared server, per [ADR-0021](./docs/architecture/decisions/0021-write-read-database-pair-per-context.md).
+- One **migration worker per context**, which runs to completion before its service starts (`WaitForCompletion`).
+- The three **services**, the **BFF**, and the **Blazor frontend** (the only externally reachable endpoint), each gated on a `/health` check.
+
+> The service and migration projects are still **skeletons without domain code**; the walking skeleton under `samples/` (see [WalkingSkeleton.md](./WalkingSkeleton.md)) has its own Aspire host and is what currently exercises the Building Blocks end to end.
 
 ## Testing
 
