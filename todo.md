@@ -1,0 +1,1337 @@
+# TODO — konsolidierte Arbeitsliste
+
+Zusammenführung der drei Befunddokumente, Stand 2026-08-02:
+
+| Quelle                                        | Einträge | davon offen |
+| --------------------------------------------- | -------- | ----------- |
+| [hacky.md](hacky.md)                          | 13       | 13          |
+| [Improvements.md](Improvements.md)            | 48       | 34          |
+| [WalkingSkeleton.md](WalkingSkeleton.md) §9   | 17       | 17          |
+| **Summe roh**                                 | **78**   | **64**      |
+| **nach Zusammenführung von Überschneidungen** |          | **43**      |
+
+Die 14 in `Improvements.md` als gelöst verifizierten Punkte wurden nicht übernomen.
+
+**Leitfrage der Priorisierung:** Die Basis soll stabil sein, bevor die echten Services kommen.
+Je stiller ein Fehler im Produktivbetrieb wirkt und je gebastelter die Stelle, desto höher die
+Priorität.
+
+| Prio   | Bedeutung                                                                                |
+| ------ | ---------------------------------------------------------------------------------------- |
+| **P1** | Datenverlust oder stiller Fehlschlag im Produktivbetrieb. Vor dem ersten echten Service. |
+| **P2** | Spürbar störend oder deutlich gebastelt. Vor dem zweiten Service.                        |
+| **P3** | Sinnvoll, aber ohne akuten Druck. Beim nächsten Anfassen der Stelle.                     |
+| **P4** | Kosmetik und Konsistenz. Aufräum-Commit.                                                 |
+
+**Status `Konflikt`** heißt: die Quelldokumente empfehlen gegenläufige Lösungen, oder ein
+Dokument erklärt für gelöst, was ein anderes als Fehler führt. Diese Punkte brauchen zuerst
+eine Entscheidung, keinen Code.
+
+## Übersicht
+
+| Nr.     | Titel                                                          | Prio   | Status            | Quellen                               |
+| ------- | -------------------------------------------------------------- | ------ | ----------------- | ------------------------------------- |
+| TODO-01 | Aggregate mit Kindkollektionen brechen still                   | **P1** | offen             | hacky-6, IMP-15                       |
+| TODO-02 | Aggregat-Version und Envelope-Metadaten                        | **P1** | offen             | WS-01, WS-03, IMP-24, IMP-41, hacky-7 |
+| TODO-03 | `AssemblyQualifiedName` als Persistenz-Contract                | **P1** | offen             | hacky-1, IMP-22                       |
+| TODO-04 | Stream-Key hängt am CLR-Klassennamen                           | **P1** | offen             | hacky-2, IMP-23                       |
+| TODO-05 | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | **P1** | offen             | hacky-5                               |
+| TODO-06 | Connection String zweimal, ohne Abgleich                       | **P1** | offen             | hacky-8, IMP-13                       |
+| TODO-07 | Integration Events sind nicht persistent                       | **P1** | offen             | WS-08                                 |
+| TODO-08 | Topic-Validierung und Kontextkennung                           | **P1** | offen             | WS-05, WS-13, WS-14                   |
+| TODO-09 | Keine CI-Pipeline                                              | **P1** | offen             | WS-16                                 |
+| TODO-10 | Rehydrierung: `new()` oder `Activator`?                        | **P1** | **Konflikt**      | hacky-5, IMP-14, WS-02                |
+| TODO-11 | Optionalität von `IUnitOfWork`                                 | **P2** | **Konflikt**      | IMP-07, hacky-11, IMP-46              |
+| TODO-12 | Name der `Result`-Fehlerfactory                                | **P2** | **Konflikt**      | hacky-3, IMP-27, IMP-39               |
+| TODO-13 | Wo lebt die Event-Identität?                                   | **P2** | **Konflikt**      | IMP-41, IMP-11                        |
+| TODO-14 | Idempotenz-Bookkeeping über die Kontextgrenze                  | **P2** | offen             | IMP-11, WS-12                         |
+| TODO-15 | Mehrfachfehler und Feldvalidierung end-to-end                  | **P2** | offen             | IMP-16, IMP-17, hacky-12              |
+| TODO-16 | `FailureCategory` fehlen Autorisierung und Unerwartet          | **P2** | offen             | IMP-18                                |
+| TODO-17 | `RuleChecker` schluckt `null`                                  | **P2** | offen             | hacky-10, IMP-36                      |
+| TODO-18 | `AddBuildingBlocks` ist nicht idempotent                       | **P2** | offen             | hacky-9                               |
+| TODO-19 | `ApplyEntityKeyConversions` scannt und mappt zu viel           | **P2** | offen             | hacky-4, WS-15                        |
+| TODO-20 | Global sequentielle Domain-Event-Queue                         | **P2** | offen             | hacky-13, IMP-25                      |
+| TODO-21 | Read-Modelle im state-stored Pfad nicht wiederaufbaubar        | **P2** | offen             | IMP-31                                |
+| TODO-22 | Unique-Constraint-Verletzungen werden nicht übersetzt          | **P2** | offen             | IMP-29                                |
+| TODO-23 | Keine Tracing-Instrumentierung der CQRS-Pipeline               | **P2** | offen             | IMP-30                                |
+| TODO-24 | `DbContext` als DI-Schlüssel                                   | **P2** | offen             | IMP-20                                |
+| TODO-25 | Marten-Nebenläufigkeit verdrahtet, aber unbelegt               | **P2** | offen             | WS-10                                 |
+| TODO-26 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | **P2** | offen             | WS-09                                 |
+| TODO-27 | Schema-Erzeugung zur Laufzeit in Produktion                    | **P2** | offen             | WS-11                                 |
+| TODO-28 | Restliche Messaging-Guard-Rails                                | **P2** | teilweise         | IMP-13, WS-06                         |
+| TODO-29 | `Publisher` koppelt Projektion und Integration-Publikation     | **P3** | offen             | IMP-26                                |
+| TODO-30 | `IIntegrationEventMapper` ist untypisiert                      | **P3** | offen             | IMP-12                                |
+| TODO-31 | `Result` hat keine Kombinatoren                                | **P3** | offen             | IMP-34                                |
+| TODO-32 | Async-Suffix ist inkonsistent                                  | **P3** | offen             | IMP-37                                |
+| TODO-33 | Ein Assembly für alle Persistenz-Pakete                        | **P3** | offen             | IMP-19                                |
+| TODO-34 | Keine zentrale Paketverwaltung                                 | **P3** | offen             | IMP-47                                |
+| TODO-35 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`     | **P3** | offen             | WS-04                                 |
+| TODO-36 | Der gRPC-Vertrag liegt noch beim Service                       | **P3** | offen             | WS-07                                 |
+| TODO-37 | Zeitbasierte Assertionen in Tests                              | **P3** | teilweise         | WS-17                                 |
+| TODO-38 | Keine Batch- oder Bulk-Fähigkeit                               | **P3** | offen             | IMP-32                                |
+| TODO-39 | Keine Saga- oder Process-Manager-Abstraktion                   | **P3** | offen             | IMP-33                                |
+| TODO-40 | Sichtbarkeits-Disziplin ist uneinheitlich                      | **P4** | teilweise         | IMP-38                                |
+| TODO-41 | Wirkungslose Varianz-Modifikatoren                             | **P4** | offen             | IMP-43                                |
+| TODO-42 | Uneinheitliche Projektstruktur                                 | **P4** | offen             | IMP-44                                |
+| TODO-43 | Irreführende Test- und Methodennamen                           | **P4** | offen             | IMP-45, IMP-48                        |
+| TODO-44 | Bewusste Ausnahmen dokumentieren                               | **P4** | wird nicht gelöst | IMP-35, IMP-46                        |
+
+---
+
+# TODO-01, Aggregate mit Kindkollektionen brechen still
+
+**P1 · offen · hacky-6 + IMP-15**
+
+Die beiden Quellbefunde sind die zwei Hälften desselben Problems und gehören zusammen:
+
+- **Lesen:** `EfCoreRepository` holt den State per `FindAsync(stateType, [id])`
+  ([EfCoreRepository.cs:40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreRepository.cs:40)) —
+  das lädt keine Navigationen.
+- **Schreiben:** `EfCoreUnitOfWork` kopiert per `CurrentValues.SetValues`
+  ([EfCoreUnitOfWork.cs:47](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreUnitOfWork.cs:47)) —
+  das kopiert nur Skalare.
+
+Ein `RecipeState` mit `IReadOnlyCollection<IngredientState>` käme also mit leerer Zutatenliste
+aus dem Repository, und Änderungen daran würden nicht geschrieben. Beides ohne Fehler, ohne Log.
+Die Samples sind flach, also fängt es kein Test — es schlägt beim **ersten echten Aggregat** zu.
+ADR-0025/0026 sagen „State mappt als gewöhnlicher Entity-Typ"; diese Zusage hält heute nur für
+flache States.
+
+## Lösungsvorschlag
+
+Sofort und billig — ehrlich abriegeln statt still falsch zu arbeiten:
+
+```csharp
+var entry = outbox.DbContext.Entry(tracked.PersistedState);
+
+if (entry.Navigations.Any())
+{
+    throw new NotSupportedException(
+        $"Der State '{entry.Metadata.ClrType}' hat Navigationen. SetValues kopiert nur Skalare.");
+}
+```
+
+Danach der eigentliche Fix, beide Hälften in einem Zug: die Include-Kette gehört ans Aggregat
+(oder per `AutoInclude` an den Kontext), und der Commit muss den State-**Graphen** ersetzen statt
+ihn zu patchen — alte Instanz detachen, neuen State als geänderten Graphen attachen.
+
+Verdient ein Amendment zu ADR-0025/0026, weil es die Kernzusage der State-Mapping-Entscheidung
+betrifft. **Vor dem ersten Aggregat mit Kindkollektion erledigen** — danach ist es zusätzlich ein
+Datenmigrationsthema.
+
+---
+
+# TODO-02, Aggregat-Version und Envelope-Metadaten
+
+**P1 · offen · WS-01 + WS-03 + IMP-24 + IMP-41 + hacky-7**
+
+Fünf Befunde, eine Ursache: es gibt keine fortlaufende Zahl pro Aggregat, und der Envelope trägt
+keine Metadaten.
+
+| Symptom                                           | Quelle        |
+| ------------------------------------------------- | ------------- |
+| Keine optimistische Nebenläufigkeit state-stored  | WS-01         |
+| Projektionen können nicht ordnungsbewusst sein    | WS-03, IMP-24 |
+| `DomainEventEnvelope` trägt nur Typname + Payload | IMP-24        |
+| `DomainEvent`-Records sind nie wertgleich         | IMP-41        |
+| Zeitstempel-Sentinel `OccurredAt.Ticks == 0`      | hacky-7       |
+
+Verifiziert: weder `RowVersion` noch `IsConcurrencyToken` existieren irgendwo. Beide Samples
+behelfen sich mit `RenameCount` als fachlicher Ordnungsgröße
+([WidgetProjections.cs:62](samples/StateStored/VitalSync.Sample.StateStored.Infrastructure/Read/WidgetProjections.cs:62)) —
+kein allgemeines Verfahren. Die ADR-0022-Anforderung „idempotent und per-aggregate order-aware"
+ist gestellt, aber von der Infrastruktur nicht bedienbar.
+
+## Lösungsvorschlag
+
+Eine Zahl für drei Zwecke — Nebenläufigkeit, Projektions-Ordnung, Envelope-Metadatum:
+
+```csharp
+// 1) Version an den State (WS-01, WS-03)
+public interface IState<TSelf, out TKey>
+{
+    TKey Id { get; }
+    long Version { get; init; }        // vom Fold hochgezählt
+    TSelf Apply(IDomainEvent domainEvent);
+}
+// im Write-DbContext: entity.Property(s => s.Version).IsConcurrencyToken();
+
+// 2) Metadaten in den Envelope (IMP-24, IMP-41, hacky-7)
+public sealed record DomainEventEnvelope(
+    string EventName, string Payload, Guid EventId,
+    string AggregateType, string AggregateId, long Version, DateTimeOffset OccurredAt);
+```
+
+Zieht `EventId`/`OccurredAt` aus dem Event heraus — damit wird `DomainEvent` ein reiner
+Wert-Record (IMP-41 gelöst) und die Sentinel-Erkennung im Stamper überflüssig (hacky-7 gelöst).
+Siehe aber **TODO-13**: für Integration Events wird die Gegenrichtung vorgeschlagen.
+
+Voraussetzung für TODO-14 (Idempotenz) und TODO-20 (Partitionierung). Braucht eine ADR.
+
+---
+
+# TODO-03, `AssemblyQualifiedName` als Persistenz-Contract
+
+**P1 · offen · hacky-1 + IMP-22**
+
+In jeder Outbox-Zeile steht `"Foo.WidgetCreated, MyAsm, Version=1.0.0.0, Culture=neutral,
+PublicKeyToken=null"`, zurückgeholt mit `Type.GetType(..., throwOnError: true)`
+([DomainEventEnvelopeSerializer.cs:23,33](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEventEnvelopeSerializer.cs:23)).
+
+Version-Bump, Assembly-Umbenennung oder Typ-Umzug macht jede noch nicht zugestellte Nachricht
+unlesbar — und das ist Crash-Recovery-Datenbestand, also genau der Fall, in dem man es am
+wenigsten gebrauchen kann. Zusätzlich ist `Type.GetType` auf persistierten Daten eine unbegrenzte
+Typ-Aktivierungsfläche.
+
+## Lösungsvorschlag
+
+```csharp
+[EventName("widget-created-v1")]
+public sealed record WidgetCreated(...) : DomainEvent;
+
+// Registry beim Start aus den gescannten Assemblies: name -> Type
+// Wrap:   fehlendes Attribut -> Startup-Fehler
+// Unwrap: _byName[name] ?? Type.GetType(name, throwOnError: true)   // Fallback für Altbestand
+```
+
+Macht Event-Versionierung überhaupt erst ausdrückbar (`-v2` neben `-v1`). Gemeinsam mit TODO-02
+und TODO-04 planen — alle drei betreffen dasselbe Persistenz-Format, und danach ist jede Änderung
+eine Datenmigration.
+
+---
+
+# TODO-04, Stream-Key hängt am CLR-Klassennamen
+
+**P1 · offen · hacky-2 + IMP-23**
+
+`$"{aggregateType.Name}/{keyValue}"`
+([EntityKeyFormatter.cs:20](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EntityKeyFormatter.cs:20)).
+Ein Rename von `Gadget` nach `Device` verwaist alle bestehenden Streams — im Event Store, wo es
+per Definition kein „einfach neu aufbauen" gibt.
+
+Das Fehlerbild ist das unangenehmste denkbare: `FetchStreamAsync` liefert leer, `GetByIdAsync`
+gibt `null`, der Handler meldet korrekt `NotFound`. **Kein Fehler** — nur Daten, die verschwunden
+scheinen. Ein anschließender Schreibvorgang legt einen neuen Stream an und macht den alten
+endgültig unauffindbar.
+
+## Lösungsvorschlag
+
+```csharp
+[StreamPrefix("gadget")]
+public sealed class Gadget : EventSourcedAggregateRoot<GadgetId, GadgetState>;
+
+private static string PrefixOf(Type aggregateType) =>
+    aggregateType.GetCustomAttribute<StreamPrefixAttribute>()?.Prefix
+    ?? throw new InvalidOperationException(
+        $"'{aggregateType}' braucht ein [StreamPrefix]; der Klassenname ist kein Persistenz-Contract.");
+```
+
+Das Werfen ist Absicht: der Contract soll bewusst gesetzt werden, nicht aus dem
+Refactoring-Zufall entstehen.
+
+---
+
+# TODO-05, Kein `Id.IsEmpty`-Guard in `AddAsync`
+
+**P1 · offen · hacky-5**
+
+Die Domäne bewacht Leer-Identität an zwei Stellen (`RaiseEvent`, `IStateOwner.Restore`) — das
+Repository ist die einzige Tür ohne Schloss. `repository.AddAsync(new Widget())` schreibt eine
+Zeile mit `Guid.Empty` bzw. öffnet Stream `Gadget/00000000-…`
+([EfCoreRepository.cs:55](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreRepository.cs:55),
+[MartenEventSourcedRepository.cs:48](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenEventSourcedRepository.cs:48)).
+
+Erreichbar ist das, weil beide Sample-Aggregate einen öffentlichen parameterlosen Konstruktor
+haben — siehe **TODO-10**, wo die Ursache verhandelt wird. Der Guard selbst ist davon unabhängig
+und unstrittig.
+
+## Lösungsvorschlag
+
+```csharp
+if (aggregate.Id.IsEmpty)
+{
+    throw new InvalidOperationException(
+        $"'{typeof(TAggregate)}' hat keine Identität. Ein Aggregat erhält sie durch sein erstes " +
+        "Event — der parameterlose Konstruktor dient nur der Rehydrierung.");
+}
+```
+
+In beide `AddAsync`-Implementierungen. Kosten null, verhinderter Fehler ist Datenkorruption.
+Kleinster P1-Punkt der Liste, sofort machbar.
+
+---
+
+# TODO-06, Connection String zweimal, ohne Abgleich
+
+**P1 · offen · hacky-8 + IMP-13 (Teil)**
+
+`UseEfCorePersistence(cs)` legt den String in `EfCoreMessageStoreConnectionString` ab und nutzt
+ihn ausschließlich für ein `RequiresWolverine`-Bool
+([BuildingBlocksOptions.cs:316](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/BuildingBlocksOptions.cs:316)).
+Der Host muss denselben String ein zweites Mal an `UseBuildingBlocksEfCorePersistence(cs)`
+reichen ([Program.cs:10-19](samples/StateStored/VitalSync.Sample.StateStored.Api/Program.cs:10)).
+
+Dass die Duplizierung strukturell erzwungen ist (Wolverine 3.0 verbietet der Extension den
+Zugriff auf die ServiceCollection), ist nachvollziehbar. Dass sie **ungeprüft** bleibt, nicht:
+zwei Tippfehler auseinander, und die Outbox sitzt in einer anderen Datenbank als die Aggregate —
+die ADR-0022-Atomaritätsgarantie ist dann still weg.
+
+## Lösungsvorschlag
+
+Der Wert liegt in DI bereit, also beim Start vergleichen:
+
+```csharp
+// WolverineWiringStartupValidator
+if (settings.EfCoreMessageStoreConnectionString is { } declared
+    && appliedStore is { } applied
+    && !string.Equals(Normalize(declared), Normalize(applied), StringComparison.Ordinal))
+{
+    throw new InvalidOperationException(
+        "UseEfCorePersistence und UseBuildingBlocksEfCorePersistence zeigen auf unterschiedliche " +
+        "Write-Datenbanken. Outbox und Aggregate müssen in einer Transaktion liegen (ADR-0022).");
+}
+```
+
+`Normalize` über `NpgsqlConnectionStringBuilder`, damit Formatierungsunterschiede nicht falsch
+anschlagen. **Bestes Aufwand-Nutzen-Verhältnis der ganzen Liste.**
+
+---
+
+# TODO-07, Integration Events sind nicht persistent
+
+**P1 · offen · WS-08**
+
+Verifiziert: nirgends in `BuildingBlocks/src` wird persistente Zustellung konfiguriert, die
+Nachrichten gehen mit `delivery_mode: 1` raus. Die Outbox schützt bis zur Übergabe an den Broker;
+**danach** verliert ein RabbitMQ-Neustart die Nachricht. Das untergräbt genau die Zusage, für die
+die Outbox gebaut wurde.
+
+## Lösungsvorschlag
+
+```csharp
+// WolverineOptionsExtensions.ApplyBuildingBlockMessagingDefaults
+options.Publish(publishing => publishing
+    .MessagesImplementing<IIntegrationEvent>()
+    .ToRabbitTopics(IntegrationEventExchangeName, exchange => exchange.Durable = true));
+```
+
+Konsumentenseite mitentscheiden: Quorum-Queues überleben einen Broker-Neustart, klassische nicht.
+Beides in denselben Schritt, sonst ist die Kette nur halb dicht. Der Durchsatzpreis ist für
+Integration Events die richtige Wahl; den lokalen Domain-Event-Pfad betrifft es nicht (der läuft
+über die Datenbank).
+
+---
+
+# TODO-08, Topic-Validierung und Kontextkennung
+
+**P1 · offen · WS-05 + WS-13 + WS-14**
+
+Drei Befunde, die alle dieselbe fehlende Information brauchen — den eigenen Kontextnamen:
+
+- **Vergessenes `[Topic]`** (WS-05): verifiziert prüft **nichts** in `BuildingBlocks/src` die
+  Attribute. Ein Event ohne `[Topic]` bekommt einen aus dem CLR-Typnamen abgeleiteten Routing
+  Key, landet unter einem Schlüssel, den niemand gebunden hat, und verschwindet still.
+- **Pattern gegen Vertrag unbewacht** (WS-14): `SubscriptionDiscoveryTests` fängt inzwischen die
+  vergessene Consumer-Assembly ab, aber ein Tippfehler im Topic-Pattern verhält sich exakt wie
+  ein Upstream-Kontext, der noch nichts publiziert hat.
+- **Eigene Events konsumieren** (WS-13): folgenlos nur solange kein Handler existiert — die
+  Folgenlosigkeit beruht auf der Abwesenheit von Code, nicht auf einer Regel.
+
+## Lösungsvorschlag
+
+```csharp
+// 1) Kontextname als Konfiguration — die fehlende Information
+options.ContextName = "nutrition";
+
+// 2) Startup-Validator analog zu HandlerRegistrationStartupValidator:
+//    - jeder IIntegrationEvent-Typ ohne [Topic]        -> Start abbrechen
+//    - [Topic]-Präfix != ContextName                    -> Start abbrechen
+//    - gebundenes Pattern ohne passenden bekannten Key  -> Warning (nicht Fehler!)
+
+// 3) beim Publish Header setzen, beim Listen eigene Nachrichten ack'en ohne Handler
+envelope.Headers["vitalsync.source-context"] = options.ContextName;
+```
+
+Die Pattern-Prüfung bewusst als **Warning**: ein Service bindet legitim auf einen noch nicht
+existierenden Upstream-Kontext, und ein Fehler dort würde genau die Reihenfolge blockieren, in
+der man Kontexte normalerweise baut.
+
+---
+
+# TODO-09, Keine CI-Pipeline
+
+**P1 · offen · WS-16**
+
+Verifiziert: `.github/workflows/` existiert und ist **leer**. Kein automatischer Build, kein
+Testlauf, keine Prüfung der „warnings as errors"-Zusage aus `Directory.Build.props`.
+
+Das ist P1, weil es das Netz ist, das alle anderen Punkte hält: ohne CI hängt die Korrektheit
+jedes Fixes daran, dass jemand lokal `dotnet test` tippt.
+
+## Lösungsvorschlag
+
+```yaml
+# .github/workflows/build.yml
+- run: dotnet build --configuration Release
+- run: dotnet test --configuration Release
+  env:
+      VITALSYNC_REQUIRE_CONTAINERS: "1" # sonst skippen alle Testcontainers-Tests still
+```
+
+Die Umgebungsvariable ist der Punkt, an dem es sonst schiefgeht: ohne sie überspringen die
+Testcontainers-Tests kommentarlos und der Lauf ist trotzdem grün — die Pipeline würde also genau
+die Tests nicht ausführen, für die sie am wertvollsten ist. GitHub-Runner haben Docker
+vorinstalliert.
+
+---
+
+# TODO-10, Rehydrierung: `new()` oder `Activator`?
+
+**P1 · KONFLIKT · hacky-5 + IMP-14 + WS-02**
+
+Die Quellen widersprechen sich in der Richtung:
+
+| Quelle           | Empfehlung                                                                                     |
+| ---------------- | ---------------------------------------------------------------------------------------------- |
+| WS-02 (original) | offene Frage: „soll das so bleiben, **oder bekommt `IRepository` eine `new()`-Beschränkung**?" |
+| hacky-5, IMP-14  | umgekehrt: `new()` **streichen**, `Activator.CreateInstance(nonPublic: true)` überall          |
+
+Der Sachstand: der EF-Pfad nutzt `Activator`
+([EfCoreRepository.cs:71](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreRepository.cs:71)),
+der Marten-Pfad eine `new()`-Constraint
+([MartenEventSourcedRepository.cs:27](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenEventSourcedRepository.cs:27)).
+Beide sind open-generisch auf denselben Vertrag registriert, der nur `IAggregateRoot<TKey>`
+verlangt — ein falsch zugeschnittenes Aggregat scheitert also erst im Container zur Laufzeit.
+
+Der Kern des Konflikts: `new()` verlangt einen **öffentlichen** parameterlosen Konstruktor. Damit
+diktiert die Infrastruktur in die Domäne hinein, entgegen ADR-0025 („darf non-public sein"), und
+`new Widget()` wird überall legaler Code.
+
+## Lösungsvorschlag
+
+**Empfehlung: `new()` streichen**, also der hacky-5/IMP-14-Richtung folgen. Begründung: eine
+`new()`-Beschränkung im Vertrag würde ADR-0025 nicht reparieren, sondern die Verletzung
+festschreiben — und sie zwänge auch state-stored Aggregate zum öffentlichen Konstruktor, die ihn
+heute nicht brauchen.
+
+```csharp
+// MartenEventSourcedRepository: new() entfällt
+var aggregate = (TAggregate)Activator.CreateInstance(typeof(TAggregate), nonPublic: true)!;
+```
+
+Der Preis — die Anforderung bleibt zur Compile-Zeit unausdrückbar — ist beim EF-Pfad ohnehin
+schon bezahlt. Ein Startup-Check über die gescannten Assemblies fängt sie früh statt beim ersten
+Laden. **Entscheidung zuerst, dann Code; braucht ein ADR-0025-Amendment.**
+
+---
+
+# TODO-11, Optionalität von `IUnitOfWork`
+
+**P2 · KONFLIKT · IMP-07 vs. hacky-11 (+ IMP-46)**
+
+| Quelle   | Aussage                                                                               |
+| -------- | ------------------------------------------------------------------------------------- |
+| IMP-07   | **gelöst** — `IUnitOfWork? unitOfWork = null` als Konstruktorparameter ist die Lösung |
+| hacky-11 | genau das ist der Fehler — ein stiller Default entscheidet statt des Entwicklers      |
+
+Beide beschreiben denselben Code
+([UnitOfWorkBehavior.cs:27](BuildingBlocks/src/BuildingBlocks.Infrastructure/Dispatching/UnitOfWorkBehavior.cs:27)).
+Unstrittig ist, dass der ursprüngliche Bug (Absturz ohne Persistenz) weg ist; strittig ist, ob
+„kein UoW registriert ⇒ Command committet stillschweigend nicht" ein akzeptabler Endzustand ist.
+Heute hängt die Sichtbarkeit an einem einzelnen `Information`-Log beim Start.
+
+## Lösungsvorschlag
+
+**Empfehlung: hacky-11 folgen.** Ein `Information`-Log ist keine Absicherung — im Produktivbetrieb
+liest ihn niemand, und der Fehlermodus ist „Command meldet Erfolg, Daten fehlen".
+
+```csharp
+internal sealed class NullUnitOfWork : IUnitOfWork
+{
+    public Task CommitAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+}
+
+// AddBuildingBlocks, am Ende:
+if (!services.Any(d => d.ServiceType == typeof(IUnitOfWork)))
+{
+    services.AddScoped<IUnitOfWork, NullUnitOfWork>();
+}
+```
+
+Das Behavior nimmt dann `IUnitOfWork` ohne `?` und ohne Default, der Null-Check im `Handle`
+entfällt. Der Startup-Hinweis bleibt sinnvoll. IMP-07 wäre danach weiterhin gelöst — nur anders.
+
+---
+
+# TODO-12, Name der `Result`-Fehlerfactory
+
+**P2 · KONFLIKT · hacky-3 + IMP-27 vs. IMP-39**
+
+| Quelle          | Vorschlag                                                                          |
+| --------------- | ---------------------------------------------------------------------------------- |
+| hacky-3, IMP-27 | `static abstract TSelf Failure(Failure failure)` — Name **`Failure` bleibt**       |
+| IMP-39          | Umbenennen zu **`Failed(...)`**, weil `Failure`/`Failures`/`IsFailure` kollidieren |
+
+Der gemeinsame Nenner: `FailureResults` sucht die statische Methode per Reflection über den Namen
+([FailureResults.cs:39](BuildingBlocks/src/BuildingBlocks.Infrastructure/Dispatching/FailureResults.cs:39)),
+weil `Result` und `Result<T>` keine gemeinsame Abstraktion haben. Beide Vorschläge beseitigen die
+Reflection — aber die Codeskizzen widersprechen sich im Namen.
+
+## Lösungsvorschlag
+
+**Empfehlung: beides, in dieser Reihenfolge** — der Konflikt ist scheinbar. Erst umbenennen, dann
+abstrahieren, weil das `new`-Hiding in `Result<T>` sonst bestehen bleibt:
+
+```csharp
+// Schritt 1 (IMP-39): Namenskollision auflösen
+public static Result Failed(Failure failure);
+public static Result<T> Failed<T>(Failure failure);   // kein "new" mehr nötig
+
+// Schritt 2 (IMP-27/hacky-3): static abstract statt Reflection
+public interface IFailureResult<out TSelf> { static abstract TSelf Failed(Failure failure); }
+// Behaviors: where TResponse : Result, IFailureResult<TResponse>
+return TResponse.Failed(Failure.Validation(...));
+```
+
+Danach ist `FailureResults` ersatzlos löschbar und aus einem Laufzeitfehler wird ein
+Compile-Fehler. Breaking Change für Handler, die `Result.Failure(...)` aufrufen — mechanisch.
+
+---
+
+# TODO-13, Wo lebt die Event-Identität?
+
+**P2 · KONFLIKT · IMP-41 vs. IMP-11**
+
+| Quelle | Richtung                                                                          |
+| ------ | --------------------------------------------------------------------------------- |
+| IMP-41 | `EventId`/`OccurredAt` **raus** aus `DomainEvent`, rein in den Envelope (TODO-02) |
+| IMP-11 | `IIntegrationEvent` bekommt `EventId`/`OccurredAt` **ans Event**                  |
+
+Gegenläufige Empfehlungen für die zwei Event-Familien, ohne dass eine der Quellen die andere
+erwähnt. Ohne Entscheidung entsteht ein Modell, in dem Identität mal im Umschlag und mal im Brief
+steht — und niemand weiß mehr, welches gilt.
+
+## Lösungsvorschlag
+
+**Empfehlung: der Widerspruch ist auflösbar, beide haben recht** — die Fälle sind verschieden:
+
+- **Domain Events** reisen ausschließlich im `DomainEventEnvelope` durch die eigene Outbox. Der
+  Envelope ist immer da, kann die Metadaten tragen, und ohne sie am Event bleibt `DomainEvent` ein
+  sauberer Wert-Record mit funktionierender Wertgleichheit. → **Identität in den Envelope.**
+- **Integration Events** sind Verträge auf der Leitung. Es gibt keinen Envelope, den der
+  Konsument kennt — die Identität muss also am Event hängen, sonst kann er keine Duplikate
+  erkennen (TODO-14). → **Identität am Event.**
+
+Das explizit als Regel festhalten (`docs/architecture/communication.md`), sonst wird die
+Asymmetrie später als Inkonsistenz „aufgeräumt". Entscheidung vor TODO-02 und TODO-14 treffen.
+
+---
+
+# TODO-14, Idempotenz-Bookkeeping über die Kontextgrenze
+
+**P2 · offen · IMP-11 + WS-12**
+
+Der Spiegel in Etappe 3 ist nur deshalb idempotent, weil das Gadget die Widget-Id übernimmt
+([MirrorWidget.cs:20](samples/EventSourced/VitalSync.Sample.EventSourced.Application/MirrorWidget.cs:20)).
+Für ein Spiegelbild angemessen, aber kein allgemeines Verfahren: ein Kontext, der aus einem
+fremden Ereignis ein **eigenes** Aggregat mit eigener Identität ableitet, braucht echtes
+Bookkeeping über verarbeitete `EventId`s. Das gibt es nicht — und `IIntegrationEvent` ist ein
+leerer Marker
+([IIntegrationEvent.cs](BuildingBlocks/src/BuildingBlocks.Application/IIntegrationEvent.cs)), es
+gibt also nicht einmal eine Id, über die man Buch führen könnte.
+
+## Lösungsvorschlag
+
+Reihenfolge beachten — erst TODO-13 entscheiden, dann:
+
+```csharp
+// 1) IIntegrationEvent bekommt Identität (IMP-11)
+public interface IIntegrationEvent { Guid EventId { get; } DateTimeOffset OccurredAt { get; } }
+
+// 2) Bookkeeping als Building Block, in der Write-DB des Konsumenten,
+//    in derselben Transaktion wie der Command:
+// processed_integration_events(event_id uuid primary key, consumed_at timestamptz)
+// INSERT ... ON CONFLICT DO NOTHING; 0 Zeilen betroffen = schon verarbeitet, ack
+```
+
+Als Wolverine-Middleware auf dem Consumer-Pfad, damit kein Konsument daran denken muss. Bis dahin
+gilt: **geteilte Identität ist der einzige sanktionierte Idempotenz-Weg** — das gehört so in
+`docs/architecture/communication.md`, sonst wird es als allgemeines Muster kopiert.
+
+---
+
+# TODO-15, Mehrfachfehler und Feldvalidierung end-to-end
+
+**P2 · offen · IMP-16 + IMP-17 + hacky-12**
+
+Drei Befunde auf derselben Kette, die nur gemeinsam Sinn ergeben:
+
+- **Erzeugen** (IMP-16): `Result` trägt eine `IReadOnlyList<Failure>`, aber der einzige Produzent
+  ist `ExceptionToResultBehavior` und erzeugt genau einen Fehler aus einer Exception.
+- **Beschreiben** (IMP-17): `Failure` hat kein `Target`/`PropertyName`
+  ([Failure.cs:40-50](BuildingBlocks/src/BuildingBlocks.Application/Failure.cs:40)), und alle
+  Domänenfehler tragen denselben technischen Code.
+- **Transportieren** (hacky-12): der gRPC-Adapter nimmt nur `result.Failures[0]`
+  ([WidgetGrpcService.cs:62](samples/StateStored/VitalSync.Sample.StateStored.Api/WidgetGrpcService.cs:62)).
+
+Ergebnis: feldweise Validierung im UI ist mit dem heutigen Modell nicht umsetzbar, obwohl das
+Datenmodell so aussieht, als wäre sie vorgesehen.
+
+## Lösungsvorschlag
+
+```csharp
+// 1) Failure um Ziel und Metadaten erweitern
+public sealed record Failure(string Code, string Message, FailureCategory Category)
+{
+    public string? Target { get; init; }     // "Name", "Ingredients[2].Amount"
+    public IReadOnlyDictionary<string, object?>? Metadata { get; init; }
+}
+
+// 2) ValidationBehavior auf dem reservierten Slot 200 (außerhalb der Unit of Work)
+public interface IRequestValidator<in TRequest>
+{
+    ValueTask<IReadOnlyList<Failure>> ValidateAsync(TRequest request, CancellationToken ct);
+}
+
+// 3) Transport: Status-Code aus Failures[0], aber alle Failures in die Trailer
+```
+
+Fachliche Codes kommen von der Regel selbst (`IBusinessRule.Code` → `recipe.name_required`), nicht
+aus einer Konstante im Behavior. Alternative, falls das zu viel ist: Mehrfach-Failures aus
+`Result` streichen — dann ist die API wenigstens ehrlich.
+
+---
+
+# TODO-16, `FailureCategory` fehlen Autorisierung und Unerwartet
+
+**P2 · offen · IMP-18**
+
+Vier Werte: `Validation`, `BusinessRule`, `NotFound`, `Conflict`
+([FailureCategory.cs](BuildingBlocks/src/BuildingBlocks.Application/FailureCategory.cs)). Ein
+Autorisierungsfehler (403) hat keine Kategorie und landet im `_ => StatusCode.Unknown`-Arm des
+gRPC-Adapters; dasselbe gilt für einen bewusst zu einem `Result` degradierten Infrastrukturfehler.
+
+## Lösungsvorschlag
+
+```csharp
+public enum FailureCategory
+{
+    Validation, BusinessRule, NotFound, Conflict,
+    Forbidden,      // 403 — authentifiziert, aber nicht berechtigt
+    Unexpected,     // 500 — technischer Fehler, bewusst als Result transportiert
+}
+```
+
+`Unauthorized` (401) bewusst **nicht**: Authentifizierung ist Sache des Hosts und erreicht die
+Application-Schicht nie. Die `switch`-Ausdrücke im Transport werden durch die neuen Werte
+compile-time-vollständigkeitsgeprüft.
+
+---
+
+# TODO-17, `RuleChecker` schluckt `null`
+
+**P2 · offen · hacky-10 + IMP-36**
+
+`rule?.IsBroken() == true` und `foreach (var rule in rules ?? [])`
+([RuleChecker.cs:18-63](BuildingBlocks/src/BuildingBlocks.Domain/RuleChecker.cs:18)). Eine
+Factory, die versehentlich `null` liefert, bedeutet „Regel bestanden" — die Validierung schweigt
+genau im Fehlerfall. Die `<remarks>` begründen das mit „damit Guard-Klauseln knapp bleiben".
+
+## Lösungsvorschlag
+
+```csharp
+public static void Check(IBusinessRule rule)
+{
+    ArgumentNullException.ThrowIfNull(rule);
+
+    if (rule.IsBroken())
+    {
+        throw new BusinessRuleViolationException(rule.Message);
+    }
+}
+```
+
+Analog für die `params`-Überladung und für `IDomainValidationRule`. Bestehende Tests, die die
+Null-Toleranz festschreiben, mitziehen. Kleiner Eingriff, entfernt eine stille Sicherheitslücke
+in der Domänenvalidierung.
+
+---
+
+# TODO-18, `AddBuildingBlocks` ist nicht idempotent
+
+**P2 · offen · hacky-9**
+
+`services.TryAddSingleton(behaviorRegistry)` behält beim zweiten Aufruf die **erste** Registry,
+`options` bekommt aber die **zweite**
+([ServiceCollectionExtensions.cs:54-58](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs:54)).
+Host-eigene Behaviors aus dem zweiten Aufruf schreiben ihre Order in eine verwaiste Instanz und
+laufen zur Laufzeit auf Order 0.
+
+Dazu passt: `GetOrder` liefert für Unbekanntes `0`
+([PipelineBehaviorRegistry.cs:40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Dispatching/PipelineBehaviorRegistry.cs:40)) —
+exakt `LoggingBehaviorOrder`. Ein direkt auf der `IServiceCollection` registriertes Behavior
+kollidiert also lautlos mit dem Logging und untergräbt die in IMP-03 hart erkämpfte Reihenfolge.
+
+## Lösungsvorschlag
+
+```csharp
+// bestehende Registry wiederverwenden statt eine zweite zu erzeugen
+var behaviorRegistry = (PipelineBehaviorRegistry?)services
+    .FirstOrDefault(d => d.ServiceType == typeof(PipelineBehaviorRegistry))?.ImplementationInstance
+    ?? new PipelineBehaviorRegistry();
+
+// und Unbekanntes nicht auf einen belegten Wert fallen lassen
+public int GetOrder(Type closed) =>
+    _orders.TryGetValue(Definition(closed), out var order)
+        ? order
+        : throw new InvalidOperationException($"Behavior '{closed}' hat keine Order.");
+```
+
+Dazu ein Test, der `AddBuildingBlocks` zweimal aufruft und die Order des zweiten Behaviors prüft.
+
+---
+
+# TODO-19, `ApplyEntityKeyConversions` scannt und mappt zu viel
+
+**P2 · offen · hacky-4 + WS-15**
+
+Zwei Befunde in derselben Schleife
+([EntityKeyValueConverter.cs:66-103](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EntityKeyValueConverter.cs:66)):
+
+- **Zu viel** (hacky-4): der Scan läuft über CLR-Properties und ruft
+  `modelBuilder.Entity(clrType).Property(name)` — das **legt die Property im Modell an**, wenn sie
+  fehlt. Jede berechnete, get-only oder `Ignore()`-te Property vom Key-Typ landet still als Spalte.
+- **Zu wenig** (WS-15): Complex Types werden gar nicht erfasst, der Helper kennt nur
+  `Model.GetEntityTypes()`. Ein typisierter Schlüssel darin bekäme keinen Konverter und scheiterte
+  erst beim Migrieren gegen PostgreSQL.
+
+## Lösungsvorschlag
+
+Beides in einem Durchgang, weil es dieselbe Schleife ist:
+
+```csharp
+foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+{
+    Konvertiere(entityType.GetProperties());                       // nur was EF kennt (hacky-4)
+    Konvertiere(entityType.GetKeys().SelectMany(k => k.Properties)); // plus der PK, der Grund für den Scan
+
+    foreach (var complex in entityType.GetComplexProperties())      // WS-15, rekursiv
+    {
+        Konvertiere(complex.ComplexType.GetProperties());
+    }
+}
+```
+
+Dazu ein Test, der eine `Ignore()`-te Key-Property nachweislich ignoriert lässt.
+
+---
+
+# TODO-20, Global sequentielle Domain-Event-Queue
+
+**P2 · offen · hacky-13 + IMP-25**
+
+```csharp
+options.PublishMessage<DomainEventEnvelope>()
+    .ToLocalQueue(DomainEventLocalQueueName).Sequential().UseDurableInbox();
+```
+
+([WolverineOptionsExtensions.cs:77-80](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/WolverineOptionsExtensions.cs:77))
+
+Sämtliche Domain Events eines Service laufen durch eine strikt sequentielle Queue, um eine
+**pro-Aggregat**-Ordnungsgarantie zu erkaufen. Global serialisieren für eine lokale Zusage: der
+Durchsatz ist auf ein Event zur Zeit gedeckelt.
+
+## Lösungsvorschlag
+
+Nach Aggregat-Id partitionieren — gleiche Garantie, parallel über verschiedene Aggregate. Setzt
+**TODO-02** voraus, weil der Envelope die Aggregat-Identität heute nicht mitführt:
+
+```csharp
+// beim Publish: GroupId = envelope.AggregateId
+// Wolverine hält die Reihenfolge pro GroupId, parallelisiert über GroupIds hinweg
+```
+
+Vor der ersten Lastmessung nicht anfassen — hier steht es, damit die Entscheidung bewusst fällt
+statt als Default stehen zu bleiben.
+
+---
+
+# TODO-21, Read-Modelle im state-stored Pfad nicht wiederaufbaubar
+
+**P2 · offen · IMP-31**
+
+ADR-0022 nennt Read-Modelle „abgeleitet und wiederaufbaubar". Für event-sourced Kontexte stimmt
+das (Marten-Stream als Quelle). Für state-stored nicht: die Write-Datenbank hält nur den aktuellen
+Zustand, und die Domain Events existieren ausschließlich als Outbox-Zeilen, die nach erfolgreicher
+Zustellung gelöscht werden. Ein Projektions-Bugfix ist damit nicht auf Altdaten anwendbar.
+
+## Lösungsvorschlag
+
+**Empfehlung: Domain-Event-Journal.** Die Envelopes zusätzlich in eine append-only Tabelle der
+Write-DB schreiben, in derselben Transaktion. Kosten: Speicher plus eine Tabelle. Nutzen: echter
+Replay, Audit-Trail, und die Vorstufe zu einer späteren ES-Migration des Kontexts — also genau der
+in ADR-0025 versprochene Wechsel state-stored ↔ event-sourced.
+
+Die Alternative (Rebuild aus dem aktuellen Zustand) ist billiger, kostet aber einen zweiten
+Codepfad pro Read-Modell und trägt nicht für Modelle, die Historie aggregieren („Anzahl
+Umbenennungen"). Braucht eine ADR.
+
+---
+
+# TODO-22, Unique-Constraint-Verletzungen werden nicht übersetzt
+
+**P2 · offen · IMP-29**
+
+`UnitOfWorkBehavior` fängt `ConcurrencyException` und `DbUpdateConcurrencyException`
+([UnitOfWorkBehavior.cs:58-65](BuildingBlocks/src/BuildingBlocks.Infrastructure/Dispatching/UnitOfWorkBehavior.cs:58)).
+Eine `DbUpdateException` mit PostgreSQL-Unique-Violation (SQLSTATE `23505`) fällt durch und wird
+zur unerwarteten Exception — obwohl „dieser Name existiert bereits" ein erwarteter fachlicher Fall
+ist. Der Nutzer bekommt einen 500er statt eines 409ers, und die Error-Metrik zählt einen
+Systemfehler.
+
+## Lösungsvorschlag
+
+```csharp
+catch (DbUpdateException exception) when (exception.InnerException is PostgresException
+    { SqlState: PostgresErrorCodes.UniqueViolation } pg)
+{
+    return FailureResults.Create<TResponse>(
+        Failure.Conflict("persistence.unique_violation", $"'{pg.ConstraintName}' verletzt."));
+}
+```
+
+Der Constraint-Name gehört in die Meldung, sonst ist der Fehler im Log nicht zuzuordnen. Das
+Mapping von Constraint-Namen auf fachliche Codes (`ux_recipes_name` → `recipe.name_taken`) gehört
+in den Service, nicht in die Building Blocks — hängt an TODO-15.
+
+---
+
+# TODO-23, Keine Tracing-Instrumentierung der CQRS-Pipeline
+
+**P2 · offen · IMP-30**
+
+Verifiziert: **kein einziges `Activity`/`ActivitySource` in `BuildingBlocks/src`**.
+`LoggingBehavior` misst die Dauer und loggt sie, erzeugt aber keinen Span. In einem
+Aspire-/OpenTelemetry-Setup fehlt damit die Ebene zwischen HTTP/gRPC-Span und Datenbank-Span: man
+sieht, dass ein Request 800 ms brauchte, aber nicht, welcher Handler oder welche Projektion.
+
+## Lösungsvorschlag
+
+```csharp
+internal static class BuildingBlocksActivitySource
+{
+    public static readonly ActivitySource Instance = new("VitalSync.BuildingBlocks", "1.0.0");
+}
+
+// eigenes TracingBehavior auf Order -100 (außerhalb des Loggings, ausdrücklich erlaubt)
+using var activity = BuildingBlocksActivitySource.Instance.StartActivity($"Send {requestName}");
+activity?.SetTag("vitalsync.request.type", requestName);
+```
+
+Analog in `ProjectionRunner` und `Publisher`; der Service-Default registriert die Quelle per
+`AddSource("VitalSync.BuildingBlocks")`. Kleiner Aufwand, hoher Betriebsnutzen — sinnvollerweise
+zusammen mit dem ersten produktiven Service.
+
+---
+
+# TODO-24, `DbContext` als DI-Schlüssel
+
+**P2 · offen · IMP-20**
+
+```csharp
+_services.TryAddScoped<DbContext>(static provider => provider.GetRequiredService<TContext>());
+```
+
+([BuildingBlocksOptions.cs:310](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/BuildingBlocksOptions.cs:310))
+
+Jeder Kontext hat laut ADR-0021 ein Write- **und** ein Read-Paar. Der unqualifizierte
+`DbContext`-Schlüssel gehört per Konvention dem Write-Kontext — sichtbar ist das nirgends.
+Registriert ein Service versehentlich seinen Read-Kontext ebenfalls als `DbContext`, entscheidet
+die Registrierungsreihenfolge, in welche Datenbank das Repository schreibt.
+
+## Lösungsvorschlag
+
+Die Konvention ins Typsystem heben — die kleinste wirksame Änderung:
+
+```csharp
+public interface IWriteDbContext;   // vom Write-Kontext des Service implementiert
+// Repository und UnitOfWork hängen an IWriteDbContext statt an DbContext
+```
+
+Die saubere Variante (`EfCoreRepository<TContext, TAggregate, TKey>`) scheitert daran, dass C#
+keine partiell geschlossenen offenen Generics registrieren kann — sie bräuchte eine
+Factory-Registrierung.
+
+---
+
+# TODO-25, Marten-Nebenläufigkeit verdrahtet, aber unbelegt
+
+**P2 · offen · WS-10**
+
+Der Repository-Pfad hängt mit erwarteter Version an
+([MartenUnitOfWork.cs:54](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenUnitOfWork.cs:54)),
+und ein BuildingBlocks-Integrationstest deckt die Versionsarithmetik ab. Dass ein echter Konflikt
+als `FailureCategory.Conflict` beim **Aufrufer** ankommt, prüft kein Szenario:
+`MirrorWidgetTests` arbeitet mit einem gemockten `Failure.Conflict`
+([MirrorWidgetTests.cs:73](samples/EventSourced/VitalSync.Sample.EventSourced.Tests/MirrorWidgetTests.cs:73)).
+
+## Lösungsvorschlag
+
+Ein Szenario-Test gegen den echten Stack (Testcontainers, wie die übrigen):
+
+```csharp
+// zwei Repository-Instanzen laden dasselbe Gadget (Version 1)
+// beide benennen um, beide committen
+// -> der zweite Commit muss als FailureCategory.Conflict beim Aufrufer ankommen,
+//    nicht als Exception
+```
+
+Sichert die Kette Marten → `ConcurrencyException` → `UnitOfWorkBehavior` → `Result` als Ganzes ab.
+Ohne ihn ist nur jedes Glied einzeln belegt. Sinnvollerweise zusammen mit TODO-02, das denselben
+Test für den state-stored Pfad braucht.
+
+---
+
+# TODO-26, Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom
+
+**P2 · offen · WS-09**
+
+`WidgetId`/`GadgetId` implementieren `IsEmpty` als berechnetes Member
+([WidgetId.cs:7](samples/StateStored/VitalSync.Sample.StateStored.Domain/WidgetId.cs:7)),
+verifiziert existiert **kein einziges `[JsonIgnore]`** im Repository. Im Eventstrom steht damit
+`"GadgetId": {"Value": "…", "IsEmpty": false}`. Events sind unveränderlich — eine dauerhafte
+Entscheidung, die gerade unbemerkt getroffen wird.
+
+## Lösungsvorschlag
+
+In BuildingBlocks lösen, nicht am Sample, sonst muss jeder Schlüsseltyp daran denken:
+
+```csharp
+public interface IEntityKey
+{
+    [JsonIgnore] bool IsEmpty { get; }     // abgeleitet, nie Nutzlast
+}
+```
+
+Sauberer: ein `JsonConverter` für `IEntityKey<TValue>`, der den Schlüssel als **nackten Wert**
+schreibt (`"GadgetId": "8f3a…"`). Halbiert die Streamgröße und macht Events von Hand lesbar.
+**Solange keine produktiven Streams existieren, ist das gratis** — danach eine Event-Migration.
+Deshalb P2 trotz geringer akuter Wirkung.
+
+---
+
+# TODO-27, Schema-Erzeugung zur Laufzeit in Produktion
+
+**P2 · offen · WS-11**
+
+Der event-sourced MigrationService migriert **nur** den Read-Kontext
+([Program.cs:21-22](samples/EventSourced/VitalSync.Sample.EventSourced.MigrationService/Program.cs:21)).
+Die Write-Seite baut ihr Schema zur Laufzeit selbst — Marten und Wolverine tun das beide. Im
+Sample unauffällig; in Produktion heißt es, dass eine Datenbank ihr Schema beim ersten Start eines
+neuen Deployments ändert, ohne dass jemand es freigegeben hat.
+
+## Lösungsvorschlag
+
+```csharp
+// Produktion: Autoerzeugung aus, Schema als Migrationsartefakt ausliefern
+options.AutoCreateSchemaObjects = AutoCreate.None;
+// dazu: Schema-Anwendung als Schritt im MigrationService-Worker
+```
+
+Gehört in denselben ADR wie die Frage, wie die Wolverine-Tabellen in Produktion entstehen — beide
+Stores haben dasselbe Muster und sollten dieselbe Antwort bekommen. Spätestens beim ersten echten
+event-sourced Service fällig.
+
+---
+
+# TODO-28, Restliche Messaging-Guard-Rails
+
+**P2 · teilweise · IMP-13 + WS-06**
+
+Der große Teil ist erledigt: `BuildingBlocksWolverineExtension` wendet die passende Kombination
+automatisch an, die `Apply*`-Methoden sind `internal`, ein Startup-Validator prüft `UseWolverine`,
+und eine Subscription ohne Transport wird abgelehnt.
+
+**Offen** bleiben vier Punkte, davon einer mit Zähnen: ein registrierter **Mapper ohne Transport**
+bedeutet, dass jedes gemappte Event im `NullIntegrationEventSink` landet und nur eine Warning
+erzeugt. Für Commands und Queries ist genau diese Fehlerklasse längst ein Startfehler (WS-06).
+
+## Lösungsvorschlag
+
+```csharp
+// 1) Mapper ohne Transport — Kompositionszeit-Prüfung
+if (mapperRegistriert && WolverineWiring.RabbitMqUri is null && !_noMessagingSelected)
+    throw new InvalidOperationException(
+        "Integration-Event-Mapper registriert, aber kein Transport konfiguriert.");
+
+// 2) UseNoMessaging() als bewusstes Opt-out statt stillem Null-Sink-Default
+// 3) AutoProvision an IHostEnvironment binden (nicht in Produktion)
+// 4) Retry differenzieren — JsonException ist nicht transient, NpgsqlException schon
+```
+
+Für **Projektionen** bewusst nichts tun: mehrere Handler pro Event und Events ganz ohne Projektion
+sind beide legitim. Die Begründung als Kommentar hinterlegen, damit die Asymmetrie nicht später
+als Lücke missverstanden wird.
+
+---
+
+# TODO-29, `Publisher` koppelt Projektion und Integration-Publikation
+
+**P3 · offen · IMP-26**
+
+Zwei Belange in einer Methode ohne Fehlerisolierung
+([Publisher.cs:32-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Events/Publisher.cs:32)):
+wirft eine Projektion, wird kein Integration Event publiziert; wirft ein Mapper, laufen bei der
+Redelivery alle Projektionen erneut. Bei at-least-once heißt das, dass ein Fehler auf der einen
+Seite die andere wiederholt ausführt — tragfähig nur, solange beide idempotent sind.
+
+## Lösungsvorschlag
+
+**Empfehlung: ein Handler, aber getrennte Fehlerbehandlung** mit ausdrücklicher Reihenfolge (erst
+Projektionen, dann Integration Events) und einem Kommentar, dass die Idempotenz beider Seiten die
+Voraussetzung ist.
+
+Zwei getrennte Wolverine-Handler auf demselben Envelope wären sauberer isoliert, kosten aber eine
+zweite Zustellung pro Event — erst wenn beide Seiten messbar unterschiedliche Fehlerraten haben.
+
+---
+
+# TODO-30, `IIntegrationEventMapper` ist untypisiert
+
+**P3 · offen · IMP-12**
+
+`IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent)` — jeder Mapper wird für
+**jedes** Domain Event aufgerufen und muss selbst per `switch` filtern, während das benachbarte
+`IProjectionHandler<in TDomainEvent>` typisiert ist und gezielt aufgelöst wird. Zwei funktional
+analoge Konzepte, gegensätzlich entworfen.
+
+## Lösungsvorschlag
+
+```csharp
+public interface IIntegrationEventMapper<in TDomainEvent>
+    where TDomainEvent : IDomainEvent
+{
+    IReadOnlyCollection<IIntegrationEvent> Map(TDomainEvent domainEvent);
+}
+```
+
+Registrierung über denselben `MultiHandlerInterfaceDefinitions`-Pfad wie `IProjectionHandler<>`,
+im `Publisher` ein `MapperRunner` als Zwilling des `ProjectionRunner`. Nebeneffekt: der
+`_ => []`-Default-Arm entfällt, und „welche Events verlassen diesen Kontext" wird an der
+Typsignatur ablesbar statt im `switch` versteckt.
+
+---
+
+# TODO-31, `Result` hat keine Kombinatoren
+
+**P3 · offen · IMP-34**
+
+Kein `Map`, `Bind`, `Match`, `Tap`, `Ensure`. Jeder mehrstufige Handler schreibt dieselbe
+`if (x is null) return Failure...`-Treppe.
+
+## Lösungsvorschlag
+
+Sparsam beginnen — `Match` ist der wertvollste, er ersetzt die
+`IsSuccess ? … : throw ToRpcException(…)`-Zeilen in jedem gRPC-Adapter:
+
+```csharp
+public static TOut Match<TIn, TOut>(
+    this Result<TIn> result, Func<TIn, TOut> onSuccess, Func<IReadOnlyList<Failure>, TOut> onFailure) =>
+    result.IsSuccess ? onSuccess(result.Value) : onFailure(result.Failures);
+```
+
+Dazu `Map` und `Bind`. Als Extensions in `BuildingBlocks.Application`, damit `Result` selbst
+schlank bleibt.
+
+---
+
+# TODO-32, Async-Suffix ist inkonsistent
+
+**P3 · offen · IMP-37**
+
+`Handle` ohne Suffix in `ICommandHandler`, `IQueryHandler`, `IProjectionHandler`,
+`IPipelineBehavior` — dagegen `GetByIdAsync`, `AddAsync`, `CommitAsync`, `PublishAsync` mit
+Suffix. Alle geben `Task` zurück.
+
+## Lösungsvorschlag
+
+**Suffix überall** — es ist die .NET-Konvention, und die Ports folgen ihr bereits; die Handler
+sind die Ausnahme, nicht die Regel:
+
+```csharp
+Task<Result> HandleAsync(TCommand command, CancellationToken cancellationToken);
+```
+
+Breaking Change über alle Handler, aber rein mechanisch und ohne Verhaltensänderung. **Jetzt
+billig, mit dem ersten Produktions-Service teuer** — deshalb P3 statt P4. Entscheidung in die
+`.editorconfig`-Konventionen bzw. eine kurze ADR.
+
+---
+
+# TODO-33, Ein Assembly für alle Persistenz-Pakete
+
+**P3 · offen · IMP-19**
+
+`BuildingBlocks.Infrastructure` referenziert 11 Pakete, darunter Marten, EF Core, Npgsql und vier
+WolverineFx-Pakete. Ein rein state-stored Service zieht Marten mit, ein event-sourced Service
+EF Core — und jedes Major-Upgrade betrifft alle Services gleichzeitig.
+
+## Lösungsvorschlag
+
+```
+BuildingBlocks.Infrastructure            → Dispatching, Events, DI-Kern (keine Store-Pakete)
+BuildingBlocks.Infrastructure.EfCore     → EF-Repository/UnitOfWork/Tracker, EntityKey-Konverter
+BuildingBlocks.Infrastructure.Marten     → Marten-Repository/UnitOfWork/Tracker, EntityKeyFormatter
+BuildingBlocks.Infrastructure.Wolverine  → Envelope, Handler, Sink, Wolverine-Extensions
+```
+
+Der Schnitt ist durch die Ordnerstruktur bereits vorgezeichnet, es wäre eine reine
+Projektverschiebung. **Auslöser für die Umsetzung:** der erste Produktions-Service, der nur eine
+der beiden Persistenzwelten braucht. Vorher ist der Aufwand höher als der Gewinn.
+
+---
+
+# TODO-34, Keine zentrale Paketverwaltung
+
+**P3 · offen · IMP-47**
+
+Verifiziert: kein `Directory.Packages.props`. Versionen stehen einzeln in den `.csproj`-Dateien;
+die WolverineFx-Pakete sind an mehreren Stellen mit `6.23.0` gepflegt. Ein übersehenes Projekt
+erzeugt eine Laufzeit-Bindungsdiskrepanz statt eines Build-Fehlers.
+
+## Lösungsvorschlag
+
+```xml
+<Project>
+  <PropertyGroup><ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally></PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Marten" Version="9.20.1" />
+    <PackageVersion Include="WolverineFx.RabbitMQ" Version="6.23.0" />
+  </ItemGroup>
+</Project>
+```
+
+Rein mechanisch, keine Verhaltensänderung, bei 34 Projekten schon spürbar. Guter Kandidat für den
+nächsten Aufräum-Commit — sinnvollerweise gebündelt mit TODO-41 bis TODO-43.
+
+---
+
+# TODO-35, `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`
+
+**P3 · offen · WS-04**
+
+Das Design-Paket steht ohne `PrivateAssets` in beiden Sample-Infrastructure-Projekten. Mit
+`PrivateAssets="all"` kappt es die transitive Kante zu `EntityFrameworkCore.Relational`, und
+Konsumenten scheitern zur Laufzeit mit `FileNotFoundException` — die Standardempfehlung für
+Design-Pakete ist hier also aktiv falsch, was niemand erwartet.
+
+## Lösungsvorschlag
+
+Die Design-Time-Factories dorthin verschieben, wo das Paket hingehört, und den MigrationService als
+Startup-Projekt scaffolden:
+
+```bash
+dotnet ef migrations add Xyz \
+  --project samples/StateStored/VitalSync.Sample.StateStored.Infrastructure \
+  --startup-project samples/StateStored/VitalSync.Sample.StateStored.MigrationService
+```
+
+Damit verschwindet die Design-Referenz aus dem Projekt, das von anderen referenziert wird — die
+Ursache, nicht das Symptom.
+
+---
+
+# TODO-36, Der gRPC-Vertrag liegt noch beim Service
+
+**P3 · offen · WS-07**
+
+`VitalSync.Sample.StateStored.Contracts` ist die richtige Struktur, aber der BFF konsumiert heute
+noch nichts ([Program.cs](src/Bff/VitalSync.Bff/Program.cs) hat nur Controller). Für das
+Integration Event ist die Frage mit Etappe 3 beantwortet (`VitalSync.Sample.Contracts`), für den
+gRPC-Vertrag nicht.
+
+## Lösungsvorschlag
+
+Dieselbe Antwort wie beim Integration Event, sobald der zweite Konsument existiert: ein eigenes
+Contracts-Projekt pro Bounded Context, das Service **und** BFF referenzieren.
+
+Nicht vorwegnehmen — die Entscheidung gehört an den Tag, an dem der BFF den ersten Service
+aufruft, und dann in einen ADR, zusammen mit der bisher nur faktisch getroffenen Bibliothekswahl
+`protobuf-net.Grpc`.
+
+---
+
+# TODO-37, Zeitbasierte Assertionen in Tests
+
+**P3 · teilweise · WS-17**
+
+`IntegrationEventSinkDeliveryTests` ruft inzwischen die Produktionsmethode auf. Die
+Negativassertion — „das Integration Event geht bei fehlgeschlagenem Handler **nicht** raus" —
+bleibt aber zeitbasiert
+([IntegrationEventSinkDeliveryTests.cs:55](BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests/IntegrationEventSinkDeliveryTests.cs:55)):
+250 ms warten, dann prüfen, dass nichts ankam. Auf einem langsamen CI-Runner (TODO-09!) ist das
+entweder flaky oder grün, obwohl die Nachricht 300 ms später doch käme.
+
+## Lösungsvorschlag
+
+Auf ein deterministisches Signal umstellen statt auf eine Frist:
+
+```csharp
+var session = await host.TrackActivity()
+    .IncludeExternalTransports()
+    .InvokeMessageAndWaitAsync(command);
+
+Assert.Empty(session.Sent.MessagesOf<WidgetCreatedIntegrationEvent>());
+```
+
+Die Assertion sagt dann „bis zum Abschluss der Verarbeitung wurde nichts gesendet" statt
+„innerhalb von 250 ms" — das ist die Aussage, die der Test treffen will. Betrifft auch die
+`Task.Delay`-Stellen in den Sample-Smoke-Tests.
+
+---
+
+# TODO-38, Keine Batch- oder Bulk-Fähigkeit
+
+**P3 · offen · IMP-32**
+
+`ISender.Send` verarbeitet einen Request, `UnitOfWorkBehavior` committet danach. „Nährwertkatalog
+mit 500 Einträgen importieren" heißt heute: 500 Transaktionen, 500 Outbox-Runden, 500
+Projektionsläufe.
+
+## Lösungsvorschlag
+
+Kein generisches Batch-API bauen — das untergräbt die Ein-Command-eine-Transaktion-Regel.
+Stattdessen den Massenvorgang als **eigenen Command** modellieren:
+
+```csharp
+public sealed record ImportFoodCatalog(IReadOnlyList<FoodEntry> Entries) : ICommand<ImportSummary>;
+// ein Command, eine Transaktion, N Aggregate, N Events — die Infrastruktur trägt das bereits
+```
+
+Deckt den Regelfall ab. Erst wenn ein Import die Transaktionsgröße sprengt, braucht es echtes
+Chunking — dann als bewusst nicht-atomarer Vorgang mit eigenem Fortschrittszustand (TODO-39).
+
+---
+
+# TODO-39, Keine Saga- oder Process-Manager-Abstraktion
+
+**P3 · offen · IMP-33**
+
+Abgedeckt: eingehender Command, eingehende Query, eingetroffenes Event. Nicht abgedeckt: alles mit
+Zustand über Zeit und Zeitsteuerung — „erinnere nach 3 Tagen ohne Eintrag", „warte, bis Nutrition
+**und** Fitness gemeldet haben". Der letzte Fall ist für Analytics absehbar relevant.
+
+## Lösungsvorschlag
+
+Nicht selbst bauen — Wolverine bringt Sagas und `ScheduleAsync` mit, beides über dieselbe durable
+Message-Infrastruktur, die hier schon konfiguriert ist.
+
+Die Entscheidung, die eine ADR braucht: ob Wolverine damit vom reinen Transport (ADR-0015/0023)
+zum Prozess-Host aufgewertet wird. Das ist eine bewusste Aufweichung der bisherigen Abgrenzung —
+**vor** der ersten Saga klären, nicht danach.
+
+---
+
+# TODO-40, Sichtbarkeits-Disziplin ist uneinheitlich
+
+**P4 · teilweise · IMP-38**
+
+Die Messaging-Typen sind inzwischen konsequent `internal`. Offen bleibt: `ProjectionRunner` ist
+`public`, obwohl er nur vom `internal` `Publisher` genutzt wird; ebenso `EfCoreUnitOfWork`,
+`MartenUnitOfWork`, `EfCoreRepository`, `MartenEventSourcedRepository` und beide Tracker — alle
+ausschließlich über `BuildingBlocksOptions` registriert, nie direkt referenziert.
+
+## Lösungsvorschlag
+
+Regel festschreiben: **`public` ist nur, was ein Service-Host tatsächlich benennt.** Die genannten
+Typen auf `internal`, `InternalsVisibleTo` für das Testprojekt. `public` bleiben
+`AddBuildingBlocks`, `BuildingBlocksOptions`, `WolverineHostExtensions`, die EntityKey-Konverter
+(im DbContext des Service benutzt), `DomainEventEnvelope` samt Handler (Wolverine muss sie sehen)
+und die Behaviors als Vorlage.
+
+---
+
+# TODO-41, Wirkungslose Varianz-Modifikatoren
+
+**P4 · offen · IMP-43**
+
+`IEntity<out TKey>`, `IAggregateRoot<out TKey>`, `IEventSourcedAggregateRoot<out TKey>`,
+`IState<TSelf, out TKey>`, `IRepository<TAggregate, in TKey>` — alle mit
+`where TKey : struct, IEntityKey`. Varianz gilt nur für Referenztypen; bei einer
+`struct`-Constraint ist der Modifikator wirkungslos und suggeriert eine Flexibilität, die es nicht
+gibt.
+
+## Lösungsvorschlag
+
+Ersatzlos streichen. Rein mechanisch, kein Verhaltensunterschied, kein Breaking Change — der
+Compiler akzeptiert exakt dieselben Verwendungen.
+
+---
+
+# TODO-42, Uneinheitliche Projektstruktur
+
+**P4 · offen · IMP-44**
+
+`BuildingBlocks.Domain` (20 Dateien) und `BuildingBlocks.Application` (18 Dateien) sind flach,
+`BuildingBlocks.Infrastructure` hat fünf Ordner. In `Application` stehen CQRS-Verträge,
+Ergebnismodell, Persistenz-Ports und Event-Ports unsortiert nebeneinander.
+
+## Lösungsvorschlag
+
+Die Ordnerstruktur der Infrastructure übertragen (`Cqrs/`, `Results/`, `Persistence/`, `Events/`
+bzw. `Model/`, `Identity/`, `Events/`, `Rules/`). Namespaces bewusst **nicht** mitziehen, sonst
+wird aus einer Aufräumaktion ein Breaking Change für jeden Service.
+
+---
+
+# TODO-43, Irreführende Test- und Methodennamen
+
+**P4 · offen · IMP-45 + IMP-48**
+
+- **`SenderContractTests`** baut ein `Substitute.For<ISender>()`, konfiguriert dessen Rückgabewert
+  und prüft, dass dieser zurückkommt — getestet wird NSubstitute. Der Wert ist nicht null (die
+  Signaturen und Constraints kompilieren nachweislich), aber der Name verspricht mehr.
+- **Wolverine-Extensions** mischen Singular und Plural: `ApplyBuildingBlock*` (drei `internal`)
+  gegen `UseBuildingBlocksEfCorePersistence` (`public`).
+
+## Lösungsvorschlag
+
+`SenderContractTests` → `SenderSignatureTests`, mit einem Kommentar, dass das Verhalten in
+`BuildingBlocks.Infrastructure.Tests` geprüft wird. Die drei `internal` Methoden auf den Plural
+vereinheitlichen (`ApplyBuildingBlocksDomainEventRouting` usw.) — kein Breaking Change nach außen.
+
+---
+
+# TODO-44, Bewusste Ausnahmen dokumentieren
+
+**P4 · wird nicht gelöst · IMP-35 + IMP-46**
+
+Zwei Muster, die wie Nachlässigkeit aussehen, aber richtig sind:
+
+- **Fünf prozessglobale statische Caches** (`Sender` 3×, `ProjectionRunner`, `FailureResults`,
+  `EntityKeyFormatter`, `EntityKeyModelBuilderExtensions`). Alle ausschließlich `Type`-gekeyed mit
+  unveränderlichen, rein typabgeleiteten Werten. Die einzige reale Fehlwirkung war der
+  unvollständige Schlüssel in `Sender` — behoben. Testisolation ist nicht betroffen.
+- **`IServiceProvider` in `Sender` und `ProjectionRunner`**: der aufzulösende Handler-Typ ergibt
+  sich erst aus dem Laufzeittyp des Requests, lässt sich also nicht per Konstruktor injizieren.
+
+**Kein Code zu ändern** — aber die Begründung fehlt im Code, und ohne sie wird beides entweder
+später „aufgeräumt" (eine Verschlechterung ohne Gegenwert) oder als Muster kopiert.
+
+## Lösungsvorschlag
+
+`<remarks>` an den betroffenen Typen plus ein Absatz in
+`docs/architecture/building-blocks.md`: „Konstruktorinjektion für alles, was zur Kompositionszeit
+feststeht; Service Location nur, wo der Typ erst zur Laufzeit bekannt ist."
+
+---
+
+## Empfohlene Reihenfolge
+
+1. **TODO-09** (CI) und **TODO-06** (Connection-String-Abgleich) zuerst — beide klein, beide
+   sichern alles Weitere ab.
+2. **TODO-10** und **TODO-13** entscheiden (Konflikte, kein Code), dann **TODO-05**.
+3. **TODO-02 → TODO-03 → TODO-04** als ein Persistenzformat-Paket. Danach ist jede Änderung daran
+   eine Datenmigration, also **vor** dem ersten echten Service.
+4. **TODO-01** vor dem ersten Aggregat mit Kindkollektion.
+5. **TODO-07** und **TODO-08** schließen die stillen Lücken im Messaging.

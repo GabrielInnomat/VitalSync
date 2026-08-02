@@ -51,11 +51,17 @@
     <Project Path="src/Frontend/VitalSync.Web/VitalSync.Web.csproj" />
   </Folder>
   <Folder Name="/src/Services/" />
+  <Folder Name="/src/Services/Analytics/">
+    <Project Path="src/Services/Analytics/VitalSync.Analytics.Api/VitalSync.Analytics.Api.csproj" />
+    <Project Path="src/Services/Analytics/VitalSync.Analytics.MigrationService/VitalSync.Analytics.MigrationService.csproj" />
+  </Folder>
   <Folder Name="/src/Services/Fitness/">
     <Project Path="src/Services/Fitness/VitalSync.Fitness.Api/VitalSync.Fitness.Api.csproj" />
+    <Project Path="src/Services/Fitness/VitalSync.Fitness.MigrationService/VitalSync.Fitness.MigrationService.csproj" />
   </Folder>
   <Folder Name="/src/Services/Nutrition/">
     <Project Path="src/Services/Nutrition/VitalSync.Nutrition.Api/VitalSync.Nutrition.Api.csproj" />
+    <Project Path="src/Services/Nutrition/VitalSync.Nutrition.MigrationService/VitalSync.Nutrition.MigrationService.csproj" />
   </Folder>
   <Folder Name="/tests/" />
 </Solution>
