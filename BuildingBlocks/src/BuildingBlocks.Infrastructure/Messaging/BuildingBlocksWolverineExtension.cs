@@ -26,7 +26,8 @@ internal sealed class BuildingBlocksWolverineExtension(WolverineWiringSettings s
 
         // The EF Core outbox is deliberately absent here: both PersistMessagesWithPostgresql and
         // UseEntityFrameworkCoreTransactions modify the service collection, which Wolverine 3.0 forbids from a
-        // container-registered extension. The host applies them via UseBuildingBlocksEfCorePersistence.
+        // container-registered extension. HostApplicationBuilderExtensions.AddBuildingBlocks applies them from
+        // its own UseWolverine callback, where the collection is still mutable.
 
         if (settings.RabbitMqUri is { } rabbitMqUri)
         {

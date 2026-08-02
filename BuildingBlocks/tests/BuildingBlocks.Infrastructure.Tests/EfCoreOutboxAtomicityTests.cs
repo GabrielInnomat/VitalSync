@@ -25,23 +25,24 @@ public sealed class EfCoreOutboxAtomicityTests(PostgreSqlFixture fixture)
 
         var recorder = new CommandRecorder();
 
-        using var host = await Host.CreateDefaultBuilder()
-            .ConfigureServices(services =>
-            {
-                services.AddBuildingBlocks(options =>
-                    options.UseEfCorePersistence<FlushProbeContext>(
-                        fixture.ConnectionString,
-                        builder => builder.AddInterceptors(recorder)));
+        var builder = Host.CreateApplicationBuilder();
 
-                services.AddScoped<ICommandHandler<StartFlushProbe>, StartFlushProbeHandler>();
-            })
-            .UseWolverine(options =>
+        // The write database is named once, here. Building Blocks issues UseWolverine and applies the EF
+        // outbox against that same database (ADR-0027 amendment) - which is what this test then observes.
+        builder.AddBuildingBlocks(
+            options => options.UseEfCorePersistence<FlushProbeContext>(
+                fixture.ConnectionString,
+                context => context.AddInterceptors(recorder)),
+            wolverine =>
             {
-                options.Durability.Mode = DurabilityMode.Solo;
-                options.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
-                options.UseBuildingBlocksEfCorePersistence(fixture.ConnectionString);
-            })
-            .StartAsync(TestContext.Current.CancellationToken);
+                wolverine.Durability.Mode = DurabilityMode.Solo;
+                wolverine.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
+            });
+
+        builder.Services.AddScoped<ICommandHandler<StartFlushProbe>, StartFlushProbeHandler>();
+
+        using var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
 
         using (var scope = host.Services.CreateScope())
         {

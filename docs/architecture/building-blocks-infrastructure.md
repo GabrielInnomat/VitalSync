@@ -360,10 +360,12 @@ builder.AddBuildingBlocks(options =>
   dead-letter defaults when messaging was selected. The underlying `Apply*`
   methods are `internal`; hosts have no Wolverine configuration surface and
   cannot forget or mismatch a call.
-- The `IServiceCollection` overload remains for tests and hosts that wire
-  Wolverine themselves; those call `UseWolverine(opts =>
-  opts.UseBuildingBlocksEfCorePersistence(writeConnectionString))` and are the
-  only place that still names the write database twice.
+- This is the **only** way to obtain the EF Core outbox: the former public
+  `UseBuildingBlocksEfCorePersistence(cs)` is gone, so no host can point the
+  message store at a second database. The `IServiceCollection` overload still
+  registers handlers, Marten, and messaging for hosts that wire Wolverine
+  themselves — but a **state-stored** context must register through the host
+  builder.
 - **Startup Wolverine validation is on by default** (ADR-0027): when a selected
   capability requires Wolverine but no runtime is registered — reachable only on
   that manual path now — a hosted service fails the host at startup with an

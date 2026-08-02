@@ -291,7 +291,8 @@ builder.UseWolverine(options =>
 {
     if (wiring.EfCoreMessageStoreConnectionString is { } writeConnectionString)
     {
-        options.UseBuildingBlocksEfCorePersistence(writeConnectionString);
+        options.PersistMessagesWithPostgresql(writeConnectionString);
+        options.UseEntityFrameworkCoreTransactions();
     }
 
     configureWolverine?.Invoke(options);
@@ -307,9 +308,12 @@ Belegt durch `HostBuilderWiringTests` — insbesondere, dass Wolverines `Databas
 genau die Datenbank ist, die `UseEfCorePersistence` ausgewählt hat. Beide Sample-Hosts rufen kein
 `UseWolverine` mehr auf. ADR-0027 hat dazu ein zweites Amendment (2026-08-03).
 
-**Rest:** Der `IServiceCollection`-Weg plus manuelles `UseWolverine` bleibt für Tests und Hosts, die
-Wolverine selbst verdrahten — nur dort wird der String noch zweimal genannt, jetzt aber sichtbar als
-bewusste Ausnahme statt als Normalfall.
+**Kein Restweg:** Die drei EF-Integrationstests (`EfCoreOutboxAtomicityTests`,
+`EfCoreAggregateRoundTripTests`, `OutboxFlushOnCommitTests`) laufen ebenfalls über die
+Builder-Überladung — damit hatte `UseBuildingBlocksEfCorePersistence` keinen Aufrufer mehr und
+`WolverineHostExtensions` ist gelöscht. Es gibt exakt **eine** Art, den EF-Outbox zu verdrahten, und
+keine öffentliche API, über die ein Host eine zweite Datenbank nennen könnte. Nebeneffekt: die Tests,
+die die ADR-0022-Atomarität belegen, gehen jetzt denselben Weg wie echte Hosts.
 
 ---
 
@@ -1260,10 +1264,11 @@ ausschließlich über `BuildingBlocksOptions` registriert, nie direkt referenzie
 ## Lösungsvorschlag
 
 Regel festschreiben: **`public` ist nur, was ein Service-Host tatsächlich benennt.** Die genannten
-Typen auf `internal`, `InternalsVisibleTo` für das Testprojekt. `public` bleiben
-`AddBuildingBlocks`, `BuildingBlocksOptions`, `WolverineHostExtensions`, die EntityKey-Konverter
-(im DbContext des Service benutzt), `DomainEventEnvelope` samt Handler (Wolverine muss sie sehen)
-und die Behaviors als Vorlage.
+Typen auf `internal`, `InternalsVisibleTo` für das Testprojekt. `public` bleiben beide
+`AddBuildingBlocks`-Überladungen, `BuildingBlocksOptions`, die EntityKey-Konverter (im DbContext des
+Service benutzt), `DomainEventEnvelope` samt Handler (Wolverine muss sie sehen) und die Behaviors als
+Vorlage. (`WolverineHostExtensions` stand hier ebenfalls und ist mit TODO-06 entfallen — genau nach
+dieser Regel: kein Host benennt es mehr.)
 
 ---
 
@@ -1307,8 +1312,9 @@ wird aus einer Aufräumaktion ein Breaking Change für jeden Service.
 - **`SenderContractTests`** baut ein `Substitute.For<ISender>()`, konfiguriert dessen Rückgabewert
   und prüft, dass dieser zurückkommt — getestet wird NSubstitute. Der Wert ist nicht null (die
   Signaturen und Constraints kompilieren nachweislich), aber der Name verspricht mehr.
-- **Wolverine-Extensions** mischen Singular und Plural: `ApplyBuildingBlock*` (drei `internal`)
-  gegen `UseBuildingBlocksEfCorePersistence` (`public`).
+- **Wolverine-Extensions** mischten Singular und Plural: `ApplyBuildingBlock*` (drei `internal`)
+  gegen `UseBuildingBlocksEfCorePersistence` (`public`). **Erledigt als Nebeneffekt von TODO-06** —
+  die öffentliche Methode ist gelöscht, übrig sind nur noch die drei internen mit einheitlichem Namen.
 
 ## Lösungsvorschlag
 

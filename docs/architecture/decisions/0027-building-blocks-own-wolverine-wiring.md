@@ -73,6 +73,14 @@ startup validation: fail fast, don't document pitfalls).
 > `UseBuildingBlocksEfCorePersistence(cs)` remain for hosts and tests that wire Wolverine themselves; only those
 > still name the database twice.
 >
+> **Same-day follow-up:** that last sentence held for one commit. With the three EF Core integration tests moved
+> to the builder overload, `UseBuildingBlocksEfCorePersistence` had no caller left outside Building Blocks, so
+> `WolverineHostExtensions` is **deleted** and its two calls live inline in the `UseWolverine` callback. There is
+> now exactly **one** way to wire the EF Core outbox, and no public API through which a host could name a second
+> database. The `IServiceCollection` overload keeps working for handlers, Marten, and messaging — a state-stored
+> host, however, must register through the host builder; on the other path the outbox is simply never applied and
+> the startup validator fails the host.
+>
 > With this, point 3 below ("the one remaining failure mode") can no longer occur on the builder path, and the
 > host contract stated at the end of the Decision section shrinks further: **`AddBuildingBlocks(…)` and nothing
 > else** — no `UseWolverine()` call at all, for either persistence style.

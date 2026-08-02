@@ -17,10 +17,10 @@ namespace BuildingBlocks.Infrastructure.Persistence;
 /// <see cref="IDbContextOutbox{TContext}.SaveChangesAndFlushMessagesAsync(CancellationToken)"/> then persists the
 /// aggregate changes and the outbox entries atomically in a single write-database transaction (ADR-0022, ADR-0023) —
 /// <c>UseEfCorePersistence</c> registers <typeparamref name="TContext"/> via
-/// <c>AddDbContextWithWolverineIntegration</c>, and the host supplies the message store and transactional
-/// middleware through <see cref="DependencyInjection.WolverineHostExtensions.UseBuildingBlocksEfCorePersistence"/> —
-/// the one piece of Wolverine wiring ADR-0027 cannot hide, because Wolverine 3.0 forbids a container-registered
-/// extension from touching the service collection. After a successful save the
+/// <c>AddDbContextWithWolverineIntegration</c>, and the message store and transactional middleware are applied by
+/// <see cref="DependencyInjection.HostApplicationBuilderExtensions.AddBuildingBlocks"/> from that same connection
+/// string. They sit in its <c>UseWolverine</c> callback rather than in the Wolverine extension because Wolverine 3.0
+/// forbids a container-registered extension from touching the service collection. After a successful save the
 /// aggregates' event collections are cleared. It is owned by the unit-of-work pipeline behavior — command handlers
 /// never commit themselves.
 /// </remarks>

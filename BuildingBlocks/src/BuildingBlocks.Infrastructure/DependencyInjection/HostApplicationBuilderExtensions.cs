@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Wolverine;
+using Wolverine.EntityFrameworkCore;
+using Wolverine.Postgresql;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection;
 
@@ -9,11 +11,12 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection;
 /// services and configures Wolverine for them.
 /// </summary>
 /// <remarks>
-/// Prefer this over the <see cref="ServiceCollectionExtensions.AddBuildingBlocks"/> overload in every real service
-/// host. Because it owns the <c>UseWolverine</c> call, it can apply the EF Core outbox from the connection string the
-/// host already declared through <c>UseEfCorePersistence</c> — the host names its write database exactly once, which
-/// is what restores ADR-0027's promise that the host configures nothing. The <see cref="IServiceCollection"/> overload
-/// remains for hosts and tests that build no host builder; those still call <c>UseWolverine</c> themselves.
+/// This is the only way to wire a state-stored context: because it owns the <c>UseWolverine</c> call, it applies the
+/// EF Core outbox from the connection string the host already declared through <c>UseEfCorePersistence</c> — the host
+/// names its write database exactly once, which is what restores ADR-0027's promise that the host configures nothing.
+/// The <see cref="IServiceCollection"/> overload remains for hosts that build no host builder and for tests that need
+/// registrations only; it can register handlers, Marten, and messaging, but a host using it must issue
+/// <c>UseWolverine</c> itself and cannot obtain the EF Core outbox — the startup validator says so at host start.
 /// </remarks>
 public static class HostApplicationBuilderExtensions
 {
@@ -53,12 +56,15 @@ public static class HostApplicationBuilderExtensions
 
         builder.UseWolverine(options =>
         {
-            // The one thing a container-registered IWolverineExtension may not do (Wolverine 3.0 forbids it from
-            // touching the service collection) and therefore the one thing that has to happen here. The connection
+            // The EF Core outbox is the one thing a container-registered IWolverineExtension may not apply:
+            // as of Wolverine 3.0 such an extension may no longer modify the service collection, and both
+            // halves below do exactly that ("the service collection cannot be modified because it is
+            // read-only"). A UseWolverine callback still may, which is why they live here. The connection
             // string comes from the selection the host already made, never from a second parameter.
             if (wiring.EfCoreMessageStoreConnectionString is { } writeConnectionString)
             {
-                options.UseBuildingBlocksEfCorePersistence(writeConnectionString);
+                options.PersistMessagesWithPostgresql(writeConnectionString);
+                options.UseEntityFrameworkCoreTransactions();
             }
 
             configureWolverine?.Invoke(options);

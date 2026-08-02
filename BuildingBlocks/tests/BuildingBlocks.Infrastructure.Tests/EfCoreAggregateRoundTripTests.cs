@@ -72,21 +72,21 @@ public sealed class EfCoreAggregateRoundTripTests(PostgreSqlFixture fixture)
 
     private async Task<IHost> StartHostAsync()
     {
-        var host = await Host.CreateDefaultBuilder()
-            .ConfigureServices(services =>
+        var builder = Host.CreateApplicationBuilder();
+
+        builder.AddBuildingBlocks(
+            options => options.UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString),
+            wolverine =>
             {
-                services.AddBuildingBlocks(options =>
-                    options.UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString));
-                services.AddScoped<ICommandHandler<StartFlushProbe>, StartFlushProbeHandler>();
-                services.AddScoped<ICommandHandler<RenameFlushProbe>, RenameFlushProbeHandler>();
-            })
-            .UseWolverine(options =>
-            {
-                options.Durability.Mode = DurabilityMode.Solo;
-                options.UseBuildingBlocksEfCorePersistence(fixture.ConnectionString);
-                options.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
-            })
-            .StartAsync(TestContext.Current.CancellationToken);
+                wolverine.Durability.Mode = DurabilityMode.Solo;
+                wolverine.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
+            });
+
+        builder.Services.AddScoped<ICommandHandler<StartFlushProbe>, StartFlushProbeHandler>();
+        builder.Services.AddScoped<ICommandHandler<RenameFlushProbe>, RenameFlushProbeHandler>();
+
+        var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
 
         using var scope = host.Services.CreateScope();
         await scope.ServiceProvider.GetRequiredService<FlushProbeContext>().Database.ExecuteSqlRawAsync(

@@ -56,25 +56,20 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
     {
         Assert.SkipUnless(fixture.Available, fixture.SkipReason);
 
-        using var host = await Host.CreateDefaultBuilder()
-            .ConfigureServices(services =>
-            {
-                services.AddBuildingBlocks(options =>
-                    options.UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString));
-                services.AddScoped<ICommandHandler<StartFlushProbe>, StartFlushProbeHandler>();
-                services.AddScoped<IProjectionHandler<FlushProbeStarted>, FlushProbeProjection>();
-                services.AddSingleton<FlushDeliverySignal>();
-            })
-            .UseWolverine(options =>
-            {
-                ConfigureFlushOnlyDurability(options);
+        var builder = Host.CreateApplicationBuilder();
 
-                // The one line a state-stored host has to supply itself: Wolverine 3.0 forbids a
-                // container-registered extension from modifying the service collection, which both halves
-                // of the EF outbox do (ADR-0027 amendment).
-                options.UseBuildingBlocksEfCorePersistence(fixture.ConnectionString);
-            })
-            .StartAsync(TestContext.Current.CancellationToken);
+        // Both halves of the EF outbox are applied by Building Blocks from the connection string selected
+        // below - the host never names the write database a second time (ADR-0027 amendment).
+        builder.AddBuildingBlocks(
+            options => options.UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString),
+            ConfigureFlushOnlyDurability);
+
+        builder.Services.AddScoped<ICommandHandler<StartFlushProbe>, StartFlushProbeHandler>();
+        builder.Services.AddScoped<IProjectionHandler<FlushProbeStarted>, FlushProbeProjection>();
+        builder.Services.AddSingleton<FlushDeliverySignal>();
+
+        using var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
 
         var id = Guid.NewGuid();
         using (var scope = host.Services.CreateScope())

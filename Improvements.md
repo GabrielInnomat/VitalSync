@@ -131,9 +131,10 @@ sichtbar, `WolverineIntegrationEventSink` kapselt den Kontext. `IIntegrationEven
 nicht mehr.
 
 **Korrektur am bisherigen Statustext:** Die dort beschriebene `EfCoreMessageStoreRegistration` und
-`ApplyBuildingBlockEfCoreOutbox` existieren **nicht mehr**. Der Message-Store wird inzwischen über
-`WolverineHostExtensions.UseBuildingBlocksEfCorePersistence` im `UseWolverine`-Callback des Hosts
-registriert (ADR-0027, Amendment) — der Statustext beschrieb einen überholten Zwischenstand.
+`ApplyBuildingBlockEfCoreOutbox` existieren **nicht mehr**. Der Message-Store wird seit dem zweiten
+ADR-0027-Amendment (2026-08-03) von `HostApplicationBuilderExtensions.AddBuildingBlocks` in dessen
+eigenem `UseWolverine`-Callback registriert, aus dem bereits ausgewählten Connection String — der Host
+verdrahtet nichts mehr selbst.
 
 ## Lösungsvorschlag
 
@@ -1017,7 +1018,7 @@ Regel festschreiben und anwenden: **`public` ist nur, was ein Service-Host tats�
 internal: ProjectionRunner, EfCoreUnitOfWork, MartenUnitOfWork, EfCoreRepository,
           MartenEventSourcedRepository, EfCoreAggregateTracker, MartenAggregateTracker
 
-public:   AddBuildingBlocks, BuildingBlocksOptions, WolverineHostExtensions,
+public:   AddBuildingBlocks (beide Überladungen), BuildingBlocksOptions,
           EntityKeyValueConverter/-ModelBuilderExtensions (im DbContext des Service benutzt),
           DomainEventEnvelope + Handler (Wolverine muss sie sehen),
           die Behaviors (als Vorlage für eigene)
@@ -1247,13 +1248,11 @@ aktuell 34 Projekten schon spürbar. Guter Kandidat für den nächsten Aufräum-
 **Teilweise überholt.** Das ursprünglich beanstandete `ApplyBuildingBlockEfCoreOutbox` existiert nicht
 mehr. Verblieben sind drei `internal` Methoden — `ApplyBuildingBlockDomainEventRouting`,
 `ApplyBuildingBlockMessagingDefaults`, `ApplyBuildingBlockSubscription`
-([WolverineOptionsExtensions.cs](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/WolverineOptionsExtensions.cs)) —
-und eine `public` Methode `UseBuildingBlocksEfCorePersistence`
-([WolverineHostExtensions.cs:34](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/WolverineHostExtensions.cs:34)).
+([WolverineOptionsExtensions.cs](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/WolverineOptionsExtensions.cs)).
 
-**Offen:** Der Singular/Plural-Mix bleibt — `BuildingBlock*` in den drei internen, `BuildingBlocks*` in
-der öffentlichen. Da die internen Methoden nur noch von der Extension aufgerufen werden, ist der Punkt
-allerdings auf eine Namenskosmetik geschrumpft.
+**Gelöst (2026-08-03).** Die `public` Gegenspielerin `UseBuildingBlocksEfCorePersistence` ist mit
+`WolverineHostExtensions` gelöscht (siehe [todo.md](todo.md), TODO-06); übrig sind die drei internen
+Methoden mit einheitlichem `BuildingBlock*`-Präfix, der Singular/Plural-Mix existiert nicht mehr.
 
 ## Lösungsvorschlag
 
