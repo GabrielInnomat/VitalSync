@@ -593,101 +593,490 @@ falschen Stelle — die Tabelle existiert nämlich, sie bleibt nur leer.
 
 ## 9. Offene Fragen und Risiken
 
-### Aus der EF-Lösung
+**Statusprüfung vom 2026-08-02:** Jeder Punkt wurde gegen den aktuellen Quellcode
+verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Improvements.md);
+Überschneidungen sind beim jeweiligen Punkt vermerkt.
 
-- **Optimistische Nebenläufigkeit** — der Concurrency-Token säße jetzt am State. Noch
-  nicht entworfen.
-- **`Activator.CreateInstance(…, nonPublic: true)`** als Rehydrierungsweg — soll das so
-  bleiben, oder bekommt `IRepository` eine `new()`-Beschränkung? Letzteres wäre eine
-  Vertragsänderung.
+| Nr.   | Titel                                                          | Herkunft     | Status    |
+| ----- | -------------------------------------------------------------- | ------------ | --------- |
+| WS-01 | Optimistische Nebenläufigkeit im state-stored Pfad fehlt       | EF-Lösung    | offen     |
+| WS-02 | `Activator.CreateInstance(…, nonPublic: true)` als Vertrag     | EF-Lösung    | offen     |
+| WS-03 | Reihenfolge über Events hinweg ist durch nichts garantiert     | Schritt 3    | offen     |
+| WS-04 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`     | Schritt 3    | offen     |
+| WS-05 | Vergessenes `[Topic]` fällt nicht auf                          | Etappe 1     | offen     |
+| WS-06 | Fehlkonfiguration ist ungleich abgedeckt                       | Etappe 1     | teilweise |
+| WS-07 | Der gRPC-Vertrag liegt noch beim Service                       | Etappe 1     | offen     |
+| WS-08 | Integration Events sind nicht persistent                       | Etappe 2     | offen     |
+| WS-09 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | Etappe 2     | offen     |
+| WS-10 | Marten-Nebenläufigkeit verdrahtet, aber im Sample unbelegt     | Etappe 2     | offen     |
+| WS-11 | Der Migrations-Worker ist asymmetrisch                         | Etappe 2     | offen     |
+| WS-12 | Kein Idempotenz-Bookkeeping über die Kontextgrenze             | Etappe 3     | offen     |
+| WS-13 | Ein Kontext konsumiert seine eigenen Integration Events        | Etappe 3     | offen     |
+| WS-14 | Die Verbindung Vertrag → Konsument ist unbewacht               | Etappe 3     | teilweise |
+| WS-15 | `ApplyEntityKeyConversions` erfasst keine Complex Types        | vorbestehend | offen     |
+| WS-16 | Keine CI-Pipeline                                              | vorbestehend | offen     |
+| WS-17 | Zeitbasierte Negativassertion im Sink-Test                     | vorbestehend | teilweise |
 
-### Aus Schritt 3
+Zusätzlich weiterhin offen und hier nur referenziert: **der produktive AppHost
+widerspricht ADR-0021** — er legt je _eine_ Datenbank pro Service an (`nutritionDb`,
+`fitnessDb`, [AppHost.cs:11-12](src/Aspire/VitalSync.AppHost/AppHost.cs:11)) statt des
+geforderten Write/Read-Paars. Eigene Aufgabe, nicht Teil des Durchstichs.
 
-- **Reihenfolge über Events hinweg ist durch nichts garantiert.** ADR-0022 verlangt
-  „per-aggregate order-aware" Projektionen, aber der Handler bekommt ein nacktes
-  `IDomainEvent` ohne Sequenznummer. Etappe 2 hat gezeigt, dass Event Sourcing das
-  **nicht** löst: die Streamversion bleibt im Event Store, und `Version` ist auf dem
-  Aggregat explizit implementiert, also für die Domäne unsichtbar. Beide Samples behelfen
-  sich mit `RenameCount` als fachlicher Ordnungsgröße; das ist kein allgemeines
-  Verfahren, und für ein Event ohne solche Größe (`GadgetRetired`) trägt es nur, weil der
-  Zustandsübergang terminal ist. **Offene Architekturfrage, jetzt für beide
-  Persistenzstile:** braucht jedes Domain Event eine Sequenznummer pro Aggregat — und wenn
-  ja, wer stempelt sie, wo state-stored Aggregate gar keine Version führen?
-- **`Microsoft.EntityFrameworkCore.Design` verträgt kein `PrivateAssets="all"`** in
-  einem Projekt, das von anderen referenziert wird — es kappt die transitive Kante zu
-  `EntityFrameworkCore.Relational`, und Konsumenten scheitern zur Laufzeit mit
-  `FileNotFoundException`. Sauberer wäre, die Design-Time-Factories in den
-  MigrationService zu verschieben und mit diesem als Startup-Projekt zu scaffolden.
+---
 
-### Aus Etappe 1 offen geblieben
+### WS-01, Optimistische Nebenläufigkeit im state-stored Pfad fehlt
 
-- **Vergessenes `[Topic]` fällt nicht auf.** Ein `IIntegrationEvent` ohne das Attribut
-  bekommt von Wolverine einen aus dem CLR-Typnamen abgeleiteten Routing Key, landet damit
-  unter einem Schlüssel, den kein Konsument gebunden hat, und verschwindet still. Der
-  naheliegende Schutz wäre ein Startup-Validator analog zu
-  `HandlerRegistrationStartupValidator`, der die gescannten Assemblies nach
-  `IIntegrationEvent`-Typen ohne `[Topic]` durchsucht. **Noch nicht umgesetzt.**
-- **Fehlkonfiguration ist ungleich abgedeckt.** Für Commands und Queries gibt es Tests,
-  die Mehrdeutigkeit und fehlende Handler mit Exceptions festnageln
-  (`HandlerRegistrationTests`, `HandlerStartupValidationTests`, vier Fixture-Assemblies).
-  Für Projektionen und Mapper existiert nur der Happy Path — bei Projektionen zu Recht,
-  denn mehrere Handler pro Event und Events ganz ohne Projektion sind beide legitim.
-- **Der gRPC-Vertrag liegt noch beim Service.** `VitalSync.Sample.StateStored.Contracts`
-  ist die richtige Struktur, aber sobald der BFF ihn konsumiert, stellt sich die Frage
-  nach einem geteilten Paket. Für das Integration Event ist sie mit Etappe 3 beantwortet
-  (`VitalSync.Sample.Contracts`), für den gRPC-Vertrag nicht.
+Der event-sourced Pfad hängt mit erwarteter Streamversion an; der state-stored Pfad hat
+nichts Vergleichbares. Der Concurrency-Token säße jetzt am State — verifiziert existiert
+weder `RowVersion` noch `IsConcurrencyToken` irgendwo im Repository. Zwei gleichzeitige
+Kommandos auf dasselbe Aggregat überschreiben sich also stillschweigend; `UnitOfWorkBehavior`
+fängt zwar `DbUpdateConcurrencyException`, aber die wird nie geworfen, weil niemand einen
+Token konfiguriert.
 
-### Aus Etappe 2
+#### Lösungsvorschlag
 
-- **Integration Events sind nicht persistent** (`delivery_mode: 1`). Der Outbox schützt
-  bis zur Übergabe an den Broker; danach verliert ein RabbitMQ-Neustart die Nachricht.
-  Zu entscheiden, ob die Publish-Defaults in `WolverineOptionsExtensions` auf persistente
-  Zustellung wechseln — und ob das mit Quorum-Queues auf Konsumentenseite einhergehen
-  muss.
-- **Typisierte Schlüssel serialisieren berechnete Member in den Eventstrom**
-  (`"GadgetId": {"Value": "…", "IsEmpty": false}`). Events sind unveränderlich, also ist
-  das eine dauerhafte Entscheidung. Ein `[JsonIgnore]` auf `IsEmpty` oder ein
-  Marten-Serializer-Konverter für `IEntityKey<>` wäre der naheliegende Weg — beides
-  betrifft BuildingBlocks, nicht den Sample.
-- **Optimistische Nebenläufigkeit ist auf der Marten-Seite verdrahtet, aber nicht
-  belegt.** Der Repository-Pfad hängt mit erwarteter Version an; dass ein Konflikt als
-  `FailureCategory.Conflict` beim Aufrufer ankommt, prüft bisher nur ein
-  BuildingBlocks-Integrationstest, kein Sample-Szenario.
-- **Der Migrations-Worker ist asymmetrisch** — nur der Read-Kontext hat Migrationen.
-  Praktisch unauffällig; ob es sich richtig anfühlt, dass die Write-Seite ihr Schema zur
-  Laufzeit selbst baut (Marten und Wolverine tun das beide), ist eine Entscheidung, die
-  spätestens beim ersten echten event-sourceten Service ansteht.
+Die Version gehört an den State, nicht an das Aggregat — dann trägt sie zugleich die
+Sequenznummer aus WS-03:
 
-### Aus Etappe 3
+```csharp
+public interface IState<TSelf, out TKey>
+{
+    TKey Id { get; }
+    long Version { get; init; }      // vom Fold hochgezählt, von EF als Concurrency-Token gemappt
+    TSelf Apply(IDomainEvent domainEvent);
+}
 
-- **Geteilte Identität über die Kontextgrenze ist eine Modellierungsentscheidung, keine
-  Regel.** Der Spiegel ist nur deshalb idempotent, weil das Gadget die Widget-Id
-  übernimmt. Das ist für ein Spiegelbild angemessen, aber kein allgemeines Verfahren:
-  ein Kontext, der aus einem fremden Ereignis ein **eigenes** Aggregat mit eigener
-  Identität ableitet, braucht echtes Idempotenz-Bookkeeping (verarbeitete `EventId`s pro
-  Konsument). Das gibt es heute nicht.
-- **Ein Kontext konsumiert seine eigenen Integration Events**, wenn sein Topic-Pattern
-  sie matcht. Folgenlos, solange kein Handler existiert. Ob BuildingBlocks das aktiv
-  ausfiltern sollte (etwa über eine Absender-Kennung im Envelope), ist offen.
-- **Die Verbindung Vertrag → Konsument ist unbewacht.** Es gibt jetzt Tests, die eine
-  vergessene Consumer-Assembly fangen (`SubscriptionDiscoveryTests`), aber nichts prüft,
-  dass die gebundenen Topic-Pattern zu den `[Topic]`-Attributen der Verträge passen, die
-  der Service konsumieren will. Ein Tippfehler im Pattern verhält sich wie ein
-  Upstream-Kontext, der noch nichts publiziert hat.
+// im Write-DbContext: entity.Property(s => s.Version).IsConcurrencyToken();
+```
 
-### Vorbestehend
+Gemeinsam mit WS-03 und IMP-24 entscheiden — es ist dieselbe Zahl für drei Zwecke
+(Nebenläufigkeit, Projektions-Ordnung, Envelope-Metadatum).
 
-- **`ApplyEntityKeyConversions` erfasst keine Complex Types** — es läuft nur über
-  `Model.GetEntityTypes()`. Nach der neuen Lösung nicht mehr akut, bleibt aber eine
-  Lücke im Helper.
-- **Keine CI-Pipeline** — `.github/workflows/` ist leer. Wer eine anlegt, **muss**
-  `VITALSYNC_REQUIRE_CONTAINERS=1` setzen, sonst überspringen alle
-  Testcontainers-Tests still und der Lauf ist trotzdem grün.
-- **Der produktive AppHost widerspricht ADR-0021** — er legt je _eine_ Datenbank pro
-  Service an (`nutritionDb`, `fitnessDb`) statt des geforderten Write/Read-Paars.
-  Eigene Aufgabe, nicht Teil des Durchstichs.
-- **`IntegrationEventSinkDeliveryTests`** ruft die Produktionsmethode inzwischen auf,
-  aber die `Task.Delay(250)`-Negativassertion bleibt zeitbasiert.
+---
+
+### WS-02, `Activator.CreateInstance(…, nonPublic: true)` als Vertrag
+
+Der EF-Pfad rehydriert über `Activator.CreateInstance(typeof(TAggregate), nonPublic: true)`
+([EfCoreRepository.cs:71](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreRepository.cs:71)),
+der Marten-Pfad über eine `new()`-Constraint
+([MartenEventSourcedRepository.cs:27](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenEventSourcedRepository.cs:27)).
+Zwei Wege für dieselbe Sache, und der zweite erzwingt einen **öffentlichen** parameterlosen
+Konstruktor am Aggregat — die Infrastruktur diktiert damit in die Domäne hinein, entgegen
+ADR-0025 („darf non-public sein").
+
+Siehe [hacky.md Nr. 5](hacky.md) und [Improvements.md IMP-14](Improvements.md).
+
+#### Lösungsvorschlag
+
+Auf den EF-Weg vereinheitlichen, nicht auf den Marten-Weg:
+
+```csharp
+// MartenEventSourcedRepository: new() streichen, stattdessen
+var aggregate = (TAggregate)Activator.CreateInstance(typeof(TAggregate), nonPublic: true)!;
+```
+
+Dann sind beide Implementierungen constraint-gleich, der Konstruktor darf überall `private`
+sein, und ADR-0025 stimmt wieder. Der Preis — die Anforderung bleibt zur Compile-Zeit
+unausdrückbar — ist beim EF-Pfad ohnehin schon bezahlt; ein Startup-Check (WS/IMP-14) fängt
+ihn früh statt beim ersten Laden. Erfordert ein ADR-0025-Amendment.
+
+---
+
+### WS-03, Reihenfolge über Events hinweg ist durch nichts garantiert
+
+ADR-0022 verlangt „per-aggregate order-aware" Projektionen, aber der Handler bekommt ein
+nacktes `IDomainEvent` ohne Sequenznummer. Etappe 2 hat gezeigt, dass Event Sourcing das
+**nicht** löst: die Streamversion bleibt im Event Store, und `Version` ist am Aggregat
+explizit implementiert, also für die Domäne unsichtbar.
+
+Beide Samples behelfen sich mit `RenameCount` als fachlicher Ordnungsgröße
+([WidgetProjections.cs:62](samples/StateStored/VitalSync.Sample.StateStored.Infrastructure/Read/WidgetProjections.cs:62)).
+Das ist kein allgemeines Verfahren, und für ein Event ohne solche Größe (`GadgetRetired`)
+trägt es nur, weil der Zustandsübergang terminal ist.
+
+Deckungsgleich mit [Improvements.md IMP-24](Improvements.md).
+
+#### Lösungsvorschlag
+
+Die Sequenznummer in den Envelope legen, wo beide Persistenzstile sie füllen können:
+
+```csharp
+public sealed record DomainEventEnvelope(
+    string EventName, string Payload, Guid EventId,
+    string AggregateType, string AggregateId,
+    long Version,                      // ES: Streamversion; state-stored: State.Version (WS-01)
+    DateTimeOffset OccurredAt);
+```
+
+Damit wird die geforderte Idempotenz erstmals implementierbar, ohne dass jeder Handler den
+Payload typspezifisch auspackt. Ist zugleich die Voraussetzung für die Partitionierung aus
+[Improvements.md IMP-25](Improvements.md).
+
+---
+
+### WS-04, `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`
+
+Das Design-Paket steht ohne `PrivateAssets` in beiden Sample-Infrastructure-Projekten
+([StateStored](samples/StateStored/VitalSync.Sample.StateStored.Infrastructure/VitalSync.Sample.StateStored.Infrastructure.csproj),
+[EventSourced](samples/EventSourced/VitalSync.Sample.EventSourced.Infrastructure/VitalSync.Sample.EventSourced.Infrastructure.csproj)).
+Mit `PrivateAssets="all"` kappt es die transitive Kante zu `EntityFrameworkCore.Relational`,
+und Konsumenten scheitern zur Laufzeit mit `FileNotFoundException` — die Standardempfehlung
+für Design-Pakete ist hier also aktiv falsch, was niemand erwartet.
+
+#### Lösungsvorschlag
+
+Die Design-Time-Factories dorthin verschieben, wo das Paket ohnehin hingehört, und den
+MigrationService als Startup-Projekt scaffolden:
+
+```bash
+dotnet ef migrations add Xyz \
+  --project    samples/StateStored/VitalSync.Sample.StateStored.Infrastructure \
+  --startup-project samples/StateStored/VitalSync.Sample.StateStored.MigrationService
+```
+
+Damit verschwindet die Design-Referenz aus dem Infrastructure-Projekt, das von anderen
+referenziert wird — die Ursache, nicht das Symptom.
+
+---
+
+### WS-05, Vergessenes `[Topic]` fällt nicht auf
+
+Verifiziert: **in `BuildingBlocks/src` prüft nichts die `[Topic]`-Attribute.** Ein
+`IIntegrationEvent` ohne das Attribut bekommt von Wolverine einen aus dem CLR-Typnamen
+abgeleiteten Routing Key, landet unter einem Schlüssel, den kein Konsument gebunden hat,
+und verschwindet still — dieselbe Fehlerklasse, die für Command-Handler längst als
+Startfehler abgefangen wird.
+
+#### Lösungsvorschlag
+
+Ein Validator analog zum bestehenden `HandlerRegistrationStartupValidator`, gespeist aus
+denselben gescannten Assemblies:
+
+```csharp
+internal sealed class IntegrationEventTopicStartupValidator(
+    IReadOnlyCollection<Assembly> scannedAssemblies) : IHostedService
+{
+    // jeder nicht-abstrakte IIntegrationEvent-Typ ohne [Topic] -> Start abbrechen,
+    // alle betroffenen Typnamen in der Meldung
+}
+```
+
+Kleiner, abgeschlossener Fix mit hohem Nutzen: er schließt die letzte stille Lücke im
+Publish-Pfad. Sinnvollerweise zusammen mit WS-14 (Pattern-gegen-`[Topic]`-Abgleich), weil
+beide dieselbe Datenquelle brauchen.
+
+---
+
+### WS-06, Fehlkonfiguration ist ungleich abgedeckt
+
+**Teilweise.** Für Commands und Queries nageln `HandlerRegistrationTests` und
+`HandlerStartupValidationTests` Mehrdeutigkeit und fehlende Handler mit Exceptions fest —
+inklusive vier eigener Fixture-Assemblies. Für Projektionen und Mapper existiert nur der
+Happy Path.
+
+Bei **Projektionen** ist das zu Recht so: mehrere Handler pro Event und Events ganz ohne
+Projektion sind beide legitim, es gibt nichts zu verbieten. Bei **Mappern** nicht: ein
+registrierter Mapper ohne konfigurierten Transport bedeutet, dass jedes gemappte Event im
+`NullIntegrationEventSink` landet und nur eine Warning erzeugt.
+
+#### Lösungsvorschlag
+
+Nur die Mapper-Seite schließen — als Kompositionszeit-Prüfung, siehe
+[Improvements.md IMP-13](Improvements.md):
+
+```csharp
+if (mapperRegistriert && WolverineWiring.RabbitMqUri is null)
+    throw new InvalidOperationException(
+        "Integration-Event-Mapper registriert, aber kein Transport konfiguriert.");
+```
+
+Für Projektionen bewusst nichts tun und die Begründung als Kommentar hinterlegen, damit die
+Asymmetrie nicht später als Lücke missverstanden wird.
+
+---
+
+### WS-07, Der gRPC-Vertrag liegt noch beim Service
+
+`VitalSync.Sample.StateStored.Contracts` ist die richtige Struktur, aber der BFF konsumiert
+heute noch nichts ([Program.cs](src/Bff/VitalSync.Bff/Program.cs) hat nur Controller).
+Sobald er es tut, stellt sich die Frage nach einem geteilten Paket. Für das Integration
+Event ist sie mit Etappe 3 beantwortet (`VitalSync.Sample.Contracts`), für den gRPC-Vertrag
+nicht.
+
+#### Lösungsvorschlag
+
+Dieselbe Antwort wie beim Integration Event, sobald der zweite Konsument existiert: ein
+eigenes Contracts-Projekt pro Bounded Context, das Service **und** BFF referenzieren.
+
+```
+src/Services/Nutrition/VitalSync.Nutrition.Contracts/   ← gRPC-Interfaces + DTOs
+        ↑ referenziert von VitalSync.Nutrition.Api und von VitalSync.Bff
+```
+
+Nicht vorwegnehmen — die Entscheidung gehört an den Tag, an dem der BFF den ersten Service
+aufruft, und dann in einen ADR (zusammen mit der bisher nur faktisch getroffenen
+Bibliothekswahl `protobuf-net.Grpc`, siehe §2).
+
+---
+
+### WS-08, Integration Events sind nicht persistent
+
+Verifiziert: nirgends in `BuildingBlocks/src` wird persistente Zustellung konfiguriert, die
+Nachrichten gehen mit `delivery_mode: 1` raus. Die Outbox schützt bis zur Übergabe an den
+Broker; **danach** verliert ein RabbitMQ-Neustart die Nachricht. Das untergräbt genau die
+Zusage, für die die Outbox gebaut wurde.
+
+#### Lösungsvorschlag
+
+```csharp
+// WolverineOptionsExtensions.ApplyBuildingBlockMessagingDefaults
+options.Publish(publishing => publishing
+    .MessagesImplementing<IIntegrationEvent>()
+    .ToRabbitTopics(IntegrationEventExchangeName, exchange => exchange.Durable = true));
+```
+
+Dazu die Konsumentenseite mitentscheiden: Quorum-Queues überleben einen Broker-Neustart,
+klassische nicht. Beides gehört in denselben Schritt, sonst ist die Kette nur halb dicht.
+Messbarer Preis: persistente Zustellung kostet Durchsatz — für Integration Events die
+richtige Wahl, für den lokalen Domain-Event-Pfad irrelevant (der läuft über die DB).
+
+---
+
+### WS-09, Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom
+
+`WidgetId`/`GadgetId` implementieren `IsEmpty` als berechnetes Member
+([WidgetId.cs:7](samples/StateStored/VitalSync.Sample.StateStored.Domain/WidgetId.cs:7));
+verifiziert existiert **kein einziges `[JsonIgnore]`** im Repository. Im Eventstrom steht
+damit `"GadgetId": {"Value": "…", "IsEmpty": false}`. Events sind unveränderlich — das ist
+eine dauerhafte Entscheidung, die gerade unbemerkt getroffen wird.
+
+#### Lösungsvorschlag
+
+Nicht am Sample, sondern in BuildingBlocks lösen, sonst muss jeder Schlüsseltyp daran denken:
+
+```csharp
+// BuildingBlocks.Domain — IsEmpty ist abgeleitet, nie Nutzlast
+public interface IEntityKey
+{
+    [JsonIgnore] bool IsEmpty { get; }
+}
+```
+
+Sauberer, aber aufwendiger: ein `JsonConverter` für `IEntityKey<TValue>`, der den Schlüssel
+als **nackten Wert** schreibt (`"GadgetId": "8f3a…"` statt eines Objekts). Das halbiert die
+Streamgröße und macht die Events von Hand lesbar — lohnt sich, solange noch keine
+produktiven Streams existieren. Danach ist es eine Event-Migration.
+
+---
+
+### WS-10, Marten-Nebenläufigkeit verdrahtet, aber im Sample unbelegt
+
+Der Repository-Pfad hängt mit erwarteter Version an
+([MartenUnitOfWork.cs:54](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenUnitOfWork.cs:54)),
+und ein BuildingBlocks-Integrationstest deckt die Versionsarithmetik ab. Dass ein echter
+Konflikt als `FailureCategory.Conflict` beim **Aufrufer** ankommt, prüft aber kein
+Sample-Szenario: `MirrorWidgetTests` arbeitet mit einem gemockten `Failure.Conflict`
+([MirrorWidgetTests.cs:73](samples/EventSourced/VitalSync.Sample.EventSourced.Tests/MirrorWidgetTests.cs:73)),
+nicht mit einer echten Kollision.
+
+#### Lösungsvorschlag
+
+Ein Szenario-Test gegen den echten Stack (Testcontainers, wie die übrigen), der die
+komplette Übersetzungskette belegt:
+
+```csharp
+// zwei Repository-Instanzen laden dasselbe Gadget (Version 1)
+// beide benennen um, beide committen
+// -> der zweite Commit muss als FailureCategory.Conflict beim Aufrufer ankommen,
+//    nicht als Exception
+```
+
+Das ist der Test, der die Kette Marten → `ConcurrencyException` → `UnitOfWorkBehavior` →
+`Result` als Ganzes absichert. Ohne ihn ist nur jedes Glied einzeln belegt.
+
+---
+
+### WS-11, Der Migrations-Worker ist asymmetrisch
+
+Verifiziert: der event-sourced MigrationService migriert **nur** den Read-Kontext
+([Program.cs:21-22](samples/EventSourced/VitalSync.Sample.EventSourced.MigrationService/Program.cs:21)).
+Die Write-Seite baut ihr Schema zur Laufzeit selbst — Marten und Wolverine tun das beide.
+Praktisch unauffällig, aber es heißt, dass eine Produktionsdatenbank ihr Schema beim ersten
+Start eines neuen Deployments ändert, ohne dass jemand es freigegeben hat.
+
+#### Lösungsvorschlag
+
+Für den Sample nichts ändern — das Verhalten ist Marten-Standard und hier korrekt
+dokumentiert. Für den ersten echten event-sourced Service die Entscheidung bewusst treffen:
+
+```csharp
+// Produktion: Schema-Autoerzeugung abschalten, Schema als Migrationsartefakt ausliefern
+options.AutoCreateSchemaObjects = AutoCreate.None;
+// dazu: dotnet run --apply-marten-changes im MigrationService-Worker
+```
+
+Gehört in denselben ADR wie die Frage, wie Wolverine-Tabellen in Produktion entstehen —
+beide Stores haben dasselbe Muster und sollten dieselbe Antwort bekommen.
+
+---
+
+### WS-12, Kein Idempotenz-Bookkeeping über die Kontextgrenze
+
+Der Spiegel in Etappe 3 ist nur deshalb idempotent, weil das Gadget die Widget-Id übernimmt
+([MirrorWidget.cs:20](samples/EventSourced/VitalSync.Sample.EventSourced.Application/MirrorWidget.cs:20)).
+Für ein Spiegelbild ist das angemessen, aber kein allgemeines Verfahren: ein Kontext, der
+aus einem fremden Ereignis ein **eigenes** Aggregat mit eigener Identität ableitet, braucht
+echtes Bookkeeping über verarbeitete `EventId`s. Das gibt es heute nicht — und ohne WS-03
+bzw. [IMP-11](Improvements.md) gibt es nicht einmal eine `EventId` am Integration Event,
+über die man Buch führen könnte.
+
+#### Lösungsvorschlag
+
+Reihenfolge beachten: erst `IIntegrationEvent` eine `EventId` geben
+([IMP-11](Improvements.md)), dann das Bookkeeping als Building Block anbieten:
+
+```csharp
+// in der Write-DB des Konsumenten, in derselben Transaktion wie der Command:
+// processed_integration_events(event_id uuid primary key, consumed_at timestamptz)
+// -> INSERT ... ON CONFLICT DO NOTHING; 0 betroffene Zeilen = schon verarbeitet, ack
+```
+
+Als Wolverine-Middleware auf dem Consumer-Pfad umsetzbar, damit kein Konsument daran denken
+muss. Bis dahin gilt: geteilte Identität ist der einzige sanktionierte Idempotenz-Weg — das
+gehört so in `docs/architecture/communication.md`, sonst wird es als allgemeines Muster
+kopiert.
+
+---
+
+### WS-13, Ein Kontext konsumiert seine eigenen Integration Events
+
+Bindet ein Service ein Topic-Pattern, das auch seine eigenen Routing Keys matcht, bekommt er
+seine eigenen Events zugestellt. Folgenlos, solange kein Handler existiert — aber die
+Folgenlosigkeit beruht auf der Abwesenheit von Code, nicht auf einer Regel.
+
+#### Lösungsvorschlag
+
+Absenderkennung setzen und beim Konsumieren auswerten:
+
+```csharp
+// beim Publish: envelope.Headers["vitalsync.source-context"] = <Kontextname>
+// beim Listen:  Nachrichten mit eigener Kennung verwerfen (ack ohne Handler-Aufruf)
+```
+
+Setzt voraus, dass ein Kontext seinen eigenen Namen kennt — heute nirgends hinterlegt.
+Kleiner Zusatz zu `BuildingBlocksOptions` (`options.ContextName = "nutrition"`), der
+nebenbei WS-05 und WS-14 nützt: aus ihm ließe sich das `[Topic]`-Präfix validieren.
+
+---
+
+### WS-14, Die Verbindung Vertrag → Konsument ist unbewacht
+
+**Teilweise.** `SubscriptionDiscoveryTests` fängt inzwischen die vergessene
+Consumer-Assembly ab — mit zwei Tests, die belegen, dass Wolverine ohne sie **gar keinen**
+Handler findet
+([SubscriptionDiscoveryTests.cs:19,36](samples/EventSourced/VitalSync.Sample.EventSourced.Tests/SubscriptionDiscoveryTests.cs:19)).
+
+**Offen:** Nichts prüft, dass die gebundenen Topic-Pattern zu den `[Topic]`-Attributen der
+Verträge passen, die der Service konsumieren will. Ein Tippfehler im Pattern verhält sich
+exakt wie ein Upstream-Kontext, der noch nichts publiziert hat — die stillste aller
+Fehlerarten.
+
+#### Lösungsvorschlag
+
+Gemeinsam mit WS-05 lösen, beide brauchen dieselbe Quelle:
+
+```csharp
+// Startup: alle [Topic]-Werte der referenzierten Vertrags-Assemblies einsammeln.
+// Für jedes gebundene Pattern prüfen, ob mindestens ein bekannter Routing Key darauf passt.
+// Kein Treffer -> Start abbrechen mit Pattern und den bekannten Keys in der Meldung.
+```
+
+Wichtig: als **Warnung statt Fehler** ausführen, wenn ein Service bewusst auf einen noch
+nicht existierenden Upstream-Kontext bindet — sonst blockiert die Prüfung genau die
+Reihenfolge, in der man Kontexte normalerweise baut.
+
+---
+
+### WS-15, `ApplyEntityKeyConversions` erfasst keine Complex Types
+
+Verifiziert: der Helper kennt **keine** Complex-Type-Behandlung, er läuft über
+`Model.GetEntityTypes()`
+([EntityKeyValueConverter.cs:66](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EntityKeyValueConverter.cs:66)).
+Ein typisierter Schlüssel innerhalb eines Complex Type bekäme keinen Konverter — und
+scheiterte damit erst beim Migrieren gegen PostgreSQL, nicht beim Modellaufbau.
+
+Der Scan hat unabhängig davon ein zweites Problem: er läuft über CLR- statt Model-Properties
+und **legt dabei Properties im Modell an**, siehe [hacky.md Nr. 4](hacky.md). Beide Punkte
+betreffen dieselbe Schleife und gehören in einen Fix.
+
+#### Lösungsvorschlag
+
+```csharp
+foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+{
+    Konvertiere(entityType.GetProperties());
+
+    foreach (var complex in entityType.GetComplexProperties())
+    {
+        Konvertiere(complex.ComplexType.GetProperties());   // rekursiv, Complex Types schachteln
+    }
+}
+```
+
+Zusammen mit hacky Nr. 4 umsetzen: dort wird die Schleife ohnehin von CLR- auf
+Model-Properties umgestellt, und `GetComplexProperties()` ist genau dann verfügbar.
+
+---
+
+### WS-16, Keine CI-Pipeline
+
+Verifiziert: `.github/workflows/` existiert und ist **leer**. Es gibt also keinen
+automatischen Build, keinen Testlauf und keine Prüfung der „warnings as errors"-Zusage aus
+`Directory.Build.props`.
+
+#### Lösungsvorschlag
+
+```yaml
+# .github/workflows/build.yml
+- run: dotnet build --configuration Release
+- run: dotnet test --configuration Release
+  env:
+    VITALSYNC_REQUIRE_CONTAINERS: "1" # sonst skippen alle Testcontainers-Tests still
+```
+
+Die Umgebungsvariable ist der Punkt, an dem es sonst schiefgeht: ohne sie überspringen die
+Testcontainers-Tests kommentarlos und der Lauf ist trotzdem grün — die Pipeline würde also
+genau die Tests nicht ausführen, für die sie am wertvollsten ist. GitHub-Runner haben Docker
+vorinstalliert, die Voraussetzung ist also erfüllt.
+
+---
+
+### WS-17, Zeitbasierte Negativassertion im Sink-Test
+
+**Teilweise.** `IntegrationEventSinkDeliveryTests` ruft inzwischen die Produktionsmethode
+auf statt die Verdrahtung nachzubauen. Die Negativassertion — „das Integration Event geht
+bei fehlgeschlagenem Handler **nicht** raus" — bleibt aber zeitbasiert
+([IntegrationEventSinkDeliveryTests.cs:55](BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests/IntegrationEventSinkDeliveryTests.cs:55)):
+250 ms warten und dann prüfen, dass nichts angekommen ist. Auf einem langsamen CI-Runner ist
+das entweder flaky oder — schlimmer — grün, obwohl die Nachricht 300 ms später doch käme.
+
+#### Lösungsvorschlag
+
+Auf ein deterministisches Signal umstellen statt auf eine Frist:
+
+```csharp
+// Wolverines Tracked-Session wartet auf definierte Aktivität statt auf Ablauf einer Zeit
+var session = await host.TrackActivity()
+    .IncludeExternalTransports()
+    .WaitForMessageToBeReceivedAt<DomainEventEnvelope>(host)
+    .InvokeMessageAndWaitAsync(command);
+
+Assert.Empty(session.Sent.MessagesOf<WidgetCreatedIntegrationEvent>());
+```
+
+Die Assertion sagt dann „bis zum Abschluss der Verarbeitung wurde nichts gesendet" statt
+„innerhalb von 250 ms wurde nichts gesendet" — das ist die Aussage, die der Test treffen
+will. Betrifft auch die übrigen `Task.Delay`-Stellen in den Sample-Smoke-Tests.
 
 ---
 
