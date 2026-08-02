@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-07-30
 - **Supersedes:** [ADR-0012](./0012-optional-event-sourcing-aggregate.md)
+- **Amended:** 2026-08-02 (EF Core maps the state as an entity type, not the aggregate — see the note below)
 
 ## Context
 
@@ -56,6 +57,48 @@ derived event-sourced base — so a state-stored aggregate carries no replay sur
 `State` record (via `ComplexProperty`/owned-entity or explicit column mapping) instead of plain auto-properties.
 This price is paid for a consistent single model and a cheap ES migration path; the previous state — an advertised
 strategy without structural support — was judged worse.
+_The named mapping mechanism is superseded by the state-mapping amendment below; the trade-off itself stands._
+
+> **State mapping (amendment 2026-08-02).** The trade-off above is right that EF Core must map the state and wrong
+> about how. The first real EF Core consumer of the Building Blocks (the walking skeleton under `samples/`) showed
+> that the aggregate cannot be mapped **at all**, and that the mechanisms named above are not the way out.
+>
+> - **The aggregate is not mappable.** `public sealed override TKey Id => State.Id` is computed: no setter, no backing
+>   field, so EF Core refuses it as a primary key — *"No backing field could be found for property 'Widget.Id' and the
+>   property does not have a setter."* A setter cannot be retrofitted in the override either, because
+>   `EntityBase<TKey>.Id` is `public abstract TKey Id { get; }` (`CS0546`). Every possible fix therefore either
+>   touches the domain or changes the persistence approach.
+> - **`ComplexProperty`/owned-entity is not the way out.** Mapped as a complex type, a positional record state fails
+>   with *"No suitable constructor was found"*, because EF must bind every constructor parameter and `State.Id` can
+>   therefore not be ignored. This follow-on error **masks** the one above; the order in which EF reports the two is
+>   misleading.
+> - **What is mapped is the state, as an ordinary entity type.** The aggregate is behavior; the state is an immutable
+>   record carrying identity ([ADR-0010](./0010-aggregate-state-object.md)) — a persistence object already. As an
+>   *entity type* rather than a complex type both problems disappear: on a positional record `State.Id` is an
+>   auto-property with a backing field, and `ApplyEntityKeyConversions` iterates `Model.GetEntityTypes()` and
+>   therefore reaches it. The schema result is **one table with one identity column** — no shadow key, no duplicated
+>   id, and a plain `modelBuilder.Entity<TState>(…)` block per aggregate.
+>
+> Mechanically this rests on one domain addition, deliberately kept out of the authoring model:
+>
+> - **`IStateOwner`** (`BuildingBlocks.Domain`) — `StateType`, `State`, `Restore(object)` — implemented
+>   **explicitly** by `AggregateRoot<TKey, TState>`, exactly like `IDomainEventsManager`. Domain code never sees the
+>   members, so an aggregate cannot bypass the event fold by restoring a state by hand, and only
+>   `BuildingBlocks.Infrastructure` consumes it. `Restore` rejects a state with an empty identity and raises no domain
+>   event: resuming from persisted state is not a state change in the domain sense.
+>
+> How the repository and the unit of work use it — including the rehydration constructor a state-stored aggregate now
+> needs — is recorded in the tracking amendment of [ADR-0026](./0026-single-repository-contract.md).
+>
+> **This ADR's decision is unchanged, and so are its neighbours.** `Id => State.Id` stands verbatim;
+> [ADR-0008](./0008-entity-identity-and-equality.md), [ADR-0010](./0010-aggregate-state-object.md) and
+> [ADR-0026](./0026-single-repository-contract.md) need no change to their decisions. The alternatives that *would*
+> have touched them were considered and rejected: a shadow key filled by the repository (a permanent redundant id
+> column per aggregate table), a `private protected` setter on `EntityBase.Id` (identity would have two sources, and
+> ADR-0008/0010/0025 would all need amending), and a separate persistence object with translation (breaks ADR-0026's
+> single repository contract). Consequence "EF Core mapping targets the state record" below is thereby true not only
+> in effect but structurally: the state **is** the mapped entity type. Pinned by `EfCoreAggregateRoundTripTests`
+> (Testcontainers, real PostgreSQL: create → rename → reload in a fresh scope).
 
 ## Consequences
 

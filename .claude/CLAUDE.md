@@ -122,10 +122,23 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   **event-sourced base is additive** (`Version` + `LoadFromHistory` only), per
   ADR-0025 (which supersedes ADR-0012). Only apply ES where the event history
   carries business value.
+- **EF Core maps the aggregate's _state_, never the aggregate** (ADR-0025 amendment):
+  `Id => State.Id` is computed, so it cannot serve as a mapped primary key, and a
+  positional record also fails as a `ComplexProperty`. The state record maps as an
+  ordinary **entity type** — one table, one id column, no shadow key. Infrastructure
+  reaches it through `IStateOwner`, implemented **explicitly** on `AggregateRoot` so
+  domain code never sees it and cannot bypass the event fold. A state-stored aggregate
+  therefore needs a **parameterless constructor** (may be non-public; the Marten path's
+  `new()` requires a public one).
 - **One repository contract**: `IRepository<TAggregate, TKey>` with `GetByIdAsync`
   and `AddAsync` only (ADR-0026) — no `Remove` (removal is a soft-delete state
   change), no `Save`/`Update` (retrieved aggregates are tracked; changes flow
-  through the unit of work). Both EF Core and Marten implement the same contract.
+  through the unit of work). Both EF Core and Marten implement the same contract, and
+  **both track in the repository**: EF's change tracker only ever sees states, so
+  `EfCoreAggregateTracker` mirrors `MartenAggregateTracker` (ADR-0026 amendment).
+  Consequence to know: **domain events are collected only from aggregates that went
+  through `IRepository`** — an entity written straight into the `DbContext` produces
+  none.
 
 ## Application / CQRS conventions (from accepted ADRs)
 
@@ -175,6 +188,12 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   database of a context onto its **own dedicated server** later is a sanctioned,
   non-breaking migration — a connection-string change plus a data move, touching no
   Domain/Application/Infrastructure code (ADR-0020/0021).
+- **State-stored contexts persist the aggregate's state object**, not the aggregate
+  (ADR-0025/0026 amendments): `EfCoreRepository` loads the state via
+  `FindAsync(stateType, [id])` and rehydrates an empty aggregate around it, and the
+  `EfCoreUnitOfWork` copies the current state onto the tracked entry with
+  `CurrentValues.SetValues` before saving — states are immutable, so without that copy
+  EF Core finds nothing to save and the change is silently lost.
 - The **event store is Marten on PostgreSQL** (ADR-0019), used as a **raw event store**:
   the event-sourced repository in `BuildingBlocks.Infrastructure` tracks aggregates
   (loaded and added) and the Marten unit of work appends their uncommitted domain

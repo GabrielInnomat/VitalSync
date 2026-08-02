@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-07-30
+- **Amended:** 2026-08-02 (EF Core tracks the state, not the aggregate — see the note below)
 
 ## Context
 
@@ -22,6 +23,43 @@ Two observations make a merge possible:
    aggregate it hands out (loaded or added) with the scoped `MartenAggregateTracker`, and the `MartenUnitOfWork`
    appends the tracked aggregates' uncommitted events (expected-version optimistic concurrency) when it commits. An
    explicit `SaveAsync` becomes unnecessary.
+   _"EF Core change-tracks retrieved aggregates" is superseded by the tracking amendment below; the conclusion —
+   no `SaveAsync` — is not._
+
+> **Tracking (amendment 2026-08-02).** Observation 2 reaches the right conclusion through a mechanism that no longer
+> exists. EF Core does **not** change-track the retrieved aggregate: since the state-mapping amendment of
+> [ADR-0025](./0025-unified-state-fold-aggregate-model.md) the mapped entity type is the aggregate's **state**, so the
+> change tracker only ever sees states and cannot answer "which aggregates took part in this command".
+>
+> The EF Core path therefore does exactly what this ADR already described for Marten:
+>
+> - **`EfCoreRepository` registers every aggregate it hands out** — loaded or added — with the scoped
+>   **`EfCoreAggregateTracker`**, together with the state instance EF Core tracks for it. Tracking is idempotent per
+>   aggregate instance.
+> - **`EfCoreUnitOfWork` walks those entries at commit**: it copies each aggregate's current state onto its tracked
+>   entity (`CurrentValues.SetValues`), enrolls the uncommitted domain events in the outbox, saves, and clears the
+>   events afterwards. The copy is load-bearing rather than defensive — state objects are immutable, so every applied
+>   event replaced the instance and left the tracked one stale; without it the change tracker would find nothing to
+>   save and a rename would be silently lost.
+>
+> Both persistence styles are thereby symmetric for the first time: repository tracks, unit of work writes.
+>
+> **The decision is unchanged.** `GetByIdAsync` still "retrieves **and tracks**", there is still no `Update`/`Save`
+> and no `Remove`, and handlers stay persistence-agnostic. The consequence below about the uniform tracking model —
+> the unit of work, not the repository, performs the write — now describes **both** sides instead of only Marten's.
+>
+> **A behavioral consequence worth knowing.** Domain events are collected **only from aggregates that passed through
+> `IRepository`**. Writing an entity straight into the `DbContext` produces no events at all, because nothing
+> registers it with the tracker. That is consistent with this ADR — the repository is the way in — but it is a real
+> break: the pre-existing EF Core outbox test wrote a plain entity, silently stopped producing an outbox entry, ran
+> into a timeout, and was moved onto a real aggregate. Pinned by `EfCoreOutboxAtomicityTests` (exactly one SQL command
+> touching aggregate table and outbox) and `EfCoreAggregateRoundTripTests`.
+>
+> **Rehydration constructor.** Because the repository builds an empty aggregate and restores the loaded state into it,
+> a state-stored aggregate needs a **parameterless constructor**. `EfCoreRepository` uses
+> `Activator.CreateInstance(…, nonPublic: true)`, so a non-public one suffices; the event-sourced repository's `new()`
+> constraint requires a **public** one. Whether `IRepository` should impose one uniform rule instead of two implicit
+> ones is open — see `WalkingSkeleton.md` §9.
 
 ## Decision
 
