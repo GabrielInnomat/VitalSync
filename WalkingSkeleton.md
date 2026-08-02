@@ -121,10 +121,11 @@ Rechtfertigung des Durchstichs in einem Satz.
 
 ## 4. Stand
 
-Alle drei Etappen sind **abgeschlossen**, Arbeitsbaum sauber, **209 Tests grün**, Build
+Alle drei Etappen sind **abgeschlossen**, Arbeitsbaum sauber, **210 Tests grün**, Build
 ohne Warnungen. Elf davon sind Smoke-Tests gegen ein laufendes System, die ohne gesetzte
 `SAMPLE_*_API_URL` überspringen (siehe §11); mit laufenden Services laufen auch sie
-grün.
+grün. Die containergestützten Tests brauchen Docker und überspringen sonst — ausser
+`VITALSYNC_REQUIRE_CONTAINERS=1` ist gesetzt.
 
 Damit hat der Durchstich seine Aufgabe erfüllt: **jede** Behauptung, die ADR-0027 über
 die Verdrahtung aufstellt, ist entweder belegt oder mit einem Amendment korrigiert, und
@@ -540,12 +541,28 @@ daran. Das Vorgehen steht in §11.
 | 5   | Queue `eventsourced.integration-events`, gebunden mit `sample.*` — von BuildingBlocks | belegt |
 | 6   | `Program.cs` ohne Wolverine-Konfiguration außer `UseWolverine()`                   | belegt |
 | 7   | Wiederholte Zustellung erzeugt kein zweites Gadget                                 | Test   |
+| 8   | Ein dauerhaft scheiternder Konsument wird 3× wiederholt und dann dead-lettert      | Test   |
 
 Kriterium 7 ist durch `MirrorWidgetTests` abgedeckt, nicht am laufenden System: eine
 Redelivery lässt sich von außen nicht zuverlässig erzwingen. Die Idempotenz ruht auf
 einer Entscheidung, nicht auf Bookkeeping — **das gespiegelte Aggregat übernimmt die
 Identität des Originals**. Eine frisch erzeugte Id würde bei jeder Wiederholung ein
 weiteres Gadget anlegen.
+
+Kriterium 8 ist durch `DeadLetterTests` abgedeckt (Testcontainers: PostgreSQL **und**
+RabbitMQ, echte Produktionsverdrahtung über `AddBuildingBlocks`). Ein Konsument, der
+immer wirft, wird genau **viermal** aufgerufen — der erste Versuch plus die drei
+Wiederholungen aus `ApplyBuildingBlockMessagingDefaults` — und die Nachricht ist danach
+aus der Dead-Letter-Queue lesbar. Doppelte Mutationsprobe: eine Wiederholung weniger →
+`Expected: 4, Actual: 2`; `MoveToErrorQueue()` durch `Discard()` ersetzt → Timeout beim
+Warten auf die Nachricht. Beide Hälften der Zusage sind damit einzeln festgenagelt.
+
+**Dabei kam der eigentliche Befund heraus:** die Nachricht landet **nicht** in der
+Tabelle `wolverine_dead_letters` der Write-Datenbank, sondern in Wolverines
+`wolverine-dead-letter-queue` **auf dem Broker**. Der Test suchte zuerst in der
+Datenbank und lief in einen Timeout, obwohl Retry und Dead-Lettering einwandfrei
+funktionierten. Wer im Betrieb eine verschluckte Nachricht sucht, schaut sonst an der
+falschen Stelle — die Tabelle existiert nämlich, sie bleibt nur leer.
 
 ### Weitere Befunde
 
@@ -649,11 +666,6 @@ weiteres Gadget anlegen.
   ein Kontext, der aus einem fremden Ereignis ein **eigenes** Aggregat mit eigener
   Identität ableitet, braucht echtes Idempotenz-Bookkeeping (verarbeitete `EventId`s pro
   Konsument). Das gibt es heute nicht.
-- **Retry und Dead-Lettering sind unbelegt.** Die Policy steht in
-  `ApplyBuildingBlockMessagingDefaults`, aber kein Test und kein Lauf hat je eine
-  Nachricht scheitern lassen. Der Konsument wirft bei einem fehlgeschlagenen Command —
-  ob daraus tatsächlich drei Wiederholungen und danach die Error-Queue werden, ist
-  angenommen, nicht gesehen.
 - **Ein Kontext konsumiert seine eigenen Integration Events**, wenn sein Topic-Pattern
   sie matcht. Folgenlos, solange kein Handler existiert. Ob BuildingBlocks das aktiv
   ausfiltern sollte (etwa über eine Absender-Kennung im Envelope), ist offen.

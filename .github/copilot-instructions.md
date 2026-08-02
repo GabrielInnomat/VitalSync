@@ -223,7 +223,9 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   **silently discards** a message with no route, and a message whose consumer was never
   discovered is marked handled and dropped without a retry or a dead letter — both
   failures are invisible. Note that `nutrition.*` also matches the subscriber's own
-  published events.
+  published events. A consumer that keeps throwing is retried three times and the message
+  then goes to Wolverine's `wolverine-dead-letter-queue` **on the broker** — not to the
+  `wolverine_dead_letters` table in the write database, which stays empty (`DeadLetterTests`).
 - **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
   and the event schema is unchanged, so snapshots can be added per context later with
   **no event migration**.

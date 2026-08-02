@@ -118,6 +118,11 @@ everything else from ADR-0004 intact.
 >   **own** published events, which are then delivered back to it. Harmless when no
 >   handler exists, but a context that both publishes and consumes under one prefix
 >   must expect its own messages.
+> - **Where a poison message ends up.** A consumer that keeps throwing is retried three
+>   times with a growing cooldown and the message is then moved to Wolverine's
+>   `wolverine-dead-letter-queue` **on the broker** — not to the `wolverine_dead_letters`
+>   table in the context's write database, which exists but stays empty. Operationally
+>   this is the one place to look; pinned by `DeadLetterTests`.
 >
 > **Codegen dependency.** Wolverine 6 no longer ships the Roslyn compiler in its
 > core package, and its default `TypeLoadMode` compiles handler code at runtime.

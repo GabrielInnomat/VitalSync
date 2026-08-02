@@ -13,6 +13,7 @@
   <Folder Name="/BuildingBlocks/tests/ExternalAssemblies/">
     <Project Path="BuildingBlocks/tests/ExternalAssemblies/AmbiguousRequestsFixture/AmbiguousRequestsFixture.csproj" />
     <Project Path="BuildingBlocks/tests/ExternalAssemblies/ConflictingHandlersFixture/ConflictingHandlersFixture.csproj" />
+    <Project Path="BuildingBlocks/tests/ExternalAssemblies/DeadLetterFixture/DeadLetterFixture.csproj" />
     <Project Path="BuildingBlocks/tests/ExternalAssemblies/OrphanRequestsFixture/OrphanRequestsFixture.csproj" />
     <Project Path="BuildingBlocks/tests/ExternalAssemblies/ValidHandlersFixture/ValidHandlersFixture.csproj" />
   </Folder>

@@ -95,6 +95,12 @@ internal static class WolverineOptionsExtensions
     /// namespace; consumers bind a queue with a topic pattern. Only required for hosts that select
     /// <c>UseWolverineMessaging</c>; a service with purely in-context projections needs only
     /// <see cref="ApplyBuildingBlockDomainEventRouting"/>.
+    /// <para>
+    /// A failing consumer is retried three times with a growing cooldown and the message is then moved to the error
+    /// queue rather than dropped or retried forever. Where to look for it is not obvious: with the RabbitMQ transport
+    /// the message goes to Wolverine's <c>wolverine-dead-letter-queue</c> **on the broker**, not to the
+    /// <c>wolverine_dead_letters</c> table in the context's write database. Pinned by <c>DeadLetterTests</c>.
+    /// </para>
     /// </remarks>
     /// <param name="options">The Wolverine options being configured.</param>
     /// <param name="rabbitMqUri">The AMQP connection URI of the RabbitMQ broker (typically the Aspire-provided connection string).</param>
