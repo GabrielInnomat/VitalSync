@@ -52,7 +52,9 @@ VitalSync/
 │   ├── StateStored/                 # EF Core end-to-end slice (Widget)
 │   └── EventSourced/                # Marten end-to-end slice (Gadget)
 ├── docs/architecture/               # Architecture docs, ADRs (decisions/), glossary, user stories
-└── tests/VitalSync.Tests/           # Cross-cutting / integration tests
+└── tests/                           # Tests for src/ (BuildingBlocks has its own tests/ folder)
+    └── VitalSync.ServiceDefaults.Tests/   # NOTE: tests/VitalSync.Tests/ is a broken template
+                                           # leftover, deliberately not in VitalSync.slnx
 ```
 
 Guidance for finding things:
@@ -80,6 +82,15 @@ Guidance for finding things:
   projection-handler / event-publisher abstractions, integration-event marker) →
   `Application`; **all implementations** → `Infrastructure`, which defines no
   use-case contracts of its own. New contract? Place it by asking who consumes it.
+- **Every service host wires the same defaults** (see any `src/Services/<Domain>/*.Api/Program.cs`):
+  `builder.AddServiceDefaults()`, one `AddNpgSqlReadinessCheck` **per database the context
+  owns** (`<context>-write` _and_ `<context>-read`), `AddRabbitMqReadinessCheck()`,
+  `AddProblemDetails()` + `app.UseExceptionHandler()` (ADR-0017's thin global handler),
+  `app.MapDefaultEndpoints()`, and `await app.RunAsync().ConfigureAwait(false)`. The
+  connection names **are** the Aspire resource names — `AddNpgSqlReadinessCheck` throws at
+  startup when the name is not configured, so renaming a resource in the AppHost fails loudly
+  instead of leaving the service permanently unhealthy while the BFF waits on it
+  (`tests/VitalSync.ServiceDefaults.Tests`).
 
 See `docs/architecture/communication.md` and the ADRs below.
 

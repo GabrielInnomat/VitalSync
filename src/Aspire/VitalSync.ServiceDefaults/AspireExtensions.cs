@@ -96,9 +96,16 @@ public static class AspireExtensions
         string name = "postgres") where TBuilder : IHostApplicationBuilder
     {
         var connectionString = builder.Configuration.GetConnectionString(connectionName);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                $"No connection string named '{connectionName}' is configured, so the readiness check " +
+                $"'{name}' cannot be added. Does the AppHost reference a resource of that name?");
+        }
+
         builder.Services.AddHealthChecks()
             .AddNpgSql(
-                connectionString!,
+                connectionString,
                 name: name,
                 tags: [ReadyTag]);
 

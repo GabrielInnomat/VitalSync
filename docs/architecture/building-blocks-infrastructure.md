@@ -305,8 +305,10 @@ services.AddBuildingBlocks(options =>
 - `UseWolverineMessaging(rabbitMqUri)` takes the broker URI (typically the
   Aspire-provided connection string) so the RabbitMQ defaults can be applied
   automatically (ADR-0027).
-- Connection strings follow the write/read pair naming of ADR-0021
-  (e.g. `NutritionWrite` / `NutritionRead`).
+- Connection strings follow the write/read pair naming of ADR-0021 — the **Aspire
+  resource name in kebab-case**, e.g. `nutrition-write` / `nutrition-read`. The
+  service host uses the same names for its readiness checks, so a rename in the
+  AppHost has exactly one spelling to follow.
 - The exact API shape of the options builder is illustrative and may evolve
   during implementation; the registration responsibilities above are
   normative.

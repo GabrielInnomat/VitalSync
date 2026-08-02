@@ -63,5 +63,7 @@
     <Project Path="src/Services/Nutrition/VitalSync.Nutrition.Api/VitalSync.Nutrition.Api.csproj" />
     <Project Path="src/Services/Nutrition/VitalSync.Nutrition.MigrationService/VitalSync.Nutrition.MigrationService.csproj" />
   </Folder>
-  <Folder Name="/tests/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/VitalSync.ServiceDefaults.Tests/VitalSync.ServiceDefaults.Tests.csproj" />
+  </Folder>
 </Solution>

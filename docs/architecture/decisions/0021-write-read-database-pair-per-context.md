@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-07-26
+- **Amended:** 2026-08-03 (connection-string naming — see the note below)
 
 ## Context
 
@@ -59,6 +60,23 @@ a read database.**
 - The read database is **derived and rebuildable.** It may be dropped and
   reconstructed by replaying events / re-running projections; it is never the
   system of record.
+
+> **Amendment (2026-08-03) — the connection-string name *is* the Aspire resource name.**
+> The "Topology today" bullet above illustrates the connection strings as
+> `ConnectionStrings:NutritionWrite` / `ConnectionStrings:NutritionRead`. That spelling
+> never existed: Aspire injects a connection string under the **resource name verbatim**,
+> so `postgres.AddDatabase("nutrition-write", …)` yields
+> `ConnectionStrings:nutrition-write`. The binding names are therefore **kebab-case**,
+> matching the resource names in the same bullet — `nutrition-write`, `nutrition-read`,
+> and likewise for every other context.
+>
+> This is a naming correction, not a change of decision: the write/read pair, the
+> ownership rule, and the migration path are untouched. It matters because the name is
+> the only link between the AppHost and the service — a service reading a name that no
+> resource provides gets no connection string and, before the guard in
+> `AddNpgSqlReadinessCheck`, would simply never become healthy while the BFF waited on
+> it. Consumers (`Program.cs`, `UseEfCorePersistence`, readiness checks) must all use
+> that one spelling.
 
 ## Consequences
 

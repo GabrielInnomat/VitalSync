@@ -46,6 +46,16 @@ Set it in every CI pipeline; leave it unset locally. Both fixtures (`PostgreSqlF
 - **Read-only event access is enforced and tested** — outside layers must not be able to mutate an aggregate's domain events.
 - **Fast feedback first** — unit/domain/application/persistence tests run quickly; heavier integration tests run as needed.
 
+## Where tests live
+
+Test projects mirror the source structure 1:1 and sit in the `tests/` folder next to what they
+cover: `BuildingBlocks/tests/<Package>.Tests` for the Building Blocks, and `tests/<Project>.Tests`
+for everything under `src/` (e.g. `tests/VitalSync.ServiceDefaults.Tests`). Every test project
+belongs in `VitalSync.slnx`, otherwise `dotnet test` never sees it.
+
+> `tests/VitalSync.Tests/` is a leftover from the Aspire template with a broken project reference
+> and stale resource names. It is deliberately **not** in the solution; do not extend it.
+
 ## External fixture assemblies
 
 Some tests need types that live in a **separate compiled assembly** from the test project

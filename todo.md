@@ -77,7 +77,7 @@ eine Entscheidung, keinen Code.
 | TODO-42 | Uneinheitliche Projektstruktur                                 | **P4** | offen             | IMP-44                                |
 | TODO-43 | Irreführende Test- und Methodennamen                           | **P4** | offen             | IMP-45, IMP-48                        |
 | TODO-44 | Bewusste Ausnahmen dokumentieren                               | **P4** | wird nicht gelöst | IMP-35, IMP-46                        |
-| TODO-45 | Api-Readiness prüft nicht mehr existierende Connection-Namen   | **P1** | offen             | AppHost `e44ae9b`                     |
+| TODO-45 | Api-Readiness prüft nicht mehr existierende Connection-Namen   | **P1** | gelöst            | AppHost `e44ae9b`                     |
 | TODO-46 | Die MigrationService-Worker sind leere Hüllen                  | **P2** | offen             | AppHost `e44ae9b`                     |
 
 ---
@@ -1332,42 +1332,32 @@ feststeht; Service Location nur, wo der Typ erst zur Laufzeit bekannt ist."
 
 # TODO-45, Api-Readiness prüft nicht mehr existierende Connection-Namen
 
-**P1 · offen · AppHost `e44ae9b`**
+**P1 · gelöst · AppHost `e44ae9b`**
 
-```csharp
-builder.AddNpgSqlReadinessCheck(connectionName: "nutritionDb", name: "nutritionDb");
-```
+Nutrition und Fitness prüften nach `e44ae9b` noch `nutritionDb` bzw. `fitnessDb`. Diese Ressourcen
+gibt es nicht mehr, also lieferte `GetConnectionString(...)` `null` — und
+`AddNpgSqlReadinessCheck` reichte das mit `connectionString!` ungeprüft an den Health Check weiter.
+Folge: Der `/health`-Check wäre nie healthy geworden, `WithHttpHealthCheck` hätte den Service unten
+gehalten und der BFF per `WaitFor` unbegrenzt gewartet. Der Build meldete nichts, weil der Name ein
+String ist.
 
-([Nutrition Program.cs:5](src/Services/Nutrition/VitalSync.Nutrition.Api/Program.cs:5),
-[Fitness Program.cs:5](src/Services/Fitness/VitalSync.Fitness.Api/Program.cs:5))
+**Behoben:** Beide Services prüfen jetzt ihr Write/Read-Paar
+([Nutrition Program.cs:5-6](src/Services/Nutrition/VitalSync.Nutrition.Api/Program.cs:5),
+[Fitness Program.cs:5-6](src/Services/Fitness/VitalSync.Fitness.Api/Program.cs:5)), und
+`AddNpgSqlReadinessCheck` wirft bei fehlender Verbindungszeichenfolge beim Start statt still einen
+Dauer-Timeout zu erzeugen
+([AspireExtensions.cs:98-105](src/Aspire/VitalSync.ServiceDefaults/AspireExtensions.cs:98)).
+Abgedeckt durch `NpgSqlReadinessCheckTests` in `tests/VitalSync.ServiceDefaults.Tests`.
 
-Der AppHost provisioniert seit `e44ae9b` `nutrition-write`/`nutrition-read` bzw.
-`fitness-write`/`fitness-read`. Die Ressourcen `nutritionDb` und `fitnessDb` gibt es nicht mehr,
-also liefert `GetConnectionString(...)` `null` — und `AddNpgSqlReadinessCheck` reicht das mit
-`connectionString!` ungeprüft an den Health Check weiter
-([AspireExtensions.cs:98-103](src/Aspire/VitalSync.ServiceDefaults/AspireExtensions.cs:98)).
-Folge: Der `/health`-Check wird nie healthy, `WithHttpHealthCheck` hält den Service unten, und der
-BFF wartet per `WaitFor` unbegrenzt. Der Build meldet nichts, weil der Name ein String ist.
+Analytics stand nie auf einem falschen Namen, hing aber noch am Default-Template
+(`AddControllers`, `UseHttpsRedirection`). Es steht jetzt ebenfalls auf dem Muster der beiden
+anderen: Readiness-Checks für `analytics-write`/`analytics-read` und RabbitMQ,
+`AddProblemDetails`/`UseExceptionHandler`, `await app.RunAsync().ConfigureAwait(false)`
+([Analytics Program.cs](src/Services/Analytics/VitalSync.Analytics.Api/Program.cs)).
 
-Analytics ist nicht betroffen, prüft dafür aber **gar nichts** — der Service verwendet noch das
-Default-Template (`AddControllers`, `UseHttpsRedirection`) statt des Musters der beiden anderen.
-
-## Lösungsvorschlag
-
-Namen korrigieren und den stillen Fehlschlag zumachen — Letzteres ist der eigentliche Punkt:
-
-```csharp
-// Program.cs je Service
-builder.AddNpgSqlReadinessCheck(connectionName: "nutrition-write", name: "nutrition-write");
-builder.AddNpgSqlReadinessCheck(connectionName: "nutrition-read", name: "nutrition-read");
-
-// AspireExtensions.AddNpgSqlReadinessCheck
-var connectionString = builder.Configuration.GetConnectionString(connectionName)
-    ?? throw new InvalidOperationException(
-        $"Keine Verbindungszeichenfolge '{connectionName}'. Referenziert der AppHost die Ressource?");
-```
-
-Aus einem Dauer-Timeout wird damit eine Startup-Exception mit dem fehlenden Namen im Text.
+Damit ist das Host-Muster über alle drei Services identisch und in
+[.claude/CLAUDE.md](.claude/CLAUDE.md) sowie
+[.github/copilot-instructions.md](.github/copilot-instructions.md) als Regel festgehalten.
 
 ---
 
@@ -1410,6 +1400,6 @@ unbelegt und gehört hier vermerkt statt im AppHost still vorausgesetzt.
    eine Datenmigration, also **vor** dem ersten echten Service.
 4. **TODO-01** vor dem ersten Aggregat mit Kindkollektion.
 5. **TODO-07** und **TODO-08** schließen die stillen Lücken im Messaging.
-6. **TODO-45** sobald ein Service tatsächlich gestartet wird — heute fällt es nur deshalb nicht
-   auf, weil niemand den produktiven AppHost hochfährt. **TODO-46** dagegen erst mit dem ersten
-   Aggregat des jeweiligen Kontexts.
+6. **TODO-45** ist erledigt; **TODO-46** kommt erst mit dem ersten Aggregat des jeweiligen
+   Kontexts — vorher ist nicht entschieden, wie dort gespeichert wird, und ein Migrations-Worker
+   ohne `DbContext` wäre geraten.

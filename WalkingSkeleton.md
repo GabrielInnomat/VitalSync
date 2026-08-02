@@ -626,12 +626,15 @@ startet per `WaitForCompletion` danach
 ([AppHost.cs:11-66](src/Aspire/VitalSync.AppHost/AppHost.cs:11)). Analytics ist damit
 erstmals als Service verdrahtet.
 
-Neu offen aus demselben Commit — siehe [todo.md](todo.md), TODO-45 und TODO-46:
+Zwei Nachzügler aus demselben Commit — siehe [todo.md](todo.md), TODO-45 und TODO-46:
 
-- Nutrition- und Fitness-Api prüfen weiterhin die **alten** Connection-Namen
-  (`nutritionDb`, `fitnessDb`), die es im AppHost nicht mehr gibt.
+- Nutrition- und Fitness-Api prüften weiterhin die **alten** Connection-Namen
+  (`nutritionDb`, `fitnessDb`). **Behoben:** beide prüfen jetzt ihr Write/Read-Paar, und
+  `AddNpgSqlReadinessCheck` wirft bei fehlender Verbindungszeichenfolge, statt still nie
+  healthy zu werden. Alle drei Services prüfen jetzt ihr Write/Read-Paar plus RabbitMQ.
 - Die drei MigrationService-Worker sind leere Hüllen (`Host.CreateApplicationBuilder`,
   `Build()`, kein `Run()`); `WaitForCompletion` ist damit heute eine Zusage ohne Inhalt.
+  Bleibt bewusst offen, bis pro Kontext feststeht, wie dort gespeichert wird.
 
 ---
 

@@ -1,23 +1,16 @@
 using VitalSync.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
-
 builder.AddServiceDefaults();
+builder.AddNpgSqlReadinessCheck(connectionName: "analytics-write", name: "analytics-write");
+builder.AddNpgSqlReadinessCheck(connectionName: "analytics-read", name: "analytics-read");
+builder.AddRabbitMqReadinessCheck();
 
-// Add services to the container.
-
-builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
+app.UseExceptionHandler();
+app.MapGet("/", () => "VitalSync Analytics service is running.");
 
 app.MapDefaultEndpoints();
-
-// Configure the HTTP request pipeline.
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();
+await app.RunAsync().ConfigureAwait(false);

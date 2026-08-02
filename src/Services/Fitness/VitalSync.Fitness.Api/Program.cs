@@ -2,7 +2,8 @@ using VitalSync.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
-builder.AddNpgSqlReadinessCheck(connectionName: "fitnessDb", name: "fitnessDb");
+builder.AddNpgSqlReadinessCheck(connectionName: "fitness-write", name: "fitness-write");
+builder.AddNpgSqlReadinessCheck(connectionName: "fitness-read", name: "fitness-read");
 builder.AddRabbitMqReadinessCheck();
 
 builder.Services.AddProblemDetails();

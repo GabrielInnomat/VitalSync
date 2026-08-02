@@ -12,6 +12,19 @@ An ADR documents a single architectural decision, its context, and its consequen
 - **Accepted** — decided and in effect.
 - **Superseded** — replaced by a later ADR (linked).
 
+## Amendments
+
+Immutability protects the **decision**, not every sentence around it. An accepted ADR may
+carry an **amendment** when reality forces a correction that leaves the decision intact —
+an illustrative detail that was never true (a name, a spelling), or an implementation
+constraint discovered by the first real consumer. Anything that changes *what was decided*
+needs a superseding ADR instead.
+
+Format (see ADR-0021, 0022, 0025, 0026, 0027): add
+`- **Amended:** YYYY-MM-DD (short reason)` to the header, and put a blockquote **at the
+place it corrects**, stating what the ADR said, what holds instead, and why. Never edit the
+original wording away — the amendment must remain readable as a correction.
+
 ## Index
 
 | #                                                         | Title                                                   | Status                    |
