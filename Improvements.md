@@ -497,7 +497,7 @@ die Application-Schicht nie. Die Transportabbildung bleibt beim BFF/Host (ADR-00
 # IMP-19, Ein Assembly für EF Core, Marten, Wolverine und RabbitMQ
 
 `BuildingBlocks.Infrastructure` referenziert unverändert 11 Pakete, darunter Marten, EF Core, Npgsql
-und vier WolverineFx-Pakete
+und fünf WolverineFx-Pakete
 ([BuildingBlocks.Infrastructure.csproj](BuildingBlocks/src/BuildingBlocks.Infrastructure/BuildingBlocks.Infrastructure.csproj)).
 Ein rein state-stored Service zieht Marten mit, ein event-sourced Service EF Core — und jedes
 Major-Upgrade eines der Pakete betrifft alle Services gleichzeitig.
@@ -793,6 +793,12 @@ Verifiziert: **kein einziges `Activity`/`ActivitySource` im gesamten `BuildingBl
 erzeugt aber keinen Span. In einem Aspire-/OpenTelemetry-Setup fehlt damit genau die Ebene zwischen
 HTTP/gRPC-Span und Datenbank-Span: Man sieht, dass ein Request 800 ms brauchte, aber nicht, welcher
 Handler oder welche Projektion.
+
+**Nachtrag (2026-08-03):** Die ServiceDefaults registrieren seit Commit `981c0c5` die Quellen
+`Npgsql`, `Wolverine` und `Marten` (Tracing) sowie den Meter `Npgsql`
+([AspireExtensions.cs](src/Aspire/VitalSync.ServiceDefaults/AspireExtensions.cs)) — Datenbank- und
+Transport-Spans existieren damit. Die hier beschriebene Lücke, der Span der CQRS-Pipeline selbst,
+bleibt offen.
 
 ## Lösungsvorschlag
 
@@ -1204,7 +1210,7 @@ IMP-35 (statische Caches) — beides sind bewusste Ausnahmen, die als solche dok
 # IMP-47, Keine zentrale Paketverwaltung
 
 Verifiziert: kein `Directory.Packages.props` im Repository. Versionen stehen einzeln in den
-`.csproj`-Dateien; die vier WolverineFx-Pakete etwa sind an mehreren Stellen mit `6.23.0` gepflegt. Ein
+`.csproj`-Dateien; `xunit.v3` etwa ist an sechs Stellen mit `3.2.2` gepflegt. Ein
 Upgrade erfordert, jede Datei zu finden — und ein übersehenes Projekt erzeugt eine
 Laufzeit-Bindungsdiskrepanz statt eines Build-Fehlers.
 

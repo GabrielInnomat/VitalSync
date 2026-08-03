@@ -411,7 +411,9 @@ options.Publish(publishing => publishing
 Konsumentenseite mitentscheiden: Quorum-Queues überleben einen Broker-Neustart, klassische nicht.
 Beides in denselben Schritt, sonst ist die Kette nur halb dicht. Der Durchsatzpreis ist für
 Integration Events die richtige Wahl; den lokalen Domain-Event-Pfad betrifft es nicht (der läuft
-über die Datenbank).
+über die Datenbank). Anmerkung seit dem ADR-0023-Amendment 2026-08-03: die Publishing-Regel heißt
+inzwischen `PublishMessagesToRabbitMqExchange<IIntegrationEvent>`; die Durable-Einstellung gehört
+dann an deren Exchange-Konfiguration statt an `ToRabbitTopics`.
 
 ---
 
@@ -952,6 +954,12 @@ Verifiziert: **kein einziges `Activity`/`ActivitySource` in `BuildingBlocks/src`
 Aspire-/OpenTelemetry-Setup fehlt damit die Ebene zwischen HTTP/gRPC-Span und Datenbank-Span: man
 sieht, dass ein Request 800 ms brauchte, aber nicht, welcher Handler oder welche Projektion.
 
+**Nachtrag (2026-08-03):** Die ServiceDefaults registrieren seit Commit `981c0c5` die Quellen
+`Npgsql`, `Wolverine` und `Marten` (Tracing) sowie den Meter `Npgsql`
+([AspireExtensions.cs](src/Aspire/VitalSync.ServiceDefaults/AspireExtensions.cs)) — Datenbank- und
+Transport-Spans existieren damit. Die hier beschriebene Lücke, der Span der CQRS-Pipeline selbst,
+bleibt offen.
+
 ## Lösungsvorschlag
 
 ```csharp
@@ -1192,7 +1200,7 @@ billig, mit dem ersten Produktions-Service teuer** — deshalb P3 statt P4. Ents
 
 **P3 · offen · IMP-19**
 
-`BuildingBlocks.Infrastructure` referenziert 11 Pakete, darunter Marten, EF Core, Npgsql und vier
+`BuildingBlocks.Infrastructure` referenziert 11 Pakete, darunter Marten, EF Core, Npgsql und fünf
 WolverineFx-Pakete. Ein rein state-stored Service zieht Marten mit, ein event-sourced Service
 EF Core — und jedes Major-Upgrade betrifft alle Services gleichzeitig.
 
@@ -1216,7 +1224,7 @@ der beiden Persistenzwelten braucht. Vorher ist der Aufwand höher als der Gewin
 **P3 · offen · IMP-47**
 
 Verifiziert: kein `Directory.Packages.props`. Versionen stehen einzeln in den `.csproj`-Dateien;
-die WolverineFx-Pakete sind an mehreren Stellen mit `6.23.0` gepflegt. Ein übersehenes Projekt
+`xunit.v3` etwa ist an sechs Stellen mit `3.2.2` gepflegt. Ein übersehenes Projekt
 erzeugt eine Laufzeit-Bindungsdiskrepanz statt eines Build-Fehlers.
 
 ## Lösungsvorschlag

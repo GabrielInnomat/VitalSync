@@ -654,9 +654,8 @@ Zwei Nachzügler aus demselben Commit — siehe [todo.md](todo.md), TODO-45 und 
 ### WS-01, Optimistische Nebenläufigkeit im state-stored Pfad fehlt — **gelöst (2026-08-03)**
 
 Siehe [TODO-02](todo.md) und [ADR-0030](docs/architecture/decisions/0030-persisted-names-and-aggregate-version.md).
-Die Version lebt auf dem State und wird state-stored als `IsConcurrencyToken()` gemappt; ein`r
+Die Version lebt auf dem State und wird state-stored als `IsConcurrencyToken()` gemappt; ein
 verlorenes Update ist jetzt eine `DbUpdateConcurrencyException` und damit ein `Conflict`.
-
 
 Der event-sourced Pfad hängt mit erwarteter Streamversion an; der state-stored Pfad hat
 nichts Vergleichbares. Der Concurrency-Token säße jetzt am State — verifiziert existiert
