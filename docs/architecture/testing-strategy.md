@@ -22,6 +22,7 @@ Automated tests are implemented for **both the Building Blocks and the individua
 | **EF Core InMemory** | Fast persistence-layer tests                             |
 | **Testcontainers (PostgreSQL)** | Integration tests against a real PostgreSQL for Marten optimistic concurrency, strongly-typed key persistence, and outbox flush-on-commit; skipped automatically when Docker is unavailable |
 | **Testcontainers (RabbitMQ)** | Integration tests for integration-event routing to the platform topic exchange; skipped automatically when Docker is unavailable |
+| **Smoke tests over gRPC**     | End-to-end checks against a running system (Aspire host, real broker, real databases); skipped unless the service's `SAMPLE_*_API_URL` is set |
 
 > Integration and component-communication tests may additionally use containerized infrastructure (e.g., via Testcontainers) once the messaging platform is selected.
 
@@ -41,7 +42,9 @@ Set it in every CI pipeline; leave it unset locally. Both fixtures (`PostgreSqlF
 
 1. **Build** in Release. `TreatWarningsAsErrors` and `AnalysisMode=All` from `Directory.Build.props` make this the analyzer and style gate as well.
 2. **Test** the whole solution with `VITALSYNC_REQUIRE_CONTAINERS=1`, so a runner without Docker fails instead of skipping.
-3. **Smoke-test a running system**: the workflow starts the samples AppHost, waits for both sample APIs, and re-runs the two sample test projects with `SAMPLE_STATESTORED_API_URL` / `SAMPLE_EVENTSOURCED_API_URL` set. On failure it prints the AppHost log — Wolverine's interesting failures (an unroutable message, a consumer that was never discovered) are invisible in test output but plain in the host log.
+3. **Smoke-test a running system**: the workflow starts the samples AppHost, waits for both sample APIs, and re-runs the two sample test projects with `SAMPLE_STATESTORED_API_URL` / `SAMPLE_EVENTSOURCED_API_URL` and **`VITALSYNC_REQUIRE_SMOKE=1`** set. On failure it prints the AppHost log — Wolverine's interesting failures (an unroutable message, a consumer that was never discovered) are invisible in test output but plain in the host log.
+
+`VITALSYNC_REQUIRE_SMOKE` is to the smoke tests what `VITALSYNC_REQUIRE_CONTAINERS` is to the container-backed ones: a missing API URL normally skips the test, which keeps the suite usable locally but would let a renamed variable turn the whole smoke stage into a green no-op. With the flag set, a missing URL fails (`SmokeRequirement`, one per sample test project).
 
 Step 3 exists because the walking skeleton found several defects that build and unit tests stayed green through; only a real web host with a real broker surfaces them. It runs against `samples/` today, and when the first real service arrives only the project paths and the two URLs change.
 

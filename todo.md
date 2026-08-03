@@ -428,10 +428,13 @@ referenzieren `Aspire.AppHost.Sdk` als Package.
 die Workload-Frage beantwortet: Der Build läuft ohne installierten Aspire-Workload, die entsprechende
 Voraussetzung in README und Instruktionsdateien war überholt und ist korrigiert.
 
-**Bekannte Lücke:** Die Smoke-Tests haben kein Gegenstück zu `ContainerRequirement`. Fehlt
-`SAMPLE_STATESTORED_API_URL` — Tippfehler im Workflow, umbenannte Variable —, überspringen sie
-kommentarlos und der Schritt bleibt grün. Genau die Fehlerklasse, die für Container bereits bewusst
-geschlossen wurde. Ein `SmokeRequirement` analog zu `ContainerRequirement` würde das schließen.
+**Nachgezogen:** Die Smoke-Tests hatten zunächst kein Gegenstück zu `ContainerRequirement` — bei
+fehlender `SAMPLE_*_API_URL` (Tippfehler im Workflow, umbenannte Variable) hätten sie kommentarlos
+übersprungen und der Schritt wäre grün geblieben. `SmokeRequirement` schließt das: mit gesetztem
+`VITALSYNC_REQUIRE_SMOKE` wird die fehlende URL zum Fehler statt zum Skip, und der Workflow setzt die
+Variable in der Smoke-Stufe. Empirisch geprüft — ohne URLs und mit gesetztem Flag fallen die
+betroffenen Tests um (4 im state-stored, 7 im event-sourced Sample); ohne Flag überspringen sie
+weiterhin, damit die Suite lokal ohne laufendes System benutzbar bleibt.
 
 ---
 

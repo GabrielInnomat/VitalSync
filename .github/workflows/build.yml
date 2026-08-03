@@ -78,10 +78,15 @@ jobs:
       # Re-runs the two sample test projects, this time with the URLs set so the smoke tests no longer
       # skip. Their unit tests run a second time, which costs seconds and keeps the failure signal
       # clean: a red step here means the running system is broken, not a unit test.
+      #
+      # VITALSYNC_REQUIRE_SMOKE is the same idea as VITALSYNC_REQUIRE_CONTAINERS one step up: without it
+      # a renamed or misspelled URL variable would make the smoke tests skip and this step stay green -
+      # the pipeline would then report success over the tests it exists for.
       - name: Smoke tests
         env:
           SAMPLE_STATESTORED_API_URL: https://localhost:54230
           SAMPLE_EVENTSOURCED_API_URL: https://localhost:54240
+          VITALSYNC_REQUIRE_SMOKE: "1"
           VITALSYNC_REQUIRE_CONTAINERS: "1"
         run: |
           dotnet test samples/StateStored/VitalSync.Sample.StateStored.Tests \

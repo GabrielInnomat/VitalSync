@@ -108,10 +108,13 @@ public sealed class SampleApiSmokeTests
 
     private static IWidgetService? CreateClient(out string skipReason)
     {
-        var url = Environment.GetEnvironmentVariable("SAMPLE_STATESTORED_API_URL");
+        const string variable = "SAMPLE_STATESTORED_API_URL";
+
+        var url = Environment.GetEnvironmentVariable(variable);
         if (string.IsNullOrWhiteSpace(url))
         {
-            skipReason = "SAMPLE_STATESTORED_API_URL is not set; start the Aspire host and point it at the API.";
+            SmokeRequirement.ThrowIfRequired(variable);
+            skipReason = $"{variable} is not set; start the Aspire host and point it at the API.";
             return null;
         }
 

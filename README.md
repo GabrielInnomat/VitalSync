@@ -188,7 +188,7 @@ The testing strategy includes (but is not limited to): unit, integration, domain
 dotnet test
 ```
 
-Container-backed tests skip when Docker is unavailable. To make a missing Docker fail the run instead — as CI does — set `VITALSYNC_REQUIRE_CONTAINERS=1`.
+Two kinds of test skip themselves when their prerequisite is missing, so the suite stays usable locally: container-backed tests without Docker, and smoke tests without a running system. CI turns both skips into failures via `VITALSYNC_REQUIRE_CONTAINERS=1` and `VITALSYNC_REQUIRE_SMOKE=1` — otherwise a green run could mean "did not run".
 
 Every push to `main` and every pull request runs [the build workflow](./.github/workflows/build.yml): build, the full test suite with containers required, and smoke tests against a running system started from the samples AppHost.
 

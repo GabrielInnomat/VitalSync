@@ -95,6 +95,7 @@ public sealed class CrossContextSmokeTests
         var url = Environment.GetEnvironmentVariable(variable);
         if (string.IsNullOrWhiteSpace(url))
         {
+            SmokeRequirement.ThrowIfRequired(variable);
             skipReason = $"{variable} is not set; start the Aspire host and point it at the API.";
             return null;
         }
