@@ -5,16 +5,6 @@ using VitalSync.Sample.StateStored.Contracts;
 
 namespace VitalSync.Sample.StateStored.Tests;
 
-// Drives the running service through the whole chain: gRPC -> ISender -> aggregate -> EF commit with the
-// outbox in one transaction -> projection into the read database -> query served from there.
-//
-// Skipped unless SAMPLE_STATESTORED_API_URL points at a running instance, because it needs the Aspire host up:
-//
-//   dotnet run --project samples/VitalSync.Samples.AppHost
-//   SAMPLE_STATESTORED_API_URL=https://localhost:<port> dotnet run --project samples/StateStored/VitalSync.Sample.StateStored.Tests
-//
-// It doubles as the reference for how the BFF will consume the service: the same contract assembly, a
-// channel, and CreateGrpcService<T>() - no generated stubs anywhere.
 public sealed class SampleApiSmokeTests
 {
     private static readonly TimeSpan ProjectionTimeout = TimeSpan.FromSeconds(15);
@@ -30,8 +20,6 @@ public sealed class SampleApiSmokeTests
 
         Assert.False(string.IsNullOrWhiteSpace(created.WidgetId));
 
-        // Reads are eventually consistent with writes (ADR-0022): the projection runs after the write
-        // transaction commits, so polling is the honest way to assert it - not a fixed delay.
         var view = await WaitForProjectionAsync(client, created.WidgetId);
 
         Assert.Equal(created.WidgetId, view.WidgetId);
@@ -60,8 +48,6 @@ public sealed class SampleApiSmokeTests
         var client = CreateClient(out var skipReason);
         Assert.SkipWhen(client is null, skipReason);
 
-        // The domain rule surfaces as DomainValidationException, is translated to
-        // Result.Failure(Validation) by the pipeline, and the host maps that onto a gRPC status.
         var thrown = await Assert.ThrowsAsync<RpcException>(
             () => client!.CreateAsync(new CreateWidgetRequest { Name = "   " }).AsTask());
 
@@ -98,7 +84,6 @@ public sealed class SampleApiSmokeTests
             }
             catch (RpcException exception) when (exception.StatusCode == StatusCode.NotFound)
             {
-                // Not projected yet.
             }
 
             Assert.True(DateTime.UtcNow < deadline, $"The projection did not catch up within {ProjectionTimeout}.");
@@ -120,8 +105,6 @@ public sealed class SampleApiSmokeTests
 
         skipReason = string.Empty;
 
-        // The Aspire host serves HTTPS with the ASP.NET development certificate, which this process has no
-        // reason to trust.
         var handler = new HttpClientHandler
         {
             ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,

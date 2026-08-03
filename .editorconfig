@@ -251,3 +251,8 @@ dotnet_diagnostic.CA1030.severity = none
 dotnet_diagnostic.CA1040.severity = none
 dotnet_diagnostic.CA2225.severity = none
 dotnet_diagnostic.CA1812.severity = none
+dotnet_diagnostic.CS1591.severity = None
+
+
+[**/Migrations/**.cs]
+generated_code = true

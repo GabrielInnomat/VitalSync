@@ -82,7 +82,6 @@ public sealed class EventSourcedAggregateRootTests
         Assert.Equal(new TestId(3), aggregate.Id);
         Assert.Equal(3, aggregate.CurrentState.Value);
         Assert.Equal(3, ((IEventSourcedAggregateRoot<TestId>)aggregate).Version);
-        // Replayed history must not be exposed as uncommitted events.
         Assert.Empty(aggregate.DomainEvents);
     }
 

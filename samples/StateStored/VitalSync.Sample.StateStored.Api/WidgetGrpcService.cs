@@ -7,9 +7,6 @@ using VitalSync.Sample.StateStored.Domain;
 
 namespace VitalSync.Sample.StateStored.Api;
 
-// A thin adapter over ISender (ADR-0023 scope note): no business logic, no persistence, no direct use of
-// repositories. Everything it does is translate transport shapes into commands and Result into gRPC status
-// codes - and that translation belongs to the host, never to Application (see CLAUDE.md).
 internal sealed class WidgetGrpcService(ISender sender) : IWidgetService
 {
     public async ValueTask<CreateWidgetReply> CreateAsync(CreateWidgetRequest request, CallContext context = default)
@@ -55,8 +52,6 @@ internal sealed class WidgetGrpcService(ISender sender) : IWidgetService
             ? new WidgetId(id)
             : throw new RpcException(new Status(StatusCode.InvalidArgument, $"'{value}' is not a valid widget id."));
 
-    // FailureCategory carries the semantics; mapping it onto a transport is the host's job, which is why
-    // Application never references gRPC.
     private static RpcException ToRpcException(Result result)
     {
         var failure = result.Failures[0];

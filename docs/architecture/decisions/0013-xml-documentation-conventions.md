@@ -1,7 +1,10 @@
 # 0013. XML documentation conventions for Building Blocks
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0028](./0028-no-comments-in-code.md)
 - **Date:** 2026-07-23
+- **Superseded:** 2026-08-03 by [ADR-0028](./0028-no-comments-in-code.md), which removes comments from code entirely — XML documentation included — and moves the _why / how / when_ into ADRs, `docs/architecture/*`, naming, and tests, where it is versioned and cannot drift away from the code unnoticed.
+
+> **Note:** This decision is no longer in effect. See [ADR-0028](./0028-no-comments-in-code.md) for the current approach. `CS1591` only ever proved a comment was *present*; the rules that mattered here — a `<remarks>` must add insight and must not restate the `<summary>` — were never machine-checkable, and the prose drifted from the members it described.
 
 ## Context
 

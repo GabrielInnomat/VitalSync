@@ -7,8 +7,6 @@ using VitalSync.Sample.EventSourced.Infrastructure;
 
 namespace VitalSync.Sample.EventSourced.Tests;
 
-// A projection that is never registered fails silently - the read model just stops updating. The assembly
-// scan is what prevents that, and this is the only thing standing between "scanned" and "silently missing".
 public sealed class SampleRegistrationTests
 {
     [Fact]
@@ -43,8 +41,6 @@ public sealed class SampleRegistrationTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IGadgetReadStore>());
     }
 
-    // Selecting Marten is what puts the event-sourced repository behind the one repository contract
-    // (ADR-0026): the handlers above are written against IRepository and never learn which store answers.
     [Fact]
     public void Infrastructure_ResolvesTheRepositoryFromTheEventStore()
     {
@@ -59,7 +55,6 @@ public sealed class SampleRegistrationTests
             StringComparison.Ordinal);
     }
 
-    // Nothing here connects: the registrations are what is under test.
     private static ServiceProvider BuildProvider()
     {
         var builder = Host.CreateApplicationBuilder();

@@ -824,8 +824,10 @@ if (mapperRegistriert && WolverineWiring.RabbitMqUri is null)
         "Integration-Event-Mapper registriert, aber kein Transport konfiguriert.");
 ```
 
-Für Projektionen bewusst nichts tun und die Begründung als Kommentar hinterlegen, damit die
-Asymmetrie nicht später als Lücke missverstanden wird.
+Für Projektionen bewusst nichts tun. Die Begründung gehört seit
+[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) **nicht** als Kommentar in
+den Code, sondern in einen ADR bzw. `docs/architecture/*` — dort ist die Asymmetrie auffindbar
+und wird nicht später als Lücke missverstanden.
 
 ---
 
@@ -1122,13 +1124,19 @@ will. Betrifft auch die übrigen `Task.Delay`-Stellen in den Sample-Smoke-Tests.
 
 ## 10. Konventionen, die beim Anlegen neuer Ordner beißen
 
-Beides ordner-lokal per `.editorconfig`, ein neuer Top-Level-Ordner erbt sie **nicht**:
+Ordner-lokale `.editorconfig`-Regeln erbt ein neuer Top-Level-Ordner **nicht**:
 
-- **CS1591** (fehlende XML-Docs) — `GenerateDocumentationFile` ist global an,
-  abgeschaltet wird pro Ordner (`src/`, `tests/`, `samples/`).
+- **CS1591** (fehlende XML-Docs) — erledigt seit
+  [ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md): `CS1591` steht global
+  auf `None`, `GenerateDocumentationFile` ist aus den `Directory.Build.props` verschwunden, und
+  Code trägt ohnehin keine Kommentare mehr. Ein neuer Ordner muss dafür nichts mehr abschalten.
 - **CA1707** (Unterstriche in Methodennamen) — sprengt jeden Testnamen im
   `Given_When_Then`-Stil; Testordner brauchen eine eigene `.editorconfig` analog zu
-  `BuildingBlocks/tests/.editorconfig`.
+  `BuildingBlocks/tests/.editorconfig` oder ein `NoWarn` im Test-`.csproj` (so gelöst in
+  `tests/VitalSync.ServiceDefaults.Tests`).
+- **CA2007** (fehlendes `ConfigureAwait`) — kollidiert in Testmethoden frontal mit
+  **xUnit1030**, das `ConfigureAwait(false)` dort verbietet. Testprojekte schalten CA2007 daher
+  ab, per `.editorconfig` (Sample-Tests) oder per `NoWarn` im `.csproj` (BuildingBlocks-Tests).
 
 - **Generierte EF-Migrationen** erfüllen `AnalysisMode=All` mit
   `TreatWarningsAsErrors` **nicht** (IDE0161, CA1062, IDE0053 …). Einzelne Regel-Ids

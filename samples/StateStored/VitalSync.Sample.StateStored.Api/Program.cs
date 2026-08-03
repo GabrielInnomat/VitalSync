@@ -6,9 +6,6 @@ using VitalSync.ServiceDefaults;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
-// The write database is named once. Building Blocks owns UseWolverine and reads the connection string back
-// from this selection, so the EF outbox cannot end up in a different database than the aggregates (ADR-0027
-// amendment; before it, the host had to repeat the string in its own UseWolverine call).
 builder.AddSampleStateStoredInfrastructure(
     builder.Configuration.GetConnectionString("statestored-write")!,
     builder.Configuration.GetConnectionString("statestored-read")!,

@@ -7,9 +7,6 @@ using VitalSync.Sample.StateStored.Infrastructure;
 
 namespace VitalSync.Sample.StateStored.Tests;
 
-// A projection that is never registered fails silently - the read model just stops updating, nothing throws
-// and nothing logs. AddHandlersFrom scanning the Infrastructure assembly is what prevents that, and this is
-// the only thing standing between "scanned" and "silently missing".
 public sealed class SampleRegistrationTests
 {
     [Fact]
@@ -40,8 +37,6 @@ public sealed class SampleRegistrationTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IWidgetReadStore>());
     }
 
-    // Nothing here connects: the registrations are what is under test, so placeholder connection strings
-    // are enough.
     private static ServiceProvider BuildProvider()
     {
         var builder = Host.CreateApplicationBuilder();

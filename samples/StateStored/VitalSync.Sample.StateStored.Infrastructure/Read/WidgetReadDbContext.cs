@@ -4,8 +4,6 @@ using VitalSync.Sample.StateStored.Domain;
 
 namespace VitalSync.Sample.StateStored.Infrastructure.Read;
 
-// The read half of the ADR-0021 database pair. Owned by this service, derived from domain events and
-// rebuildable by replaying them - never written to by a command handler.
 public sealed class WidgetReadDbContext(DbContextOptions<WidgetReadDbContext> options) : DbContext(options)
 {
     public DbSet<WidgetReadModel> Widgets => Set<WidgetReadModel>();

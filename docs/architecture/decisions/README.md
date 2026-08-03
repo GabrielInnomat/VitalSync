@@ -41,7 +41,7 @@ original wording away — the amendment must remain readable as a correction.
 | [0010](./0010-aggregate-state-object.md)                  | Aggregate state object                                  | Accepted                  |
 | [0011](./0011-unified-aggregate-for-es-and-ef.md)         | Unified aggregate for event sourcing and EF Core        | Superseded by ADR-0012    |
 | [0012](./0012-optional-event-sourcing-aggregate.md)       | Optional event sourcing via a split aggregate hierarchy | Superseded by ADR-0025    |
-| [0013](./0013-xml-documentation-conventions.md)           | XML documentation conventions for Building Blocks       | Accepted                  |
+| [0013](./0013-xml-documentation-conventions.md)           | XML documentation conventions for Building Blocks       | Superseded by ADR-0028    |
 | [0014](./0014-replace-fluentassertions-with-xunit-asserts.md) | Replace FluentAssertions with standard xUnit asserts | Accepted                  |
 | [0015](./0015-hand-rolled-cqrs-mediator.md)               | Hand-rolled CQRS mediator instead of MediatR            | Accepted                  |
 | [0016](./0016-remove-common-result-in-application.md)     | Remove BuildingBlocks.Common; Result lives in Application | Accepted                |
@@ -56,6 +56,7 @@ original wording away — the amendment must remain readable as a correction.
 | [0025](./0025-unified-state-fold-aggregate-model.md)      | Unified state-fold aggregate model with additive event sourcing | Accepted (supersedes ADR-0012) |
 | [0026](./0026-single-repository-contract.md)              | Single repository contract: add and get, no delete      | Accepted                  |
 | [0027](./0027-building-blocks-own-wolverine-wiring.md)    | Building Blocks own the persistence and Wolverine wiring | Accepted                 |
+| [0028](./0028-no-comments-in-code.md)                     | No comments in code                                     | Accepted (supersedes ADR-0013) |
 
 ## Template
 

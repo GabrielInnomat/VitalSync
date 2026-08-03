@@ -18,8 +18,6 @@ public sealed class RetireGadgetHandler(IRepository<Gadget, GadgetId> repository
             return Failure.NotFound("gadget.not_found", $"No gadget with id '{command.GadgetId.Value}' exists.");
         }
 
-        // Retiring twice breaks a business rule, which the pipeline turns into FailureCategory.BusinessRule -
-        // a different transport status than a validation error, and the reason this command exists.
         gadget.Retire(command.Reason);
         return Result.Success();
     }

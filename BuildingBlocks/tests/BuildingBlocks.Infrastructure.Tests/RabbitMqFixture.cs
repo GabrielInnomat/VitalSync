@@ -2,10 +2,6 @@ using Testcontainers.RabbitMq;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
-/// <summary>
-/// Shared disposable RabbitMQ instance for the integration-event routing tests. When Docker is unavailable the
-/// container fails to start and <see cref="Available"/> stays <c>false</c>, so the tests skip instead of failing.
-/// </summary>
 public sealed class RabbitMqFixture : IAsyncLifetime
 {
     private RabbitMqContainer? _container;

@@ -8,10 +8,6 @@ using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
-// EF Core maps the aggregate's state, not the aggregate: the repository rehydrates an aggregate around a
-// loaded state and the unit of work copies the current state back onto the tracked entity at commit. That
-// copy is the whole reason an update reaches the database at all — state objects are immutable, so the
-// instance EF tracks goes stale the moment an event is applied. These tests exercise both directions.
 [Collection(PostgreSqlCollection.Name)]
 public sealed class EfCoreAggregateRoundTripTests(PostgreSqlFixture fixture)
 {
@@ -32,12 +28,9 @@ public sealed class EfCoreAggregateRoundTripTests(PostgreSqlFixture fixture)
 
         Assert.NotNull(reloaded);
 
-        // The identity survives the round trip even though the aggregate itself is never mapped: Id is
-        // derived from the state, and the state is what was stored.
         Assert.Equal(id, reloaded!.Id.Value);
         Assert.Equal("renamed", reloaded.Name);
 
-        // A rehydrated aggregate carries no uncommitted events - Restore is not a state change.
         Assert.Empty(reloaded.DomainEvents);
 
         await host.StopAsync(TestContext.Current.CancellationToken);

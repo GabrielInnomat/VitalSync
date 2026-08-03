@@ -4,24 +4,10 @@ using Microsoft.Extensions.Logging;
 
 namespace BuildingBlocks.Infrastructure.Dispatching;
 
-/// <summary>
-/// Pipeline behavior that emits structured logs for every dispatched request.
-/// </summary>
-/// <remarks>
-/// The behavior logs the request name, the outcome (success, or the distinct failure categories on failure), and the
-/// duration; it never logs request payloads, so sensitive command or query data cannot leak into logs by default. It is
-/// the <b>outermost</b> built-in behavior (<see cref="DependencyInjection.BuildingBlocksOptions.LoggingBehaviorOrder"/>),
-/// so failures translated further in (expected domain errors, concurrency conflicts) are logged as failed results at
-/// <c>Warning</c>, while genuinely unexpected exceptions are observed as <c>Error</c> (faulted) and rethrown.
-/// </remarks>
-/// <typeparam name="TRequest">The type of the request flowing through the pipeline.</typeparam>
-/// <typeparam name="TResponse">The type of the result produced by the pipeline.</typeparam>
-/// <param name="logger">The logger the behavior writes to.</param>
 public sealed class LoggingBehavior<TRequest, TResponse>(ILogger<LoggingBehavior<TRequest, TResponse>> logger)
     : IPipelineBehavior<TRequest, TResponse>
     where TResponse : Result
 {
-    /// <inheritdoc/>
     public async Task<TResponse> Handle(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(continuation);

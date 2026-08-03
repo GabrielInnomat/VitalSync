@@ -10,10 +10,6 @@ using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
-// End-to-end regression tests for IMP-08: after a successful command, the transactional outbox is
-// flushed immediately on commit — for both persistence paths — instead of waiting for the durability
-// agent's polling. The agent's recovery polling is pushed out by an hour, so a prompt delivery can
-// only ever come through the flush-on-commit path.
 [Collection(PostgreSqlCollection.Name)]
 public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
 {
@@ -58,8 +54,6 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
 
         var builder = Host.CreateApplicationBuilder();
 
-        // Both halves of the EF outbox are applied by Building Blocks from the connection string selected
-        // below - the host never names the write database a second time (ADR-0027 amendment).
         builder.AddBuildingBlocks(
             options => options.UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString),
             ConfigureFlushOnlyDurability);
@@ -96,13 +90,9 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
     {
         options.Durability.Mode = DurabilityMode.Solo;
 
-        // Push the durability agent's crash-recovery polling far beyond the assertion window, so a
-        // prompt delivery can only come from the flush-on-commit path — never from polling.
         options.Durability.ScheduledJobFirstExecution = TimeSpan.FromHours(1);
         options.Durability.ScheduledJobPollingTime = TimeSpan.FromHours(1);
 
-        // Keep Wolverine's conventional discovery away from this test assembly's unrelated
-        // *Handler fixtures; the Building Blocks extension includes its own assembly anyway.
         options.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
     }
 }
@@ -116,8 +106,6 @@ public sealed class FlushDeliverySignal
 
     public void MarkDelivered(IDomainEvent domainEvent) => _delivered.TrySetResult(domainEvent);
 }
-
-// --- Marten (event-sourced) path ---
 
 public sealed record CreateFlushCounter(Guid Id) : ICommand;
 
@@ -175,12 +163,8 @@ public sealed class FlushCounter : EventSourcedAggregateRoot<FlushCounterId, Flu
     }
 }
 
-// --- EF Core (state-stored) path ---
-
 public sealed record StartFlushProbe(Guid Id) : ICommand;
 
-// Goes through IRepository like production code: EF Core tracks the aggregate's state, so the unit of work
-// collects domain events from the aggregate tracker rather than from the change tracker.
 public sealed class StartFlushProbeHandler(IRepository<FlushProbe, FlushProbeId> repository)
     : ICommandHandler<StartFlushProbe>
 {

@@ -3,8 +3,6 @@ using VitalSync.Sample.EventSourced.Domain;
 
 namespace VitalSync.Sample.EventSourced.Tests;
 
-// Pins the aggregate before Marten enters the picture: if the round trip breaks later, these say whether the
-// fold itself was ever correct.
 public sealed class GadgetTests
 {
     [Fact]
@@ -54,8 +52,6 @@ public sealed class GadgetTests
 
         Assert.True(gadget.IsRetired);
 
-        // A broken business rule, not a validation error: the two travel different paths through the
-        // pipeline and end up as different transport statuses.
         Assert.Throws<BusinessRuleViolationException>(() => gadget.Rename("later"));
         Assert.Throws<BusinessRuleViolationException>(() => gadget.Retire("again"));
     }
@@ -66,8 +62,6 @@ public sealed class GadgetTests
         var gadget = Gadget.Create(GadgetId.New(), "first");
         gadget.Rename("second");
 
-        // Version is implemented explicitly, so only infrastructure sees it - the domain cannot accidentally
-        // build behavior on the stream position.
         Assert.Equal(2, ((IEventSourcedAggregateRoot<GadgetId>)gadget).Version);
     }
 
@@ -82,9 +76,6 @@ public sealed class GadgetTests
             new GadgetRetired(id, "obsolete"),
         ];
 
-        // This is the only route to an empty hull, and it is the same one the repository takes: a static
-        // abstract member is reachable only through a type parameter constrained to IReconstitutable, so
-        // `new Gadget()` and `Gadget.CreateEmpty()` are both compile errors here.
         var gadget = Reconstitute<Gadget>();
         ((IEventSourcedAggregateRoot<GadgetId>)gadget).LoadFromHistory(history);
 
@@ -94,7 +85,6 @@ public sealed class GadgetTests
         Assert.True(gadget.IsRetired);
         Assert.Equal(3, ((IEventSourcedAggregateRoot<GadgetId>)gadget).Version);
 
-        // Replay must not look like new work: appending these again would duplicate the whole stream.
         Assert.Empty(gadget.DomainEvents);
     }
 

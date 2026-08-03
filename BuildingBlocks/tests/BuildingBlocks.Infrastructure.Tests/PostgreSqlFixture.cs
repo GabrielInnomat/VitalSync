@@ -2,10 +2,6 @@ using Testcontainers.PostgreSql;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
-/// <summary>
-/// Shared disposable PostgreSQL instance for the persistence integration tests. When Docker is unavailable the
-/// container fails to start and <see cref="Available"/> stays <c>false</c>, so the tests skip instead of failing.
-/// </summary>
 public sealed class PostgreSqlFixture : IAsyncLifetime
 {
     private PostgreSqlContainer? _container;

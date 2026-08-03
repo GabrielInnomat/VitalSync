@@ -4,29 +4,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.Dispatching;
 
-/// <summary>
-/// DI-based implementation of <see cref="ISender"/> that dispatches commands and queries through the behavior pipeline.
-/// </summary>
-/// <remarks>
-/// For each request the sender resolves the single matching handler and the registered
-/// <see cref="IPipelineBehavior{TRequest, TResponse}"/>s from the container and wraps the handler in the behavior
-/// chain; behaviors execute in the explicit order recorded by <see cref="PipelineBehaviorRegistry"/> (ADR-0015) — lower
-/// orders wrap further out and execute earlier. Dispatch avoids reflection-heavy scanning:
-/// the closed-generic dispatcher for each request/result type pair is created once and cached for subsequent sends.
-/// Register the sender as a scoped service via <c>AddBuildingBlocks</c> so handlers resolve from the current scope.
-/// </remarks>
-/// <param name="serviceProvider">The service provider used to resolve handlers and pipeline behaviors.</param>
 public sealed class Sender(IServiceProvider serviceProvider) : ISender
 {
-    // The result type participates in the produced closed-generic dispatcher, so it must be part of the cache key:
-    // a request type exposing two result contracts would otherwise resolve the wrong dispatcher on the second call (IMP-06).
     private readonly record struct DispatcherKey(Type Request, Type Result);
 
     private static readonly ConcurrentDictionary<Type, CommandDispatcher> CommandDispatchers = new();
     private static readonly ConcurrentDictionary<DispatcherKey, object> CommandWithResultDispatchers = new();
     private static readonly ConcurrentDictionary<DispatcherKey, object> QueryDispatchers = new();
 
-    /// <inheritdoc/>
     public Task<Result> Send(ICommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -39,7 +24,6 @@ public sealed class Sender(IServiceProvider serviceProvider) : ISender
         return dispatcher.Dispatch(command, serviceProvider, cancellationToken);
     }
 
-    /// <inheritdoc/>
     public Task<Result<TResult>> Send<TResult>(ICommand<TResult> command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -52,7 +36,6 @@ public sealed class Sender(IServiceProvider serviceProvider) : ISender
         return dispatcher.Dispatch(command, serviceProvider, cancellationToken);
     }
 
-    /// <inheritdoc/>
     public Task<Result<TResult>> Send<TResult>(IQuery<TResult> query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);

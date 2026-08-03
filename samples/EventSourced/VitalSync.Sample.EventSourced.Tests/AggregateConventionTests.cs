@@ -3,8 +3,6 @@ using VitalSync.Sample.EventSourced.Domain;
 
 namespace VitalSync.Sample.EventSourced.Tests;
 
-// Same convention scan as the state-stored sample: reconstitution is written identically on both persistence
-// paths (ADR-0025), so the check that guards it is identical too.
 public sealed class AggregateConventionTests
 {
     [Fact]

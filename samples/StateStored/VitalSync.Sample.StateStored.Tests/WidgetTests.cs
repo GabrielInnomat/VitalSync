@@ -3,8 +3,6 @@ using VitalSync.Sample.StateStored.Domain;
 
 namespace VitalSync.Sample.StateStored.Tests;
 
-// Pins the aggregate before EF Core enters the picture in the next stage: if persistence turns out to be
-// broken later, these tests say whether the fold itself was ever correct.
 public sealed class WidgetTests
 {
     [Fact]

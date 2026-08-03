@@ -6,7 +6,6 @@ namespace VitalSync.Sample.StateStored.Infrastructure.Write;
 
 public sealed class WidgetWriteDbContext(DbContextOptions<WidgetWriteDbContext> options) : DbContext(options)
 {
-    // The mapped type is the aggregate's state, not the aggregate itself.
     public DbSet<WidgetState> Widgets => Set<WidgetState>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

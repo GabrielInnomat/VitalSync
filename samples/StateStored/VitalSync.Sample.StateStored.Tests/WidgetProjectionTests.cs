@@ -4,9 +4,6 @@ using VitalSync.Sample.StateStored.Infrastructure.Read;
 
 namespace VitalSync.Sample.StateStored.Tests;
 
-// Found while building the event-sourced sample: the create handler used to write its name back on every
-// delivery, so a redelivered WidgetCreated silently undid a rename in the read model. Nothing throws when a
-// projection drifts, which is why the awkward deliveries are replayed here directly.
 public sealed class WidgetProjectionTests
 {
     [Fact]

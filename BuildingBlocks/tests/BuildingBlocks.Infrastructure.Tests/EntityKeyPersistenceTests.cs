@@ -14,9 +14,6 @@ public sealed class EntityKeyPersistenceTests(PostgreSqlFixture fixture)
     {
         Assert.SkipUnless(fixture.Available, fixture.SkipReason);
 
-        // The persistence tests share one PostgreSQL database (PostgreSqlCollection), so this context uses a unique
-        // schema and creates its tables explicitly. EnsureCreated would no-op whenever the shared database already has
-        // any tables (e.g. Marten streams created by another test), leaving this table missing.
         var schema = "recipes_" + Guid.NewGuid().ToString("N")[..8];
         var options = new DbContextOptionsBuilder<RecipeContext>()
             .UseNpgsql(fixture.ConnectionString)

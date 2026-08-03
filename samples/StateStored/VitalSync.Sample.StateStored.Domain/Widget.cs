@@ -2,9 +2,6 @@ using BuildingBlocks.Domain;
 
 namespace VitalSync.Sample.StateStored.Domain;
 
-// The empty constructor is private and CreateEmpty is implemented explicitly: neither `new Widget()` nor
-// `Widget.CreateEmpty()` compiles outside this class, so Create below is the only way a Widget comes into
-// existence. Only a repository - generic over a type constrained to IReconstitutable - can reach the hull.
 public sealed class Widget : AggregateRoot<WidgetId, WidgetState>, IReconstitutable<Widget>
 {
     private Widget() : base(WidgetState.Empty)

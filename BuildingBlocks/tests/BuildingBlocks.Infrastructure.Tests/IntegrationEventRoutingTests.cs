@@ -12,10 +12,6 @@ using BuildingBlockDefaults = BuildingBlocks.Infrastructure.Messaging.WolverineO
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
-// Connecting the RabbitMQ transport routes nothing on its own: without a publishing rule Wolverine finds
-// no subscriber for an integration event and PublishAsync drops it without a trace. These tests exercise
-// the production wiring itself — AddBuildingBlocks/UseWolverineMessaging, never a hand-rolled copy of the
-// rule — so deleting the rule from ApplyBuildingBlockMessagingDefaults fails them.
 [Collection(RabbitMqCollection.Name)]
 public sealed class IntegrationEventRoutingTests(RabbitMqFixture fixture)
 {
@@ -36,17 +32,12 @@ public sealed class IntegrationEventRoutingTests(RabbitMqFixture fixture)
             .Received.WaitAsync(DeliveryTimeout, TestContext.Current.CancellationToken);
         Assert.Equal(name, Assert.IsType<RoutingProbeIntegrationEvent>(received.Message).Name);
 
-        // Arrival alone proves nothing: without the routing rule Wolverine's local routing convention
-        // hands the event straight to the in-process handler, and the test would pass having never
-        // touched RabbitMQ. The destination is what distinguishes the two paths.
         Assert.Equal("rabbitmq", received.Destination?.Scheme);
         Assert.Contains(ProbeQueueName, received.Destination?.ToString(), StringComparison.Ordinal);
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
-    // The rule matches the IIntegrationEvent marker rather than all messages, precisely so the envelope
-    // carrying a context's raw domain events can never be routed onto the broker (ADR-0022).
     [Fact]
     public async Task DomainEventEnvelope_IsNotRoutedToThePlatformExchange()
     {
@@ -75,13 +66,9 @@ public sealed class IntegrationEventRoutingTests(RabbitMqFixture fixture)
             {
                 options.Durability.Mode = DurabilityMode.Solo;
 
-                // Keep Wolverine's conventional discovery away from this test assembly's unrelated
-                // *Handler fixtures; only the probe handler is needed here.
                 options.Discovery.DisableConventionalDiscovery();
                 options.Discovery.IncludeType(typeof(RoutingProbeHandler));
 
-                // The consumer side a subscribing service would own: a queue bound to the platform
-                // exchange with a topic pattern. Nothing about it is configured by Building Blocks.
                 options.ListenToRabbitQueue(ProbeQueueName)
                     .ConfigureQueue(queue => queue
                         .BindTopic("probe.*")

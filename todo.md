@@ -720,7 +720,9 @@ compile-time-vollständigkeitsgeprüft.
 `rule?.IsBroken() == true` und `foreach (var rule in rules ?? [])`
 ([RuleChecker.cs:18-63](BuildingBlocks/src/BuildingBlocks.Domain/RuleChecker.cs:18)). Eine
 Factory, die versehentlich `null` liefert, bedeutet „Regel bestanden" — die Validierung schweigt
-genau im Fehlerfall. Die `<remarks>` begründen das mit „damit Guard-Klauseln knapp bleiben".
+genau im Fehlerfall. Begründet war das mit „damit Guard-Klauseln knapp bleiben"; die `<remarks>`,
+in denen das stand, sind mit
+[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) entfallen.
 
 ## Lösungsvorschlag
 
@@ -1055,8 +1057,10 @@ if (mapperRegistriert && WolverineWiring.RabbitMqUri is null && !_noMessagingSel
 ```
 
 Für **Projektionen** bewusst nichts tun: mehrere Handler pro Event und Events ganz ohne Projektion
-sind beide legitim. Die Begründung als Kommentar hinterlegen, damit die Asymmetrie nicht später
-als Lücke missverstanden wird.
+sind beide legitim. Die Begründung gehört seit
+[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) nicht in den Code, sondern in
+`docs/architecture/cqrs-and-event-sourcing.md`, damit die Asymmetrie nicht später als Lücke
+missverstanden wird.
 
 ---
 
@@ -1073,8 +1077,10 @@ Seite die andere wiederholt ausführt — tragfähig nur, solange beide idempote
 ## Lösungsvorschlag
 
 **Empfehlung: ein Handler, aber getrennte Fehlerbehandlung** mit ausdrücklicher Reihenfolge (erst
-Projektionen, dann Integration Events) und einem Kommentar, dass die Idempotenz beider Seiten die
-Voraussetzung ist.
+Projektionen, dann Integration Events). Dass die Idempotenz beider Seiten die Voraussetzung ist,
+gehört seit [ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) in
+`docs/architecture/cqrs-and-event-sourcing.md` und in einen Test, der die doppelte Zustellung
+durchspielt — nicht als Kommentar an die Methode.
 
 Zwei getrennte Wolverine-Handler auf demselben Envelope wären sauberer isoliert, kosten aber eine
 zweite Zustellung pro Event — erst wenn beide Seiten messbar unterschiedliche Fehlerraten haben.
@@ -1383,8 +1389,9 @@ wird aus einer Aufräumaktion ein Breaking Change für jeden Service.
 
 ## Lösungsvorschlag
 
-`SenderContractTests` → `SenderSignatureTests`, mit einem Kommentar, dass das Verhalten in
-`BuildingBlocks.Infrastructure.Tests` geprüft wird. Die drei `internal` Methoden auf den Plural
+`SenderContractTests` → `SenderSignatureTests`; dass das Verhalten in
+`BuildingBlocks.Infrastructure.Tests` geprüft wird, sagt der Name der Testklasse dort, nicht ein
+Kommentar hier ([ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md)). Die drei `internal` Methoden auf den Plural
 vereinheitlichen (`ApplyBuildingBlocksDomainEventRouting` usw.) — kein Breaking Change nach außen.
 
 ---
@@ -1402,14 +1409,16 @@ Zwei Muster, die wie Nachlässigkeit aussehen, aber richtig sind:
 - **`IServiceProvider` in `Sender` und `ProjectionRunner`**: der aufzulösende Handler-Typ ergibt
   sich erst aus dem Laufzeittyp des Requests, lässt sich also nicht per Konstruktor injizieren.
 
-**Kein Code zu ändern** — aber die Begründung fehlt im Code, und ohne sie wird beides entweder
-später „aufgeräumt" (eine Verschlechterung ohne Gegenwert) oder als Muster kopiert.
+**Kein Code zu ändern** — aber die Begründung ist nirgends festgehalten, und ohne sie wird beides
+entweder später „aufgeräumt" (eine Verschlechterung ohne Gegenwert) oder als Muster kopiert.
 
 ## Lösungsvorschlag
 
-`<remarks>` an den betroffenen Typen plus ein Absatz in
-`docs/architecture/building-blocks.md`: „Konstruktorinjektion für alles, was zur Kompositionszeit
-feststeht; Service Location nur, wo der Typ erst zur Laufzeit bekannt ist."
+Ein Absatz in `docs/architecture/building-blocks.md`: „Konstruktorinjektion für alles, was zur
+Kompositionszeit feststeht; Service Location nur, wo der Typ erst zur Laufzeit bekannt ist."
+Der ursprüngliche Vorschlag, das zusätzlich als `<remarks>` an die Typen zu schreiben, ist mit
+[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) hinfällig — Code trägt keine
+Kommentare, das *Warum* lebt im Architekturdokument.
 
 ---
 

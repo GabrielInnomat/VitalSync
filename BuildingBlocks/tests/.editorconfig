@@ -1,9 +1,6 @@
 [*.cs]
-dotnet_diagnostic.CS1591.severity = None
 dotnet_diagnostic.CA1707.severity = None
 
-# Test projects favour readability over these production-oriented rules.
-dotnet_diagnostic.CA2007.severity = None
 dotnet_diagnostic.CA1515.severity = None
 dotnet_diagnostic.CA1711.severity = None
 dotnet_diagnostic.CA1031.severity = None

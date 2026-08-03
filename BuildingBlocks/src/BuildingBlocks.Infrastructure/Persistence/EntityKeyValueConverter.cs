@@ -6,17 +6,6 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace BuildingBlocks.Infrastructure.Persistence;
 
-/// <summary>
-/// EF Core value converter that maps a strongly typed entity key to its underlying primitive value and back.
-/// </summary>
-/// <remarks>
-/// Strongly typed identifiers (ADR-0005) are structs wrapping a primitive; this converter stores the wrapped
-/// <see cref="IEntityKey{TValue}.Value"/> in the column and reconstructs the key through its <c>(TValue)</c>
-/// constructor on materialization. Apply it per property, or model-wide via
-/// <see cref="EntityKeyModelBuilderExtensions.ApplyEntityKeyConversions"/>.
-/// </remarks>
-/// <typeparam name="TKey">The type of the identity key.</typeparam>
-/// <typeparam name="TValue">The primitive type wrapped by the key.</typeparam>
 public sealed class EntityKeyValueConverter<TKey, TValue>() : ValueConverter<TKey, TValue>(
     key => key.Value,
     value => KeyFactory(value))
@@ -38,26 +27,10 @@ public sealed class EntityKeyValueConverter<TKey, TValue>() : ValueConverter<TKe
     }
 }
 
-/// <summary>
-/// EF Core model conventions that apply the entity-key value conversion across a model.
-/// </summary>
-/// <remarks>
-/// Call <see cref="ApplyEntityKeyConversions"/> at the end of a write-database context's <c>OnModelCreating</c> to
-/// convert every property whose CLR type implements <see cref="IEntityKey{TValue}"/> without configuring each
-/// property individually. Because a strongly typed key wraps a type EF Core cannot map on its own, the scan works
-/// over the entity's CLR properties rather than the already-discovered model properties; this ensures a strongly
-/// typed <b>primary key</b> is configured as well, which relational providers otherwise refuse to map.
-/// </remarks>
 public static class EntityKeyModelBuilderExtensions
 {
     private static readonly ConcurrentDictionary<Type, ValueConverter> Converters = new();
 
-    /// <summary>
-    /// Applies the <see cref="EntityKeyValueConverter{TKey, TValue}"/> to every strongly typed key property.
-    /// </summary>
-    /// <param name="modelBuilder">The model builder whose entity types are inspected.</param>
-    /// <returns>The same model builder, for chaining.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="modelBuilder"/> is <see langword="null"/>.</exception>
     public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyEntityKeyConversions(
         this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder)
     {

@@ -1,9 +1,0 @@
-[*.cs]
-dotnet_diagnostic.CS1591.severity = None
-
-# EF Core scaffolds migrations, and the generated code cannot satisfy AnalysisMode=All with
-# TreatWarningsAsErrors (file-scoped namespaces, CA1062 argument checks, lambda bodies...).
-# Marking it as generated is the single lever that covers all of them, instead of chasing
-# individual rule ids every time the scaffolder's output changes.
-[**/Migrations/**.cs]
-generated_code = true

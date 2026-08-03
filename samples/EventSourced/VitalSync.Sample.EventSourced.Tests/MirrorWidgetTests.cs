@@ -7,8 +7,6 @@ using VitalSync.Sample.EventSourced.Infrastructure.Integration;
 
 namespace VitalSync.Sample.EventSourced.Tests;
 
-// Delivery across the service boundary is at-least-once, so the same integration event will eventually be
-// handled twice. Nothing in the transport prevents that; only this handler does.
 public sealed class MirrorWidgetTests
 {
     private readonly IRepository<Gadget, GadgetId> _repository = Substitute.For<IRepository<Gadget, GadgetId>>();
@@ -24,7 +22,6 @@ public sealed class MirrorWidgetTests
 
         Assert.True(result.IsSuccess);
 
-        // The shared identifier is the whole idempotency mechanism - it must not be regenerated here.
         await _repository.Received(1).AddAsync(
             Arg.Is<Gadget>(gadget => gadget.Id == new GadgetId(widgetId) && gadget.Name == "mirrored"),
             Arg.Any<CancellationToken>());
@@ -40,8 +37,6 @@ public sealed class MirrorWidgetTests
         var result = await new MirrorWidgetHandler(_repository)
             .Handle(new MirrorWidget(widgetId, "mirrored"), TestContext.Current.CancellationToken);
 
-        // Success, not a conflict: the message has been dealt with, and failing would make the broker retry a
-        // fact that is already true.
         Assert.True(result.IsSuccess);
         await _repository.DidNotReceive().AddAsync(Arg.Any<Gadget>(), Arg.Any<CancellationToken>());
     }
@@ -72,8 +67,6 @@ public sealed class MirrorWidgetTests
         sender.Send(Arg.Any<ICommand>(), Arg.Any<CancellationToken>())
             .Returns(Failure.Conflict("gadget.conflict", "someone else got there first"));
 
-        // Returning normally would acknowledge the message and lose it. Throwing is what hands it back to
-        // Wolverine's retry and dead-letter policy - the one thing this thin handler has to get right.
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             WidgetCreatedConsumer.Handle(
                 new WidgetCreatedIntegrationEvent(Guid.NewGuid(), "doomed"),

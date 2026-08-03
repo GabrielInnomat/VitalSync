@@ -13,8 +13,6 @@ public sealed class GetGadgetHandler(IGadgetReadStore readStore) : IQueryHandler
 
         var view = await readStore.GetAsync(query.GadgetId, cancellationToken).ConfigureAwait(false);
 
-        // Reads are eventually consistent with writes (ADR-0022): a gadget whose stream exists but whose
-        // projection has not run yet is indistinguishable from one that was never created.
         return view is null
             ? Failure.NotFound("gadget.not_found", $"No gadget with id '{query.GadgetId.Value}' exists.")
             : view;

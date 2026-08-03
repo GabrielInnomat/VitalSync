@@ -717,8 +717,11 @@ B) Ein Handler, aber getrennte Fehlerbehandlung mit ausdrücklicher Reihenfolge:
    Ein Fehler im zweiten Schritt darf den ersten nicht rückgängig machen wollen.
 ```
 
-Empfehlung: B, mit einem expliziten Kommentar, dass die Idempotenz beider Seiten die Voraussetzung
-ist. A erst, wenn Projektionen und Integration Events messbar unterschiedliche Fehlerraten haben.
+Empfehlung: B. Dass die Idempotenz beider Seiten die Voraussetzung ist, gehört seit
+[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) **nicht** als Kommentar in den
+Code, sondern nach `docs/architecture/cqrs-and-event-sourcing.md` und in einen Test, der die
+doppelte Zustellung ausdrücklich durchspielt. A erst, wenn Projektionen und Integration Events
+messbar unterschiedliche Fehlerraten haben.
 
 ---
 
@@ -934,9 +937,10 @@ Testisolation ist nicht betroffen, weil kein Cache Container- oder Scope-Zustand
 
 ## Lösungsvorschlag
 
-Keine Änderung. Die Begründung gehört allerdings in die `<remarks>` der betroffenen Typen, damit
-niemand sie später „aufräumt" und die Caches pro Container instanziiert — das wäre eine
-Verschlechterung ohne Gegenwert. Das ist derselbe Punkt wie IMP-46 Schritt 2.
+Keine Änderung. Die Begründung gehört allerdings festgehalten, damit niemand sie später „aufräumt"
+und die Caches pro Container instanziiert — das wäre eine Verschlechterung ohne Gegenwert. Seit
+[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) **nicht** mehr in `<remarks>`
+am Typ, sondern in `docs/architecture/building-blocks.md`. Das ist derselbe Punkt wie IMP-46 Schritt 2.
 
 ---
 
@@ -1193,17 +1197,17 @@ wird.
 
 ## Lösungsvorschlag
 
-```csharp
-/// <remarks>
-/// Der <see cref="IServiceProvider"/> ist hier bewusst gewählt und keine Nachlässigkeit: der
-/// aufzulösende Handler-Typ ergibt sich erst aus dem Laufzeittyp des Requests, lässt sich also
-/// nicht per Konstruktor injizieren. Für Abhängigkeiten, die zur Kompositionszeit feststehen,
-/// gilt weiterhin Konstruktorinjektion — siehe UnitOfWorkBehavior.
-/// </remarks>
-```
+Die Regel in `docs/architecture/building-blocks.md` festhalten, gemeinsam mit der Begründung aus
+IMP-35 (statische Caches) — beides sind bewusste Ausnahmen, die als solche dokumentiert gehören:
 
-Dazu die Regel in `docs/architecture/building-blocks.md` festhalten, gemeinsam mit der Begründung aus
-IMP-35 (statische Caches) — beides sind bewusste Ausnahmen, die als solche dokumentiert gehören.
+> Der `IServiceProvider` ist in `Sender` und `ProjectionRunner` bewusst gewählt und keine
+> Nachlässigkeit: der aufzulösende Handler-Typ ergibt sich erst aus dem Laufzeittyp des Requests,
+> lässt sich also nicht per Konstruktor injizieren. Für Abhängigkeiten, die zur Kompositionszeit
+> feststehen, gilt weiterhin Konstruktorinjektion — siehe `UnitOfWorkBehavior`.
+
+Der ursprüngliche Vorschlag, das als `<remarks>` an die beiden Typen zu schreiben, ist mit
+[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) hinfällig: Code trägt keine
+Kommentare, das *Warum* lebt in den Architekturdokumenten.
 
 ---
 

@@ -8,10 +8,6 @@ using Wolverine.Runtime;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
-// The host names its write database exactly once, in UseEfCorePersistence. Before the ADR-0027 amendment it had
-// to repeat the same string in its own UseWolverine call, and nothing compared the two: two typos apart, the
-// outbox sat in a different database than the aggregates and the ADR-0022 atomicity guarantee was silently gone.
-// These tests pin that the second mention no longer exists - Building Blocks configures Wolverine itself.
 public sealed class HostBuilderWiringTests
 {
     private const string WriteConnectionString = "Host=localhost;Database=wiring-write;Username=test;Password=test";
@@ -39,8 +35,6 @@ public sealed class HostBuilderWiringTests
         Assert.Contains(builder.Services, descriptor => descriptor.ServiceType == typeof(IDbContextOutbox));
     }
 
-    // Marten supplies its own message store through IntegrateWithWolverine, so the PostgreSQL-backed store of the
-    // EF Core path must not be applied on top of it.
     [Fact]
     public void MartenSelection_ConfiguresWolverineWithoutThePostgresqlMessageStore()
     {
@@ -60,8 +54,6 @@ public sealed class HostBuilderWiringTests
         Assert.Contains(builder.Services, descriptor => descriptor.ServiceType == typeof(IWolverineRuntime));
     }
 
-    // A host that selects nothing needing the outbox gets no Wolverine runtime forced on it - the same rule the
-    // startup validator encodes from the other side.
     [Fact]
     public void NoCapabilitySelected_LeavesWolverineUnconfigured()
     {
@@ -83,8 +75,6 @@ public sealed class HostBuilderWiringTests
         Assert.True(applied);
     }
 
-    // The callback is also the only reason to bring up Wolverine for a host that selected no Building Block
-    // capability at all; without it there would be nothing to configure.
     [Fact]
     public void HostSpecificWolverineConfiguration_WithoutAnyCapability_StillConfiguresWolverine()
     {

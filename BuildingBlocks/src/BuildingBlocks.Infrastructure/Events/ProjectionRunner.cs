@@ -5,29 +5,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.Events;
 
-/// <summary>
-/// Dispatches a committed domain event to the in-context projection handlers registered for its type.
-/// </summary>
-/// <remarks>
-/// The runner resolves every <see cref="IProjectionHandler{TDomainEvent}"/> registered for the event's runtime type
-/// and invokes them sequentially. Idempotency is the handler's responsibility, tracked via the event's stable
-/// <see cref="IDomainEvent.EventId"/> (ADR-0022). Per-aggregate ordering is preserved by the messaging transport's
-/// durable, sequential local queue (see <c>WolverineOptionsExtensions.ApplyBuildingBlockDomainEventRouting</c>). Only
-/// this plumbing lives in Infrastructure — the handler contract lives in <c>BuildingBlocks.Application</c> and the
-/// read models belong to each service.
-/// </remarks>
-/// <param name="serviceProvider">The scoped service provider used to resolve the projection handlers.</param>
 public sealed class ProjectionRunner(IServiceProvider serviceProvider)
 {
     private static readonly ConcurrentDictionary<Type, ProjectionInvoker> Invokers = new();
 
-    /// <summary>
-    /// Invokes all projection handlers registered for the domain event's runtime type.
-    /// </summary>
-    /// <param name="domainEvent">The committed domain event to project.</param>
-    /// <param name="cancellationToken">A token that can be used to request cancellation of the operation.</param>
-    /// <returns>A task that represents the asynchronous projection run.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="domainEvent"/> is <see langword="null"/>.</exception>
     public Task RunAsync(IDomainEvent domainEvent, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);

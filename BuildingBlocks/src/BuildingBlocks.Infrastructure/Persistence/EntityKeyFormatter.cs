@@ -5,14 +5,6 @@ using BuildingBlocks.Domain;
 
 namespace BuildingBlocks.Infrastructure.Persistence;
 
-/// <summary>
-/// Formats strongly typed entity keys into stable stream identifiers.
-/// </summary>
-/// <remarks>
-/// Stream keys have the shape <c>{AggregateTypeName}/{KeyValue}</c>, which keeps streams of different aggregate types
-/// from colliding in the same event store. Value extraction goes through the <see cref="IEntityKey{TValue}"/>
-/// contract and is compiled and cached per key type.
-/// </remarks>
 internal static class EntityKeyFormatter
 {
     private static readonly ConcurrentDictionary<Type, Func<object, object>> ValueAccessors = new();

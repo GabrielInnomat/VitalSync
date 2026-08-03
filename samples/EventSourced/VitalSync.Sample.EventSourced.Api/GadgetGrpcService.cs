@@ -7,8 +7,6 @@ using VitalSync.Sample.EventSourced.Domain;
 
 namespace VitalSync.Sample.EventSourced.Api;
 
-// A thin adapter over ISender (ADR-0023 scope note), identical in shape to the state-stored service: the
-// transport knows nothing about how the context stores its data.
 internal sealed class GadgetGrpcService(ISender sender) : IGadgetService
 {
     public async ValueTask<CreateGadgetReply> CreateAsync(CreateGadgetRequest request, CallContext context = default)
@@ -70,8 +68,6 @@ internal sealed class GadgetGrpcService(ISender sender) : IGadgetService
             ? new GadgetId(id)
             : throw new RpcException(new Status(StatusCode.InvalidArgument, $"'{value}' is not a valid gadget id."));
 
-    // FailureCategory carries the semantics; mapping it onto a transport is the host's job, which is why
-    // Application never references gRPC.
     private static RpcException ToRpcException(Result result)
     {
         var failure = result.Failures[0];

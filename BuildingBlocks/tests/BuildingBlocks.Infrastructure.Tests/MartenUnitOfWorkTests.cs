@@ -33,7 +33,7 @@ public sealed class MartenUnitOfWorkTests
         var calls = new List<string>();
         var session = Substitute.For<IDocumentSession>();
         var outbox = Substitute.For<IMartenOutbox>();
-#pragma warning disable CA2012 // NSubstitute configuration lambda — the ValueTask is never awaited by design
+#pragma warning disable CA2012
         outbox.When(o => o.PublishAsync(Arg.Any<object>())).Do(_ => calls.Add("publish"));
 #pragma warning restore CA2012
         session.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(Task.CompletedTask)
@@ -45,7 +45,6 @@ public sealed class MartenUnitOfWorkTests
         var unitOfWork = new MartenUnitOfWork(session, tracker, outbox, new StoppedClock(CommitTime));
         await unitOfWork.CommitAsync(CancellationToken.None);
 
-        // CounterCreated + CounterIncremented published, both before the save
         Assert.Equal(["publish", "publish", "save"], calls);
     }
 

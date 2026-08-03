@@ -11,10 +11,6 @@ using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
-// ADR-0022's central promise is that aggregate state and the outbox entry commit together or not at all.
-// That promise was only ever observed in a log; this pins it. If a future change moves the envelope write
-// out of the context's SaveChanges - a second connection, an explicit send, an eager flush - the two
-// statements stop sharing a command and this test fails.
 [Collection(PostgreSqlCollection.Name)]
 public sealed class EfCoreOutboxAtomicityTests(PostgreSqlFixture fixture)
 {
@@ -27,8 +23,6 @@ public sealed class EfCoreOutboxAtomicityTests(PostgreSqlFixture fixture)
 
         var builder = Host.CreateApplicationBuilder();
 
-        // The write database is named once, here. Building Blocks issues UseWolverine and applies the EF
-        // outbox against that same database (ADR-0027 amendment) - which is what this test then observes.
         builder.AddBuildingBlocks(
             options => options.UseEfCorePersistence<FlushProbeContext>(
                 fixture.ConnectionString,

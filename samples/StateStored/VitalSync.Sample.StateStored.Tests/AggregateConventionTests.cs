@@ -4,10 +4,6 @@ using VitalSync.Sample.StateStored.Domain;
 
 namespace VitalSync.Sample.StateStored.Tests;
 
-// The reconstitution convention (ADR-0025 amendment) is enforced by the compiler at the point where a repository
-// is injected - but only for aggregates that actually reach a repository. This scan closes the gap for the rest:
-// a new aggregate that forgets IReconstitutable, or leaves its empty constructor public, fails here rather than
-// months later when someone first tries to load it.
 public sealed class AggregateConventionTests
 {
     [Fact]

@@ -3,10 +3,6 @@ using BuildingBlocks.Infrastructure.Persistence;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
-// The tracker is what lets the EF Core unit of work answer "which aggregates took part in this command", since
-// EF's own change tracker only ever sees states. The state accessor is handed in by the repository rather than
-// derived here: the repository already resolved it to find the state type, so re-deriving it would only have
-// re-introduced a runtime failure mode for a fact the caller already knows.
 public sealed class EfCoreAggregateTrackerTests
 {
     [Fact]
@@ -82,9 +78,6 @@ public sealed class EfCoreAggregateTrackerTests
     [Fact]
     public void StateAccessor_ReflectsTheCurrentStateAfterAnEventWasRaised()
     {
-        // Why the tracker keeps the accessor rather than a state snapshot: states are immutable, so the
-        // instance EF Core tracks goes stale the moment an event is applied, and the unit of work copies the
-        // current values over at commit.
         var tracker = new EfCoreAggregateTracker();
         var probe = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
         var stateOwner = (IStateOwner)probe;

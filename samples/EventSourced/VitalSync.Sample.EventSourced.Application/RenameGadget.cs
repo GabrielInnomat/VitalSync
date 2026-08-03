@@ -12,8 +12,6 @@ public sealed class RenameGadgetHandler(IRepository<Gadget, GadgetId> repository
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // Reads the whole stream and folds it - there is no current-state row to read. The version the fold
-        // produces is what the commit asserts against, which is how optimistic concurrency works here.
         var gadget = await repository.GetByIdAsync(command.GadgetId, cancellationToken).ConfigureAwait(false);
         if (gadget is null)
         {

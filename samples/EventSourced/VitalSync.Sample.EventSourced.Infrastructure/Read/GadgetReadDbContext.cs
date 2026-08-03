@@ -4,9 +4,6 @@ using VitalSync.Sample.EventSourced.Domain;
 
 namespace VitalSync.Sample.EventSourced.Infrastructure.Read;
 
-// The read half of the ADR-0021 pair - and the only half EF Core touches in an event-sourced context. The
-// write half is Marten's event store, which builds its own schema, so there is nothing here that mirrors the
-// state-stored sample's write context.
 public sealed class GadgetReadDbContext(DbContextOptions<GadgetReadDbContext> options) : DbContext(options)
 {
     public DbSet<GadgetReadModel> Gadgets => Set<GadgetReadModel>();

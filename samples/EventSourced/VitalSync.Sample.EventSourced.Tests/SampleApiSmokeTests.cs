@@ -5,13 +5,6 @@ using VitalSync.Sample.EventSourced.Contracts;
 
 namespace VitalSync.Sample.EventSourced.Tests;
 
-// Drives the running service through the whole chain: gRPC -> ISender -> aggregate -> Marten stream append
-// with the outbox in one transaction -> projection into the read database -> query served from there.
-//
-// Skipped unless SAMPLE_EVENTSOURCED_API_URL points at a running instance:
-//
-//   dotnet run --project samples/VitalSync.Samples.AppHost
-//   SAMPLE_EVENTSOURCED_API_URL=https://localhost:<port> dotnet test samples/EventSourced/VitalSync.Sample.EventSourced.Tests
 public sealed class SampleApiSmokeTests
 {
     private static readonly TimeSpan ProjectionTimeout = TimeSpan.FromSeconds(15);
@@ -44,8 +37,6 @@ public sealed class SampleApiSmokeTests
         var created = await client!.CreateAsync(new CreateGadgetRequest { Name = "before" });
         await WaitForProjectionAsync(client, created.GadgetId);
 
-        // Renaming twice matters here: the second command has to load a two-event stream, fold it, and append
-        // at the right expected version. A broken version would surface as a concurrency failure.
         await client.RenameAsync(new RenameGadgetRequest { GadgetId = created.GadgetId, Name = "after" });
         await client.RenameAsync(new RenameGadgetRequest { GadgetId = created.GadgetId, Name = "final" });
 
@@ -65,8 +56,6 @@ public sealed class SampleApiSmokeTests
         var view = await WaitForProjectionAsync(client, created.GadgetId, v => v.IsRetired);
         Assert.True(view.IsRetired);
 
-        // A broken business rule, translated to FailureCategory.BusinessRule by the pipeline and mapped onto
-        // a different status than a validation error - the distinction the state-stored sample never exercised.
         var thrown = await Assert.ThrowsAsync<RpcException>(
             () => client.RetireAsync(
                 new RetireGadgetRequest { GadgetId = created.GadgetId, Reason = "again" }).AsTask());
@@ -116,8 +105,6 @@ public sealed class SampleApiSmokeTests
             }
             catch (RpcException exception) when (exception.StatusCode == StatusCode.NotFound)
             {
-                // Not projected yet - reads are eventually consistent with writes (ADR-0022), so polling is
-                // the honest assertion, not a fixed delay.
             }
 
             Assert.True(DateTime.UtcNow < deadline, $"The projection did not catch up within {ProjectionTimeout}.");
@@ -139,8 +126,6 @@ public sealed class SampleApiSmokeTests
 
         skipReason = string.Empty;
 
-        // The Aspire host serves HTTPS with the ASP.NET development certificate, which this process has no
-        // reason to trust.
         var handler = new HttpClientHandler
         {
             ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,

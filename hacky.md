@@ -123,8 +123,10 @@ nichts. Aus einem Laufzeitfehler wird ein Compile-Fehler.
 Der Scan läuft über `clrType.GetProperties(...)` und ruft dann
 `modelBuilder.Entity(clrType).Property(name)`. Dieser Aufruf _legt die Property im Modell an_,
 falls sie dort noch nicht existiert. Jede berechnete, get-only oder explizit `Ignore()`-te
-Property vom Key-Typ landet damit still als Spalte in der Tabelle. Die `<remarks>` begründen
-den CLR-Scan mit dem Primärschlüssel — der Nebeneffekt trifft aber alles.
+Property vom Key-Typ landet damit still als Spalte in der Tabelle. Der CLR-Scan war mit dem
+Primärschlüssel begründet — der Nebeneffekt trifft aber alles. (Die Begründung stand bis
+[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) als `<remarks>` am Typ und
+ist mit dem Kommentar entfallen; sie gehört bei der Behebung in einen ADR, nicht zurück in den Code.)
 
 `BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EntityKeyValueConverter.cs:74-103`
 
@@ -344,9 +346,10 @@ Dazu ein Test, der `AddBuildingBlocks` zweimal aufruft und die Order des zweiten
 # 10, `RuleChecker` schluckt `null`
 
 `rule?.IsBroken() == true` und `foreach (var rule in rules ?? [])`. Eine Factory, die
-versehentlich `null` liefert, bedeutet „Regel bestanden". Die `<remarks>` begründen das mit
-„damit Guard-Klauseln knapp bleiben" — der Preis ist, dass die Validierung genau im Fehlerfall
-schweigt.
+versehentlich `null` liefert, bedeutet „Regel bestanden". Begründet war das mit „damit
+Guard-Klauseln knapp bleiben" — der Preis ist, dass die Validierung genau im Fehlerfall schweigt.
+(Die Begründung stand bis [ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) als
+`<remarks>` am Typ und ist mit dem Kommentar entfallen.)
 
 `BuildingBlocks/src/BuildingBlocks.Domain/RuleChecker.cs:18-63`
 

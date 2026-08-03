@@ -1,37 +1,12 @@
 namespace BuildingBlocks.Domain;
 
-/// <summary>
-/// Represents a unique identifier for an entity or aggregate root in the domain model.
-/// </summary>
-/// <remarks>
-/// This non-generic base exists so identity can be inspected without knowing the concrete value type: guard clauses in
-/// <see cref="Entity{TKey}"/> and <see cref="AggregateRoot{TKey, TState}"/> check <see cref="IsEmpty"/> through this contract
-/// rather than the underlying primitive. The strongly typed <see cref="IEntityKey{TValue}"/> derives from it to add the
-/// typed <see cref="IEntityKey{TValue}.Value"/>.
-/// </remarks>
 public interface IEntityKey
 {
-    /// <summary>
-    /// Gets a value indicating whether the entity key is empty.
-    /// </summary>
-    /// <remarks>
-    /// An empty key typically means that the entity has not yet been assigned a valid identifier.
-    /// </remarks>
     bool IsEmpty { get; }
 }
 
-/// <summary>
-/// Represents a strongly typed unique identifier for an entity or aggregate root in the domain model.
-/// </summary>
-/// <remarks>
-/// Strong typing ensures that the key's value is of type <typeparamref name="TValue"/> and cannot be <see langword="null"/>.
-/// </remarks>
-/// <typeparam name="TValue">The type of the key's value.</typeparam>
 public interface IEntityKey<out TValue> : IEntityKey
     where TValue : notnull
 {
-    /// <summary>
-    /// Gets the value of the key.
-    /// </summary>
     TValue Value { get; }
 }

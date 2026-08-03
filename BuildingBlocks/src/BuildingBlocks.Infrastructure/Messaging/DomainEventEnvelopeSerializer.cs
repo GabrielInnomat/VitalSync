@@ -3,14 +3,6 @@ using BuildingBlocks.Domain;
 
 namespace BuildingBlocks.Infrastructure.Messaging;
 
-/// <summary>
-/// Wraps domain events into <see cref="DomainEventEnvelope"/>s and back.
-/// </summary>
-/// <remarks>
-/// Events are serialized together with their assembly-qualified CLR type name, so the envelope handler can rehydrate
-/// the concrete event type without any registry. Domain events must therefore be System.Text.Json-serializable
-/// records, which the <c>DomainEvent</c> base already guarantees for its own members.
-/// </remarks>
 internal static class DomainEventEnvelopeSerializer
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.General);

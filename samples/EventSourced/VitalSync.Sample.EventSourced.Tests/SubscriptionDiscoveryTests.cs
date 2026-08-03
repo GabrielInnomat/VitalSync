@@ -9,10 +9,6 @@ using Wolverine;
 
 namespace VitalSync.Sample.EventSourced.Tests;
 
-// The failure mode this guards against is the worst kind: an integration event whose handler was not
-// discovered is not an error. Wolverine reports that it found no handler, marks the envelope handled and
-// moves on - the queue drains, the dead-letter queue stays empty, and nothing happens. Only the missing row
-// in the read model gives it away, much later.
 public sealed class SubscriptionDiscoveryTests
 {
     [Fact]
@@ -35,8 +31,6 @@ public sealed class SubscriptionDiscoveryTests
     [Fact]
     public async Task WithoutIt_WolverineHasNoHandlerAtAll()
     {
-        // Wolverine scans the entry assembly only, and here that is the test assembly. Pinning the negative
-        // case keeps the Discovery line in Program.cs from looking like something that can be tidied away.
         using var host = await BuildHost(Substitute.For<ISender>(), includeConsumerAssembly: false);
 
         var thrown = await Record.ExceptionAsync(() =>

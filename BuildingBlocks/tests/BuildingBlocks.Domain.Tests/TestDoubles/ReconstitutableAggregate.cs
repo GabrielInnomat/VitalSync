@@ -1,10 +1,5 @@
 namespace BuildingBlocks.Domain.Tests.TestDoubles;
 
-/// <summary>
-/// A state-stored aggregate written the way the reconstitution amendment of ADR-0025 prescribes: private
-/// parameterless constructor, <see cref="IReconstitutable{TSelf}"/> implemented explicitly, and a named factory
-/// as the only public way in.
-/// </summary>
 internal sealed class ReconstitutableAggregate
     : AggregateRoot<TestId, TestState>, IReconstitutable<ReconstitutableAggregate>
 {
@@ -24,10 +19,6 @@ internal sealed class ReconstitutableAggregate
     }
 }
 
-/// <summary>
-/// The event-sourced counterpart of <see cref="ReconstitutableAggregate"/>, used to show that reconstitution is
-/// written identically on both persistence paths.
-/// </summary>
 internal sealed class ReconstitutableEventSourcedAggregate
     : EventSourcedAggregateRoot<TestId, TestState>, IReconstitutable<ReconstitutableEventSourcedAggregate>
 {

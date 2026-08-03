@@ -4,10 +4,6 @@ using ProtoBuf.Grpc.Configuration;
 
 namespace VitalSync.Sample.EventSourced.Contracts;
 
-// Code-first gRPC (ADR-0003), in its own library for the same reason as the state-stored contract: callers
-// need the types and CA1515 keeps public types out of an application project.
-//
-// The numbers in [ProtoMember] are field identities on the wire, not a sort order.
 [Service]
 public interface IGadgetService
 {
@@ -44,8 +40,6 @@ public sealed class RenameGadgetRequest
     public string Name { get; set; } = string.Empty;
 }
 
-// Empty on purpose: the operation has no result beyond success, and a message type leaves room to add one
-// without changing the signature.
 [ProtoContract]
 public sealed class RenameGadgetReply
 {

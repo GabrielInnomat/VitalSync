@@ -18,7 +18,6 @@ public sealed class RenameWidgetHandler(IRepository<Widget, WidgetId> repository
             return Failure.NotFound("widget.not_found", $"No widget with id '{command.WidgetId.Value}' exists.");
         }
 
-        // No further repository call: the aggregate is tracked and persisted when the unit of work commits.
         widget.Rename(command.Name);
         return Result.Success();
     }
