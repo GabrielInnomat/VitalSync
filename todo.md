@@ -424,6 +424,15 @@ Dazu neu: **`global.json`** nagelt das SDK fest (`10.0.302`, `rollForward: lates
 und Entwicklerrechner dieselbe Feature-Band benutzen. **Kein Aspire-Workload-Schritt** — die AppHosts
 referenzieren `Aspire.AppHost.Sdk` als Package.
 
+**Erster Lauf (`f56840c`): grün in 2 Minuten**, alle Schritte inklusive Smoke-Stufe. Damit ist auch
+die Workload-Frage beantwortet: Der Build läuft ohne installierten Aspire-Workload, die entsprechende
+Voraussetzung in README und Instruktionsdateien war überholt und ist korrigiert.
+
+**Bekannte Lücke:** Die Smoke-Tests haben kein Gegenstück zu `ContainerRequirement`. Fehlt
+`SAMPLE_STATESTORED_API_URL` — Tippfehler im Workflow, umbenannte Variable —, überspringen sie
+kommentarlos und der Schritt bleibt grün. Genau die Fehlerklasse, die für Container bereits bewusst
+geschlossen wurde. Ein `SmokeRequirement` analog zu `ContainerRequirement` würde das schließen.
+
 ---
 
 # TODO-10, Rehydrierung: `new()` oder `Activator`?

@@ -22,7 +22,7 @@ dotnet test BuildingBlocks/tests/BuildingBlocks.Domain.Tests   # run one test pr
 dotnet run --project src/Aspire/VitalSync.AppHost   # run the full system via Aspire
 ```
 
-Prerequisites: .NET SDK aligned with .NET Aspire 13, the Aspire 13 workload, and Docker (for messaging/database infrastructure).
+Prerequisites: the .NET SDK pinned in `global.json` (`10.0.302`, `rollForward: latestFeature`) and Docker (for messaging/database infrastructure). **No Aspire workload** — the AppHosts reference `Aspire.AppHost.Sdk` as a package, and CI builds green without one.
 
 Global build settings (`Directory.Build.props`) apply solution-wide: nullable + implicit usings enabled, `latest-all` analysis level, **warnings treated as errors**, and `GenerateDocumentationFile` on. Respect `.editorconfig` at each level (root, `src/`, `tests/`, and a stricter one under `BuildingBlocks/src/*` — see XML docs below).
 

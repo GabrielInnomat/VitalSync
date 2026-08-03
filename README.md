@@ -154,9 +154,10 @@ These Building Blocks are deliberately **independent of VitalSync** and reusable
 
 ### Prerequisites
 
-- [.NET SDK](https://dotnet.microsoft.com/download) (version aligned with .NET Aspire 13)
-- [.NET Aspire 13 workload](https://learn.microsoft.com/dotnet/aspire/)
+- [.NET SDK](https://dotnet.microsoft.com/download) — the version is pinned in `global.json` (`10.0.302`, rolling forward within the feature band)
 - Docker (for local messaging infrastructure and containers)
+
+> No Aspire workload install is needed: the AppHosts reference `Aspire.AppHost.Sdk` as a package, which CI confirms by building without one.
 
 ### Build
 
