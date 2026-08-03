@@ -54,8 +54,12 @@ public static class AspireExtensions
         builder.Services.AddOpenTelemetry()
             .WithMetrics(metrics => metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation())
+                    .AddRuntimeInstrumentation()
+                    .AddMeter("Npgsql"))
             .WithTracing(tracing => tracing.AddSource(builder.Environment.ApplicationName)
+                    .AddSource("Npgsql")
+                    .AddSource("Wolverine")
+                    .AddSource("Marten")
                     .AddAspNetCoreInstrumentation(tracing =>
                         tracing.Filter = context =>
                             !context.Request.Path.StartsWithSegments(HealthEndpointPath, StringComparison.OrdinalIgnoreCase)
