@@ -328,12 +328,13 @@ Index: `docs/architecture/decisions/README.md`.
 6. Write **no comments** — not in `*.cs`, `*.csproj`, workflow YAML, or the code examples in `*.md` (ADR-0028); delete any comment you come across.
 7. If a change affects architecture, add or update an ADR using the template in `docs/architecture/decisions/README.md`.
 8. Match existing style; respect `.editorconfig` and `Directory.Build.props`.
-9. **Always commit and push directly to the `main` branch** — never work on separate branches, and never ask which branch to use; `main` is always the target.
+9. **Always work on `main` branch** — never work on separate branches, and never ask which branch to use; `main` is always the target.
 10. Always update the instruction files in `.github/*.md` and `.claude/*.md` if you discover a gap or ambiguity in the guidance.
 11. If you are unsure about a decision, **always ask a human** — Copilot is not the arbiter of architecture or domain rules.
 12. Always use short and clear commit messages.
 13. If you write code, always add or update unit tests / integration tests / architecture tests, and make sure they pass before committing.
 14. Always check all `*.md` files in the repository and update them if needed.
+15. **NEVER commit yourself.**
 
 ## Key documentation
 
