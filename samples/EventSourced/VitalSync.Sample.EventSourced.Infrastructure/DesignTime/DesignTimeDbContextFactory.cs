@@ -8,6 +8,6 @@ public sealed class GadgetReadDbContextFactory : IDesignTimeDbContextFactory<Gad
 {
     public GadgetReadDbContext CreateDbContext(string[] args) =>
         new(new DbContextOptionsBuilder<GadgetReadDbContext>()
-            .UseNpgsql("Host=localhost;Database=design-time;Username=postgres;Password=postgres")
+            .UseNpgsql("Host=design-time")
             .Options);
 }

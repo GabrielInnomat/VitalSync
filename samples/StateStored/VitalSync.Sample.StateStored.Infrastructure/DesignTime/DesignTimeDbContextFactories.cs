@@ -7,7 +7,7 @@ namespace VitalSync.Sample.StateStored.Infrastructure.DesignTime;
 
 internal static class DesignTimeConnectionString
 {
-    public const string Value = "Host=localhost;Database=design-time;Username=postgres;Password=postgres";
+    public const string Value = "Host=design-time";
 }
 
 public sealed class WidgetWriteDbContextFactory : IDesignTimeDbContextFactory<WidgetWriteDbContext>
