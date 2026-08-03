@@ -42,6 +42,10 @@ This document describes how the parts of VitalSync talk to each other. These rul
 
 Cross-service communication is expressed via **integration events** published to the messaging backbone. Integration events are distinct from **domain events** (which are internal to a service's domain model).
 
+### Event identity
+
+Identity placement is deliberately **asymmetric** (ADR-0029): **domain events carry no identity** — they are pure value records, and `EventId`/`OccurredAt` are minted at commit and travel on the `DomainEventEnvelope`, which is always present inside the owning service. **Integration events carry their identity on the event** — `IIntegrationEvent` requires `EventId` and `OccurredAt`, because there is no envelope a foreign consumer knows about and duplicate detection under at-least-once delivery needs a stable id on the contract itself. Mappers populate both from the `DomainEventMetadata` they receive; they must never mint a fresh Guid per invocation, or redeliveries produce new identities and deduplication breaks. Do not "clean up" this asymmetry — it is the decided rule, not an inconsistency.
+
 See [Domain model](./domain-model.md) for domain events and [Building Blocks](./building-blocks.md) for the outbox/dispatch abstractions.
 
 ### Broker topology
@@ -50,14 +54,14 @@ All integration events are published to the single topic exchange **`vitalsync.i
 
 ```csharp
 [Topic("nutrition.recipe-created")]
-public sealed record RecipeCreated(Guid RecipeId) : IIntegrationEvent;
+public sealed record RecipeCreated(Guid RecipeId, Guid EventId, DateTimeOffset OccurredAt) : IIntegrationEvent;
 ```
 
 The attribute is **mandatory** on every integration event. It makes the routing key part of the published contract instead of deriving it from the CLR namespace, where a rename would silently break consumer bindings.
 
 Consumers own their side of the topology: a subscribing service declares its own queue and binds it to the exchange with a topic pattern (`nutrition.*`), so adding a subscriber never changes the publishing service. Building Blocks wires only the publishing half.
 
-Domain events never reach the broker. The publishing rule matches the `IIntegrationEvent` marker, and the `DomainEventEnvelope` that carries domain events through a service's local outbox queue does not implement it — integration events remain the only cross-context signal (ADR-0022).
+Domain events never reach the broker. The publishing rule matches the `IIntegrationEvent` contract, and the `DomainEventEnvelope` that carries domain events through a service's local outbox queue does not implement it — integration events remain the only cross-context signal (ADR-0022).
 
 ## Messaging platform
 

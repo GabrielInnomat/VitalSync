@@ -1,6 +1,5 @@
 ﻿using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
-using BuildingBlocks.Infrastructure.Events;
 using BuildingBlocks.Infrastructure.Messaging;
 using Marten;
 using Wolverine.Marten;
@@ -24,15 +23,11 @@ public sealed class MartenUnitOfWork(IDocumentSession session, MartenAggregateTr
                 continue;
             }
 
-            var stampedEvents = uncommittedEvents
-                .Select(domainEvent => DomainEventStamper.Stamp(domainEvent, occurredAt))
-                .ToList();
+            session.Events.Append(entry.StreamKey(), entry.ExpectedVersion(), uncommittedEvents);
 
-            session.Events.Append(entry.StreamKey(), entry.ExpectedVersion(), stampedEvents);
-
-            foreach (var stampedEvent in stampedEvents)
+            foreach (var domainEvent in uncommittedEvents)
             {
-                await outbox.PublishAsync(DomainEventEnvelopeSerializer.Wrap(stampedEvent)).ConfigureAwait(false);
+                await outbox.PublishAsync(DomainEventEnvelopeSerializer.Wrap(domainEvent, Guid.NewGuid(), occurredAt)).ConfigureAwait(false);
             }
         }
 

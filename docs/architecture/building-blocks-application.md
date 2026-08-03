@@ -154,9 +154,11 @@ persistence — only the composition-layer registration does
 ### Domain-event publishing & projections
 
 ```csharp
+public sealed record DomainEventMetadata(Guid EventId, DateTimeOffset OccurredAt);
+
 public interface IDomainEventPublisher
 {
-    Task PublishAsync(IDomainEvent domainEvent, CancellationToken ct);
+    Task PublishAsync(IDomainEvent domainEvent, DomainEventMetadata metadata, IIntegrationEventSink integrationEventSink, CancellationToken ct);
 }
 
 public interface IProjectionHandler<in TDomainEvent>
@@ -169,28 +171,39 @@ public interface IProjectionHandler<in TDomainEvent>
 - `IDomainEventPublisher` is the contract of the outbox-backed publisher
   (ADR-0022/0023): it is invoked once per committed domain event and fans it out
   to the in-context projection handlers and the integration-event path.
+- `DomainEventMetadata` carries the identity minted at commit — domain events
+  themselves are pure value records without identity fields (ADR-0029).
 - `IProjectionHandler<TDomainEvent>` is implemented per service to update read
   models. Delivery is at-least-once, so idempotency is the handler's
-  responsibility (upsert by key, tracked via the event's stable `EventId`).
+  responsibility (upsert by key, tracked via the envelope's stable `EventId`).
 
 ### Integration events
 
 ```csharp
-public interface IIntegrationEvent;
+public interface IIntegrationEvent
+{
+    Guid EventId { get; }
+    DateTimeOffset OccurredAt { get; }
+}
 
 public interface IIntegrationEventMapper
 {
-    IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent);
+    IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent, DomainEventMetadata metadata);
 }
 ```
 
 - `IIntegrationEvent` marks the immutable, serializable contract types that are
   the **only** cross-context signal (ADR-0004/0023); domain events and
-  aggregates never cross the broker.
+  aggregates never cross the broker. Unlike domain events, integration events
+  **carry their identity on the event** (ADR-0029): there is no envelope a
+  foreign consumer knows about, so `EventId`/`OccurredAt` are part of the
+  published contract and give consumers a stable handle for deduplication.
 - `IIntegrationEventMapper` is implemented **per service** (the translation maps
   themselves never live in the Building Blocks): it selects which domain events
   leave the context and what shape they take, returning an empty collection for
-  events without cross-context significance.
+  events without cross-context significance. Mappers populate the integration
+  event's identity from the supplied `DomainEventMetadata` — never a fresh Guid
+  per invocation, or redeliveries break deduplication.
 
 ## Failure handling & the `Result` model
 

@@ -4,7 +4,12 @@ using Wolverine.Attributes;
 namespace DeadLetterFixture;
 
 [Topic("probe.always-fails")]
-public sealed record AlwaysFailsIntegrationEvent(string Name) : IIntegrationEvent;
+public sealed record AlwaysFailsIntegrationEvent(string Name) : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+
+    public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
+}
 
 public sealed class AttemptRecorder
 {

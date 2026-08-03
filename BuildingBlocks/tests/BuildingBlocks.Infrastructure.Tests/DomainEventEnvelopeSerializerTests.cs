@@ -1,10 +1,13 @@
-using BuildingBlocks.Domain;
+﻿using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.Messaging;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
 public sealed class DomainEventEnvelopeSerializerTests
 {
+    private static readonly Guid EventId = Guid.NewGuid();
+    private static readonly DateTimeOffset OccurredAt = new(2026, 7, 31, 12, 0, 0, TimeSpan.Zero);
+
     [Fact]
     public void WrapThenUnwrap_WithTypedIdDecimalAndDateTimeOffset_RoundTripsAllValues()
     {
@@ -15,28 +18,34 @@ public sealed class DomainEventEnvelopeSerializerTests
             RenamedAt: new DateTimeOffset(2026, 7, 30, 9, 30, 0, TimeSpan.FromHours(2)));
 
         var restored = (RecipeRenamed)DomainEventEnvelopeSerializer.Unwrap(
-            DomainEventEnvelopeSerializer.Wrap(original));
+            DomainEventEnvelopeSerializer.Wrap(original, EventId, OccurredAt));
 
-        Assert.Equal(original.EventId, restored.EventId);
-        Assert.Equal(original.RecipeId, restored.RecipeId);
-        Assert.Equal(original.NewName, restored.NewName);
-        Assert.Equal(original.Rating, restored.Rating);
-        Assert.Equal(original.RenamedAt, restored.RenamedAt);
+        Assert.Equal(original, restored);
     }
 
     [Fact]
     public void Wrap_CarriesTheAssemblyQualifiedEventTypeName()
     {
         var envelope = DomainEventEnvelopeSerializer.Wrap(
-            new RecipeRenamed(new RecipeId(Guid.NewGuid()), "Pizza", 5m, DateTimeOffset.UnixEpoch));
+            new RecipeRenamed(new RecipeId(Guid.NewGuid()), "Pizza", 5m, DateTimeOffset.UnixEpoch), EventId, OccurredAt);
 
         Assert.Equal(typeof(RecipeRenamed).AssemblyQualifiedName, envelope.EventTypeName);
     }
 
     [Fact]
+    public void Wrap_CarriesEventIdAndOccurredAtOnTheEnvelope()
+    {
+        var envelope = DomainEventEnvelopeSerializer.Wrap(
+            new RecipeRenamed(new RecipeId(Guid.NewGuid()), "Pizza", 5m, DateTimeOffset.UnixEpoch), EventId, OccurredAt);
+
+        Assert.Equal(EventId, envelope.EventId);
+        Assert.Equal(OccurredAt, envelope.OccurredAt);
+    }
+
+    [Fact]
     public void Unwrap_WithUnknownTypeName_ThrowsAClearException_NotNullReference()
     {
-        var envelope = new DomainEventEnvelope("BuildingBlocks.Nonexistent.Event, Nonexistent.Assembly", "{}");
+        var envelope = new DomainEventEnvelope("BuildingBlocks.Nonexistent.Event, Nonexistent.Assembly", "{}", EventId, OccurredAt);
 
         var exception = Record.Exception(() => DomainEventEnvelopeSerializer.Unwrap(envelope));
 

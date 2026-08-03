@@ -7,7 +7,7 @@ internal static class DomainEventEnvelopeSerializer
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.General);
 
-    public static DomainEventEnvelope Wrap(IDomainEvent domainEvent)
+    public static DomainEventEnvelope Wrap(IDomainEvent domainEvent, Guid eventId, DateTimeOffset occurredAt)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
 
@@ -15,7 +15,11 @@ internal static class DomainEventEnvelopeSerializer
         var eventTypeName = eventType.AssemblyQualifiedName
             ?? throw new InvalidOperationException($"The domain event type '{eventType}' has no assembly-qualified name.");
 
-        return new DomainEventEnvelope(eventTypeName, JsonSerializer.Serialize(domainEvent, eventType, SerializerOptions));
+        return new DomainEventEnvelope(
+            eventTypeName,
+            JsonSerializer.Serialize(domainEvent, eventType, SerializerOptions),
+            eventId,
+            occurredAt);
     }
 
     public static IDomainEvent Unwrap(DomainEventEnvelope envelope)

@@ -78,7 +78,12 @@ public sealed class IntegrationEventRoutingTests(RabbitMqFixture fixture)
 }
 
 [Topic("probe.routing-probe")]
-public sealed record RoutingProbeIntegrationEvent(string Name) : IIntegrationEvent;
+public sealed record RoutingProbeIntegrationEvent(string Name) : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+
+    public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
+}
 
 public sealed class RoutingProbeSignal
 {

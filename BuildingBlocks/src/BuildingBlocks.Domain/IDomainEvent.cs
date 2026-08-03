@@ -1,8 +1,3 @@
-namespace BuildingBlocks.Domain;
+﻿namespace BuildingBlocks.Domain;
 
-public interface IDomainEvent
-{
-    Guid EventId { get; }
-
-    DateTimeOffset OccurredAt { get; }
-}
+public interface IDomainEvent;

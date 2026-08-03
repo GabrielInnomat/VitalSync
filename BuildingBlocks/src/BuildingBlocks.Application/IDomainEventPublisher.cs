@@ -4,5 +4,5 @@ namespace BuildingBlocks.Application;
 
 public interface IDomainEventPublisher
 {
-    Task PublishAsync(IDomainEvent domainEvent, IIntegrationEventSink integrationEventSink, CancellationToken cancellationToken);
+    Task PublishAsync(IDomainEvent domainEvent, DomainEventMetadata metadata, IIntegrationEventSink integrationEventSink, CancellationToken cancellationToken);
 }

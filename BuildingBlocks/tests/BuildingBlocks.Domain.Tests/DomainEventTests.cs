@@ -1,45 +1,33 @@
-using BuildingBlocks.Domain.Tests.TestDoubles;
+﻿using BuildingBlocks.Domain.Tests.TestDoubles;
 
 namespace BuildingBlocks.Domain.Tests;
 
 public sealed class DomainEventTests
 {
     [Fact]
-    public void Constructor_AssignsNonEmptyEventId()
-    {
-        var @event = new TestDomainEvent(1);
-
-        Assert.NotEqual(Guid.Empty, @event.EventId);
-    }
-
-    [Fact]
-    public void Constructor_AssignsUniqueEventIds()
+    public void Records_WithSameData_AreValueEqual()
     {
         var first = new TestDomainEvent(1);
         var second = new TestDomainEvent(1);
 
-        Assert.NotEqual(first.EventId, second.EventId);
+        Assert.Equal(first, second);
     }
 
     [Fact]
-    public void OccurredAt_DefaultsToUnsetSoStampingCanDetectIt()
+    public void Records_WithDifferentData_AreNotEqual()
     {
-        var @event = new TestDomainEvent(1);
+        var first = new TestDomainEvent(1);
+        var second = new TestDomainEvent(2);
 
-        Assert.Equal(0, @event.OccurredAt.Ticks);
-        Assert.Equal(default, @event.OccurredAt);
+        Assert.NotEqual(first, second);
     }
 
     [Fact]
-    public void With_OverridesOccurredAtButKeepsEventId()
+    public void Records_WithSameData_HaveSameHashCode()
     {
-        var original = new TestDomainEvent(1);
-        var stampedAt = new DateTimeOffset(2026, 07, 22, 12, 00, 00, TimeSpan.Zero);
+        var first = new TestDomainEvent(1);
+        var second = new TestDomainEvent(1);
 
-        var stamped = original with { OccurredAt = stampedAt };
-
-        Assert.Equal(stampedAt, stamped.OccurredAt);
-        Assert.Equal(original.EventId, stamped.EventId);
-        Assert.Equal(0, original.OccurredAt.Ticks);
+        Assert.Equal(first.GetHashCode(), second.GetHashCode());
     }
 }

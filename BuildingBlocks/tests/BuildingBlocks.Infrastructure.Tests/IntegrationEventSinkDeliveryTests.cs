@@ -54,8 +54,7 @@ public sealed class IntegrationEventSinkDeliveryTests
     }
 
     private static DomainEventEnvelope WrapProbeEvent(string name)
-        => DomainEventEnvelopeSerializer.Wrap(
-            new SinkProbeDomainEvent(name) { EventId = Guid.NewGuid(), OccurredAt = DateTimeOffset.UtcNow });
+        => DomainEventEnvelopeSerializer.Wrap(new SinkProbeDomainEvent(name), Guid.NewGuid(), DateTimeOffset.UtcNow);
 
     private static async Task<IHost> StartHostAsync()
         => await Host.CreateDefaultBuilder()
@@ -87,7 +86,7 @@ public sealed class IntegrationEventSinkDeliveryTests
 
 public sealed record SinkProbeDomainEvent(string Name) : DomainEvent;
 
-public sealed record SinkProbeIntegrationEvent(string Name) : IIntegrationEvent;
+public sealed record SinkProbeIntegrationEvent(string Name, Guid EventId, DateTimeOffset OccurredAt) : IIntegrationEvent;
 
 public sealed class SinkProbeRecorder
 {
@@ -126,13 +125,19 @@ public sealed class SinkProbeCrashSwitch
 
 public sealed class SinkProbeMapper : IIntegrationEventMapper
 {
-    public IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent)
-        => domainEvent is SinkProbeDomainEvent probe ? [new SinkProbeIntegrationEvent(probe.Name)] : [];
+    public IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent, DomainEventMetadata metadata)
+    {
+        ArgumentNullException.ThrowIfNull(metadata);
+
+        return domainEvent is SinkProbeDomainEvent probe
+            ? [new SinkProbeIntegrationEvent(probe.Name, metadata.EventId, metadata.OccurredAt)]
+            : [];
+    }
 }
 
 public sealed class SinkProbeCrashingMapper(SinkProbeCrashSwitch crashSwitch) : IIntegrationEventMapper
 {
-    public IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent)
+    public IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent, DomainEventMetadata metadata)
     {
         if (!crashSwitch.Enabled)
         {

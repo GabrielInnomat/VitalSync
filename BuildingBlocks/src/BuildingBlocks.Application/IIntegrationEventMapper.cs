@@ -4,5 +4,5 @@ namespace BuildingBlocks.Application;
 
 public interface IIntegrationEventMapper
 {
-    IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent);
+    IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent, DomainEventMetadata metadata);
 }

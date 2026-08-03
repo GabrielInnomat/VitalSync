@@ -19,37 +19,13 @@ public sealed class EventSourcedAggregateRootTests
     }
 
     [Fact]
-    public void RaiseEvent_DoesNotStampOccurredAt_StampingHappensAtCommit()
-    {
-        var aggregate = new TestEventSourcedAggregate();
-
-        aggregate.Raise(new TestDomainEvent(5));
-
-        var raised = Assert.IsType<TestDomainEvent>(aggregate.DomainEvents.Single());
-        Assert.Equal(default, raised.OccurredAt);
-    }
-
-    [Fact]
-    public void RaiseEvent_WithPresetOccurredAt_LeavesTimestampUnchanged()
-    {
-        var aggregate = new TestEventSourcedAggregate();
-        var preset = new DateTimeOffset(2000, 01, 01, 00, 00, 00, TimeSpan.Zero);
-
-        aggregate.Raise(new TestDomainEvent(5) { OccurredAt = preset });
-
-        var raised = Assert.IsType<TestDomainEvent>(aggregate.DomainEvents.Single());
-        Assert.Equal(preset, raised.OccurredAt);
-    }
-
-    [Fact]
-    public void RaiseEvent_WithNonDomainEventImplementation_IsNotStamped()
+    public void RaiseEvent_WithNonDomainEventImplementation_IsAccepted()
     {
         var aggregate = new TestEventSourcedAggregate();
 
         aggregate.Raise(new RawDomainEvent(5));
 
-        var raised = Assert.IsType<RawDomainEvent>(aggregate.DomainEvents.Single());
-        Assert.Equal(default, raised.OccurredAt);
+        Assert.IsType<RawDomainEvent>(aggregate.DomainEvents.Single());
     }
 
     [Fact]

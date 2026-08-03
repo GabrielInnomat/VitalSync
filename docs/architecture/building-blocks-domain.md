@@ -32,8 +32,8 @@ The block provides a **single aggregate authoring model**: every aggregate deriv
 | `IDomainEventOwner`                       | interface       | Privileged contract that can **clear** events (infrastructure-only, explicit).       |
 | `IStateOwner`                             | interface       | Privileged access to the aggregate's state object (infrastructure-only, explicit).   |
 | `IReconstitutable<TSelf>`                 | interface       | Supplies the empty hull a repository rehydrates into (`static abstract CreateEmpty`). |
-| `IDomainEvent`                            | interface       | Pure business event contract (`EventId`, `OccurredAt`).                              |
-| `DomainEvent`                             | abstract record | Convenience base supplying `EventId`; `OccurredAt` is stamped at commit.             |
+| `IDomainEvent`                            | interface       | Pure business event marker — no identity fields (ADR-0029).                          |
+| `DomainEvent`                             | abstract record | Convenience base; identity travels on the envelope, not the event.                   |
 | `IClock`                                  | interface       | Abstraction over "now" for deterministic time.                                       |
 | `IBusinessRule`                           | interface       | An invariant that can be _broken_.                                                   |
 | `IDomainValidationRule`                   | interface       | A validation constraint that can be _invalid_.                                       |
@@ -305,17 +305,13 @@ DomainEvents  (read-only, side-effect free)
 
 ## Domain events
 
-`IDomainEvent` is a pure business contract:
+`IDomainEvent` is a pure business marker:
 
 ```csharp
-public interface IDomainEvent
-{
-    Guid EventId { get; }
-    DateTimeOffset OccurredAt { get; }
-}
+public interface IDomainEvent;
 ```
 
-`DomainEvent` is a convenience base record that assigns a fresh `EventId` in its constructor and carries an `OccurredAt`. Events are **pure data**: `RaiseEvent` does not stamp them — if a `DomainEvent`'s `OccurredAt` is unset, it is filled in at commit time by the infrastructure's stamper (via `IClock`), keeping time deterministic and testable.
+`DomainEvent` is an equally empty convenience base record. Events are **pure data** — plain value records with working value equality and **no identity fields**. Their `EventId` and `OccurredAt` are minted by the unit of work at commit time and travel on the `DomainEventEnvelope`, never on the event itself (ADR-0029).
 
 > Domain events are **internal** to a service's domain. Translating them into integration events for cross-service messaging happens at the service boundary, not here.
 
@@ -402,7 +398,7 @@ Switching this aggregate between the two worlds means changing its base class an
 5. Equality is **identity-based** and type-sensitive, implemented once on `EntityBase<TKey>`.
 6. Aggregates **own** their events; outsiders read only; clearing is **explicit** and infrastructure-only.
 7. **Event-sourcing capability** (`Version`/`LoadFromHistory`) is exposed via **explicit** `IEventSourcedAggregateRoot<TKey>` implementation — off the public surface — and `LoadFromHistory` is guarded against replay misuse (throws if uncommitted events exist), which keeps snapshotting possible.
-8. Domain events are **pure** and carry an `EventId`.
+8. Domain events are **pure value records** without identity fields; identity lives on the envelope (ADR-0029).
 9. Business rules and domain validation are **distinct**, with distinct exceptions.
 
 ## Related documents

@@ -171,9 +171,11 @@ Two distinct concepts, each with its own rule interface and exception:
 
 A record of something **business-relevant** that has happened in the domain (e.g.
 `RecipeCreated`, `RecipeRenamed`). Domain events are **pure business data** —
-no infrastructure or third-party types — carry a stable `EventId` and an
-`OccurredAt`, and are **internal** to a service. They may be translated into an
-**integration event** at the service boundary.
+no infrastructure or third-party types, no identity fields — plain value records
+with working value equality, **internal** to a service. Their `EventId` and
+`OccurredAt` are minted at commit and travel on the `DomainEventEnvelope`
+(ADR-0029). They may be translated into an **integration event** at the service
+boundary, which carries that identity on the event itself.
 
 ### Entity
 
@@ -382,8 +384,7 @@ processed only after its handlers succeed, otherwise it is retried. See
 
 The two ways an event-sourced aggregate's state changes: `RaiseEvent(e)`
 applies the event to the state, validates identity, advances the
-version, and records it (`OccurredAt` is stamped later, at commit, by the unit of
-work); `LoadFromHistory(history)` **replays** a persisted stream
+version, and records it; `LoadFromHistory(history)` **replays** a persisted stream
 to rebuild state ([rehydration](#rehydration), recording nothing) into the hull
 supplied by [reconstitution](#reconstitution-ireconstitutabletself). A
 **replay-misuse guard** prevents `LoadFromHistory` from running after uncommitted
@@ -615,8 +616,8 @@ for fast feedback.
 ### IClock
 
 An abstraction over "now" that makes time-dependent domain behavior
-**deterministic** and testable. The infrastructure's unit of work uses it to stamp
-each domain event's `OccurredAt` with the transaction's commit time; the domain
+**deterministic** and testable. The infrastructure's unit of work uses it to mint
+the `OccurredAt` carried on each `DomainEventEnvelope` at commit time; the domain
 itself takes an `IClock` only where time is a **business** rule.
 
 ### Marten

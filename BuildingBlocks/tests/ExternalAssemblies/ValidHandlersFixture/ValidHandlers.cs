@@ -28,5 +28,5 @@ public sealed class RegistrationProjectionHandler : IProjectionHandler<Registrat
 
 public sealed class RegistrationMapper : IIntegrationEventMapper
 {
-    public IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent) => [];
+    public IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent, DomainEventMetadata metadata) => [];
 }

@@ -1,6 +1,5 @@
 using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
-using BuildingBlocks.Infrastructure.Events;
 using BuildingBlocks.Infrastructure.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Wolverine.EntityFrameworkCore;
@@ -28,8 +27,7 @@ public sealed class EfCoreUnitOfWork<TContext>(
         {
             foreach (var domainEvent in entry.Aggregate.DomainEvents)
             {
-                var stamped = DomainEventStamper.Stamp(domainEvent, occurredAt);
-                await outbox.PublishAsync(DomainEventEnvelopeSerializer.Wrap(stamped)).ConfigureAwait(false);
+                await outbox.PublishAsync(DomainEventEnvelopeSerializer.Wrap(domainEvent, Guid.NewGuid(), occurredAt)).ConfigureAwait(false);
             }
         }
 

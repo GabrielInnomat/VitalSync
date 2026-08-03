@@ -133,6 +133,14 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   with `IStateOwner`. The two are deliberately **not** merged: `IDomainEventOwner`
   applies to every aggregate, `IStateOwner` only to state-stored ones.
 - **Entity identity and equality** follow ADR-0008.
+- **Event identity is asymmetric** (ADR-0029): domain events are **pure value
+  records with no identity fields** — `IDomainEvent`/`DomainEvent` are empty, and
+  `EventId`/`OccurredAt` are minted by the unit of work at commit and travel on the
+  `DomainEventEnvelope`. Integration events **carry `EventId`/`OccurredAt` on the
+  event** (required by `IIntegrationEvent`) because no envelope crosses the context
+  boundary; mappers populate both from the `DomainEventMetadata` they receive —
+  **never** a fresh Guid per invocation, or redeliveries break deduplication. Do not
+  "clean up" this asymmetry.
 - **Business rules and domain validation** follow ADR-0009.
 - Aggregates use an **aggregate state object** (ADR-0010).
 - **One aggregate authoring model** — every aggregate derives from the state-fold

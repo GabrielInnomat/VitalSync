@@ -106,10 +106,10 @@ public interface IUnitOfWork
 - On commit, in a **single write-database transaction**:
     1. persist aggregate changes (EF Core `SaveChanges` or Marten stream append);
     2. collect the aggregates' uncommitted domain events;
-    3. stamp each event's `OccurredAt` with the transaction's commit time (one
-       `IClock.Now` value shared by all events; already-stamped events are left
-       untouched, so replayed events keep their original time);
-    4. write those events to the **transactional outbox** in the write database
+    3. mint each event's `EventId` and `OccurredAt` onto its envelope (one
+       `IClock.Now` value shared by all events of the commit — ADR-0029; the
+       events themselves stay untouched);
+    4. write those envelopes to the **transactional outbox** in the write database
        (ADR-0022, ADR-0023) — atomically with the state change;
     5. clear the aggregates' event collections.
 - **Optimistic-concurrency conflicts surface at commit, not before.** Both
@@ -210,8 +210,10 @@ A small cluster of classes, using Marten as a **raw stream store**:
   change).
 - Wrapping and unwrapping are centralized in a `DomainEventEnvelopeSerializer`
   so the two unit-of-work implementations and the envelope handler share one
-  serialization scheme; the envelope carries the event's stable `EventId` and
-  its concrete type for faithful round-tripping.
+  serialization scheme; the envelope carries the event's concrete type for
+  faithful round-tripping plus its identity — `EventId` and `OccurredAt`,
+  minted at commit (ADR-0029) — which the handler passes on as
+  `DomainEventMetadata`.
 - **Dispatch:** after commit, Wolverine delivers each envelope to the single
   `DomainEventEnvelopeHandler` this package registers, which unwraps it and
   calls the **Publisher**. Both persistence paths flush the outbox
@@ -238,8 +240,8 @@ A small cluster of classes, using Marten as a **raw stream store**:
   runner lives here.
 - Enforces/enables the ADR-0022 handler rules:
     - **Idempotency** is the handler's responsibility (upsert by key), tracked
-      via the event's stable `EventId` (generated once when the event is
-      raised) as the last-processed marker — this works identically for
+      via the envelope's stable `EventId` (minted once at commit, ADR-0029) as
+      the last-processed marker — this works identically for
       event-sourced and state-stored aggregates, which do not all have a
       meaningful stream position.
     - **Per-aggregate ordering** is guaranteed by the messaging transport's

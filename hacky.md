@@ -10,7 +10,7 @@
 | 4   | `ApplyEntityKeyConversions` scannt CLR- statt Model-Properties | offen  |
 | 5   | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | teilweise |
 | 6   | `CurrentValues.SetValues` kopiert nur Skalare                  | offen  |
-| 7   | `DomainEventStamper` erkennt „unstamped" über Sentinel         | offen  |
+| 7   | `DomainEventStamper` erkennt „unstamped" über Sentinel         | gelöst |
 | 8   | Connection String zweimal, ohne Abgleich                       | gelöst |
 | 9   | `AddBuildingBlocks` ist nicht idempotent                       | offen  |
 | 10  | `RuleChecker` schluckt `null`                                  | offen  |
@@ -228,7 +228,12 @@ es die Kernzusage der State-Mapping-Entscheidung betrifft.
 
 ---
 
-# 7, `DomainEventStamper` erkennt „unstamped" über Sentinel
+# 7, `DomainEventStamper` erkennt „unstamped" über Sentinel — **gelöst (2026-08-03)**
+
+> Gelöst durch die erste Variante des Vorschlags unten, per
+> [ADR-0029](docs/architecture/decisions/0029-event-identity-placement.md) (TODO-13):
+> `EventId`/`OccurredAt` liegen jetzt auf dem `DomainEventEnvelope`, die Events selbst sind
+> reine Wert-Records, und der `DomainEventStamper` ist gelöscht — es gibt kein „unstamped" mehr.
 
 `domainEvent is DomainEvent { OccurredAt.Ticks: 0 }`. Zwei Annahmen in einem Ausdruck: dass
 `Ticks == 0` nie ein echter Wert ist, und dass jedes Event vom `DomainEvent`-Record erbt. Wer

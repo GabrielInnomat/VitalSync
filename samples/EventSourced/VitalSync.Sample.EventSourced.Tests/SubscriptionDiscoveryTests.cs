@@ -21,7 +21,7 @@ public sealed class SubscriptionDiscoveryTests
         using var host = await BuildHost(sender, includeConsumerAssembly: true);
 
         await host.Services.GetRequiredService<IMessageBus>()
-            .InvokeAsync(new WidgetCreatedIntegrationEvent(widgetId, "mirrored"), TestContext.Current.CancellationToken);
+            .InvokeAsync(new WidgetCreatedIntegrationEvent(widgetId, "mirrored", Guid.NewGuid(), DateTimeOffset.UtcNow), TestContext.Current.CancellationToken);
 
         await sender.Received(1).Send(
             Arg.Is<ICommand>(command => ((MirrorWidget)command).WidgetId == widgetId),
@@ -35,7 +35,7 @@ public sealed class SubscriptionDiscoveryTests
 
         var thrown = await Record.ExceptionAsync(() =>
             host.Services.GetRequiredService<IMessageBus>()
-                .InvokeAsync(new WidgetCreatedIntegrationEvent(Guid.NewGuid(), "ignored"), TestContext.Current.CancellationToken));
+                .InvokeAsync(new WidgetCreatedIntegrationEvent(Guid.NewGuid(), "ignored", Guid.NewGuid(), DateTimeOffset.UtcNow), TestContext.Current.CancellationToken));
 
         Assert.NotNull(thrown);
     }

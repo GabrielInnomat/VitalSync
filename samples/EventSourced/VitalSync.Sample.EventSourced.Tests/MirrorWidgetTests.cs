@@ -49,7 +49,7 @@ public sealed class MirrorWidgetTests
         var widgetId = Guid.NewGuid();
 
         await WidgetCreatedConsumer.Handle(
-            new WidgetCreatedIntegrationEvent(widgetId, "from-state-stored"),
+            new WidgetCreatedIntegrationEvent(widgetId, "from-state-stored", Guid.NewGuid(), DateTimeOffset.UtcNow),
             sender,
             TestContext.Current.CancellationToken);
 
@@ -69,7 +69,7 @@ public sealed class MirrorWidgetTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             WidgetCreatedConsumer.Handle(
-                new WidgetCreatedIntegrationEvent(Guid.NewGuid(), "doomed"),
+                new WidgetCreatedIntegrationEvent(Guid.NewGuid(), "doomed", Guid.NewGuid(), DateTimeOffset.UtcNow),
                 sender,
                 TestContext.Current.CancellationToken));
     }

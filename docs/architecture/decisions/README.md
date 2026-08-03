@@ -57,6 +57,7 @@ original wording away — the amendment must remain readable as a correction.
 | [0026](./0026-single-repository-contract.md)              | Single repository contract: add and get, no delete      | Accepted                  |
 | [0027](./0027-building-blocks-own-wolverine-wiring.md)    | Building Blocks own the persistence and Wolverine wiring | Accepted                 |
 | [0028](./0028-no-comments-in-code.md)                     | No comments in code                                     | Accepted (supersedes ADR-0013) |
+| [0029](./0029-event-identity-placement.md)                | Event identity: envelope for domain events, on the event for integration events | Accepted |
 
 ## Template
 

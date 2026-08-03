@@ -45,7 +45,7 @@ eine Entscheidung, keinen Code.
 | TODO-10 | Rehydrierung: `new()` oder `Activator`?                        | **P1** | gelöst            | hacky-5, IMP-14, WS-02                |
 | TODO-11 | Optionalität von `IUnitOfWork`                                 | **P2** | **Konflikt**      | IMP-07, hacky-11, IMP-46              |
 | TODO-12 | Name der `Result`-Fehlerfactory                                | **P2** | **Konflikt**      | hacky-3, IMP-27, IMP-39               |
-| TODO-13 | Wo lebt die Event-Identität?                                   | **P2** | **Konflikt**      | IMP-41, IMP-11                        |
+| TODO-13 | Wo lebt die Event-Identität?                                   | **P2** | gelöst            | IMP-41, IMP-11                        |
 | TODO-14 | Idempotenz-Bookkeeping über die Kontextgrenze                  | **P2** | offen             | IMP-11, WS-12                         |
 | TODO-15 | Mehrfachfehler und Feldvalidierung end-to-end                  | **P2** | offen             | IMP-16, IMP-17, hacky-12              |
 | TODO-16 | `FailureCategory` fehlen Autorisierung und Unerwartet          | **P2** | offen             | IMP-18                                |
@@ -127,18 +127,17 @@ Datenmigrationsthema.
 
 # TODO-02, Aggregat-Version und Envelope-Metadaten
 
-**P1 · offen · WS-01 + WS-03 + IMP-24 + IMP-41 + hacky-7**
+**P1 · offen · WS-01 + WS-03 + IMP-24 (+ IMP-41, hacky-7 via TODO-13 erledigt)**
 
-Fünf Befunde, eine Ursache: es gibt keine fortlaufende Zahl pro Aggregat, und der Envelope trägt
-keine Metadaten.
+Ursprünglich fünf Befunde, eine Ursache: es gibt keine fortlaufende Zahl pro Aggregat, und der
+Envelope trägt keine Aggregat-Metadaten. Zwei davon (IMP-41, hacky-7) sind mit TODO-13
+(ADR-0029) erledigt — `EventId`/`OccurredAt` liegen bereits auf dem Envelope. Offen bleiben:
 
 | Symptom                                           | Quelle        |
 | ------------------------------------------------- | ------------- |
 | Keine optimistische Nebenläufigkeit state-stored  | WS-01         |
 | Projektionen können nicht ordnungsbewusst sein    | WS-03, IMP-24 |
-| `DomainEventEnvelope` trägt nur Typname + Payload | IMP-24        |
-| `DomainEvent`-Records sind nie wertgleich         | IMP-41        |
-| Zeitstempel-Sentinel `OccurredAt.Ticks == 0`      | hacky-7       |
+| `DomainEventEnvelope` trägt keine Aggregat-Metadaten | IMP-24     |
 
 Verifiziert: weder `RowVersion` noch `IsConcurrencyToken` existieren irgendwo. Beide Samples
 behelfen sich mit `RenameCount` als fachlicher Ordnungsgröße
@@ -163,9 +162,8 @@ public sealed record DomainEventEnvelope(
     string AggregateType, string AggregateId, long Version, DateTimeOffset OccurredAt);
 ```
 
-Zieht `EventId`/`OccurredAt` aus dem Event heraus — damit wird `DomainEvent` ein reiner
-Wert-Record (IMP-41 gelöst) und die Sentinel-Erkennung im Stamper überflüssig (hacky-7 gelöst).
-Siehe aber **TODO-13**: für Integration Events wird die Gegenrichtung vorgeschlagen.
+Zieht die Aggregat-Metadaten in den Envelope — `EventId`/`OccurredAt` sind dort seit TODO-13
+(ADR-0029) schon vorhanden, es fehlen `AggregateType`, `AggregateId` und `Version`.
 
 Voraussetzung für TODO-14 (Idempotenz) und TODO-20 (Partitionierung). Braucht eine ADR.
 
@@ -561,7 +559,7 @@ Compile-Fehler. Breaking Change für Handler, die `Result.Failure(...)` aufrufen
 
 # TODO-13, Wo lebt die Event-Identität?
 
-**P2 · KONFLIKT · IMP-41 vs. IMP-11**
+**P2 · gelöst · IMP-41 vs. IMP-11**
 
 | Quelle | Richtung                                                                          |
 | ------ | --------------------------------------------------------------------------------- |
@@ -572,7 +570,23 @@ Gegenläufige Empfehlungen für die zwei Event-Familien, ohne dass eine der Quel
 erwähnt. Ohne Entscheidung entsteht ein Modell, in dem Identität mal im Umschlag und mal im Brief
 steht — und niemand weiß mehr, welches gilt.
 
-## Lösungsvorschlag
+## Gelöst — Asymmetrie ist die Regel (ADR-0029)
+
+Genau wie unten vorgeschlagen entschieden und umgesetzt
+([ADR-0029](docs/architecture/decisions/0029-event-identity-placement.md)):
+
+- **Domain Events** sind reine Wert-Records ohne Identitätsfelder — `IDomainEvent` und
+  `DomainEvent` sind leer, `EventId`/`OccurredAt` werden vom Unit of Work beim Commit geprägt
+  und reisen auf dem `DomainEventEnvelope`. Damit sind IMP-41 und hacky-7 miterledigt, der
+  `DomainEventStamper` ist gelöscht.
+- **Integration Events** tragen die Identität am Event: `IIntegrationEvent` verlangt
+  `EventId`/`OccurredAt` (IMP-11 erledigt). Mapper erhalten `DomainEventMetadata` und übernehmen
+  die Identität daraus — nie ein frisches Guid pro Aufruf, sonst bricht die Deduplizierung bei
+  Redelivery.
+
+Die Regel steht in `docs/architecture/communication.md`; TODO-14 kann darauf aufsetzen.
+
+## Ursprünglicher Lösungsvorschlag
 
 **Empfehlung: der Widerspruch ist auflösbar, beide haben recht** — die Fälle sind verschieden:
 
@@ -596,18 +610,14 @@ Der Spiegel in Etappe 3 ist nur deshalb idempotent, weil das Gadget die Widget-I
 ([MirrorWidget.cs:20](samples/EventSourced/VitalSync.Sample.EventSourced.Application/MirrorWidget.cs:20)).
 Für ein Spiegelbild angemessen, aber kein allgemeines Verfahren: ein Kontext, der aus einem
 fremden Ereignis ein **eigenes** Aggregat mit eigener Identität ableitet, braucht echtes
-Bookkeeping über verarbeitete `EventId`s. Das gibt es nicht — und `IIntegrationEvent` ist ein
-leerer Marker
+Bookkeeping über verarbeitete `EventId`s. Das gibt es nicht — aber seit TODO-13 (ADR-0029) trägt
+`IIntegrationEvent` `EventId`/`OccurredAt`
 ([IIntegrationEvent.cs](BuildingBlocks/src/BuildingBlocks.Application/IIntegrationEvent.cs)), es
-gibt also nicht einmal eine Id, über die man Buch führen könnte.
+gibt also inzwischen eine Id, über die man Buch führen kann.
 
 ## Lösungsvorschlag
 
-Reihenfolge beachten — erst TODO-13 entscheiden, dann:
-
-```csharp
-public interface IIntegrationEvent { Guid EventId { get; } DateTimeOffset OccurredAt { get; } }
-```
+TODO-13 ist entschieden, die Id existiert — es fehlt noch das Bookkeeping selbst:
 
 Als Wolverine-Middleware auf dem Consumer-Pfad, damit kein Konsument daran denken muss. Bis dahin
 gilt: **geteilte Identität ist der einzige sanktionierte Idempotenz-Weg** — das gehört so in
@@ -1418,7 +1428,9 @@ unbelegt und gehört hier vermerkt statt im AppHost still vorausgesetzt.
 
 1. **TODO-09** (CI) zuerst — klein und sichert alles Weitere ab. (**TODO-06** stand hier
    gleichauf und ist erledigt: die zweite Nennung des Connection Strings existiert nicht mehr.)
-2. **TODO-13** entscheiden (Konflikt, kein Code), dann **TODO-05**. (**TODO-10** stand hier
+2. **TODO-05**. (**TODO-13** stand hier gleichauf und ist entschieden und umgesetzt: Identität
+   asymmetrisch — Envelope für Domain Events, am Event für Integration Events, ADR-0029.
+   **TODO-10** stand hier
    gleichauf und ist erledigt: Rekonstitution ist jetzt ein expliziter Domänenvertrag, womit
    TODO-05 nur noch die Restlücke schließt statt eine offene Tür.)
 3. **TODO-02 → TODO-03 → TODO-04** als ein Persistenzformat-Paket. Danach ist jede Änderung daran

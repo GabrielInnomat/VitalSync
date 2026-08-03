@@ -23,7 +23,7 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-08 | `MartenUnitOfWork` flusht die Outbox nicht                               | gelöst            |
 | IMP-09 | Kein Testprojekt für `BuildingBlocks.Infrastructure`                     | gelöst            |
 | IMP-10 | Zwei inkompatible Aggregat-Programmiermodelle                            | gelöst            |
-| IMP-11 | `IIntegrationEvent` ist ein leerer Marker                                | offen             |
+| IMP-11 | `IIntegrationEvent` ist ein leerer Marker                                | gelöst            |
 | IMP-12 | `IIntegrationEventMapper` ist untypisiert                                | offen             |
 | IMP-13 | Messaging-Konfiguration ohne Guard-Rails                                 | teilweise         |
 | IMP-14 | Constraint-Mismatch zwischen Repository-Vertrag und Implementierung      | gelöst            |
@@ -53,7 +53,7 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-38 | Sichtbarkeits-Disziplin ist uneinheitlich                                | teilweise         |
 | IMP-39 | `Result`-API: Namenskollision und implizite Konvertierungen              | offen             |
 | IMP-40 | `State` ist `public` und bricht die Kapselung                            | gelöst            |
-| IMP-41 | `DomainEvent` als `record` mit garantiert ungleicher Wertgleichheit      | offen             |
+| IMP-41 | `DomainEvent` als `record` mit garantiert ungleicher Wertgleichheit      | gelöst            |
 | IMP-42 | `IRepository`-API ist asymmetrisch und irreführend benannt               | gelöst            |
 | IMP-43 | Wirkungslose Varianz-Modifikatoren                                       | offen             |
 | IMP-44 | Uneinheitliche Projektstruktur                                           | offen             |
@@ -244,6 +244,13 @@ Umgesetzt via ADR-0025/ADR-0026.
 ---
 
 # IMP-11, `IIntegrationEvent` ist ein leerer Marker
+
+**Gelöst (2026-08-03)** via TODO-13 /
+[ADR-0029](docs/architecture/decisions/0029-event-identity-placement.md): `IIntegrationEvent`
+verlangt `Guid EventId` und `DateTimeOffset OccurredAt`; Mapper übernehmen beides aus der
+`DomainEventMetadata` des auslösenden Envelopes. Auf die Basisklasse mit `Guid.NewGuid()` im
+Konstruktor wurde bewusst verzichtet — eine pro Aufruf frisch geprägte Id würde bei Redelivery
+die Deduplizierung brechen.
 
 `public interface IIntegrationEvent;` — kein `EventId`, kein `OccurredAt`, während `IDomainEvent`
 beides trägt. Der Konsument kann eine redelivered Nachricht nicht als Duplikat erkennen, obwohl die
@@ -1044,6 +1051,12 @@ Umgesetzt im Zuge von ADR-0025.
 ---
 
 # IMP-41, `DomainEvent` als `record` mit garantiert ungleicher Wertgleichheit
+
+**Gelöst (2026-08-03)** via TODO-13 /
+[ADR-0029](docs/architecture/decisions/0029-event-identity-placement.md): die empfohlene
+Alternative wurde umgesetzt — `EventId`/`OccurredAt` liegen im Envelope, `DomainEvent` ist ein
+reiner Wert-Record mit korrekter generierter Gleichheit; IMP-24 (Teil) und hacky-7 sind
+miterledigt.
 
 ```csharp
 protected DomainEvent() => EventId = Guid.NewGuid();

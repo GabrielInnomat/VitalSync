@@ -7,7 +7,10 @@ public sealed class DomainEventEnvelopeHandler(IDomainEventPublisher publisher, 
 {
     public Task Handle(DomainEventEnvelope envelope, IMessageContext context, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(envelope);
+
         var domainEvent = DomainEventEnvelopeSerializer.Unwrap(envelope);
-        return publisher.PublishAsync(domainEvent, sinkFactory.Create(context), cancellationToken);
+        var metadata = new DomainEventMetadata(envelope.EventId, envelope.OccurredAt);
+        return publisher.PublishAsync(domainEvent, metadata, sinkFactory.Create(context), cancellationToken);
     }
 }

@@ -945,14 +945,14 @@ Der Spiegel in Etappe 3 ist nur deshalb idempotent, weil das Gadget die Widget-I
 ([MirrorWidget.cs:20](samples/EventSourced/VitalSync.Sample.EventSourced.Application/MirrorWidget.cs:20)).
 Für ein Spiegelbild ist das angemessen, aber kein allgemeines Verfahren: ein Kontext, der
 aus einem fremden Ereignis ein **eigenes** Aggregat mit eigener Identität ableitet, braucht
-echtes Bookkeeping über verarbeitete `EventId`s. Das gibt es heute nicht — und ohne WS-03
-bzw. [IMP-11](Improvements.md) gibt es nicht einmal eine `EventId` am Integration Event,
+echtes Bookkeeping über verarbeitete `EventId`s. Das gibt es heute nicht — die `EventId` am
+Integration Event existiert seit [IMP-11](Improvements.md) (gelöst via ADR-0029) inzwischen,
 über die man Buch führen könnte.
 
 #### Lösungsvorschlag
 
-Reihenfolge beachten: erst `IIntegrationEvent` eine `EventId` geben
-([IMP-11](Improvements.md)), dann das Bookkeeping als Building Block anbieten.
+Der erste Schritt — `IIntegrationEvent` eine `EventId` geben
+([IMP-11](Improvements.md)) — ist erledigt; jetzt das Bookkeeping als Building Block anbieten.
 
 Als Wolverine-Middleware auf dem Consumer-Pfad umsetzbar, damit kein Konsument daran denken
 muss. Bis dahin gilt: geteilte Identität ist der einzige sanktionierte Idempotenz-Weg — das
