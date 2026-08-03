@@ -35,7 +35,17 @@ VITALSYNC_REQUIRE_CONTAINERS=1 dotnet test
 
 Set it in every CI pipeline; leave it unset locally. Both fixtures (`PostgreSqlFixture`, `RabbitMqFixture`) honour it via `ContainerRequirement`.
 
-> There is no CI pipeline in this repository yet (`.github/workflows/` is empty). Whoever adds one must set this variable, otherwise the container-backed tests silently do nothing.
+## Continuous integration
+
+[`.github/workflows/build.yml`](../../.github/workflows/build.yml) runs on every push to `main`, on pull requests, and on demand. In order:
+
+1. **Build** in Release. `TreatWarningsAsErrors` and `AnalysisMode=All` from `Directory.Build.props` make this the analyzer and style gate as well.
+2. **Test** the whole solution with `VITALSYNC_REQUIRE_CONTAINERS=1`, so a runner without Docker fails instead of skipping.
+3. **Smoke-test a running system**: the workflow starts the samples AppHost, waits for both sample APIs, and re-runs the two sample test projects with `SAMPLE_STATESTORED_API_URL` / `SAMPLE_EVENTSOURCED_API_URL` set. On failure it prints the AppHost log — Wolverine's interesting failures (an unroutable message, a consumer that was never discovered) are invisible in test output but plain in the host log.
+
+Step 3 exists because the walking skeleton found several defects that build and unit tests stayed green through; only a real web host with a real broker surfaces them. It runs against `samples/` today, and when the first real service arrives only the project paths and the two URLs change.
+
+The SDK is pinned by `global.json` (`rollForward: latestFeature`). No Aspire workload is installed — the AppHosts reference `Aspire.AppHost.Sdk` as a package.
 
 > NSubstitute is used in the application/persistence/messaging tests; domain tests use lightweight hand-written test doubles instead.
 

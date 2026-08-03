@@ -1,0 +1,101 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A second push supersedes the first; nobody needs the older answer.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # global.json pins the SDK, so CI and developer machines resolve the same feature band.
+      # No Aspire workload install: the AppHosts reference Aspire.AppHost.Sdk as a package.
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore
+
+      # Directory.Build.props sets TreatWarningsAsErrors and AnalysisMode=All, so this step is
+      # also the style and analyzer gate.
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      # VITALSYNC_REQUIRE_CONTAINERS turns a failed container start into a failed run. Without it the
+      # Testcontainers-backed tests skip silently and the run is green while never having tested the
+      # outbox, Marten concurrency, or broker routing - see docs/architecture/testing-strategy.md.
+      - name: Test
+        env:
+          VITALSYNC_REQUIRE_CONTAINERS: "1"
+        run: dotnet test --configuration Release --no-build
+
+      # ---------------------------------------------------------------------------------------------
+      # Smoke tests against a running system. These are the only tests that exercise real web hosts,
+      # real gRPC, and a real broker - the class of failure that the walking skeleton found and that
+      # build plus unit tests stayed green through. They live in samples/ today; when the first real
+      # service arrives, only the project paths and the two URLs below change.
+      # ---------------------------------------------------------------------------------------------
+
+      # Kestrel serves the sample APIs over HTTPS. The certificate only has to exist, not to be
+      # trusted: the smoke clients accept any server certificate.
+      - name: Create the ASP.NET development certificate
+        run: dotnet dev-certs https
+
+      - name: Start the samples AppHost
+        env:
+          ASPIRE_ALLOW_UNSECURED_TRANSPORT: "true"
+        run: |
+          nohup dotnet run --project samples/VitalSync.Samples.AppHost \
+            --configuration Release --no-build > apphost.log 2>&1 &
+          echo $! > apphost.pid
+
+      # Cold runners pull Postgres, RabbitMQ, and pgAdmin first, so this can take minutes.
+      - name: Wait for both sample APIs
+        run: |
+          for attempt in $(seq 1 100); do
+            if curl -sk --max-time 3 https://localhost:54230/health > /dev/null \
+              && curl -sk --max-time 3 https://localhost:54240/health > /dev/null; then
+              echo "Both sample APIs are up after ${attempt} attempts."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "The sample APIs did not become reachable."
+          exit 1
+
+      # Re-runs the two sample test projects, this time with the URLs set so the smoke tests no longer
+      # skip. Their unit tests run a second time, which costs seconds and keeps the failure signal
+      # clean: a red step here means the running system is broken, not a unit test.
+      - name: Smoke tests
+        env:
+          SAMPLE_STATESTORED_API_URL: https://localhost:54230
+          SAMPLE_EVENTSOURCED_API_URL: https://localhost:54240
+          VITALSYNC_REQUIRE_CONTAINERS: "1"
+        run: |
+          dotnet test samples/StateStored/VitalSync.Sample.StateStored.Tests \
+            --configuration Release --no-build
+          dotnet test samples/EventSourced/VitalSync.Sample.EventSourced.Tests \
+            --configuration Release --no-build
+
+      # The interesting failures of this system are invisible in test output but plain in the host log:
+      # Wolverine discards unroutable messages, and a consumer that was never discovered is marked
+      # handled without a retry or a dead letter.
+      - name: AppHost log
+        if: failure()
+        run: cat apphost.log
+
+      - name: Stop the samples AppHost
+        if: always()
+        run: kill "$(cat apphost.pid)" 2> /dev/null || true

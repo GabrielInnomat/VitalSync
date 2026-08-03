@@ -294,6 +294,12 @@ Index: `docs/architecture/decisions/README.md`.
   add them to `VitalSync.slnx`, no XML docs. See `docs/architecture/testing-strategy.md`.
 - Strategy covers unit, integration, domain, application-layer, persistence, and
   component-communication tests. See `docs/architecture/testing-strategy.md`.
+- **CI is `.github/workflows/build.yml`** (push to `main`, PRs, manual): Release build, the whole
+  suite with `VITALSYNC_REQUIRE_CONTAINERS=1` so container tests **fail instead of skipping**, then
+  the samples AppHost is started and the smoke tests run against it with `SAMPLE_*_API_URL` set.
+  Keep both properties when touching the workflow — a green run that skipped the container and
+  smoke tests is exactly the blind spot the walking skeleton exposed. The SDK is pinned by
+  `global.json`; no Aspire workload is installed (the AppHosts use `Aspire.AppHost.Sdk` as a package).
 
 ## When contributing
 

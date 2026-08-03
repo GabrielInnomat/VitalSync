@@ -1,5 +1,7 @@
 # VitalSync
 
+[![build](https://github.com/GabrielInnomat/VitalSync/actions/workflows/build.yml/badge.svg)](https://github.com/GabrielInnomat/VitalSync/actions/workflows/build.yml)
+
 > A cloud-native, distributed platform unifying **nutrition**, **fitness**, and **health analytics** in a single application.
 
 VitalSync lets users manage nutrition- and workout-related information and derive meaningful insights from the collected data. It is built as a distributed system of independent microservices following Domain-Driven Design, CQRS, and selective Event Sourcing.
@@ -184,6 +186,10 @@ The testing strategy includes (but is not limited to): unit, integration, domain
 ```bash
 dotnet test
 ```
+
+Container-backed tests skip when Docker is unavailable. To make a missing Docker fail the run instead — as CI does — set `VITALSYNC_REQUIRE_CONTAINERS=1`.
+
+Every push to `main` and every pull request runs [the build workflow](./.github/workflows/build.yml): build, the full test suite with containers required, and smoke tests against a running system started from the samples AppHost.
 
 See [Testing strategy](./docs/architecture/testing-strategy.md).
 

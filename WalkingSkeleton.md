@@ -622,7 +622,7 @@ verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Impro
 | WS-13 | Ein Kontext konsumiert seine eigenen Integration Events        | Etappe 3     | offen     |
 | WS-14 | Die Verbindung Vertrag → Konsument ist unbewacht               | Etappe 3     | teilweise |
 | WS-15 | `ApplyEntityKeyConversions` erfasst keine Complex Types        | vorbestehend | offen     |
-| WS-16 | Keine CI-Pipeline                                              | vorbestehend | offen     |
+| WS-16 | Keine CI-Pipeline                                              | vorbestehend | gelöst    |
 | WS-17 | Zeitbasierte Negativassertion im Sink-Test                     | vorbestehend | teilweise |
 
 **Erledigt (Commit `e44ae9b`, 2026-08-02):** Der produktive AppHost widersprach
@@ -1050,11 +1050,17 @@ Model-Properties umgestellt, und `GetComplexProperties()` ist genau dann verfüg
 
 ---
 
-### WS-16, Keine CI-Pipeline
+### WS-16, Keine CI-Pipeline — **gelöst (2026-08-03)**
 
 Verifiziert: `.github/workflows/` existiert und ist **leer**. Es gibt also keinen
 automatischen Build, keinen Testlauf und keine Prüfung der „warnings as errors"-Zusage aus
 `Directory.Build.props`.
+
+> **Umgesetzt** als `.github/workflows/build.yml`, mit einem Schritt mehr als hier
+> vorgeschlagen: Der Workflow startet zusätzlich den Samples-AppHost und lässt die
+> Smoke-Tests gegen das laufende System laufen. Das ist der Testtyp, der die Befunde aus §3
+> überhaupt erst sichtbar gemacht hat — Build und Unit-Tests waren dabei durchgehend grün.
+> Details in [todo.md](todo.md), TODO-09.
 
 #### Lösungsvorschlag
 

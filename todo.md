@@ -41,7 +41,7 @@ eine Entscheidung, keinen Code.
 | TODO-06 | Connection String zweimal, ohne Abgleich                       | **P1** | gelöst            | hacky-8, IMP-13                       |
 | TODO-07 | Integration Events sind nicht persistent                       | **P1** | offen             | WS-08                                 |
 | TODO-08 | Topic-Validierung und Kontextkennung                           | **P1** | offen             | WS-05, WS-13, WS-14                   |
-| TODO-09 | Keine CI-Pipeline                                              | **P1** | offen             | WS-16                                 |
+| TODO-09 | Keine CI-Pipeline                                              | **P1** | gelöst            | WS-16                                 |
 | TODO-10 | Rehydrierung: `new()` oder `Activator`?                        | **P1** | **Konflikt**      | hacky-5, IMP-14, WS-02                |
 | TODO-11 | Optionalität von `IUnitOfWork`                                 | **P2** | **Konflikt**      | IMP-07, hacky-11, IMP-46              |
 | TODO-12 | Name der `Result`-Fehlerfactory                                | **P2** | **Konflikt**      | hacky-3, IMP-27, IMP-39               |
@@ -380,7 +380,7 @@ der man Kontexte normalerweise baut.
 
 # TODO-09, Keine CI-Pipeline
 
-**P1 · offen · WS-16**
+**P1 · gelöst · WS-16**
 
 Verifiziert: `.github/workflows/` existiert und ist **leer**. Kein automatischer Build, kein
 Testlauf, keine Prüfung der „warnings as errors"-Zusage aus `Directory.Build.props`.
@@ -402,6 +402,27 @@ Die Umgebungsvariable ist der Punkt, an dem es sonst schiefgeht: ohne sie übers
 Testcontainers-Tests kommentarlos und der Lauf ist trotzdem grün — die Pipeline würde also genau
 die Tests nicht ausführen, für die sie am wertvollsten ist. GitHub-Runner haben Docker
 vorinstalliert.
+
+## Umgesetzt als `.github/workflows/build.yml`
+
+Ein Job auf `ubuntu-latest`, Trigger `push` auf `main`, `pull_request` und `workflow_dispatch`,
+mit `concurrency`/`cancel-in-progress`. Schritte: Restore → Build (Release; damit ist es zugleich
+das Analyzer- und Style-Gate) → `dotnet test` mit `VITALSYNC_REQUIRE_CONTAINERS=1`.
+
+**Ein Schritt mehr als ursprünglich vorgeschlagen:** Der Workflow startet danach den
+Samples-AppHost, wartet auf beide Sample-APIs und lässt die Sample-Testprojekte mit gesetzten
+`SAMPLE_*_API_URL` erneut laufen — dann überspringen die elf Smoke-Tests nicht mehr. Begründung ist
+§3 des Durchstichs: alle dort gefundenen Fehler waren durch Build und Testsuite unsichtbar, nur ein
+echter Web-Host mit echtem Broker hat sie gezeigt. Bei `failure()` gibt der Job das AppHost-Log aus,
+weil Wolverines interessante Fehler (routenlose Nachricht, nicht entdeckter Consumer) genau dort
+stehen und nirgends sonst.
+
+Die Smoke-Stufe hängt an `samples/`. Wenn der erste echte Service steht, ändern sich dort nur die
+Projektpfade und die zwei URLs — nicht der Aufbau.
+
+Dazu neu: **`global.json`** nagelt das SDK fest (`10.0.302`, `rollForward: latestFeature`), damit CI
+und Entwicklerrechner dieselbe Feature-Band benutzen. **Kein Aspire-Workload-Schritt** — die AppHosts
+referenzieren `Aspire.AppHost.Sdk` als Package.
 
 ---
 
