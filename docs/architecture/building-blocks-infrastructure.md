@@ -150,6 +150,11 @@ public interface IRepository<TAggregate, in TKey>
   constructor required, and no asymmetry between the two paths
   ([ADR-0025](./decisions/0025-unified-state-fold-aggregate-model.md)
   reconstitution amendment).
+- Both `AddAsync` implementations **reject aggregates with an empty identity**
+  (`Id.IsEmpty`) with an `InvalidOperationException`: an aggregate gains its
+  identity through its first event, and an empty hull exists only for
+  rehydration — without the guard it would silently persist a `Guid.Empty` row
+  or open a `…/00000000-…` stream.
 
 ### EF Core repository (state-stored contexts, ADR-0020)
 

@@ -37,7 +37,7 @@ eine Entscheidung, keinen Code.
 | TODO-02 | Aggregat-Version und Envelope-Metadaten                        | **P1** | offen             | WS-01, WS-03, IMP-24, IMP-41, hacky-7 |
 | TODO-03 | `AssemblyQualifiedName` als Persistenz-Contract                | **P1** | offen             | hacky-1, IMP-22                       |
 | TODO-04 | Stream-Key hängt am CLR-Klassennamen                           | **P1** | offen             | hacky-2, IMP-23                       |
-| TODO-05 | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | **P1** | offen             | hacky-5                               |
+| TODO-05 | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | **P1** | gelöst            | hacky-5                               |
 | TODO-06 | Connection String zweimal, ohne Abgleich                       | **P1** | gelöst            | hacky-8, IMP-13                       |
 | TODO-07 | Integration Events sind nicht persistent                       | **P1** | offen             | WS-08                                 |
 | TODO-08 | Topic-Validierung und Kontextkennung                           | **P1** | offen             | WS-05, WS-13, WS-14                   |
@@ -228,7 +228,7 @@ Refactoring-Zufall entstehen.
 
 # TODO-05, Kein `Id.IsEmpty`-Guard in `AddAsync`
 
-**P1 · offen · hacky-5**
+**P1 · gelöst · hacky-5**
 
 Die Domäne bewacht Leer-Identität an zwei Stellen (`RaiseEvent`, `IStateOwner.Restore`) — das
 Repository ist die einzige Tür ohne Schloss. Ein Aggregat mit leerer Identität schreibt eine
@@ -242,7 +242,15 @@ eine leere Hülle nur noch über eine selbstgeschriebene generische Methode mit
 `IReconstitutable`-Constraint — die bewusst in Kauf genommene Restlücke. Der Guard schließt
 genau die, ist davon unabhängig und unstrittig; die Priorität sinkt dadurch, der Bedarf nicht.
 
-## Lösungsvorschlag
+## Gelöst — der Guard steht in beiden Repositories (2026-08-03)
+
+Wie unten vorgeschlagen umgesetzt: beide `AddAsync`-Implementierungen werfen bei
+`aggregate.Id.IsEmpty` eine `InvalidOperationException`, bevor irgendetwas getrackt oder
+geschrieben wird. Damit ist auch die letzte Tür bewacht — die per `IReconstitutable`-Constraint
+noch erreichbare leere Hülle landet nicht mehr in der Datenbank. Abgesichert durch
+`RepositoryEmptyIdentityGuardTests` (leer → wirft, mit Identität → passiert) für beide Pfade.
+
+## Ursprünglicher Lösungsvorschlag
 
 ```csharp
 if (aggregate.Id.IsEmpty)
@@ -1428,11 +1436,12 @@ unbelegt und gehört hier vermerkt statt im AppHost still vorausgesetzt.
 
 1. **TODO-09** (CI) zuerst — klein und sichert alles Weitere ab. (**TODO-06** stand hier
    gleichauf und ist erledigt: die zweite Nennung des Connection Strings existiert nicht mehr.)
-2. **TODO-05**. (**TODO-13** stand hier gleichauf und ist entschieden und umgesetzt: Identität
+2. **TODO-05** ist erledigt: der `IsEmpty`-Guard steht in beiden `AddAsync`-Implementierungen.
+   (**TODO-13** stand hier gleichauf und ist entschieden und umgesetzt: Identität
    asymmetrisch — Envelope für Domain Events, am Event für Integration Events, ADR-0029.
    **TODO-10** stand hier
    gleichauf und ist erledigt: Rekonstitution ist jetzt ein expliziter Domänenvertrag, womit
-   TODO-05 nur noch die Restlücke schließt statt eine offene Tür.)
+   TODO-05 nur noch die Restlücke schloss statt eine offene Tür.)
 3. **TODO-02 → TODO-03 → TODO-04** als ein Persistenzformat-Paket. Danach ist jede Änderung daran
    eine Datenmigration, also **vor** dem ersten echten Service.
 4. **TODO-01** vor dem ersten Aggregat mit Kindkollektion.

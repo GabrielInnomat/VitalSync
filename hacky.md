@@ -8,7 +8,7 @@
 | 2   | CLR-Typname im Event-Stream-Key                                | offen  |
 | 3   | `FailureResults` sucht statische Methode per Name              | offen  |
 | 4   | `ApplyEntityKeyConversions` scannt CLR- statt Model-Properties | offen  |
-| 5   | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | teilweise |
+| 5   | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | gelöst    |
 | 6   | `CurrentValues.SetValues` kopiert nur Skalare                  | offen  |
 | 7   | `DomainEventStamper` erkennt „unstamped" über Sentinel         | gelöst |
 | 8   | Connection String zweimal, ohne Abgleich                       | gelöst |
@@ -145,7 +145,10 @@ lässt.
 
 # 5, Kein `Id.IsEmpty`-Guard in `AddAsync`
 
-**Teilweise gelöst (2026-08-03): die zweite Hälfte ist weg, der Guard fehlt weiterhin.**
+**Gelöst (2026-08-03): der Guard steht jetzt in beiden `AddAsync`-Implementierungen** und wirft
+bei leerer Identität eine `InvalidOperationException`, abgesichert durch
+`RepositoryEmptyIdentityGuardTests`. Die erste Teillösung (2026-08-03, Rekonstitutions-Amendment)
+hatte bereits den bequemen Weg geschlossen; siehe unten.
 
 Die Domäne bewacht Leer-Identität an zwei Stellen (`RaiseEvent`, `IStateOwner.Restore`) — das
 Repository ist die einzige Tür ohne Schloss. Ein Aggregat mit leerer Identität schreibt eine
