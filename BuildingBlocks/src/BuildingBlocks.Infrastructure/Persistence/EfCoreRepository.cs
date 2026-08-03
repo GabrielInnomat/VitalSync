@@ -30,6 +30,7 @@ public sealed class EfCoreRepository<TAggregate, TKey>(DbContext context, EfCore
     public Task AddAsync(TAggregate aggregate, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(aggregate);
+        ThrowIfEmptyIdentity(aggregate);
 
         var stateOwner = AsStateOwner(aggregate);
         var state = stateOwner.State;
@@ -37,6 +38,15 @@ public sealed class EfCoreRepository<TAggregate, TKey>(DbContext context, EfCore
         context.Add(state);
         tracker.Track((IDomainEventOwner)aggregate, stateOwner, state);
         return Task.CompletedTask;
+    }
+
+    private static void ThrowIfEmptyIdentity(TAggregate aggregate)
+    {
+        if (aggregate.Id.IsEmpty)
+        {
+            throw new InvalidOperationException(
+                $"'{typeof(TAggregate)}' has no identity. An aggregate gains its identity through its first event; an empty hull exists only for rehydration.");
+        }
     }
 
     private static TAggregate CreateEmpty(out IStateOwner stateOwner)

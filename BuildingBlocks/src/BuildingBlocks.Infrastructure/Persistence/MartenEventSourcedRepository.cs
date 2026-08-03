@@ -29,6 +29,12 @@ public sealed class MartenEventSourcedRepository<TAggregate, TKey>(IDocumentSess
     {
         ArgumentNullException.ThrowIfNull(aggregate);
 
+        if (aggregate.Id.IsEmpty)
+        {
+            throw new InvalidOperationException(
+                $"'{typeof(TAggregate)}' has no identity. An aggregate gains its identity through its first event; an empty hull exists only for rehydration.");
+        }
+
         Track(aggregate);
         return Task.CompletedTask;
     }
