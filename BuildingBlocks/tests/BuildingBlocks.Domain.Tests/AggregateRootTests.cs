@@ -75,7 +75,7 @@ public sealed class AggregateRootTests
         var aggregate = new TestAggregate(new TestId(1));
         aggregate.Raise(new TestDomainEvent(1));
 
-        ((IDomainEventsManager)aggregate).ClearDomainEvents();
+        ((IDomainEventOwner)aggregate).ClearDomainEvents();
 
         Assert.Empty(aggregate.DomainEvents);
     }

@@ -26,7 +26,7 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-11 | `IIntegrationEvent` ist ein leerer Marker                                | offen             |
 | IMP-12 | `IIntegrationEventMapper` ist untypisiert                                | offen             |
 | IMP-13 | Messaging-Konfiguration ohne Guard-Rails                                 | teilweise         |
-| IMP-14 | Constraint-Mismatch zwischen Repository-Vertrag und Implementierung      | teilweise         |
+| IMP-14 | Constraint-Mismatch zwischen Repository-Vertrag und Implementierung      | gelöst            |
 | IMP-15 | Repository lädt Aggregate unvollständig                                  | offen             |
 | IMP-16 | Kein Validierungs-Behavior, Mehrfachfehler nicht erzeugbar               | teilweise         |
 | IMP-17 | `Failure` ohne Zielfeld und ohne fachliche Fehlercodes                   | offen             |
@@ -351,33 +351,25 @@ Connection String — ist als [hacky.md Nr. 8](hacky.md) erfasst.
 
 # IMP-14, Constraint-Mismatch zwischen Repository-Vertrag und Implementierung
 
-**Teilweise gelöst — Problem verlagert, nicht beseitigt.** `IEventSourcedRepository` existiert nicht
-mehr; es gibt nur noch `IRepository<TAggregate, TKey>` mit
-`where TAggregate : class, IAggregateRoot<TKey>`.
+**Gelöst (2026-08-03).** `IEventSourcedRepository` existiert nicht mehr; es gibt nur noch
+`IRepository<TAggregate, TKey>`. Der Mismatch bestand danach in neuer Form fort:
+`MartenEventSourcedRepository` verlangte zusätzlich `IEventSourcedAggregateRoot<TKey>` **und**
+`new()`, `EfCoreRepository` nur `IAggregateRoot<TKey>` — beide open-generisch auf denselben Vertrag
+registriert, also scheiterte ein falsch zugeschnittenes Aggregat erst beim `GetRequiredService` mit
+einer DI-Meldung, die die Constraint-Verletzung nicht nannte.
 
-Der Mismatch besteht aber in neuer Form: `MartenEventSourcedRepository` verlangt zusätzlich
-`IEventSourcedAggregateRoot<TKey>` **und** `new()`
-([MartenEventSourcedRepository.cs:27](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenEventSourcedRepository.cs:27)),
-`EfCoreRepository` nur `IAggregateRoot<TKey>`. Da beide open-generisch auf denselben Vertrag
-registriert werden, scheitert ein Aggregat mit falschem Zuschnitt erst beim `GetRequiredService` zur
-Laufzeit — mit einer DI-Meldung, die die Constraint-Verletzung nicht nennt.
+Der `new()`-Teil ist ersatzlos weg: beide Implementierungen verlangen jetzt
+`IReconstitutable<TAggregate>` (`static abstract CreateEmpty()`), und die Constraint steht am
+**Vertrag**, nicht nur an den Implementierungen. Ein falsch zugeschnittenes Aggregat ist damit ein
+**Compile-Fehler an der Injektionsstelle** — der hier vorgeschlagene Startup-Check ist überflüssig
+geworden, weil der Compiler die Prüfung übernimmt. Details in **TODO-10** und im
+Rekonstitutions-Amendment von ADR-0025.
 
-## Lösungsvorschlag
-
-Den Mismatch zur Startzeit sichtbar machen, statt ihn dem Container zu überlassen. Der bereits
-existierende `HandlerRegistrationStartupValidator` ist der passende Ort:
-
-```csharp
-// Für jedes IAggregateRoot<> in den gescannten Assemblies prüfen, ob es zur gewählten
-// Persistenzstrategie passt:
-//   Marten  → muss IEventSourcedAggregateRoot<> implementieren und einen public ctor() haben
-//   EF Core → muss einen (auch non-public) parameterlosen ctor haben
-```
-
-Sauberer, aber invasiver: die `new()`-Constraint im Marten-Repository durch dasselbe
-`Activator.CreateInstance(..., nonPublic: true)` ersetzen, das der EF-Pfad schon nutzt — dann sind
-beide Implementierungen constraint-gleich und der Konstruktor darf überall `private` sein (hängt mit
-[hacky.md Nr. 5](hacky.md) zusammen).
+Was **nicht** von der Constraint erfasst wird: `MartenEventSourcedRepository` verlangt weiterhin
+`IEventSourcedAggregateRoot<TKey>`, `EfCoreRepository` nicht. Ein event-sourced Aggregat, das gegen
+eine EF-Registrierung aufgelöst wird (oder umgekehrt), fällt also nach wie vor erst im Container
+auf. Das ist aber eine **Wahl der Persistenzstrategie im Composition Root**, kein Zuschnitt des
+Aggregats — und ADR-0025/0026 sagen ausdrücklich, dass diese Wahl dort und nur dort getroffen wird.
 
 ---
 
@@ -1153,7 +1145,7 @@ BuildingBlocks.Application/
 BuildingBlocks.Domain/
 ├── Model/         EntityBase, Entity, AggregateRoot, EventSourcedAggregateRoot, IState, IStateOwner
 ├── Identity/      IEntityKey
-├── Events/        DomainEvent, IDomainEvent, IHasDomainEvents, IDomainEventsManager
+├── Events/        DomainEvent, IDomainEvent, IHasDomainEvents, IDomainEventOwner
 └── Rules/         IBusinessRule, IDomainValidationRule, RuleChecker, *Exception
 ```
 

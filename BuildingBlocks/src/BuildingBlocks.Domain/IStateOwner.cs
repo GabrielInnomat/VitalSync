@@ -9,7 +9,7 @@ namespace BuildingBlocks.Domain;
 /// rehydrates the aggregate around a loaded state, instead of trying to map the aggregate: the aggregate's
 /// <c>Id</c> is derived from its state and has no setter, so it cannot serve as a mapped primary key. Implemented
 /// <b>explicitly</b> by <see cref="AggregateRoot{TKey, TState}"/>, exactly like
-/// <see cref="IDomainEventsManager"/>, so domain code never sees these members and cannot bypass the event fold by
+/// <see cref="IDomainEventOwner"/>, so domain code never sees these members and cannot bypass the event fold by
 /// restoring a state by hand. Only <c>BuildingBlocks.Infrastructure</c> consumes it.
 /// </remarks>
 public interface IStateOwner

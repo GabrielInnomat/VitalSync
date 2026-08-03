@@ -5,15 +5,21 @@ namespace VitalSync.Sample.EventSourced.Domain;
 // The event-sourced counterpart of the state-stored sample's Widget. The only difference is the base class:
 // EventSourcedAggregateRoot adds Version and LoadFromHistory and nothing else (ADR-0025), so the business
 // logic below is written exactly as it would be for a state-stored aggregate. That is the claim this sample
-// is here to test - and the parameterless constructor is not cosmetic: MartenEventSourcedRepository
-// constrains TAggregate to new() because it rehydrates by folding the raw stream into an empty instance.
-public sealed class Gadget() : EventSourcedAggregateRoot<GadgetId, GadgetState>(GadgetState.Empty)
+// is here to test - including the reconstitution hull, which is written identically to the Widget's: the
+// repository folds the raw stream into it, and nothing outside this class can create one.
+public sealed class Gadget : EventSourcedAggregateRoot<GadgetId, GadgetState>, IReconstitutable<Gadget>
 {
+    private Gadget() : base(GadgetState.Empty)
+    {
+    }
+
     public string Name => State.Name;
 
     public int RenameCount => State.RenameCount;
 
     public bool IsRetired => State.IsRetired;
+
+    static Gadget IReconstitutable<Gadget>.CreateEmpty() => new();
 
     public static Gadget Create(GadgetId id, string name)
     {

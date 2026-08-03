@@ -159,8 +159,14 @@ public sealed record FlushCounterState(FlushCounterId Id) : IState<FlushCounterS
     };
 }
 
-public sealed class FlushCounter() : EventSourcedAggregateRoot<FlushCounterId, FlushCounterState>(FlushCounterState.Empty)
+public sealed class FlushCounter : EventSourcedAggregateRoot<FlushCounterId, FlushCounterState>, IReconstitutable<FlushCounter>
 {
+    private FlushCounter() : base(FlushCounterState.Empty)
+    {
+    }
+
+    static FlushCounter IReconstitutable<FlushCounter>.CreateEmpty() => new();
+
     public static FlushCounter Create(FlushCounterId id)
     {
         var counter = new FlushCounter();
@@ -236,9 +242,15 @@ public sealed record FlushProbeState(FlushProbeId Id, string Name) : IState<Flus
     };
 }
 
-public sealed class FlushProbe() : AggregateRoot<FlushProbeId, FlushProbeState>(FlushProbeState.Empty)
+public sealed class FlushProbe : AggregateRoot<FlushProbeId, FlushProbeState>, IReconstitutable<FlushProbe>
 {
+    private FlushProbe() : base(FlushProbeState.Empty)
+    {
+    }
+
     public string Name => State.Name;
+
+    static FlushProbe IReconstitutable<FlushProbe>.CreateEmpty() => new();
 
     public static FlushProbe Create(FlushProbeId id)
     {

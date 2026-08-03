@@ -15,7 +15,7 @@ namespace BuildingBlocks.Domain;
 /// </remarks>
 /// <typeparam name="TKey">The type of the identity key.</typeparam>
 /// <typeparam name="TState">The type of the aggregate root's state.</typeparam>
-public abstract class AggregateRoot<TKey, TState> : EntityBase<TKey>, IAggregateRoot<TKey>, IDomainEventsManager, IStateOwner
+public abstract class AggregateRoot<TKey, TState> : EntityBase<TKey>, IAggregateRoot<TKey>, IDomainEventOwner, IStateOwner
     where TKey : struct, IEntityKey
     where TState : IState<TState, TKey>
 {
@@ -108,7 +108,7 @@ public abstract class AggregateRoot<TKey, TState> : EntityBase<TKey>, IAggregate
     }
 
     /// <inheritdoc/>
-    void IDomainEventsManager.ClearDomainEvents()
+    void IDomainEventOwner.ClearDomainEvents()
     {
         _domainEvents.Clear();
     }

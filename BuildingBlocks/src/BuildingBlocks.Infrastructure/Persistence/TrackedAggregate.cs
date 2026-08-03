@@ -14,6 +14,6 @@ namespace BuildingBlocks.Infrastructure.Persistence;
 /// <param name="StreamKey">The accessor yielding the key of the event stream the aggregate's events belong to.</param>
 /// <param name="ExpectedVersion">The accessor yielding the expected stream version after the uncommitted events are appended.</param>
 public sealed record TrackedAggregate(
-    IDomainEventsManager Aggregate,
+    IDomainEventOwner Aggregate,
     Func<string> StreamKey,
     Func<long> ExpectedVersion);

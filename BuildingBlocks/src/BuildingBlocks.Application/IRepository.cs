@@ -14,11 +14,17 @@ namespace BuildingBlocks.Application;
 /// <see cref="IUnitOfWork"/> at commit time. This holds for both persistence styles: the EF Core implementation
 /// relies on change tracking, and the event-store implementation appends the tracked aggregates' uncommitted events
 /// at commit. Only the contract lives here; the implementations reside in <c>BuildingBlocks.Infrastructure</c>.
+/// <para>
+/// The <see cref="IReconstitutable{TSelf}"/> constraint is what lets both implementations rebuild a stored aggregate
+/// without reflection and without demanding a public constructor. Because it sits on the contract rather than on the
+/// implementations, an aggregate that cannot be reconstituted fails to compile where the repository is injected,
+/// instead of throwing when the container first closes the open generic.
+/// </para>
 /// </remarks>
 /// <typeparam name="TAggregate">The type of the aggregate root.</typeparam>
 /// <typeparam name="TKey">The type of the aggregate root's identity key.</typeparam>
 public interface IRepository<TAggregate, in TKey>
-    where TAggregate : class, IAggregateRoot<TKey>
+    where TAggregate : class, IAggregateRoot<TKey>, IReconstitutable<TAggregate>
     where TKey : struct, IEntityKey
 {
     /// <summary>

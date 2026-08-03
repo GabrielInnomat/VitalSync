@@ -82,7 +82,10 @@ public sealed class GadgetTests
             new GadgetRetired(id, "obsolete"),
         ];
 
-        var gadget = new Gadget();
+        // This is the only route to an empty hull, and it is the same one the repository takes: a static
+        // abstract member is reachable only through a type parameter constrained to IReconstitutable, so
+        // `new Gadget()` and `Gadget.CreateEmpty()` are both compile errors here.
+        var gadget = Reconstitute<Gadget>();
         ((IEventSourcedAggregateRoot<GadgetId>)gadget).LoadFromHistory(history);
 
         Assert.Equal(id, gadget.Id);
@@ -103,4 +106,7 @@ public sealed class GadgetTests
         Assert.Throws<InvalidOperationException>(
             () => ((IEventSourcedAggregateRoot<GadgetId>)gadget).LoadFromHistory([]));
     }
+
+    private static TAggregate Reconstitute<TAggregate>()
+        where TAggregate : IReconstitutable<TAggregate> => TAggregate.CreateEmpty();
 }

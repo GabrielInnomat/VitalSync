@@ -29,7 +29,9 @@ The block provides a **single aggregate authoring model**: every aggregate deriv
 | `AggregateRoot<TKey, TState>`             | abstract class  | The single aggregate base: state fold via `RaiseEvent`, identity derived from state. |
 | `EventSourcedAggregateRoot<TKey, TState>` | abstract class  | Additive base for **event-sourced** aggregates: adds `Version` + `LoadFromHistory`.  |
 | `IHasDomainEvents`                        | interface       | Read-only access to an aggregate's domain events.                                    |
-| `IDomainEventsManager`                    | interface       | Privileged contract that can **clear** events (infrastructure-only).                 |
+| `IDomainEventOwner`                       | interface       | Privileged contract that can **clear** events (infrastructure-only, explicit).       |
+| `IStateOwner`                             | interface       | Privileged access to the aggregate's state object (infrastructure-only, explicit).   |
+| `IReconstitutable<TSelf>`                 | interface       | Supplies the empty hull a repository rehydrates into (`static abstract CreateEmpty`). |
 | `IDomainEvent`                            | interface       | Pure business event contract (`EventId`, `OccurredAt`).                              |
 | `DomainEvent`                             | abstract record | Convenience base supplying `EventId`; `OccurredAt` is stamped at commit.             |
 | `IClock`                                  | interface       | Abstraction over "now" for deterministic time.                                       |
@@ -157,7 +159,7 @@ Every aggregate derives (directly or indirectly) from the single base `Aggregate
 
 ```csharp
 public abstract class AggregateRoot<TKey, TState>
-    : EntityBase<TKey>, IAggregateRoot<TKey>, IDomainEventsManager
+    : EntityBase<TKey>, IAggregateRoot<TKey>, IDomainEventOwner, IStateOwner
     where TKey : struct, IEntityKey
     where TState : IState<TState, TKey>
 ```
@@ -165,7 +167,7 @@ public abstract class AggregateRoot<TKey, TState>
 - It holds the current immutable `protected TState State` and the private uncommitted-events list.
 - `Id` is derived from `State`.
 - State changes **only** via `protected RaiseEvent(e)` — apply the event to the state, validate identity, and record the event. There is no other mutation path; the state fold forces every change to be expressed as an event.
-- Events are exposed **read-only**; clearing is implemented **explicitly** via `IDomainEventsManager`.
+- Events are exposed **read-only**; clearing is implemented **explicitly** via `IDomainEventOwner`.
 
 **Event-sourced** aggregates extend `EventSourcedAggregateRoot<TKey, TState>`, which is purely **additive**:
 
@@ -200,14 +202,14 @@ This is realized with two interfaces and explicit implementation:
 IHasDomainEvents          → IReadOnlyCollection<IDomainEvent> DomainEvents   (everyone)
         ▲
         │
-IDomainEventsManager      → void ClearDomainEvents()                          (infrastructure only)
+IDomainEventOwner      → void ClearDomainEvents()                          (infrastructure only)
 ```
 
 - `IAggregateRoot<TKey>` inherits **only** `IHasDomainEvents`. Application code holding an aggregate therefore sees `DomainEvents` and **cannot** see `ClearDomainEvents()`.
-- The aggregate base _also_ implements `IDomainEventsManager`, but **explicitly**:
+- The aggregate base _also_ implements `IDomainEventOwner`, but **explicitly**:
 
 ```csharp
-void IDomainEventsManager.ClearDomainEvents() => _domainEvents.Clear();
+void IDomainEventOwner.ClearDomainEvents() => _domainEvents.Clear();
 ```
 
 - Raising (`RaiseEvent`) is `protected`, so only the aggregate itself can add events.
@@ -220,6 +222,37 @@ IEventSourcedAggregateRoot<TKey>  → long Version; void LoadFromHistory(...)   
 
 Both `ClearDomainEvents` and the ES members are reachable **only** by code that deliberately casts to the respective interface — by convention, the persistence layer.
 
+### The `*Owner` pattern, and reconstitution
+
+`IDomainEventOwner` and `IStateOwner` are the same shape: the aggregate **owns** something (its events, its state), and infrastructure needs privileged access to it, so the contract is implemented **explicitly** and is invisible to domain code. The suffix is the signal — see one, expect the other three properties.
+
+`IReconstitutable<TSelf>` applies the same idea to **construction**, which cannot be an instance member:
+
+```csharp
+public interface IReconstitutable<TSelf>
+    where TSelf : IReconstitutable<TSelf>
+{
+    static abstract TSelf CreateEmpty();
+}
+```
+
+Every aggregate implements it explicitly and keeps its parameterless constructor **private**:
+
+```csharp
+public sealed class Widget : AggregateRoot<WidgetId, WidgetState>, IReconstitutable<Widget>
+{
+    private Widget() : base(WidgetState.Empty) { }
+
+    static Widget IReconstitutable<Widget>.CreateEmpty() => new();
+
+    public static Widget Create(WidgetId id, string name) { … }   // the only public way in
+}
+```
+
+A static abstract member is callable **only through a type parameter** constrained to the interface, so an explicit implementation closes every public route: `new Widget()` is `CS1729`, `Widget.CreateEmpty()` is `CS0117`, and reaching it through an interface-typed instance is `CS0176`. Only a repository — generic over `TAggregate : IReconstitutable<TAggregate>` — can obtain the hull, which it immediately fills via `IStateOwner.Restore` or `LoadFromHistory`. The constraint lives on `IRepository`, so a non-conforming aggregate fails to compile where the repository is injected ([ADR-0025](./decisions/0025-unified-state-fold-aggregate-model.md) reconstitution amendment). It replaced an `Activator.CreateInstance` call on the EF Core path and a `new()` constraint on the Marten path — the latter would have forced a **public** constructor onto every aggregate.
+
+One line of boilerplate per aggregate is the price; the base class cannot supply it, because knowing `TSelf` there would require a `new()` constraint again.
+
 ### Access matrix (event-sourced base)
 
 | Caller holds…                             | Read events? | Clear events?              | Raise events?               | ES members (`Version`/`LoadFromHistory`)? |
@@ -227,7 +260,7 @@ Both `ClearDomainEvents` and the ES members are reachable **only** by code that 
 | The concrete aggregate (e.g. `Recipe`)    | ✅           | ❌ (not on surface)        | ❌ (only internally)        | ❌ (not on surface)                       |
 | `IAggregateRoot<TKey>`                    | ✅           | ❌                         | ❌                          | ❌                                        |
 | `IHasDomainEvents`                        | ✅           | ❌                         | ❌                          | ❌                                        |
-| `IDomainEventsManager` (cast)             | ✅           | ✅                         | ❌                          | ❌                                        |
+| `IDomainEventOwner` (cast)                | ✅           | ✅                         | ❌                          | ❌                                        |
 | `IEventSourcedAggregateRoot<TKey>` (cast) | ✅           | ❌                         | ❌                          | ✅                                        |
 | A subclass of the ES base                 | ✅           | ❌ (explicit, not visible) | ✅ (`protected RaiseEvent`) | ❌ (explicit, not visible)                |
 
@@ -267,7 +300,7 @@ RaiseEvent(creationEvent)          LoadFromHistory(stream)
 DomainEvents  (read-only, side-effect free)
         │
         ▼ (persistence collects, then — only after SaveChanges succeeds:)
-((IDomainEventsManager)agg).ClearDomainEvents()
+((IDomainEventOwner)agg).ClearDomainEvents()
 ```
 
 ## Domain events

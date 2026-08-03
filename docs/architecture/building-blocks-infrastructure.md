@@ -130,7 +130,7 @@ Both persistence styles implement the **same** `IRepository<,>` contract from
 
 ```csharp
 public interface IRepository<TAggregate, in TKey>   // contract lives in Application (ADR-0024)
-    where TAggregate : class, IAggregateRoot<TKey>
+    where TAggregate : class, IAggregateRoot<TKey>, IReconstitutable<TAggregate>
 {
     Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken ct);
     Task AddAsync(TAggregate aggregate, CancellationToken ct);
@@ -145,13 +145,28 @@ public interface IRepository<TAggregate, in TKey>   // contract lives in Applica
 - **No query methods beyond `GetByIdAsync`.** Queries never go through
   repositories: the read side reads its own read database directly
   (ADR-0021/0022).
+- Both implementations obtain the empty hull they rehydrate into through
+  `TAggregate.CreateEmpty()` — no `Activator`, no `new()` constraint, no public
+  constructor required, and no asymmetry between the two paths
+  ([ADR-0025](./decisions/0025-unified-state-fold-aggregate-model.md)
+  reconstitution amendment).
 
 ### EF Core repository (state-stored contexts, ADR-0020)
 
 - Strongly typed identifiers (ADR-0005) are mapped via EF Core value converters
   provided here as reusable conventions.
-- Change tracking comes from the `DbContext`; the unit of work collects tracked
-  aggregates' events from the change tracker at commit.
+- What EF Core maps is the aggregate's **state**, not the aggregate (ADR-0025
+  state-mapping amendment), so the change tracker cannot answer "which aggregates
+  took part in this command". `EfCoreAggregateTracker` — the mirror image of
+  `MartenAggregateTracker` — answers it instead: the repository registers every
+  aggregate it hands out, together with the `IStateOwner` view it already
+  resolved and the state instance EF Core tracks.
+- **Load:** `FindAsync(stateType, [id])` → `TAggregate.CreateEmpty()` →
+  `IStateOwner.Restore(state)`, then track.
+- **Commit (unit of work):** copies each entry's current state onto its tracked
+  entity via `CurrentValues.SetValues` — load-bearing, not defensive: states are
+  immutable, so every applied event left the tracked instance stale and without
+  the copy a rename would be silently lost.
 
 ### Marten event-sourced repository (ADR-0019)
 

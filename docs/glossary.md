@@ -132,8 +132,9 @@ its **Aggregate Root**.
 A core ownership rule: **only** the aggregate may raise events; **only** a
 privileged infrastructure contract may clear them; everyone else gets a
 **read-only** view. This is enforced structurally via two interfaces —
-`IHasDomainEvents` (read-only, everyone) and `IDomainEventsManager` (clear,
-infrastructure-only, implemented explicitly). See
+`IHasDomainEvents` (read-only, everyone) and `IDomainEventOwner` (clear,
+infrastructure-only, implemented explicitly; named `IDomainEventsManager` before
+the ADR-0007 naming amendment). See
 [ADR-0006](./architecture/decisions/0006-aggregate-owns-domain-events.md) and
 [ADR-0007](./architecture/decisions/0007-read-only-vs-managed-domain-events.md).
 
@@ -383,15 +384,36 @@ The two ways an event-sourced aggregate's state changes: `RaiseEvent(e)`
 applies the event to the state, validates identity, advances the
 version, and records it (`OccurredAt` is stamped later, at commit, by the unit of
 work); `LoadFromHistory(history)` **replays** a persisted stream
-to rebuild state ([rehydration](#rehydration), recording nothing). A
+to rebuild state ([rehydration](#rehydration), recording nothing) into the hull
+supplied by [reconstitution](#reconstitution-ireconstitutabletself). A
 **replay-misuse guard** prevents `LoadFromHistory` from running after uncommitted
 events exist.
 
+### Reconstitution (`IReconstitutable<TSelf>`)
+
+Rebuilding an aggregate that **already exists**, as opposed to creating a new one.
+A repository does not author aggregates — it restores a persisted state or replays
+an event history — and both need an instance to fold into first. That instance
+comes from `static abstract TSelf CreateEmpty()`, which every aggregate implements
+**explicitly** while keeping its parameterless constructor **private**. Because a
+static abstract member is reachable only through a type parameter constrained to
+the interface, neither `new Widget()` nor `Widget.CreateEmpty()` compiles: the
+aggregate's own named factory stays the only public way into existence, and the
+domain never sees an unidentified hull. The constraint sits on
+[`IRepository`](#repository-irepositorytaggregate-tkey), so an aggregate that
+cannot be reconstituted is a **compile error at the injection site** rather than a
+container failure on first load. It replaced the earlier split of
+`Activator.CreateInstance` (EF Core) and a `new()` constraint (Marten) — see the
+reconstitution amendment of
+[ADR-0025](./architecture/decisions/0025-unified-state-fold-aggregate-model.md).
+
 ### Rehydration
 
-Rebuilding an event-sourced aggregate's current state by replaying its event
-stream (via [`LoadFromHistory`](#raiseevent--loadfromhistory)), typically inside the
-event-sourced repository.
+Rebuilding an aggregate's current state inside its repository: replaying the event
+stream via [`LoadFromHistory`](#raiseevent--loadfromhistory) for an event-sourced
+aggregate, or restoring the persisted state via `IStateOwner.Restore` for a
+state-stored one. Both start from the empty hull supplied by
+[reconstitution](#reconstitution-ireconstitutabletself).
 
 ### Snapshotting
 
@@ -556,7 +578,10 @@ soft-delete state change, so there is no `Remove`, `Update`, or `Save`
 ([ADR-0026](./architecture/decisions/0026-single-repository-contract.md)).
 `Infrastructure` provides **generic implementations** for EF Core and for the
 Marten-based event store (see
-[ADR-0019](./architecture/decisions/0019-event-store-technology-marten.md)).
+[ADR-0019](./architecture/decisions/0019-event-store-technology-marten.md)). Both
+rebuild a stored aggregate through
+[reconstitution](#reconstitution-ireconstitutabletself), which the contract
+requires of `TAggregate`.
 
 ---
 

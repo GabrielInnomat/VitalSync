@@ -29,7 +29,7 @@ namespace BuildingBlocks.Infrastructure.Persistence;
 /// <param name="tracker">The tracker recording which aggregates take part in the current unit of work.</param>
 public sealed class EfCoreRepository<TAggregate, TKey>(DbContext context, EfCoreAggregateTracker tracker)
     : IRepository<TAggregate, TKey>
-    where TAggregate : class, IAggregateRoot<TKey>
+    where TAggregate : class, IAggregateRoot<TKey>, IReconstitutable<TAggregate>
     where TKey : struct, IEntityKey
 {
     /// <inheritdoc/>
@@ -47,7 +47,7 @@ public sealed class EfCoreRepository<TAggregate, TKey>(DbContext context, EfCore
         }
 
         stateOwner.Restore(state);
-        tracker.Track((IDomainEventsManager)aggregate, state);
+        tracker.Track((IDomainEventOwner)aggregate, stateOwner, state);
         return aggregate;
     }
 
@@ -60,17 +60,16 @@ public sealed class EfCoreRepository<TAggregate, TKey>(DbContext context, EfCore
         var state = stateOwner.State;
 
         context.Add(state);
-        tracker.Track((IDomainEventsManager)aggregate, state);
+        tracker.Track((IDomainEventOwner)aggregate, stateOwner, state);
         return Task.CompletedTask;
     }
 
     // The aggregate is constructed before the lookup so its state type is available without reflecting over
-    // TAggregate; a non-public parameterless constructor is honoured so aggregates can keep theirs hidden.
+    // TAggregate. Construction goes through the aggregate's own explicit IReconstitutable implementation, so no
+    // public constructor is demanded and nothing is resolved by reflection (ADR-0025 reconstitution amendment).
     private static TAggregate CreateEmpty(out IStateOwner stateOwner)
     {
-        var aggregate = Activator.CreateInstance(typeof(TAggregate), nonPublic: true) as TAggregate
-            ?? throw new InvalidOperationException(
-                $"The aggregate '{typeof(TAggregate)}' needs a parameterless constructor so it can be rehydrated from its persisted state.");
+        var aggregate = TAggregate.CreateEmpty();
 
         stateOwner = AsStateOwner(aggregate);
         return aggregate;

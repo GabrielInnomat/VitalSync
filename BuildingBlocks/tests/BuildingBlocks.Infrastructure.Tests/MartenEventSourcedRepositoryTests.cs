@@ -156,9 +156,15 @@ internal sealed record CounterState(CounterId Id, int Total) : IState<CounterSta
     };
 }
 
-internal sealed class Counter() : EventSourcedAggregateRoot<CounterId, CounterState>(CounterState.Empty)
+internal sealed class Counter : EventSourcedAggregateRoot<CounterId, CounterState>, IReconstitutable<Counter>
 {
+    private Counter() : base(CounterState.Empty)
+    {
+    }
+
     public int Total => State.Total;
+
+    static Counter IReconstitutable<Counter>.CreateEmpty() => new();
 
     public static Counter Create(CounterId id)
     {

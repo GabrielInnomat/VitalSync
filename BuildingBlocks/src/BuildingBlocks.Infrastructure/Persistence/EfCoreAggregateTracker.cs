@@ -27,23 +27,19 @@ public sealed class EfCoreAggregateTracker
     /// </summary>
     /// <remarks>
     /// Tracking is idempotent per aggregate instance, so an aggregate that is both loaded and explicitly added is
-    /// registered only once.
+    /// registered only once. The state accessor is supplied by the caller rather than derived here: the repository
+    /// has already resolved it in order to find the state type, and passing it on keeps "this aggregate exposes its
+    /// state" a compile-time fact instead of a condition this method would have to re-check and reject.
     /// </remarks>
     /// <param name="aggregate">The aggregate to track until commit.</param>
+    /// <param name="stateOwner">The same aggregate, viewed through its state accessor, as resolved by the repository.</param>
     /// <param name="persistedState">The state instance EF Core tracks, whose values are refreshed from the aggregate at commit.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="aggregate"/> or <paramref name="persistedState"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="aggregate"/> does not expose its state.</exception>
-    public void Track(IDomainEventsManager aggregate, object persistedState)
+    /// <exception cref="ArgumentNullException">Thrown when any argument is <see langword="null"/>.</exception>
+    public void Track(IDomainEventOwner aggregate, IStateOwner stateOwner, object persistedState)
     {
         ArgumentNullException.ThrowIfNull(aggregate);
+        ArgumentNullException.ThrowIfNull(stateOwner);
         ArgumentNullException.ThrowIfNull(persistedState);
-
-        if (aggregate is not IStateOwner stateOwner)
-        {
-            throw new ArgumentException(
-                $"The aggregate '{aggregate.GetType()}' does not expose its state and cannot be persisted by EF Core.",
-                nameof(aggregate));
-        }
 
         if (_entries.Exists(entry => ReferenceEquals(entry.Aggregate, aggregate)))
         {
@@ -82,6 +78,6 @@ public sealed class EfCoreAggregateTracker
 /// <param name="StateOwner">The same aggregate, viewed through its state accessor.</param>
 /// <param name="PersistedState">The state instance tracked by EF Core.</param>
 public sealed record TrackedStateAggregate(
-    IDomainEventsManager Aggregate,
+    IDomainEventOwner Aggregate,
     IStateOwner StateOwner,
     object PersistedState);

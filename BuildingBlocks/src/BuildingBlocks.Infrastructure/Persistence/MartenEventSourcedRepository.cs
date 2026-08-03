@@ -24,7 +24,7 @@ namespace BuildingBlocks.Infrastructure.Persistence;
 /// <param name="tracker">The tracker through which the aggregate's events reach the unit of work at commit.</param>
 public sealed class MartenEventSourcedRepository<TAggregate, TKey>(IDocumentSession session, MartenAggregateTracker tracker)
     : IRepository<TAggregate, TKey>
-    where TAggregate : class, IEventSourcedAggregateRoot<TKey>, new()
+    where TAggregate : class, IEventSourcedAggregateRoot<TKey>, IReconstitutable<TAggregate>
     where TKey : struct, IEntityKey
 {
     /// <inheritdoc/>
@@ -38,7 +38,7 @@ public sealed class MartenEventSourcedRepository<TAggregate, TKey>(IDocumentSess
             return null;
         }
 
-        var aggregate = new TAggregate();
+        var aggregate = TAggregate.CreateEmpty();
         ((IEventSourcedAggregateRoot<TKey>)aggregate).LoadFromHistory(stream.Select(@event => (IDomainEvent)@event.Data));
         Track(aggregate);
         return aggregate;
@@ -56,7 +56,7 @@ public sealed class MartenEventSourcedRepository<TAggregate, TKey>(IDocumentSess
     private void Track(TAggregate aggregate)
     {
         tracker.Track(
-            (IDomainEventsManager)aggregate,
+            (IDomainEventOwner)aggregate,
             () => EntityKeyFormatter.GetStreamKey(typeof(TAggregate), aggregate.Id),
             () => ((IEventSourcedAggregateRoot<TKey>)aggregate).Version);
     }

@@ -36,7 +36,7 @@ public sealed class MartenAggregateTracker
     /// <param name="streamKey">The accessor yielding the key of the event stream the aggregate's events belong to.</param>
     /// <param name="expectedVersion">The accessor yielding the expected stream version after the uncommitted events are appended.</param>
     /// <exception cref="ArgumentNullException">Thrown when any argument is <see langword="null"/>.</exception>
-    public void Track(IDomainEventsManager aggregate, Func<string> streamKey, Func<long> expectedVersion)
+    public void Track(IDomainEventOwner aggregate, Func<string> streamKey, Func<long> expectedVersion)
     {
         ArgumentNullException.ThrowIfNull(aggregate);
         ArgumentNullException.ThrowIfNull(streamKey);

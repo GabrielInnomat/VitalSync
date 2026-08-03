@@ -42,7 +42,7 @@ eine Entscheidung, keinen Code.
 | TODO-07 | Integration Events sind nicht persistent                       | **P1** | offen             | WS-08                                 |
 | TODO-08 | Topic-Validierung und Kontextkennung                           | **P1** | offen             | WS-05, WS-13, WS-14                   |
 | TODO-09 | Keine CI-Pipeline                                              | **P1** | gelöst            | WS-16                                 |
-| TODO-10 | Rehydrierung: `new()` oder `Activator`?                        | **P1** | **Konflikt**      | hacky-5, IMP-14, WS-02                |
+| TODO-10 | Rehydrierung: `new()` oder `Activator`?                        | **P1** | gelöst            | hacky-5, IMP-14, WS-02                |
 | TODO-11 | Optionalität von `IUnitOfWork`                                 | **P2** | **Konflikt**      | IMP-07, hacky-11, IMP-46              |
 | TODO-12 | Name der `Result`-Fehlerfactory                                | **P2** | **Konflikt**      | hacky-3, IMP-27, IMP-39               |
 | TODO-13 | Wo lebt die Event-Identität?                                   | **P2** | **Konflikt**      | IMP-41, IMP-11                        |
@@ -240,14 +240,16 @@ Refactoring-Zufall entstehen.
 **P1 · offen · hacky-5**
 
 Die Domäne bewacht Leer-Identität an zwei Stellen (`RaiseEvent`, `IStateOwner.Restore`) — das
-Repository ist die einzige Tür ohne Schloss. `repository.AddAsync(new Widget())` schreibt eine
+Repository ist die einzige Tür ohne Schloss. Ein Aggregat mit leerer Identität schreibt eine
 Zeile mit `Guid.Empty` bzw. öffnet Stream `Gadget/00000000-…`
 ([EfCoreRepository.cs:55](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreRepository.cs:55),
 [MartenEventSourcedRepository.cs:48](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenEventSourcedRepository.cs:48)).
 
-Erreichbar ist das, weil beide Sample-Aggregate einen öffentlichen parameterlosen Konstruktor
-haben — siehe **TODO-10**, wo die Ursache verhandelt wird. Der Guard selbst ist davon unabhängig
-und unstrittig.
+**Der bequeme Weg dorthin ist mit TODO-10 zu.** `repository.AddAsync(new Widget())` kompiliert
+nicht mehr: der Konstruktor ist privat, `CreateEmpty` explizit implementiert. Erreichbar bleibt
+eine leere Hülle nur noch über eine selbstgeschriebene generische Methode mit
+`IReconstitutable`-Constraint — die bewusst in Kauf genommene Restlücke. Der Guard schließt
+genau die, ist davon unabhängig und unstrittig; die Priorität sinkt dadurch, der Bedarf nicht.
 
 ## Lösungsvorschlag
 
@@ -440,7 +442,7 @@ weiterhin, damit die Suite lokal ohne laufendes System benutzbar bleibt.
 
 # TODO-10, Rehydrierung: `new()` oder `Activator`?
 
-**P1 · KONFLIKT · hacky-5 + IMP-14 + WS-02**
+**P1 · GELÖST · hacky-5 + IMP-14 + WS-02**
 
 Die Quellen widersprechen sich in der Richtung:
 
@@ -449,32 +451,62 @@ Die Quellen widersprechen sich in der Richtung:
 | WS-02 (original) | offene Frage: „soll das so bleiben, **oder bekommt `IRepository` eine `new()`-Beschränkung**?" |
 | hacky-5, IMP-14  | umgekehrt: `new()` **streichen**, `Activator.CreateInstance(nonPublic: true)` überall          |
 
-Der Sachstand: der EF-Pfad nutzt `Activator`
-([EfCoreRepository.cs:71](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreRepository.cs:71)),
-der Marten-Pfad eine `new()`-Constraint
-([MartenEventSourcedRepository.cs:27](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenEventSourcedRepository.cs:27)).
-Beide sind open-generisch auf denselben Vertrag registriert, der nur `IAggregateRoot<TKey>`
-verlangt — ein falsch zugeschnittenes Aggregat scheitert also erst im Container zur Laufzeit.
+Der damalige Sachstand: der EF-Pfad nutzte `Activator`, der Marten-Pfad eine `new()`-Constraint.
+Beide waren open-generisch auf denselben Vertrag registriert, der nur `IAggregateRoot<TKey>`
+verlangte — ein falsch zugeschnittenes Aggregat scheiterte also erst im Container zur Laufzeit.
 
 Der Kern des Konflikts: `new()` verlangt einen **öffentlichen** parameterlosen Konstruktor. Damit
-diktiert die Infrastruktur in die Domäne hinein, entgegen ADR-0025 („darf non-public sein"), und
-`new Widget()` wird überall legaler Code.
+diktierte die Infrastruktur in die Domäne hinein, entgegen ADR-0025 („darf non-public sein"), und
+`new Widget()` war überall legaler Code.
 
-## Lösungsvorschlag
+## Lösung
 
-**Empfehlung: `new()` streichen**, also der hacky-5/IMP-14-Richtung folgen. Begründung: eine
-`new()`-Beschränkung im Vertrag würde ADR-0025 nicht reparieren, sondern die Verletzung
-festschreiben — und sie zwänge auch state-stored Aggregate zum öffentlichen Konstruktor, die ihn
-heute nicht brauchen.
+**Keins von beiden.** Die Frage war falsch gestellt: „öffentlicher Konstruktor oder Reflection?"
+sind zwei Varianten derselben Kapitulation, obwohl das, was das Repository braucht — der State-Typ
+und eine Instanz zum Hineinfalten — zur **Compile-Zeit** feststeht. Umgesetzt ist stattdessen ein
+expliziter Domänenvertrag:
 
 ```csharp
-// MartenEventSourcedRepository: new() entfällt
-var aggregate = (TAggregate)Activator.CreateInstance(typeof(TAggregate), nonPublic: true)!;
+// BuildingBlocks.Domain
+public interface IReconstitutable<TSelf> where TSelf : IReconstitutable<TSelf>
+{
+    static abstract TSelf CreateEmpty();
+}
+
+// Jedes Aggregat: Konstruktor privat, Implementierung explizit
+public sealed class Widget : AggregateRoot<WidgetId, WidgetState>, IReconstitutable<Widget>
+{
+    private Widget() : base(WidgetState.Empty) { }
+    static Widget IReconstitutable<Widget>.CreateEmpty() => new();
+}
+
+// Beide Repositories, identisch
+var aggregate = TAggregate.CreateEmpty();
 ```
 
-Der Preis — die Anforderung bleibt zur Compile-Zeit unausdrückbar — ist beim EF-Pfad ohnehin
-schon bezahlt. Ein Startup-Check über die gescannten Assemblies fängt sie früh statt beim ersten
-Laden. **Entscheidung zuerst, dann Code; braucht ein ADR-0025-Amendment.**
+Ein `static abstract` Member ist **nur über einen constraint-gebundenen Typparameter** aufrufbar.
+Die explizite Implementierung schließt damit jeden öffentlichen Weg — empirisch gegen den Compiler
+geprüft: `new Widget()` → `CS1729`, `Widget.CreateEmpty()` → `CS0117`, über eine
+interface-typisierte Instanz → `CS0176`. `Widget.Create(…)` bleibt die einzige Entstehung.
+
+Die Constraint sitzt auf **`IRepository<TAggregate, TKey>`**, nicht auf den Implementierungen:
+ein falsch zugeschnittenes Aggregat scheitert dadurch **beim Injizieren zur Compile-Zeit** statt
+beim Schließen des offenen Generics im Container. Der ursprünglich vorgeschlagene Startup-Check
+über die gescannten Assemblies ist damit überflüssig. `Activator` und `new()` sind beide weg, und
+die EF/Marten-Asymmetrie — nie eine Entscheidung, nur ein Zufall — ebenfalls.
+
+**Bewusst akzeptierte Restlücke:** Anwendungscode *könnte* eine eigene generische Methode mit
+`IReconstitutable`-Constraint schreiben und so an eine Hülle kommen. Das ist ein lauter, greppbarer,
+absichtlicher Akt statt eines Tippfehlers; Reflection war ohnehin nie verhinderbar. Die Latte ist
+„kann nicht versehentlich passieren", nicht „kann nicht passieren".
+
+**Preis:** eine Zeile Boilerplate pro Aggregat. Die Basisklasse kann sie nicht liefern — dafür
+bräuchte sie `TSelf` und damit wieder `new()`. Ein Source Generator wäre später rein additiv.
+
+Abgesichert durch `ReconstitutableTests` (beide Persistenzformen) und je einen
+`AggregateConventionTests`-Scan pro Sample, der bei fehlendem Interface oder öffentlichem
+parameterlosem Konstruktor fehlschlägt. ADR-0025 und ADR-0026 sind um je ein Amendment ergänzt
+(2026-08-03).
 
 ---
 
@@ -1446,7 +1478,9 @@ unbelegt und gehört hier vermerkt statt im AppHost still vorausgesetzt.
 
 1. **TODO-09** (CI) zuerst — klein und sichert alles Weitere ab. (**TODO-06** stand hier
    gleichauf und ist erledigt: die zweite Nennung des Connection Strings existiert nicht mehr.)
-2. **TODO-10** und **TODO-13** entscheiden (Konflikte, kein Code), dann **TODO-05**.
+2. **TODO-13** entscheiden (Konflikt, kein Code), dann **TODO-05**. (**TODO-10** stand hier
+   gleichauf und ist erledigt: Rekonstitution ist jetzt ein expliziter Domänenvertrag, womit
+   TODO-05 nur noch die Restlücke schließt statt eine offene Tür.)
 3. **TODO-02 → TODO-03 → TODO-04** als ein Persistenzformat-Paket. Danach ist jede Änderung daran
    eine Datenmigration, also **vor** dem ersten echten Service.
 4. **TODO-01** vor dem ersten Aggregat mit Kindkollektion.

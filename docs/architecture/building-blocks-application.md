@@ -116,7 +116,7 @@ pipeline behavior in `Infrastructure` — handlers never commit themselves.
 
 ```csharp
 public interface IRepository<TAggregate, in TKey>
-    where TAggregate : class, IAggregateRoot<TKey>
+    where TAggregate : class, IAggregateRoot<TKey>, IReconstitutable<TAggregate>
     where TKey : struct, IEntityKey
 {
     Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken ct);
@@ -134,6 +134,14 @@ The surface is deliberately minimal:
   their changes flow through the `IUnitOfWork` at commit. This holds for both
   implementations: EF Core relies on change tracking, and the event-store
   implementation appends tracked aggregates' uncommitted events at commit.
+
+The `IReconstitutable<TAggregate>` constraint is how both implementations rebuild
+a stored aggregate — without reflection and without demanding a public
+constructor. It sits on the **contract** rather than on the implementations on
+purpose: an aggregate that cannot be reconstituted then fails to compile where the
+repository is *injected*, instead of throwing when the container first closes the
+open generic ([ADR-0025](./decisions/0025-unified-state-fold-aggregate-model.md)
+reconstitution amendment).
 
 The `TKey : struct, IEntityKey` constraint ties the repository to the strongly
 typed identifier model of `BuildingBlocks.Domain` (ADR-0005): keys are value

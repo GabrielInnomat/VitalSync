@@ -186,8 +186,8 @@ Umgesetzt:
 
 - **`IStateOwner`** (`BuildingBlocks.Domain`, neu) — `StateType`, `State`,
   `Restore(object)`. Von `AggregateRoot` **explizit** implementiert, wie
-  `IDomainEventsManager`. Domänencode sieht die Member nicht und kann den Event-Fold
-  nicht per Hand-Restore umgehen.
+  `IDomainEventOwner` (damals noch `IDomainEventsManager`). Domänencode sieht die Member
+  nicht und kann den Event-Fold nicht per Hand-Restore umgehen.
 - **`EfCoreRepository`** — lädt den State per `context.FindAsync(stateType, [id])` und
   rehydriert ein leeres Aggregat darum; `AddAsync` legt den State in den Context.
 - **`EfCoreAggregateTracker`** (neu) — Gegenstück zum bestehenden
@@ -403,9 +403,11 @@ Was zusätzlich anders ist, ist bewusst gewählt, nicht erzwungen:
 `Version` und `LoadFromHistory` und sonst nichts. Vom EF-Mapping-Problem (§5) ist die
 Seite gar nicht betroffen: Marten speichert Events, es gibt keinen Schlüssel zu mappen.
 
-Eine Nebenwirkung, die man kennen muss: `MartenEventSourcedRepository` verlangt
-`new()`, weil es die Rehydrierung als „leeres Aggregat + Stream falten" umsetzt. Der
-parameterlose Konstruktor ist also **Pflicht**, nicht Kosmetik.
+Eine Nebenwirkung, die man kennen muss: weil `MartenEventSourcedRepository` die
+Rehydrierung als „leeres Aggregat + Stream falten" umsetzt, ist der parameterlose
+Konstruktor **Pflicht**, nicht Kosmetik. Er war dafür ursprünglich per `new()`-Constraint
+öffentlich erzwungen — seit WS-02 gelöst ist, ist er privat und die Hülle kommt über
+`IReconstitutable<Gadget>.CreateEmpty()`.
 
 ### Abnahmekriterien Etappe 2
 
@@ -608,7 +610,7 @@ verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Impro
 | Nr.   | Titel                                                          | Herkunft     | Status    |
 | ----- | -------------------------------------------------------------- | ------------ | --------- |
 | WS-01 | Optimistische Nebenläufigkeit im state-stored Pfad fehlt       | EF-Lösung    | offen     |
-| WS-02 | `Activator.CreateInstance(…, nonPublic: true)` als Vertrag     | EF-Lösung    | offen     |
+| WS-02 | `Activator.CreateInstance(…, nonPublic: true)` als Vertrag     | EF-Lösung    | gelöst    |
 | WS-03 | Reihenfolge über Events hinweg ist durch nichts garantiert     | Schritt 3    | offen     |
 | WS-04 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`     | Schritt 3    | offen     |
 | WS-05 | Vergessenes `[Topic]` fällt nicht auf                          | Etappe 1     | offen     |
@@ -688,19 +690,29 @@ ADR-0025 („darf non-public sein").
 
 Siehe [hacky.md Nr. 5](hacky.md) und [Improvements.md IMP-14](Improvements.md).
 
-#### Lösungsvorschlag
+#### Lösung (2026-08-03)
 
-Auf den EF-Weg vereinheitlichen, nicht auf den Marten-Weg:
+Weder der EF- noch der Marten-Weg — die offene Frage dieses Punkts („soll das so bleiben,
+oder bekommt `IRepository` eine `new()`-Beschränkung?") hatte eine dritte Antwort. Der
+Bedarf des Repositories — State-Typ und eine Instanz zum Hineinfalten — steht zur
+**Compile-Zeit** fest, also wird er dort ausgedrückt:
 
 ```csharp
-// MartenEventSourcedRepository: new() streichen, stattdessen
-var aggregate = (TAggregate)Activator.CreateInstance(typeof(TAggregate), nonPublic: true)!;
+public interface IReconstitutable<TSelf> where TSelf : IReconstitutable<TSelf>
+{
+    static abstract TSelf CreateEmpty();
+}
 ```
 
-Dann sind beide Implementierungen constraint-gleich, der Konstruktor darf überall `private`
-sein, und ADR-0025 stimmt wieder. Der Preis — die Anforderung bleibt zur Compile-Zeit
-unausdrückbar — ist beim EF-Pfad ohnehin schon bezahlt; ein Startup-Check (WS/IMP-14) fängt
-ihn früh statt beim ersten Laden. Erfordert ein ADR-0025-Amendment.
+Explizit implementiert, Konstruktor privat. Ein `static abstract` Member ist nur über einen
+constraint-gebundenen Typparameter erreichbar — `new Gadget()`, `Gadget.CreateEmpty()` und der
+Weg über eine interface-typisierte Instanz sind alle drei Compile-Fehler (`CS1729`, `CS0117`,
+`CS0176`, empirisch geprüft). Die Constraint sitzt auf `IRepository`, also scheitert ein falsch
+zugeschnittenes Aggregat beim **Injizieren**, nicht im Container; der hier vorgeschlagene
+Startup-Check ist damit hinfällig. `Activator` und `new()` sind beide weg, beide Pfade sind
+identisch, und ADR-0025 stimmt wieder — Amendment vom 2026-08-03, zusammen mit ADR-0026.
+
+Siehe **TODO-10** (gelöst).
 
 ---
 

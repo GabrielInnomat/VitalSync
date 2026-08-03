@@ -126,7 +126,12 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 
 - Use **strongly typed aggregate identifiers** — no raw `Guid`/`int` IDs.
 - The **aggregate owns its domain events** (ADR-0006); expose read-only vs. managed
-  domain events per ADR-0007.
+  domain events per ADR-0007 — `IHasDomainEvents` (public) vs. **`IDomainEventOwner`**
+  (clear; explicit, infrastructure-only). The interface was renamed from
+  `IDomainEventsManager` by the ADR-0007 naming amendment; `*Owner` is the house
+  signal for "privileged view, implemented explicitly, infrastructure only", shared
+  with `IStateOwner`. The two are deliberately **not** merged: `IDomainEventOwner`
+  applies to every aggregate, `IStateOwner` only to state-stored ones.
 - **Entity identity and equality** follow ADR-0008.
 - **Business rules and domain validation** follow ADR-0009.
 - Aggregates use an **aggregate state object** (ADR-0010).
@@ -140,9 +145,19 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   positional record also fails as a `ComplexProperty`. The state record maps as an
   ordinary **entity type** — one table, one id column, no shadow key. Infrastructure
   reaches it through `IStateOwner`, implemented **explicitly** on `AggregateRoot` so
-  domain code never sees it and cannot bypass the event fold. A state-stored aggregate
-  therefore needs a **parameterless constructor** (may be non-public; the Marten path's
-  `new()` requires a public one).
+  domain code never sees it and cannot bypass the event fold.
+- **Reconstitution, not construction** (ADR-0025 amendment 2026-08-03): every aggregate
+  implements **`IReconstitutable<TSelf>`** (`static abstract TSelf CreateEmpty()`)
+  **explicitly** and keeps its parameterless constructor **private**. A static abstract
+  member is reachable only through a constrained type parameter, so `new Widget()`
+  (`CS1729`), `Widget.CreateEmpty()` (`CS0117`) and the interface-instance route
+  (`CS0176`) are all compile errors — the aggregate's named factory stays the only
+  public way in. The constraint sits on `IRepository`, so a non-conforming aggregate
+  fails to compile **where the repository is injected**. There is no `Activator` and no
+  `new()` constraint any more, and both persistence paths are identical. Cost: one line
+  of boilerplate per aggregate (the base cannot supply it — knowing `TSelf` there would
+  need `new()` again). New aggregate? Private ctor + explicit `CreateEmpty`, or the
+  `AggregateConventionTests` scan fails.
 - **One repository contract**: `IRepository<TAggregate, TKey>` with `GetByIdAsync`
   and `AddAsync` only (ADR-0026) — no `Remove` (removal is a soft-delete state
   change), no `Save`/`Update` (retrieved aggregates are tracked; changes flow

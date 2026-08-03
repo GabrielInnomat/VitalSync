@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-07-30
 - **Amended:** 2026-08-02 (EF Core tracks the state, not the aggregate — see the note below)
+- **Amended:** 2026-08-03 (the contract constrains reconstitution; the rehydration-constructor question is answered)
 
 ## Context
 
@@ -60,6 +61,23 @@ Two observations make a merge possible:
 > `Activator.CreateInstance(…, nonPublic: true)`, so a non-public one suffices; the event-sourced repository's `new()`
 > constraint requires a **public** one. Whether `IRepository` should impose one uniform rule instead of two implicit
 > ones is open — see `WalkingSkeleton.md` §9.
+> _Superseded by the reconstitution amendment below; the open question it names is answered there._
+
+> **Reconstitution (amendment 2026-08-03).** The open question above is settled: `IRepository<TAggregate, TKey>`
+> **does** impose one uniform rule, and it is neither of the two implicit ones. `TAggregate` is now additionally
+> constrained to **`IReconstitutable<TAggregate>`** (`static abstract TSelf CreateEmpty()`), which both
+> implementations call — no `Activator`, no `new()`, no public constructor, and no asymmetry between the persistence
+> paths. Because the constraint sits on the contract, a wrongly shaped aggregate is a compile error at the injection
+> site rather than a container failure on first use. The rationale and the residual hole are recorded in the
+> reconstitution amendment of [ADR-0025](./0025-unified-state-fold-aggregate-model.md).
+>
+> The two members and their semantics are untouched: `GetByIdAsync` still retrieves **and tracks**, `AddAsync` still
+> registers, and there is still no `Remove`/`Update`/`Save`.
+>
+> **Tracker signature, while nearby.** `EfCoreAggregateTracker.Track` now receives the `IStateOwner` from the
+> repository, which had already resolved it to find the state type, instead of re-deriving it and throwing an
+> `ArgumentException` when the cast failed. One fact, established once, at the only place that can establish it —
+> the failure mode is removed rather than reported. Pinned by `EfCoreAggregateTrackerTests`.
 
 ## Decision
 

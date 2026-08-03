@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-24
+- **Amended:** 2026-08-03 (the managed interface is renamed to `IDomainEventOwner` — see the note below)
 
 ## Context
 
@@ -32,6 +33,28 @@ To clear, a caller must deliberately obtain the `IDomainEventsManager` view:
 ```
 
 The persistence layer collects events from `IHasDomainEvents`, and — only after `SaveChanges` succeeds — clears them through `IDomainEventsManager`.
+
+> **Naming (amendment 2026-08-03).** `IDomainEventsManager` is renamed to **`IDomainEventOwner`**. Everything above
+> holds verbatim with the new name substituted: same split, same explicit implementation, same members, same
+> consumers. Only the label changes.
+>
+> Two reasons. First, "Manager" says nothing — it names no capability, and the interface has exactly one member.
+> `Owner` names it: the aggregate *owns* its domain events, which is literally the title of
+> [ADR-0006](./0006-aggregate-owns-domain-events.md), so the type now cites the decision it implements. Second, and
+> more useful in practice, it makes the Building Blocks domain interfaces legible as a system rather than as sprawl:
+>
+> | | implemented by | visibility |
+> | --- | --- | --- |
+> | `IState<TSelf, TKey>` | the state | public, its own axis |
+> | `IHasDomainEvents` | the aggregate | public, part of `IAggregateRoot` |
+> | `IDomainEventOwner` | the aggregate | **explicit, infrastructure only** |
+> | `IStateOwner` | the aggregate | **explicit, infrastructure only** |
+>
+> The `*Owner` suffix now reads as a pattern — "privileged view, explicitly implemented, infrastructure only" — which
+> is what a reader needs to know before touching any of them. A merge of the two `*Owner` interfaces was considered
+> and **rejected**: `IDomainEventOwner` applies to every aggregate on both persistence paths, while `IStateOwner` is
+> meaningful only for state-stored ones, so `MartenAggregateTracker` would end up declaring a dependency it never
+> uses. Four precise contracts beat three imprecise ones; interface count was never the problem.
 
 ## Consequences
 

@@ -8,7 +8,7 @@
 | 2   | CLR-Typname im Event-Stream-Key                                | offen  |
 | 3   | `FailureResults` sucht statische Methode per Name              | offen  |
 | 4   | `ApplyEntityKeyConversions` scannt CLR- statt Model-Properties | offen  |
-| 5   | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | offen  |
+| 5   | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | teilweise |
 | 6   | `CurrentValues.SetValues` kopiert nur Skalare                  | offen  |
 | 7   | `DomainEventStamper` erkennt „unstamped" über Sentinel         | offen  |
 | 8   | Connection String zweimal, ohne Abgleich                       | gelöst |
@@ -156,14 +156,20 @@ lässt.
 
 # 5, Kein `Id.IsEmpty`-Guard in `AddAsync`
 
+**Teilweise gelöst (2026-08-03): die zweite Hälfte ist weg, der Guard fehlt weiterhin.**
+
 Die Domäne bewacht Leer-Identität an zwei Stellen (`RaiseEvent`, `IStateOwner.Restore`) — das
-Repository ist die einzige Tür ohne Schloss. `repository.AddAsync(new Widget())` schreibt eine
+Repository ist die einzige Tür ohne Schloss. Ein Aggregat mit leerer Identität schreibt eine
 Zeile mit `Guid.Empty` bzw. öffnet Stream `Gadget/00000000-...`.
 
-Erreichbar ist das, weil beide Sample-Aggregate einen **öffentlichen** parameterlosen
-Konstruktor haben. Bei Marten ist das erzwungen: die `new()`-Constraint verlangt public.
-ADR-0025 sagt „darf non-public sein" — für event-sourced Aggregate stimmt das nicht, dort
-diktiert die Infrastruktur einen öffentlichen id-losen Konstruktor in die Domäne hinein.
+Der bequeme Weg dorthin ist zu: `repository.AddAsync(new Widget())` kompiliert nicht mehr. Beide
+Sample-Aggregate hatten einen **öffentlichen** parameterlosen Konstruktor, bei Marten durch die
+`new()`-Constraint erzwungen — ADR-0025s „darf non-public sein" stimmte für event-sourced
+Aggregate schlicht nicht. Seit dem Rekonstitutions-Amendment ist der Konstruktor überall privat
+und die Hülle nur über `IReconstitutable<T>.CreateEmpty()` erreichbar, also ausschließlich aus
+generischem, constraint-gebundenem Code heraus.
+
+Der Guard bleibt trotzdem nötig — er schließt genau diese Restlücke, und die Kosten sind null.
 
 `BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreRepository.cs:55`,
 `BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenEventSourcedRepository.cs:48`,
@@ -189,10 +195,11 @@ public Task AddAsync(TAggregate aggregate, CancellationToken cancellationToken)
 }
 ```
 
-Für den erzwungen-öffentlichen Konstruktor: `new()`-Constraint in
-`MartenEventSourcedRepository` durch denselben `Activator.CreateInstance(..., nonPublic: true)`
-ersetzen, den der EF-Pfad schon nutzt. Dann darf der Konstruktor überall `private` sein und
-ADR-0025 stimmt wieder. Erfordert eine ADR-Ergänzung.
+Der zweite Teil — der erzwungen-öffentliche Konstruktor — ist erledigt, aber anders als hier
+vorgeschlagen: nicht `Activator` überall, sondern `IReconstitutable<TSelf>` mit
+`static abstract CreateEmpty()`, explizit implementiert. Weder Reflection noch `new()`, und die
+Anforderung ist zur Compile-Zeit ausdrückbar. Siehe **TODO-10** und das
+Rekonstitutions-Amendment von ADR-0025.
 
 ---
 

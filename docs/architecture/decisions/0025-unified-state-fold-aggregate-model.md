@@ -4,6 +4,7 @@
 - **Date:** 2026-07-30
 - **Supersedes:** [ADR-0012](./0012-optional-event-sourcing-aggregate.md)
 - **Amended:** 2026-08-02 (EF Core maps the state as an entity type, not the aggregate — see the note below)
+- **Amended:** 2026-08-03 (reconstitution is a domain contract, not a constructor requirement — see the note below)
 
 ## Context
 
@@ -89,6 +90,7 @@ _The named mapping mechanism is superseded by the state-mapping amendment below;
 >
 > How the repository and the unit of work use it — including the rehydration constructor a state-stored aggregate now
 > needs — is recorded in the tracking amendment of [ADR-0026](./0026-single-repository-contract.md).
+> _The rehydration constructor named there is superseded by the reconstitution amendment below._
 >
 > **This ADR's decision is unchanged, and so are its neighbours.** `Id => State.Id` stands verbatim;
 > [ADR-0008](./0008-entity-identity-and-equality.md), [ADR-0010](./0010-aggregate-state-object.md) and
@@ -99,6 +101,42 @@ _The named mapping mechanism is superseded by the state-mapping amendment below;
 > single repository contract). Consequence "EF Core mapping targets the state record" below is thereby true not only
 > in effect but structurally: the state **is** the mapped entity type. Pinned by `EfCoreAggregateRoundTripTests`
 > (Testcontainers, real PostgreSQL: create → rename → reload in a fresh scope).
+
+> **Reconstitution (amendment 2026-08-03).** The state-mapping amendment above left the two persistence paths
+> disagreeing about how the empty aggregate hull comes into being: `EfCoreRepository` used
+> `Activator.CreateInstance(…, nonPublic: true)`, `MartenEventSourcedRepository` a `new()` constraint. Both are
+> answers to a badly posed question — "public constructor or reflection?" — when what the repository actually needs
+> (the state type, and an instance to fold into) is known at **compile time**. The `new()` variant additionally
+> demanded a **public** parameterless constructor, which would have made `new Widget()` legal everywhere and let an
+> unidentified aggregate reach domain code.
+>
+> Neither is kept. Reconstitution becomes an explicit domain contract:
+>
+> - **`IReconstitutable<TSelf>`** (`BuildingBlocks.Domain`) — `static abstract TSelf CreateEmpty()`. Reconstitution
+>   is not creation: the repository does not author a new aggregate, it rebuilds an existing one, by restoring its
+>   persisted state (`IStateOwner.Restore`) or replaying its history (`LoadFromHistory`). Both need an instance
+>   first, and this supplies it.
+> - **Implemented explicitly, constructor private.** A static abstract member is callable *only* through a type
+>   parameter constrained to the interface, so an explicit implementation leaves no publicly reachable empty
+>   constructor. Verified against the compiler: `new Widget()` is `CS1729`, `Widget.CreateEmpty()` is `CS0117`, and
+>   reaching it through an interface-typed instance is `CS0176`. The aggregate's own named factory stays the only
+>   public way in — the same technique already used for `IStateOwner` and `IDomainEventOwner`, lifted to a static
+>   member.
+> - **The constraint sits on `IRepository<TAggregate, TKey>`, not on the implementations.** An aggregate that cannot
+>   be reconstituted therefore fails to compile where the repository is *injected*, instead of throwing when the
+>   container first closes the open generic. That is the compile-time expressiveness the earlier note recorded as
+>   unavailable; the startup scan it proposed as a substitute is not needed.
+> - **Both paths are now identical.** The EF Core/Marten asymmetry was never a decision, only an accident of who was
+>   written first.
+>
+> **The decision is unchanged.** The authoring model, `RaiseEvent` as the sole mutation path, and `Id => State.Id`
+> all stand. What changes is a mechanism: "a state-stored aggregate needs a parameterless constructor (may be
+> non-public)" becomes "**every** aggregate implements `IReconstitutable` explicitly and keeps its parameterless
+> constructor private". Residual hole, accepted knowingly: application code *could* declare its own generic method
+> constrained to `IReconstitutable` and obtain a hull that way. That is a loud, greppable, deliberate act rather than
+> a typo, and reflection was never preventable anyway — the bar is "cannot happen by accident", not "cannot happen".
+> Pinned by `ReconstitutableTests` (both persistence shapes) and by an `AggregateConventionTests` scan in each sample
+> that fails on an aggregate missing the interface or exposing a public parameterless constructor.
 
 ## Consequences
 
@@ -112,6 +150,9 @@ _The named mapping mechanism is superseded by the state-mapping amendment below;
 - State-stored aggregates gain the immutable state fold: better testability, no mutation outside events.
 - EF Core mapping targets the state record, which costs more configuration than mapping free properties.
 - `AddDomainEvent` no longer exists; `RaiseEvent` is the single raising API.
+- Every aggregate carries one line of reconstitution boilerplate (a private constructor plus an explicit
+  `CreateEmpty`). It cannot be inherited from the base, which would need a `TSelf` type parameter and therefore a
+  `new()` constraint again — the very thing being removed. A source generator could emit it later; that is additive.
 
 ## Alternatives considered
 
