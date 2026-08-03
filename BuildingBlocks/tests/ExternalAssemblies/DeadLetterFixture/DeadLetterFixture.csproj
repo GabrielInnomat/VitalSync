@@ -6,10 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="WolverineFx" Version="6.23.0" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\..\src\BuildingBlocks.Application\BuildingBlocks.Application.csproj" />
   </ItemGroup>
 

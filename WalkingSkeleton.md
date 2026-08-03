@@ -67,7 +67,7 @@ Wegwerf-Code abhängen. Beim Aufräumen wird genau ein Ordner gelöscht.
 | Persistenz        | **beide** — je ein Service für EF Core und Marten                                                                                            |
 | Migrationen       | eigener MigrationService-Worker, Api wartet per `WaitForCompletion`                                                                          |
 | Routing-Topologie | ein Topic-Exchange `vitalsync.integration-events`                                                                                            |
-| Topic-Namen       | explizites `[Topic("<kontext>.<event>")]` in kebab-case, **ohne** Startup-Validator (offen, siehe §9)                                        |
+| Topic-Namen       | explizites `[Topic("<kontext>.<event>")]` in kebab-case, **ohne** Startup-Validator (inzwischen gelöst: `[IntegrationEventTopic]` mit Publish-Fail-Fast, siehe WS-05)     |
 | Umfang Messaging  | zuerst nur Publish-Seite; die Subscribe-Seite kam in Etappe 3 und liegt seither ebenfalls in BuildingBlocks (ADR-0023-Amendment)             |
 | gRPC              | code-first (ADR-0003) — die Bibliothekswahl (`protobuf-net.Grpc`) trifft der Sample faktisch für die Plattform und verdient später einen ADR |
 
@@ -597,7 +597,10 @@ falschen Stelle — die Tabelle existiert nämlich, sie bleibt nur leer.
   war — es hat keinen. Symmetrie wäre genau die Begründung, die ADR-0024 ablehnt.
 - **Das geteilte Vertragspaket referenziert Wolverine**, wegen `[Topic]`. Ein
   publizierter Vertrag benennt damit seinen Transport. Preis dafür, dass der Routing Key
-  Vertragsbestandteil ist statt aus dem CLR-Namespace abgeleitet.
+  Vertragsbestandteil ist statt aus dem CLR-Namespace abgeleitet. _(Inzwischen behoben:
+  `[IntegrationEventTopic]` in `BuildingBlocks.Application` ersetzt Wolverines `[Topic]`,
+  die WolverineFx-Referenz im Vertragspaket ist entfallen — ADR-0023-Amendment
+  2026-08-03.)_
 
 ---
 
@@ -613,7 +616,7 @@ verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Impro
 | WS-02 | `Activator.CreateInstance(…, nonPublic: true)` als Vertrag     | EF-Lösung    | gelöst    |
 | WS-03 | Reihenfolge über Events hinweg ist durch nichts garantiert     | Schritt 3    | gelöst    |
 | WS-04 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`     | Schritt 3    | offen     |
-| WS-05 | Vergessenes `[Topic]` fällt nicht auf                          | Etappe 1     | offen     |
+| WS-05 | Vergessenes `[Topic]` fällt nicht auf                          | Etappe 1     | gelöst    |
 | WS-06 | Fehlkonfiguration ist ungleich abgedeckt                       | Etappe 1     | teilweise |
 | WS-07 | Der gRPC-Vertrag liegt noch beim Service                       | Etappe 1     | offen     |
 | WS-08 | Integration Events sind nicht persistent                       | Etappe 2     | offen     |
@@ -804,6 +807,19 @@ Kleiner, abgeschlossener Fix mit hohem Nutzen: er schließt die letzte stille L�
 Publish-Pfad. Sinnvollerweise zusammen mit WS-14 (Pattern-gegen-`[Topic]`-Abgleich), weil
 beide dieselbe Datenquelle brauchen.
 
+#### Auflösung (2026-08-03)
+
+Anders gelöst als vorgeschlagen, mit demselben Effekt: statt eines Startup-Validators
+liefert das ADR-0023-Amendment 2026-08-03 ein eigenes Attribut
+`[IntegrationEventTopic("<kontext>.<event>")]` in `BuildingBlocks.Application`, das sein
+Argument bei Konstruktion validiert (genau zwei kebab-case-Segmente). Der Routing-Key wird
+zentral von der Publishing-Regel aufgelöst
+(`PublishMessagesToRabbitMqExchange<IIntegrationEvent>`); ein Event **ohne** Attribut wirft
+beim Publish eine Exception mit Typname und Fix, statt still unter einem CLR-Schlüssel zu
+verschwinden — gepinnt durch `IntegrationEventRoutingTests`. Nebeneffekt: die
+WolverineFx-Referenz im Vertragspaket ist entfallen. Der Startup-Zeitpunkt bleibt offen für
+WS-14, das dieselbe Datenquelle bräuchte.
+
 ---
 
 ### WS-06, Fehlkonfiguration ist ungleich abgedeckt
@@ -877,6 +893,9 @@ Dazu die Konsumentenseite mitentscheiden: Quorum-Queues überleben einen Broker-
 klassische nicht. Beides gehört in denselben Schritt, sonst ist die Kette nur halb dicht.
 Messbarer Preis: persistente Zustellung kostet Durchsatz — für Integration Events die
 richtige Wahl, für den lokalen Domain-Event-Pfad irrelevant (der läuft über die DB).
+Anmerkung seit dem ADR-0023-Amendment 2026-08-03: die Publishing-Regel heißt inzwischen
+`PublishMessagesToRabbitMqExchange<IIntegrationEvent>`; die Durable-Einstellung gehört dann
+an deren Exchange-Konfiguration statt an `ToRabbitTopics`.
 
 ---
 

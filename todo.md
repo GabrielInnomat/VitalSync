@@ -40,7 +40,7 @@ eine Entscheidung, keinen Code.
 | TODO-05 | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | **P1** | gelöst            | hacky-5                               |
 | TODO-06 | Connection String zweimal, ohne Abgleich                       | **P1** | gelöst            | hacky-8, IMP-13                       |
 | TODO-07 | Integration Events sind nicht persistent                       | **P1** | offen             | WS-08                                 |
-| TODO-08 | Topic-Validierung und Kontextkennung                           | **P1** | offen             | WS-05, WS-13, WS-14                   |
+| TODO-08 | Topic-Validierung und Kontextkennung                           | **P1** | teilweise gelöst  | WS-05, WS-13, WS-14                   |
 | TODO-09 | Keine CI-Pipeline                                              | **P1** | gelöst            | WS-16                                 |
 | TODO-10 | Rehydrierung: `new()` oder `Activator`?                        | **P1** | gelöst            | hacky-5, IMP-14, WS-02                |
 | TODO-11 | Optionalität von `IUnitOfWork`                                 | **P2** | **Konflikt**      | IMP-07, hacky-11, IMP-46              |
@@ -417,13 +417,14 @@ Integration Events die richtige Wahl; den lokalen Domain-Event-Pfad betrifft es 
 
 # TODO-08, Topic-Validierung und Kontextkennung
 
-**P1 · offen · WS-05 + WS-13 + WS-14**
+**P1 · teilweise gelöst · WS-05 + WS-13 + WS-14**
 
 Drei Befunde, die alle dieselbe fehlende Information brauchen — den eigenen Kontextnamen:
 
-- **Vergessenes `[Topic]`** (WS-05): verifiziert prüft **nichts** in `BuildingBlocks/src` die
-  Attribute. Ein Event ohne `[Topic]` bekommt einen aus dem CLR-Typnamen abgeleiteten Routing
-  Key, landet unter einem Schlüssel, den niemand gebunden hat, und verschwindet still.
+- **Vergessenes `[Topic]`** (WS-05): **gelöst** durch das ADR-0023-Amendment 2026-08-03 —
+  `[IntegrationEventTopic("<kontext>.<event>")]` in `BuildingBlocks.Application` validiert sein
+  Argument bei Konstruktion, und ein Event ohne Attribut wirft beim Publish statt still unter
+  einem CLR-Schlüssel zu verschwinden (gepinnt durch `IntegrationEventRoutingTests`).
 - **Pattern gegen Vertrag unbewacht** (WS-14): `SubscriptionDiscoveryTests` fängt inzwischen die
   vergessene Consumer-Assembly ab, aber ein Tippfehler im Topic-Pattern verhält sich exakt wie
   ein Upstream-Kontext, der noch nichts publiziert hat.

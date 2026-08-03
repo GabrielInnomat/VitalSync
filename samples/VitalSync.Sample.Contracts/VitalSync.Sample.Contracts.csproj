@@ -8,8 +8,4 @@
     <ProjectReference Include="..\..\BuildingBlocks\src\BuildingBlocks.Application\BuildingBlocks.Application.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="WolverineFx" Version="6.23.0" />
-  </ItemGroup>
-
 </Project>

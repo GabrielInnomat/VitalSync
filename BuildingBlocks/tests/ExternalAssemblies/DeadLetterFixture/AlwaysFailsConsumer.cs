@@ -1,9 +1,8 @@
 using BuildingBlocks.Application;
-using Wolverine.Attributes;
 
 namespace DeadLetterFixture;
 
-[Topic("probe.always-fails")]
+[IntegrationEventTopic("probe.always-fails")]
 public sealed record AlwaysFailsIntegrationEvent(string Name) : IIntegrationEvent
 {
     public Guid EventId { get; init; } = Guid.NewGuid();

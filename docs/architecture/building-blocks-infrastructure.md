@@ -280,12 +280,15 @@ A small cluster of classes, using Marten as a **raw stream store**:
 - **Routing.** Connecting the transport moves nothing on its own — Wolverine
   routes only what a routing rule matches, and `PublishAsync` silently discards
   an unroutable message. `UseWolverineMessaging` therefore installs the rule
-  `MessagesImplementing<IIntegrationEvent>().ToRabbitTopics("vitalsync.integration-events")`.
+  `PublishMessagesToRabbitMqExchange<IIntegrationEvent>("vitalsync.integration-events", …)`.
   Matching the marker rather than all messages is load-bearing: `DomainEventEnvelope`
   does not implement `IIntegrationEvent` and so can never be routed onto the
   broker (ADR-0022/0023, pinned by `IntegrationEventRoutingTests`). Each
   integration event supplies its routing key via a mandatory
-  `[Topic("<context>.<event>")]` attribute.
+  `[IntegrationEventTopic("<context>.<event>")]` attribute from
+  `BuildingBlocks.Application` — resolved by the routing rule's topic source, so
+  publishing an event without it throws instead of silently using a CLR-derived
+  key (ADR-0023 amendment 2026-08-03).
 - **Consumer side not included.** Queue declaration, binding, and listening are
   owned by the subscribing service; this package wires the publishing half only.
 

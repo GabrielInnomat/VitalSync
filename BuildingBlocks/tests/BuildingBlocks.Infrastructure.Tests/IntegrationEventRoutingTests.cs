@@ -4,7 +4,6 @@ using BuildingBlocks.Infrastructure.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Wolverine;
-using Wolverine.Attributes;
 using Wolverine.RabbitMQ;
 using Wolverine.Runtime;
 
@@ -55,6 +54,21 @@ public sealed class IntegrationEventRoutingTests(RabbitMqFixture fixture)
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
+    [Fact]
+    public async Task PublishingAnIntegrationEventWithoutATopic_FailsFastInsteadOfSilentlyDisappearing()
+    {
+        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
+
+        using var host = await StartHostAsync();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            host.Services.GetRequiredService<IMessageBus>()
+                .PublishAsync(new TopiclessProbeIntegrationEvent()).AsTask());
+        Assert.Contains(nameof(TopiclessProbeIntegrationEvent), exception.Message, StringComparison.Ordinal);
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
     private async Task<IHost> StartHostAsync()
         => await Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
@@ -77,8 +91,15 @@ public sealed class IntegrationEventRoutingTests(RabbitMqFixture fixture)
             .StartAsync(TestContext.Current.CancellationToken);
 }
 
-[Topic("probe.routing-probe")]
+[IntegrationEventTopic("probe.routing-probe")]
 public sealed record RoutingProbeIntegrationEvent(string Name) : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+
+    public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
+}
+
+public sealed record TopiclessProbeIntegrationEvent : IIntegrationEvent
 {
     public Guid EventId { get; init; } = Guid.NewGuid();
 

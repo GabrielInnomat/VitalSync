@@ -295,10 +295,15 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   database.
 - **Broker topology** (ADR-0023 amendment): one topic exchange
   `vitalsync.integration-events` for the whole platform. The publishing rule matches
-  `MessagesImplementing<IIntegrationEvent>()` — **never** all messages, so
+  the `IIntegrationEvent` marker (`PublishMessagesToRabbitMqExchange<IIntegrationEvent>`)
+  — **never** all messages, so
   `DomainEventEnvelope` cannot leak onto the broker. Every integration event **must**
-  carry `[Topic("<context>.<event>")]` in kebab-case (`nutrition.recipe-created`): the
+  carry `[IntegrationEventTopic("<context>.<event>")]` in kebab-case
+  (`nutrition.recipe-created`) — a Building Blocks attribute in
+  `BuildingBlocks.Application`, so contract assemblies never reference Wolverine: the
   routing key is part of the published contract, not derived from the CLR namespace.
+  The attribute rejects anything but two kebab-case segments at construction, and
+  publishing an event without it **throws** instead of silently using a CLR-derived key.
   Consumers subscribe via `options.SubscribeToIntegrationEvents(queue, consumerAssembly,
   patterns)` — Building Blocks wires **both halves**, so the subscribing host adds
   nothing of its own. Pass the service's **Infrastructure** assembly,

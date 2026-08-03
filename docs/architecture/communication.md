@@ -50,14 +50,14 @@ See [Domain model](./domain-model.md) for domain events and [Building Blocks](./
 
 ### Broker topology
 
-All integration events are published to the single topic exchange **`vitalsync.integration-events`**, which Wolverine provisions automatically. The routing key of an event is its **`[Topic("<context>.<event>")]`** attribute in kebab-case:
+All integration events are published to the single topic exchange **`vitalsync.integration-events`**, which Wolverine provisions automatically. The routing key of an event is its **`[IntegrationEventTopic("<context>.<event>")]`** attribute in kebab-case — a Building Blocks attribute living in `BuildingBlocks.Application` next to `IIntegrationEvent`, so contract assemblies stay free of any transport dependency (ADR-0023 amendment 2026-08-03):
 
 ```csharp
-[Topic("nutrition.recipe-created")]
+[IntegrationEventTopic("nutrition.recipe-created")]
 public sealed record RecipeCreated(Guid RecipeId, Guid EventId, DateTimeOffset OccurredAt) : IIntegrationEvent;
 ```
 
-The attribute is **mandatory** on every integration event. It makes the routing key part of the published contract instead of deriving it from the CLR namespace, where a rename would silently break consumer bindings.
+The attribute is **mandatory** on every integration event. It makes the routing key part of the published contract instead of deriving it from the CLR namespace, where a rename would silently break consumer bindings. Both halves fail fast: the attribute rejects anything but two kebab-case segments at construction, and publishing an event without the attribute throws instead of silently publishing under a key no consumer has bound.
 
 Consumers own their side of the topology: a subscribing service declares its own queue and binds it to the exchange with a topic pattern (`nutrition.*`), so adding a subscriber never changes the publishing service. Building Blocks wires only the publishing half.
 

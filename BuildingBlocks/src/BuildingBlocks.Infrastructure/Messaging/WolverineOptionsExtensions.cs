@@ -37,9 +37,9 @@ internal static class WolverineOptionsExtensions
 
         options.UseRabbitMq(rabbitMqUri).AutoProvision();
 
-        options.Publish(publishing => publishing
-            .MessagesImplementing<IIntegrationEvent>()
-            .ToRabbitTopics(IntegrationEventExchangeName));
+        options.PublishMessagesToRabbitMqExchange<IIntegrationEvent>(
+            IntegrationEventExchangeName,
+            integrationEvent => IntegrationEventTopic.For(integrationEvent.GetType()));
 
         options.Policies.OnException<Exception>()
             .RetryWithCooldown(

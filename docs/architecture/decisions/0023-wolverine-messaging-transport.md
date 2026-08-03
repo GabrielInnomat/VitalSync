@@ -4,6 +4,8 @@
 - **Date:** 2026-07-27
 - **Supersedes:** [ADR-0004](./0004-asynchronous-messaging-between-services.md)
 - **Amended:** 2026-07-31 (broker topology for integration events — see the note below)
+- **Amended:** 2026-08-01 (subscribing half — see the note below)
+- **Amended:** 2026-08-03 (topic attribute owned by Building Blocks — see the note below)
 
 ## Context
 
@@ -123,6 +125,31 @@ everything else from ADR-0004 intact.
 >   `wolverine-dead-letter-queue` **on the broker** — not to the `wolverine_dead_letters`
 >   table in the context's write database, which exists but stays empty. Operationally
 >   this is the one place to look; pinned by `DeadLetterTests`.
+
+> **Topic attribute owned by Building Blocks (amendment 2026-08-03).** The routing
+> key moves from Wolverine's `[Topic]` to a Building Blocks attribute,
+> **`[IntegrationEventTopic("<context>.<event>")]`** in `BuildingBlocks.Application`,
+> next to the `IIntegrationEvent` marker it belongs to.
+>
+> - **Why.** An integration event is a published contract, and contract assemblies
+>   were referencing WolverineFx for a single attribute — the transport was leaking
+>   into the contract layer that this ADR's own placement rule keeps
+>   framework-agnostic. The subscribe half was already wrapped
+>   (`SubscribeToIntegrationEvents`); this closes the publish half.
+> - **How.** `UseWolverineMessaging` routes via
+>   `PublishMessagesToRabbitMqExchange<IIntegrationEvent>` with a topic source that
+>   reads the attribute from the event type. The routing target and the
+>   marker-not-all-messages rule are unchanged.
+> - **Fail fast, twice.** The attribute validates its argument at construction:
+>   exactly `<context>.<event>`, both segments lower-case kebab-case — a third
+>   segment would silently escape one-word patterns like `nutrition.*`, because an
+>   AMQP `*` matches exactly one word. And publishing an event **without** the
+>   attribute now throws with the event's name and the fix, instead of Wolverine
+>   silently publishing under a CLR-derived key that no consumer has bound
+>   (WS-05's publish half). Pinned by `IntegrationEventRoutingTests`.
+> - **Consequence:** contract assemblies reference only `BuildingBlocks.Application`.
+>   Wolverine's own `[Topic]` is no longer read on integration events and must not
+>   be used.
 >
 > **Codegen dependency.** Wolverine 6 no longer ships the Roslyn compiler in its
 > core package, and its default `TypeLoadMode` compiles handler code at runtime.
