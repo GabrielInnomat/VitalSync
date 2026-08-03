@@ -17,11 +17,14 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v4
+      # Both actions are pinned to the majors that run on node24. The v4 majors targeted node20,
+      # which the runners now force onto node24 anyway while warning about it - so staying on v4
+      # bought no stability, only the annotation.
+      - uses: actions/checkout@v7
 
       # global.json pins the SDK, so CI and developer machines resolve the same feature band.
       # No Aspire workload install: the AppHosts reference Aspire.AppHost.Sdk as a package.
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
