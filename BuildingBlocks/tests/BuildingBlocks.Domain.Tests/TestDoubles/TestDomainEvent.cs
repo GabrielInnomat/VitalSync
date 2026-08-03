@@ -6,3 +6,5 @@ internal sealed class RawDomainEvent(int newValue) : IDomainEvent
 {
     public int NewValue { get; } = newValue;
 }
+
+internal sealed record IgnoredDomainEvent : DomainEvent;

@@ -1,4 +1,4 @@
-﻿using BuildingBlocks.Domain;
+using BuildingBlocks.Domain;
 
 namespace BuildingBlocks.Infrastructure.Persistence;
 
@@ -8,18 +8,19 @@ public sealed class MartenAggregateTracker
 
     public IReadOnlyList<TrackedAggregate> Entries => _entries;
 
-    public void Track(IDomainEventOwner aggregate, Func<string> streamKey, Func<long> expectedVersion)
+    public void Track(IDomainEventOwner aggregate, string aggregateName, string aggregateId, Func<long> version)
     {
         ArgumentNullException.ThrowIfNull(aggregate);
-        ArgumentNullException.ThrowIfNull(streamKey);
-        ArgumentNullException.ThrowIfNull(expectedVersion);
+        ArgumentException.ThrowIfNullOrWhiteSpace(aggregateName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(aggregateId);
+        ArgumentNullException.ThrowIfNull(version);
 
         if (_entries.Exists(entry => ReferenceEquals(entry.Aggregate, aggregate)))
         {
             return;
         }
 
-        _entries.Add(new TrackedAggregate(aggregate, streamKey, expectedVersion));
+        _entries.Add(new TrackedAggregate(aggregate, aggregateName, aggregateId, version));
     }
 
     public void ClearDomainEvents()

@@ -1,4 +1,4 @@
-using BuildingBlocks.Infrastructure.DependencyInjection;
+﻿using BuildingBlocks.Infrastructure.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -68,7 +68,11 @@ public sealed class WolverineWiringStartupValidationTests
         var services = new ServiceCollection();
         services.AddLogging();
         registerExtras?.Invoke(services);
-        services.AddBuildingBlocks(configure);
+        services.AddBuildingBlocks(options =>
+        {
+            options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
+            configure(options);
+        });
         return services.BuildServiceProvider();
     }
 
@@ -79,3 +83,4 @@ public sealed class WolverineWiringStartupValidationTests
 
     private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options);
 }
+

@@ -184,14 +184,16 @@ identity — two entities are equal when they are the **same concrete type** and
 have the **same id** (not on their attribute values). See
 [ADR-0008](./architecture/decisions/0008-entity-identity-and-equality.md).
 
-### State object (`IState<TSelf, TKey>`)
+### State object (`AggregateState<TSelf, TKey>`)
 
-For event-sourced aggregates, an **immutable** object that owns the aggregate's
-identity and all **apply / evolve** logic. `Apply(IDomainEvent)` returns the next
-state (`this with { … }`). Keeping evolution logic on the state keeps large
-aggregates free of "apply noise" — the aggregate class holds only the public
-command API. See
-[ADR-0010](./architecture/decisions/0010-aggregate-state-object.md).
+An **immutable** record that owns the aggregate's identity, its **version**, and
+all **apply / evolve** logic. `Apply(IDomainEvent)` returns the next state
+(`this with { … }`). Keeping evolution logic on the state keeps large aggregates
+free of "apply noise" — the aggregate class holds only the public command API.
+It is an abstract record rather than an interface so the base can own the version
+bookkeeping via the virtual record copy constructor. See
+[ADR-0010](./architecture/decisions/0010-aggregate-state-object.md) and
+[ADR-0030](./architecture/decisions/0030-persisted-names-and-aggregate-version.md).
 
 ### Strongly Typed Identifier
 

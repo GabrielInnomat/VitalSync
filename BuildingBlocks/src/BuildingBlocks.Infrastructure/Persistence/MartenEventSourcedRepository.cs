@@ -1,4 +1,4 @@
-﻿using BuildingBlocks.Application;
+using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 using Marten;
 
@@ -11,7 +11,8 @@ public sealed class MartenEventSourcedRepository<TAggregate, TKey>(IDocumentSess
 {
     public async Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken cancellationToken)
     {
-        var streamKey = EntityKeyFormatter.GetStreamKey(typeof(TAggregate), id);
+        var aggregateName = EntityKeyFormatter.GetAggregateName(typeof(TAggregate));
+        var streamKey = EntityKeyFormatter.GetStreamKey(aggregateName, EntityKeyFormatter.GetKeyValue(id));
         var stream = await session.Events.FetchStreamAsync(streamKey, token: cancellationToken).ConfigureAwait(false);
 
         if (stream is not { Count: > 0 })
@@ -21,7 +22,7 @@ public sealed class MartenEventSourcedRepository<TAggregate, TKey>(IDocumentSess
 
         var aggregate = TAggregate.CreateEmpty();
         ((IEventSourcedAggregateRoot<TKey>)aggregate).LoadFromHistory(stream.Select(@event => (IDomainEvent)@event.Data));
-        Track(aggregate);
+        Track(aggregate, aggregateName);
         return aggregate;
     }
 
@@ -35,15 +36,16 @@ public sealed class MartenEventSourcedRepository<TAggregate, TKey>(IDocumentSess
                 $"'{typeof(TAggregate)}' has no identity. An aggregate gains its identity through its first event; an empty hull exists only for rehydration.");
         }
 
-        Track(aggregate);
+        Track(aggregate, EntityKeyFormatter.GetAggregateName(typeof(TAggregate)));
         return Task.CompletedTask;
     }
 
-    private void Track(TAggregate aggregate)
+    private void Track(TAggregate aggregate, string aggregateName)
     {
         tracker.Track(
             (IDomainEventOwner)aggregate,
-            () => EntityKeyFormatter.GetStreamKey(typeof(TAggregate), aggregate.Id),
+            aggregateName,
+            EntityKeyFormatter.GetKeyValue(aggregate.Id),
             () => ((IEventSourcedAggregateRoot<TKey>)aggregate).Version);
     }
 }

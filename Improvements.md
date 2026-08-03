@@ -34,9 +34,9 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-19 | Ein Assembly für EF Core, Marten, Wolverine und RabbitMQ                 | offen             |
 | IMP-20 | `DbContext` als DI-Schlüssel kollidiert mit dem Read/Write-Paar          | offen             |
 | IMP-21 | `IRepository` koppelt an die konkrete Domain-Basisklasse                 | gelöst            |
-| IMP-22 | `AssemblyQualifiedName` als Event-Typ-Token                              | offen             |
-| IMP-23 | Marten-Stream-Key hängt am Klassennamen                                  | offen             |
-| IMP-24 | `DomainEventEnvelope` trägt zu wenig Metadaten                           | offen             |
+| IMP-22 | `AssemblyQualifiedName` als Event-Typ-Token                              | gelöst            |
+| IMP-23 | Marten-Stream-Key hängt am Klassennamen                                  | gelöst            |
+| IMP-24 | `DomainEventEnvelope` trägt zu wenig Metadaten                           | gelöst            |
 | IMP-25 | `Sequential()` auf einer einzigen Queue für alle Domain Events           | offen             |
 | IMP-26 | `Publisher` koppelt Projektion und Integration-Event-Publikation         | offen             |
 | IMP-27 | `FailureResults`-Reflection ist vermeidbar                               | offen             |
@@ -565,7 +565,10 @@ Umgesetzt im Zuge von ADR-0026.
 
 ---
 
-# IMP-22, `AssemblyQualifiedName` als Event-Typ-Token
+# IMP-22, `AssemblyQualifiedName` als Event-Typ-Token — **gelöst (2026-08-03)**
+
+Siehe [TODO-03](todo.md) und [ADR-0030](docs/architecture/decisions/0030-persisted-names-and-aggregate-version.md).
+
 
 Unverändert offen — identisch mit [hacky.md Nr. 1](hacky.md).
 
@@ -590,7 +593,10 @@ drei betreffen dasselbe Persistenz-Format.
 
 ---
 
-# IMP-23, Marten-Stream-Key hängt am Klassennamen
+# IMP-23, Marten-Stream-Key hängt am Klassennamen — **gelöst (2026-08-03)**
+
+Siehe [TODO-04](todo.md) und [ADR-0030](docs/architecture/decisions/0030-persisted-names-and-aggregate-version.md).
+
 
 Unverändert offen — identisch mit [hacky.md Nr. 2](hacky.md).
 
@@ -617,7 +623,10 @@ entstehen.
 
 ---
 
-# IMP-24, `DomainEventEnvelope` trägt zu wenig Metadaten
+# IMP-24, `DomainEventEnvelope` trägt zu wenig Metadaten — **gelöst (2026-08-03)**
+
+Siehe [TODO-02](todo.md) und [ADR-0030](docs/architecture/decisions/0030-persisted-names-and-aggregate-version.md).
+
 
 ```csharp
 public sealed record DomainEventEnvelope(string EventTypeName, string Payload);

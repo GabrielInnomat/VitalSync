@@ -34,9 +34,9 @@ eine Entscheidung, keinen Code.
 | Nr.     | Titel                                                          | Prio   | Status            | Quellen                               |
 | ------- | -------------------------------------------------------------- | ------ | ----------------- | ------------------------------------- |
 | TODO-01 | Aggregate mit Kindkollektionen brechen still                   | **P1** | offen             | hacky-6, IMP-15                       |
-| TODO-02 | Aggregat-Version und Envelope-Metadaten                        | **P1** | offen             | WS-01, WS-03, IMP-24, IMP-41, hacky-7 |
-| TODO-03 | `AssemblyQualifiedName` als Persistenz-Contract                | **P1** | offen             | hacky-1, IMP-22                       |
-| TODO-04 | Stream-Key hängt am CLR-Klassennamen                           | **P1** | offen             | hacky-2, IMP-23                       |
+| TODO-02 | Aggregat-Version und Envelope-Metadaten                        | **P1** | gelöst            | WS-01, WS-03, IMP-24, IMP-41, hacky-7 |
+| TODO-03 | `AssemblyQualifiedName` als Persistenz-Contract                | **P1** | gelöst            | hacky-1, IMP-22                       |
+| TODO-04 | Stream-Key hängt am CLR-Klassennamen                           | **P1** | gelöst            | hacky-2, IMP-23                       |
 | TODO-05 | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | **P1** | gelöst            | hacky-5                               |
 | TODO-06 | Connection String zweimal, ohne Abgleich                       | **P1** | gelöst            | hacky-8, IMP-13                       |
 | TODO-07 | Integration Events sind nicht persistent                       | **P1** | offen             | WS-08                                 |
@@ -127,7 +127,41 @@ Datenmigrationsthema.
 
 # TODO-02, Aggregat-Version und Envelope-Metadaten
 
-**P1 · offen · WS-01 + WS-03 + IMP-24 (+ IMP-41, hacky-7 via TODO-13 erledigt)**
+**P1 · gelöst · WS-01 + WS-03 + IMP-24 (+ IMP-41, hacky-7 via TODO-13 erledigt)**
+
+## Gelöst — die Version lebt auf dem State (ADR-0030, 2026-08-03)
+
+Zusammen mit TODO-03 und TODO-04 in einem Zug umgesetzt, weil alle drei dasselbe
+Persistenzformat betreffen. Aus dem Interface `IState<TSelf, TKey>` ist die abstrakte
+Record-Basis `AggregateState<TSelf, TKey>` geworden, die `Id`, `Version` und `Apply` trägt;
+`AggregateRoot.ApplyEvent` zählt bei jedem gefalteten Event hoch — auch bei einem, das der State
+ignoriert. Der private Zähler in `EventSourcedAggregateRoot` ist gelöscht; beide Persistenzformen
+lesen dieselbe Zahl.
+
+Die eine Zahl bedient alle drei ursprünglichen Symptome:
+
+| Symptom                                              | Jetzt                                                                 |
+| ---------------------------------------------------- | --------------------------------------------------------------------- |
+| Keine optimistische Nebenläufigkeit state-stored     | `version`-Spalte mit `IsConcurrencyToken()` — belegt durch `EfCoreAggregateRoundTripTests.TwoConcurrentRenames_LetTheSecondCommitFailAsAConflict` gegen echtes Postgres |
+| Projektionen können nicht ordnungsbewusst sein       | `IProjectionHandler.Handle` bekommt die `DomainEventMetadata`; die Samples führen einen Versions-Wasserstand statt `RenameCount` |
+| `DomainEventEnvelope` trägt keine Aggregat-Metadaten | `AggregateName`, `AggregateId`, `Version` — jedes Event einer Transaktion bekommt seine eigene Version |
+
+**Anders als vorgeschlagen:** `IState` ist kein Interface mehr, sondern die abstrakte Record-Basis
+`AggregateState<TSelf, TKey>`. Der Copy-Konstruktor von Records ist virtuell, also liefert
+`this with { … }` in der Basis den abgeleiteten Laufzeittyp zurück — die Basis kann die Version
+damit selbst setzen. `WithVersion` ist `internal` und für Domänencode weder erreichbar noch falsch
+implementierbar. Ein State-Record schreibt deshalb **null** Zeilen zur Version, und der ursprünglich
+gebaute Guard in `AggregateRoot` samt Exception, Test und Test-Double ist wieder entfallen — der
+Fehlermodus existiert nicht mehr. Preis: ein ungeprüfter Cast, einmal, in den Building Blocks.
+
+**Semantikwechsel, den man kennen muss:** Ein Event auf oder unter dem Wasserstand wird
+**verworfen**, wo vorher feldweise gemerged wurde. Unter der heutigen Zustellung (pro Aggregat
+geordnet, nur Redelivery) ist das richtig; unter echt ungeordneter Zustellung wäre es das nicht.
+
+Damit ist auch **TODO-20** erst machbar (der Envelope trägt jetzt die Aggregat-Identität, nach
+der partitioniert würde) und die state-stored Hälfte von **TODO-25** abgedeckt.
+
+## Ursprünglicher Befund
 
 Ursprünglich fünf Befunde, eine Ursache: es gibt keine fortlaufende Zahl pro Aggregat, und der
 Envelope trägt keine Aggregat-Metadaten. Zwei davon (IMP-41, hacky-7) sind mit TODO-13
@@ -150,16 +184,16 @@ ist gestellt, aber von der Infrastruktur nicht bedienbar.
 Eine Zahl für drei Zwecke — Nebenläufigkeit, Projektions-Ordnung, Envelope-Metadatum:
 
 ```csharp
-public interface IState<TSelf, out TKey>
+public abstract record AggregateState<TSelf, TKey>
 {
-    TKey Id { get; }
-    long Version { get; init; }
-    TSelf Apply(IDomainEvent domainEvent);
+    public abstract TKey Id { get; init; }
+    public long Version { get; init; }
+    public abstract TSelf Apply(IDomainEvent domainEvent);
 }
 
 public sealed record DomainEventEnvelope(
     string EventName, string Payload, Guid EventId,
-    string AggregateType, string AggregateId, long Version, DateTimeOffset OccurredAt);
+    string AggregateName, string AggregateId, long Version, DateTimeOffset OccurredAt);
 ```
 
 Zieht die Aggregat-Metadaten in den Envelope — `EventId`/`OccurredAt` sind dort seit TODO-13
@@ -171,7 +205,30 @@ Voraussetzung für TODO-14 (Idempotenz) und TODO-20 (Partitionierung). Braucht e
 
 # TODO-03, `AssemblyQualifiedName` als Persistenz-Contract
 
-**P1 · offen · hacky-1 + IMP-22**
+**P1 · gelöst · hacky-1 + IMP-22**
+
+## Gelöst — `[EventName]` und eine geschlossene Typ-Registry (ADR-0030, 2026-08-03)
+
+Wie vorgeschlagen umgesetzt, plus eine Hälfte, die im Befund fehlte.
+
+`[EventName("widget-created-v1")]` ist Pflicht, kebab-case wird im Attributkonstruktor geprüft.
+Eine `DomainEventTypeRegistry` wird aus den per `options.AddDomainEventsFrom(assembly)`
+genannten Assemblies gebaut und wirft **bei der Registrierung** bei fehlendem Attribut oder
+doppeltem Namen. Wer eine Persistenzstrategie wählt, ohne ein Domain-Event-Assembly zu nennen,
+scheitert beim Start. `Type.GetType` ist ersatzlos weg — die lesbare Typmenge ist geschlossen,
+und damit auch die unbegrenzte Aktivierungsfläche.
+
+**Der Befund war halbiert:** `UseMartenEventSourcing` konfigurierte **keine** Event-Aliase, also
+leitete Marten `mt_events.type` selbst aus dem CLR-Typnamen ab. Ein `[EventName]`, das nur die
+Outbox repariert, hätte ausgerechnet den Event Store — die einzige Stelle ohne „einfach neu
+aufbauen" — weiter am Klassennamen hängen lassen. Dieselbe Registry speist jetzt
+`options.Events.MapEventType`; belegt durch `MartenEventAliasTests`, das ein Event schreibt und
+den gespeicherten `EventTypeName` aus der Datenbank zurückliest.
+
+Weiter abgesichert durch `DomainEventTypeRegistryTests` (fehlendes Attribut, Namenskollision,
+Idempotenz beim Doppelscan) und `DomainEventEnvelopeSerializerTests.StoredPayload_SurvivesARenameOfTheClrType`.
+
+## Ursprünglicher Befund
 
 In jeder Outbox-Zeile steht `"Foo.WidgetCreated, MyAsm, Version=1.0.0.0, Culture=neutral,
 PublicKeyToken=null"`, zurückgeholt mit `Type.GetType(..., throwOnError: true)`
@@ -197,7 +254,24 @@ eine Datenmigration.
 
 # TODO-04, Stream-Key hängt am CLR-Klassennamen
 
-**P1 · offen · hacky-2 + IMP-23**
+**P1 · gelöst · hacky-2 + IMP-23**
+
+## Gelöst — `[AggregateName]` statt `[StreamPrefix]` (ADR-0030, 2026-08-03)
+
+Wie vorgeschlagen, aber unter anderem Namen: `[AggregateName("gadget")]` statt des skizzierten
+`[StreamPrefix]`, weil derselbe Name auch als `AggregateName` auf dem Envelope gebraucht wird
+(TODO-02). Ein Begriff, ein Attribut. `EntityKeyFormatter.GetAggregateName` wirft bei fehlendem
+Attribut — das Werfen ist wie vorgeschlagen Absicht.
+
+`AggregateConventionTests` scannt in beiden Samples auf `[AggregateName]` und `[EventName]`,
+`EntityKeyFormatterTests` belegt, dass zwei unterschiedlich heißende CLR-Typen mit demselben
+Attribut denselben Stream-Key ergeben — also genau die Rename-Resistenz, um die es ging.
+
+Die bestehenden Sample-Streams heißen danach `gadget/…` statt `Gadget/…` und sind verwaist.
+Heute folgenlos (Wegwerf-Durchstich, Datenbanken werden neu erzeugt) — und genau der Grund, das
+vor dem ersten echten Service zu machen.
+
+## Ursprünglicher Befund
 
 `$"{aggregateType.Name}/{keyValue}"`
 ([EntityKeyFormatter.cs:20](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EntityKeyFormatter.cs:20)).
@@ -1298,7 +1372,11 @@ dieser Regel: kein Host benennt es mehr.)
 
 # TODO-41, Wirkungslose Varianz-Modifikatoren
 
-**P4 · offen · IMP-43**
+**P4 · offen (teilweise gegenstandslos) · IMP-43**
+
+> Nachtrag 2026-08-03: `IState<TSelf, out TKey>` gibt es nicht mehr — der State ist mit ADR-0030
+> die Record-Basis `AggregateState<TSelf, TKey>`, und Klassen kennen keine Varianz. Dieser eine
+> Modifikator ist damit weg; die übrigen vier stehen weiterhin offen.
 
 `IEntity<out TKey>`, `IAggregateRoot<out TKey>`, `IEventSourcedAggregateRoot<out TKey>`,
 `IState<TSelf, out TKey>`, `IRepository<TAggregate, in TKey>` — alle mit

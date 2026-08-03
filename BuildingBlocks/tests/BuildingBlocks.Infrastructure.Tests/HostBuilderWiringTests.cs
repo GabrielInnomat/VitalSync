@@ -1,4 +1,4 @@
-using BuildingBlocks.Infrastructure.DependencyInjection;
+﻿using BuildingBlocks.Infrastructure.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -69,7 +69,9 @@ public sealed class HostBuilderWiringTests
         var applied = false;
 
         builder.AddBuildingBlocks(
-            options => options.UseEfCorePersistence<TestDbContext>(WriteConnectionString),
+            options => options
+                .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
+                .UseEfCorePersistence<TestDbContext>(WriteConnectionString),
             _ => applied = true);
 
         Assert.True(applied);
@@ -88,9 +90,14 @@ public sealed class HostBuilderWiringTests
     private static HostApplicationBuilder BuildHost(Action<BuildingBlocksOptions> configure)
     {
         var builder = Host.CreateApplicationBuilder();
-        builder.AddBuildingBlocks(configure);
+        builder.AddBuildingBlocks(options =>
+        {
+            options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
+            configure(options);
+        });
         return builder;
     }
 
     private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options);
 }
+

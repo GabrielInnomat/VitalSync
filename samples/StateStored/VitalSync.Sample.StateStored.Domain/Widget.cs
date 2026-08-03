@@ -2,6 +2,7 @@ using BuildingBlocks.Domain;
 
 namespace VitalSync.Sample.StateStored.Domain;
 
+[AggregateName("widget")]
 public sealed class Widget : AggregateRoot<WidgetId, WidgetState>, IReconstitutable<Widget>
 {
     private Widget() : base(WidgetState.Empty)

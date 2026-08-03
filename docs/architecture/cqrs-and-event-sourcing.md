@@ -121,8 +121,10 @@ event-sourced and state-stored contexts:
 
 Because delivery is at-least-once and the two databases are separate, read-model
 updates are **eventually consistent** with writes, and projection handlers **must
-be idempotent and per-aggregate order-aware** (tracking a last-processed
-position/version). Read models are **domain-shaped and owned by each service** — not
+be idempotent and per-aggregate order-aware** — the `DomainEventMetadata` a handler
+receives carries the aggregate's `Version`, so the handler keeps that number on its
+read model and ignores any event at or below it ([ADR-0030](./decisions/0030-persisted-names-and-aggregate-version.md)).
+Read models are **domain-shaped and owned by each service** — not
 a Building Block; Infrastructure ships only the plumbing (Publisher, outbox,
 dispatch loop, projection runner, transport). Read models are **rebuildable** by
 replaying events (ES) or re-running projections over the write side.

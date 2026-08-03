@@ -19,6 +19,7 @@ public sealed class WidgetWriteDbContext(DbContextOptions<WidgetWriteDbContext> 
             entity.Property(state => state.Id).HasColumnName("id");
             entity.Property(state => state.Name).HasColumnName("name").IsRequired().HasMaxLength(200);
             entity.Property(state => state.RenameCount).HasColumnName("rename_count");
+            entity.Property(state => state.Version).HasColumnName("version").IsConcurrencyToken();
         });
 
         modelBuilder.ApplyEntityKeyConversions();

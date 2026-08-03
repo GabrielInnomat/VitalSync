@@ -6,5 +6,7 @@ public interface IStateOwner
 
     object State { get; }
 
+    long Version { get; }
+
     void Restore(object state);
 }

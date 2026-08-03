@@ -1,4 +1,5 @@
-using BuildingBlocks.Application;
+﻿using BuildingBlocks.Application;
+using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Messaging;
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +33,35 @@ public sealed class EfCoreAggregateRoundTripTests(PostgreSqlFixture fixture)
         Assert.Equal("renamed", reloaded.Name);
 
         Assert.Empty(reloaded.DomainEvents);
+        Assert.Equal(2, ((IStateOwner)reloaded).Version);
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task TwoConcurrentRenames_LetTheSecondCommitFailAsAConflict()
+    {
+        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
+
+        using var host = await StartHostAsync();
+        var id = Guid.NewGuid();
+        await SendAsync(host, new StartFlushProbe(id));
+
+        using var first = host.Services.CreateScope();
+        using var second = host.Services.CreateScope();
+
+        var firstProbe = await LoadAsync(first, id);
+        var secondProbe = await LoadAsync(second, id);
+
+        firstProbe.Rename("first");
+        secondProbe.Rename("second");
+
+        await first.ServiceProvider.GetRequiredService<IUnitOfWork>()
+            .CommitAsync(TestContext.Current.CancellationToken);
+
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(
+            () => second.ServiceProvider.GetRequiredService<IUnitOfWork>()
+                .CommitAsync(TestContext.Current.CancellationToken));
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
@@ -55,6 +85,13 @@ public sealed class EfCoreAggregateRoundTripTests(PostgreSqlFixture fixture)
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
+    private static async Task<FlushProbe> LoadAsync(IServiceScope scope, Guid id)
+    {
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<FlushProbe, FlushProbeId>>();
+        var probe = await repository.GetByIdAsync(new FlushProbeId(id), TestContext.Current.CancellationToken);
+        return probe!;
+    }
+
     private static async Task SendAsync(IHost host, ICommand command)
     {
         using var scope = host.Services.CreateScope();
@@ -68,7 +105,9 @@ public sealed class EfCoreAggregateRoundTripTests(PostgreSqlFixture fixture)
         var builder = Host.CreateApplicationBuilder();
 
         builder.AddBuildingBlocks(
-            options => options.UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString),
+            options => options
+                .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
+                .UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString),
             wolverine =>
             {
                 wolverine.Durability.Mode = DurabilityMode.Solo;
@@ -83,9 +122,10 @@ public sealed class EfCoreAggregateRoundTripTests(PostgreSqlFixture fixture)
 
         using var scope = host.Services.CreateScope();
         await scope.ServiceProvider.GetRequiredService<FlushProbeContext>().Database.ExecuteSqlRawAsync(
-            "create table if not exists flush_probe_rows (id uuid primary key, name text not null)",
+            "create table if not exists flush_probe_rows (id uuid primary key, name text not null, version bigint not null)",
             TestContext.Current.CancellationToken);
 
         return host;
     }
 }
+

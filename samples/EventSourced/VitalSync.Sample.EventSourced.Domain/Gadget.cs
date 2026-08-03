@@ -2,6 +2,7 @@ using BuildingBlocks.Domain;
 
 namespace VitalSync.Sample.EventSourced.Domain;
 
+[AggregateName("gadget")]
 public sealed class Gadget : EventSourcedAggregateRoot<GadgetId, GadgetState>, IReconstitutable<Gadget>
 {
     private Gadget() : base(GadgetState.Empty)

@@ -9,6 +9,7 @@ namespace BuildingBlocks.Infrastructure.Persistence;
 public sealed class EfCoreUnitOfWork<TContext>(
     IDbContextOutbox<TContext> outbox,
     EfCoreAggregateTracker tracker,
+    DomainEventEnvelopeSerializer serializer,
     IClock clock) : IUnitOfWork
     where TContext : DbContext
 {
@@ -25,9 +26,20 @@ public sealed class EfCoreUnitOfWork<TContext>(
 
         foreach (var entry in entries)
         {
-            foreach (var domainEvent in entry.Aggregate.DomainEvents)
+            var domainEvents = entry.Aggregate.DomainEvents;
+            var version = entry.StateOwner.Version - domainEvents.Count;
+
+            foreach (var domainEvent in domainEvents)
             {
-                await outbox.PublishAsync(DomainEventEnvelopeSerializer.Wrap(domainEvent, Guid.NewGuid(), occurredAt)).ConfigureAwait(false);
+                var envelope = serializer.Wrap(
+                    domainEvent,
+                    Guid.NewGuid(),
+                    entry.AggregateName,
+                    entry.AggregateId,
+                    ++version,
+                    occurredAt);
+
+                await outbox.PublishAsync(envelope).ConfigureAwait(false);
             }
         }
 

@@ -7,6 +7,7 @@ public sealed record RegistrationCommand : ICommand;
 
 public sealed record RegistrationQuery : IQuery<int>;
 
+[EventName("registration-v1")]
 public sealed record RegistrationEvent : DomainEvent;
 
 public sealed class RegistrationCommandHandler : ICommandHandler<RegistrationCommand>
@@ -23,7 +24,8 @@ public sealed class RegistrationQueryHandler : IQueryHandler<RegistrationQuery, 
 
 public sealed class RegistrationProjectionHandler : IProjectionHandler<RegistrationEvent>
 {
-    public Task Handle(RegistrationEvent domainEvent, CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task Handle(RegistrationEvent domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken) =>
+        Task.CompletedTask;
 }
 
 public sealed class RegistrationMapper : IIntegrationEventMapper

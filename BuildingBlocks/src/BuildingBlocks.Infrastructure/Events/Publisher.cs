@@ -16,7 +16,7 @@ internal sealed class Publisher(
         ArgumentNullException.ThrowIfNull(metadata);
         ArgumentNullException.ThrowIfNull(integrationEventSink);
 
-        await projectionRunner.RunAsync(domainEvent, cancellationToken).ConfigureAwait(false);
+        await projectionRunner.RunAsync(domainEvent, metadata, cancellationToken).ConfigureAwait(false);
 
         foreach (var mapper in _mappers)
         {

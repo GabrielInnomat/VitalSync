@@ -141,6 +141,27 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   boundary; mappers populate both from the `DomainEventMetadata` they receive —
   **never** a fresh Guid per invocation, or redeliveries break deduplication. Do not
   "clean up" this asymmetry.
+- **Persisted names are declared, never derived** (ADR-0030): every domain event needs
+  `[EventName("widget-created-v1")]` and every aggregate needs `[AggregateName("widget")]`,
+  both lower-case kebab-case. The event name is what the outbox row and `mt_events.type`
+  store; the aggregate name prefixes the event stream and travels on every envelope. A CLR
+  rename must never touch persisted data, so the class name is not a contract. A host names
+  the declaring assembly via `options.AddDomainEventsFrom(assembly)` — configuring persistence
+  without it throws at startup, and a missing or duplicated `[EventName]` throws at
+  registration. `Type.GetType` over stored data is gone; the readable type set is closed.
+- **The state is an abstract record, not an interface** (ADR-0030, amending ADR-0010): a state
+  derives from `AggregateState<TSelf, TKey>` and writes only its fields, `Empty` and
+  `override Apply`. The base carries `Id` and `Version`; because a record's copy constructor is
+  virtual, `this with { … }` in the base returns the derived type, so the base owns the version
+  bookkeeping through an `internal WithVersion` that domain code can neither reach nor
+  implement wrongly. A state record therefore has **no** version boilerplate and there is no
+  guard to write — the cost is one unchecked cast, once, in Building Blocks.
+- **The aggregate version lives on the state** (ADR-0030): `AggregateRoot` advances it on every
+  folded event, including one the state's `Apply` ignores. One number serves three purposes —
+  Marten's expected stream version, the EF `IsConcurrencyToken()` column that finally gives
+  state-stored contexts optimistic concurrency, and the per-aggregate sequence on
+  `DomainEventEnvelope`/`DomainEventMetadata` (`AggregateName`, `AggregateId`, `Version`) that
+  projections use as an order watermark.
 - **Business rules and domain validation** follow ADR-0009.
 - Aggregates use an **aggregate state object** (ADR-0010).
 - **One aggregate authoring model** — every aggregate derives from the state-fold
@@ -261,8 +282,10 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   atomically via `SaveChangesAndFlushMessagesAsync`; Marten via the flush-on-commit
   listener that `IMartenOutbox.Enroll` registers) — the durability agent's polling
   is crash-recovery only. Delivery is **at-least-once**, so projection handlers
-  **must be idempotent and per-aggregate order-aware** (track a last-processed
-  position/version); reads are **eventually consistent** with writes.
+  **must be idempotent and per-aggregate order-aware** — `IProjectionHandler.Handle` receives
+  the `DomainEventMetadata`, so a handler keeps the last processed `Version` per aggregate on
+  its read model and ignores anything at or below that watermark (ADR-0030); an event below the
+  watermark is dropped, not field-merged. Reads are **eventually consistent** with writes.
 - **Read models are owned by each service, not a Building Block** — the service owns
   its read-model schema, projection handlers, and queries; Infrastructure ships only
   the plumbing (Publisher, outbox, dispatch loop, projection runner, transport). Read
@@ -328,12 +351,13 @@ Index: `docs/architecture/decisions/README.md`.
 6. Write **no comments** — not in `*.cs`, `*.csproj`, workflow YAML, or the code examples in `*.md` (ADR-0028); delete any comment you come across.
 7. If a change affects architecture, add or update an ADR using the template in `docs/architecture/decisions/README.md`.
 8. Match existing style; respect `.editorconfig` and `Directory.Build.props`.
-9. **Always commit and push directly to the `main` branch** — never work on separate branches, and never ask which branch to use; `main` is always the target.
+9. **Always work on `main` branch** — never work on separate branches, and never ask which branch to use; `main` is always the target.
 10. Always update the instruction files in `.github/*.md` and `.claude/*.md` if you discover a gap or ambiguity in the guidance.
 11. If you are unsure about a decision, **always ask a human** — Copilot is not the arbiter of architecture or domain rules.
 12. Always use short and clear commit messages.
 13. If you write code, always add or update unit tests / integration tests / architecture tests, and make sure they pass before committing.
 14. Always check all `*.md` files in the repository and update them if needed.
+15. **NEVER commit yourself.**
 
 ## Key documentation
 

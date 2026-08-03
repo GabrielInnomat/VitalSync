@@ -6,9 +6,10 @@ namespace VitalSync.Sample.EventSourced.Infrastructure.Read;
 
 public sealed class GadgetCreatedProjection(GadgetReadDbContext context) : IProjectionHandler<GadgetCreated>
 {
-    public async Task Handle(GadgetCreated domainEvent, CancellationToken cancellationToken)
+    public async Task Handle(GadgetCreated domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
+        ArgumentNullException.ThrowIfNull(metadata);
 
         var existing = await context.Gadgets
             .FirstOrDefaultAsync(gadget => gadget.Id == domainEvent.GadgetId, cancellationToken)
@@ -22,11 +23,13 @@ public sealed class GadgetCreatedProjection(GadgetReadDbContext context) : IProj
                 Name = domainEvent.Name,
                 RenameCount = 0,
                 IsRetired = false,
+                Version = metadata.Version,
             });
         }
-        else if (existing.RenameCount == 0)
+        else if (existing.Version < metadata.Version)
         {
             existing.Name = domainEvent.Name;
+            existing.Version = metadata.Version;
         }
 
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -35,9 +38,10 @@ public sealed class GadgetCreatedProjection(GadgetReadDbContext context) : IProj
 
 public sealed class GadgetRenamedProjection(GadgetReadDbContext context) : IProjectionHandler<GadgetRenamed>
 {
-    public async Task Handle(GadgetRenamed domainEvent, CancellationToken cancellationToken)
+    public async Task Handle(GadgetRenamed domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
+        ArgumentNullException.ThrowIfNull(metadata);
 
         var existing = await context.Gadgets
             .FirstOrDefaultAsync(gadget => gadget.Id == domainEvent.GadgetId, cancellationToken)
@@ -50,12 +54,14 @@ public sealed class GadgetRenamedProjection(GadgetReadDbContext context) : IProj
                 Id = domainEvent.GadgetId,
                 Name = domainEvent.Name,
                 RenameCount = domainEvent.RenameCount,
+                Version = metadata.Version,
             });
         }
-        else if (existing.RenameCount < domainEvent.RenameCount)
+        else if (existing.Version < metadata.Version)
         {
             existing.Name = domainEvent.Name;
             existing.RenameCount = domainEvent.RenameCount;
+            existing.Version = metadata.Version;
         }
 
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -64,9 +70,10 @@ public sealed class GadgetRenamedProjection(GadgetReadDbContext context) : IProj
 
 public sealed class GadgetRetiredProjection(GadgetReadDbContext context) : IProjectionHandler<GadgetRetired>
 {
-    public async Task Handle(GadgetRetired domainEvent, CancellationToken cancellationToken)
+    public async Task Handle(GadgetRetired domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
+        ArgumentNullException.ThrowIfNull(metadata);
 
         var existing = await context.Gadgets
             .FirstOrDefaultAsync(gadget => gadget.Id == domainEvent.GadgetId, cancellationToken)
@@ -78,11 +85,13 @@ public sealed class GadgetRetiredProjection(GadgetReadDbContext context) : IProj
             {
                 Id = domainEvent.GadgetId,
                 IsRetired = true,
+                Version = metadata.Version,
             });
         }
-        else
+        else if (existing.Version < metadata.Version)
         {
             existing.IsRetired = true;
+            existing.Version = metadata.Version;
         }
 
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

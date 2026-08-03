@@ -80,6 +80,7 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
 
                 services.AddBuildingBlocks(options =>
                 {
+                    options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
                     options.UseMartenEventSourcing(postgres.ConnectionString);
                     options.UseWolverineMessaging(rabbit.ConnectionUri);
                     options.SubscribeToIntegrationEvents(

@@ -42,6 +42,10 @@ namespace VitalSync.Sample.EventSourced.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("rename_count");
 
+                    b.Property<long>("Version")
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
                     b.HasKey("Id");
 
                     b.ToTable("gadgets", (string)null);

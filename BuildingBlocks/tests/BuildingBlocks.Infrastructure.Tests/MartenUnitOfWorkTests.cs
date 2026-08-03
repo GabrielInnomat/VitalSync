@@ -1,5 +1,6 @@
-using BuildingBlocks.Application;
+﻿using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
+using BuildingBlocks.Infrastructure.Messaging;
 using BuildingBlocks.Infrastructure.Persistence;
 using Marten;
 using NSubstitute;
@@ -11,6 +12,9 @@ public sealed class MartenUnitOfWorkTests
 {
     private static readonly DateTimeOffset CommitTime = new(2026, 7, 31, 12, 0, 0, TimeSpan.Zero);
 
+    private static readonly DomainEventEnvelopeSerializer Serializer =
+        new(new DomainEventTypeRegistry([typeof(CounterCreated).Assembly]));
+
     [Fact]
     public async Task Commit_EnrollsOutboxBeforeSaving()
     {
@@ -21,7 +25,7 @@ public sealed class MartenUnitOfWorkTests
         session.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(Task.CompletedTask)
             .AndDoes(_ => calls.Add("save"));
 
-        var unitOfWork = new MartenUnitOfWork(session, TrackerWith(out _), outbox, new StoppedClock(CommitTime));
+        var unitOfWork = new MartenUnitOfWork(session, TrackerWith(out _), outbox, Serializer, new StoppedClock(CommitTime));
         await unitOfWork.CommitAsync(CancellationToken.None);
 
         Assert.Equal(["enroll", "save"], calls);
@@ -42,7 +46,7 @@ public sealed class MartenUnitOfWorkTests
         var tracker = TrackerWith(out var counter);
         counter.Increment(1);
 
-        var unitOfWork = new MartenUnitOfWork(session, tracker, outbox, new StoppedClock(CommitTime));
+        var unitOfWork = new MartenUnitOfWork(session, tracker, outbox, Serializer, new StoppedClock(CommitTime));
         await unitOfWork.CommitAsync(CancellationToken.None);
 
         Assert.Equal(["publish", "publish", "save"], calls);
@@ -54,7 +58,7 @@ public sealed class MartenUnitOfWorkTests
         var session = Substitute.For<IDocumentSession>();
         var tracker = TrackerWith(out var counter);
 
-        var unitOfWork = new MartenUnitOfWork(session, tracker, Substitute.For<IMartenOutbox>(), new StoppedClock(CommitTime));
+        var unitOfWork = new MartenUnitOfWork(session, tracker, Substitute.For<IMartenOutbox>(), Serializer, new StoppedClock(CommitTime));
         await unitOfWork.CommitAsync(CancellationToken.None);
 
         Assert.Empty(counter.DomainEvents);
@@ -69,7 +73,7 @@ public sealed class MartenUnitOfWorkTests
             .Returns(Task.FromException(new InvalidOperationException("commit failed")));
         var tracker = TrackerWith(out var counter);
 
-        var unitOfWork = new MartenUnitOfWork(session, tracker, Substitute.For<IMartenOutbox>(), new StoppedClock(CommitTime));
+        var unitOfWork = new MartenUnitOfWork(session, tracker, Substitute.For<IMartenOutbox>(), Serializer, new StoppedClock(CommitTime));
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => unitOfWork.CommitAsync(CancellationToken.None));
 
@@ -81,7 +85,7 @@ public sealed class MartenUnitOfWorkTests
     {
         var tracker = new MartenAggregateTracker();
         var aggregate = Counter.Create(new CounterId(Guid.NewGuid()));
-        tracker.Track(aggregate, () => aggregate.Id.Value.ToString(), () => aggregate.DomainEvents.Count);
+        tracker.Track(aggregate, "counter", aggregate.Id.Value.ToString(), () => aggregate.DomainEvents.Count);
         counter = aggregate;
         return tracker;
     }
@@ -91,3 +95,4 @@ public sealed class MartenUnitOfWorkTests
         public DateTimeOffset Now => now;
     }
 }
+

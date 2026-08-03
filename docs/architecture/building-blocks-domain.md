@@ -23,7 +23,7 @@ The block provides a **single aggregate authoring model**: every aggregate deriv
 | `IEntity<TKey>`                           | interface       | An entity with a strongly typed identity.                                            |
 | `EntityBase<TKey>`                        | abstract class  | Shared identity-equality base for entities and aggregate roots (single equality implementation). |
 | `Entity<TKey>`                            | abstract class  | Base for non-aggregate entities: constructor-set identity, guard, identity equality. |
-| `IState<TSelf, TKey>`                     | interface       | An aggregate's state: owns the identity and the event-apply ("evolve") logic.        |
+| `AggregateState<TSelf, TKey>`             | abstract record | An aggregate's state: owns the identity, the version, and the event-apply ("evolve") logic. |
 | `IAggregateRoot<TKey>`                    | interface       | Marker for an aggregate root; exposes events **read-only**.                          |
 | `IEventSourcedAggregateRoot<TKey>`        | interface       | Infrastructure-only capability exposing `Version` + `LoadFromHistory` for ES.        |
 | `AggregateRoot<TKey, TState>`             | abstract class  | The single aggregate base: state fold via `RaiseEvent`, identity derived from state. |
@@ -118,19 +118,26 @@ left.Equals(right)  ⇔  left.GetType() == right.GetType()  ∧  left.Id == righ
 
 ## The state object
 
-Every aggregate's state implements the self-referencing `IState<TSelf, TKey>`:
+Every aggregate's state derives from the self-referencing `AggregateState<TSelf, TKey>`:
 
 ```csharp
-public interface IState<TSelf, out TKey>
-    where TSelf : IState<TSelf, TKey>
+public abstract record AggregateState<TSelf, TKey>
+    where TSelf : AggregateState<TSelf, TKey>
     where TKey : struct, IEntityKey
 {
-    TKey Id { get; }
-    TSelf Apply(IDomainEvent domainEvent);
+    public abstract TKey Id { get; init; }
+
+    public long Version { get; init; }
+
+    public abstract TSelf Apply(IDomainEvent domainEvent);
+
+    internal TSelf WithVersion(long version) => (TSelf)(object)(this with { Version = version });
 }
 ```
 
-The `TSelf` type parameter lets `Apply` return the **concrete** state type rather than the interface, so no casting is needed when evolving state.
+The `TSelf` type parameter lets `Apply` return the **concrete** state type rather than the base, so no casting is needed when evolving state.
+
+It is a **record base, not an interface** ([ADR-0030](./decisions/0030-persisted-names-and-aggregate-version.md)): the record copy constructor is virtual, so `this with { … }` in the base returns the derived runtime type. That lets the base own the version bookkeeping outright — `WithVersion` is `internal`, so a state author can neither implement it wrongly nor reach it at all, and `AggregateRoot` needs no guard against a state that drops the version. The price is one unchecked cast, written once in Building Blocks instead of two mechanical lines in every state record.
 
 The state object exists to keep large aggregates maintainable. All **apply/evolution logic lives on the state**, so the aggregate class contains only the public command API (the behavior invoked by callers).
 
@@ -138,11 +145,11 @@ State implementations are expected to be **immutable**: `Apply` returns the next
 
 ```csharp
 public sealed record RecipeState(RecipeId Id, string Name)
-    : IState<RecipeState, RecipeId>
+    : AggregateState<RecipeState, RecipeId>
 {
     public static RecipeState Empty => new(default, string.Empty);
 
-    public RecipeState Apply(IDomainEvent e) => e switch
+    public override RecipeState Apply(IDomainEvent e) => e switch
     {
         RecipeCreated created => this with { Id = created.RecipeId, Name = created.Name },
         RecipeRenamed renamed => this with { Name = renamed.NewName },
@@ -150,6 +157,8 @@ public sealed record RecipeState(RecipeId Id, string Name)
     };
 }
 ```
+
+The state writes nothing about the version: the base carries it, and `AggregateRoot` advances it on every folded event — including an event this `Apply` ignores.
 
 ## Aggregates and domain events
 
@@ -161,7 +170,7 @@ Every aggregate derives (directly or indirectly) from the single base `Aggregate
 public abstract class AggregateRoot<TKey, TState>
     : EntityBase<TKey>, IAggregateRoot<TKey>, IDomainEventOwner, IStateOwner
     where TKey : struct, IEntityKey
-    where TState : IState<TState, TKey>
+    where TState : AggregateState<TState, TKey>
 ```
 
 - It holds the current immutable `protected TState State` and the private uncommitted-events list.
@@ -175,7 +184,7 @@ public abstract class AggregateRoot<TKey, TState>
 public abstract class EventSourcedAggregateRoot<TKey, TState>
     : AggregateRoot<TKey, TState>, IEventSourcedAggregateRoot<TKey>
     where TKey : struct, IEntityKey
-    where TState : IState<TState, TKey>
+    where TState : AggregateState<TState, TKey>
 ```
 
 - It adds an internal version (stream position) that advances on every raise/replay.
@@ -344,11 +353,11 @@ public readonly record struct RecipeId(Guid Value) : IEntityKey<Guid>
 }
 
 public sealed record RecipeState(RecipeId Id, string Name)
-    : IState<RecipeState, RecipeId>
+    : AggregateState<RecipeState, RecipeId>
 {
     public static RecipeState Empty => new(default, string.Empty);
 
-    public RecipeState Apply(IDomainEvent e) => e switch
+    public override RecipeState Apply(IDomainEvent e) => e switch
     {
         RecipeCreated created => this with { Id = created.RecipeId, Name = created.Name },
         RecipeRenamed renamed => this with { Name = renamed.NewName },
@@ -393,7 +402,7 @@ Switching this aggregate between the two worlds means changing its base class an
 
 1. The domain block has **zero** infrastructure dependencies.
 2. **One authoring model**: every aggregate derives from `AggregateRoot<TKey, TState>` and changes state only through `RaiseEvent`; `EventSourcedAggregateRoot<TKey, TState>` merely adds `Version` + `LoadFromHistory` when the event history carries business value.
-3. All **apply/evolution logic lives on the state** (`IState<TSelf, TKey>`), keeping aggregates free of apply noise.
+3. All **apply/evolution logic lives on the state** (`AggregateState<TSelf, TKey>`), keeping aggregates free of apply noise.
 4. **Identity validation is type-agnostic**, driven by `IEntityKey.IsEmpty`. Entities validate in the constructor; aggregates validate at **every transition** (no post-creation check).
 5. Equality is **identity-based** and type-sensitive, implemented once on `EntityBase<TKey>`.
 6. Aggregates **own** their events; outsiders read only; clearing is **explicit** and infrastructure-only.

@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Data.Common;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.DependencyInjection;
@@ -24,7 +24,9 @@ public sealed class EfCoreOutboxAtomicityTests(PostgreSqlFixture fixture)
         var builder = Host.CreateApplicationBuilder();
 
         builder.AddBuildingBlocks(
-            options => options.UseEfCorePersistence<FlushProbeContext>(
+            options => options
+                .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
+                .UseEfCorePersistence<FlushProbeContext>(
                 fixture.ConnectionString,
                 context => context.AddInterceptors(recorder)),
             wolverine =>
@@ -102,3 +104,4 @@ public sealed class EfCoreOutboxAtomicityTests(PostgreSqlFixture fixture)
         private void Record(DbCommand command) => _commands.Enqueue(command.CommandText);
     }
 }
+

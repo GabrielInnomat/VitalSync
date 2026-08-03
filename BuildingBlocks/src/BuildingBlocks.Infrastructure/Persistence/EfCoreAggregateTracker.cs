@@ -8,18 +8,25 @@ public sealed class EfCoreAggregateTracker
 
     public IReadOnlyList<TrackedStateAggregate> Entries => _entries;
 
-    public void Track(IDomainEventOwner aggregate, IStateOwner stateOwner, object persistedState)
+    public void Track(
+        IDomainEventOwner aggregate,
+        IStateOwner stateOwner,
+        object persistedState,
+        string aggregateName,
+        string aggregateId)
     {
         ArgumentNullException.ThrowIfNull(aggregate);
         ArgumentNullException.ThrowIfNull(stateOwner);
         ArgumentNullException.ThrowIfNull(persistedState);
+        ArgumentException.ThrowIfNullOrWhiteSpace(aggregateName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(aggregateId);
 
         if (_entries.Exists(entry => ReferenceEquals(entry.Aggregate, aggregate)))
         {
             return;
         }
 
-        _entries.Add(new TrackedStateAggregate(aggregate, stateOwner, persistedState));
+        _entries.Add(new TrackedStateAggregate(aggregate, stateOwner, persistedState, aggregateName, aggregateId));
     }
 
     public void ClearDomainEvents()
@@ -36,4 +43,6 @@ public sealed class EfCoreAggregateTracker
 public sealed record TrackedStateAggregate(
     IDomainEventOwner Aggregate,
     IStateOwner StateOwner,
-    object PersistedState);
+    object PersistedState,
+    string AggregateName,
+    string AggregateId);

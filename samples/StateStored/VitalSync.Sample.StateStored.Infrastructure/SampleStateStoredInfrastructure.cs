@@ -27,6 +27,7 @@ public static class SampleStateStoredInfrastructure
         {
             options.AddHandlersFrom(typeof(CreateWidget).Assembly);
             options.AddHandlersFrom(typeof(SampleStateStoredInfrastructure).Assembly);
+            options.AddDomainEventsFrom(typeof(Widget).Assembly);
             options.UseEfCorePersistence<WidgetWriteDbContext>(writeConnectionString);
             options.UseWolverineMessaging(rabbitMqUri);
         });

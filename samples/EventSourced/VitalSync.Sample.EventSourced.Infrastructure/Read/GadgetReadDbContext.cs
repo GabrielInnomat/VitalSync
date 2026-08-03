@@ -20,6 +20,7 @@ public sealed class GadgetReadDbContext(DbContextOptions<GadgetReadDbContext> op
             entity.Property(gadget => gadget.Name).HasColumnName("name").IsRequired().HasMaxLength(200);
             entity.Property(gadget => gadget.RenameCount).HasColumnName("rename_count");
             entity.Property(gadget => gadget.IsRetired).HasColumnName("is_retired");
+            entity.Property(gadget => gadget.Version).HasColumnName("version");
         });
 
         modelBuilder.ApplyEntityKeyConversions();
@@ -35,4 +36,6 @@ public sealed class GadgetReadModel
     public int RenameCount { get; set; }
 
     public bool IsRetired { get; set; }
+
+    public long Version { get; set; }
 }

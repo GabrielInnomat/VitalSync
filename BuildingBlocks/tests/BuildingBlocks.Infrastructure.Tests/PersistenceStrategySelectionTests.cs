@@ -1,4 +1,4 @@
-using BuildingBlocks.Infrastructure.DependencyInjection;
+﻿using BuildingBlocks.Infrastructure.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,7 +14,7 @@ public sealed class PersistenceStrategySelectionTests
         var services = new ServiceCollection();
 
         var exception = Record.Exception(() =>
-            services.AddBuildingBlocks(options => options.UseEfCorePersistence<TestDbContext>(ConnectionString)));
+            services.AddBuildingBlocks(options => WithDomainEvents(options).UseEfCorePersistence<TestDbContext>(ConnectionString)));
 
         Assert.Null(exception);
     }
@@ -25,7 +25,7 @@ public sealed class PersistenceStrategySelectionTests
         var services = new ServiceCollection();
 
         var exception = Record.Exception(() =>
-            services.AddBuildingBlocks(options => options.UseMartenEventSourcing(ConnectionString)));
+            services.AddBuildingBlocks(options => WithDomainEvents(options).UseMartenEventSourcing(ConnectionString)));
 
         Assert.Null(exception);
     }
@@ -36,7 +36,7 @@ public sealed class PersistenceStrategySelectionTests
         var services = new ServiceCollection();
 
         var exception = Record.Exception(() =>
-            services.AddBuildingBlocks(options => options
+            services.AddBuildingBlocks(options => WithDomainEvents(options)
                 .UseEfCorePersistence<TestDbContext>(ConnectionString)
                 .UseEfCorePersistence<TestDbContext>(ConnectionString)));
 
@@ -67,5 +67,9 @@ public sealed class PersistenceStrategySelectionTests
                 .UseEfCorePersistence<TestDbContext>(ConnectionString)));
     }
 
+    private static BuildingBlocksOptions WithDomainEvents(BuildingBlocksOptions options) =>
+        options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
+
     private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options);
 }
+

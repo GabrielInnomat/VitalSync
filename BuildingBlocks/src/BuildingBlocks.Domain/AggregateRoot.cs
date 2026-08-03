@@ -2,7 +2,7 @@ namespace BuildingBlocks.Domain;
 
 public abstract class AggregateRoot<TKey, TState> : EntityBase<TKey>, IAggregateRoot<TKey>, IDomainEventOwner, IStateOwner
     where TKey : struct, IEntityKey
-    where TState : IState<TState, TKey>
+    where TState : AggregateState<TState, TKey>
 {
     private readonly List<IDomainEvent> _domainEvents = [];
 
@@ -23,22 +23,17 @@ public abstract class AggregateRoot<TKey, TState> : EntityBase<TKey>, IAggregate
         ArgumentNullException.ThrowIfNull(domainEvent);
         ApplyEvent(domainEvent);
         _domainEvents.Add(domainEvent);
-        OnEventRaised();
     }
 
     private protected void ApplyEvent(IDomainEvent domainEvent)
     {
-        State = State.Apply(domainEvent);
+        State = State.Apply(domainEvent).WithVersion(State.Version + 1);
 
         if (State.Id.IsEmpty)
         {
             throw new DomainValidationException(
                 "The aggregate's identity must be set to a non-empty value by the applied event.");
         }
-    }
-
-    private protected virtual void OnEventRaised()
-    {
     }
 
     void IDomainEventOwner.ClearDomainEvents()
@@ -49,6 +44,8 @@ public abstract class AggregateRoot<TKey, TState> : EntityBase<TKey>, IAggregate
     Type IStateOwner.StateType => typeof(TState);
 
     object IStateOwner.State => State;
+
+    long IStateOwner.Version => State.Version;
 
     void IStateOwner.Restore(object state)
     {

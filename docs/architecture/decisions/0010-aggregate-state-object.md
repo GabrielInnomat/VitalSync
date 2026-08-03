@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-06-25
 - **Amended:** 2026-07-22 (`IState` is now the self-referencing `IState<TSelf, TKey>` so `Apply` returns the concrete state without a cast; the state object now applies only to event-modeled aggregates — see [ADR-0012](./0012-optional-event-sourcing-aggregate.md))
+- **Amended:** 2026-08-03 (the state object is described by the abstract record `AggregateState<TSelf, TKey>` instead of the `IState` interface, so the base can own the aggregate version through the virtual record copy constructor — see [ADR-0030](./0030-persisted-names-and-aggregate-version.md))
 
 ## Context
 

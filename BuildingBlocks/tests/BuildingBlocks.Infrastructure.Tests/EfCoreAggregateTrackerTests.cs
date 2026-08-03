@@ -1,4 +1,4 @@
-using BuildingBlocks.Domain;
+﻿using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.Persistence;
 
 namespace BuildingBlocks.Infrastructure.Tests;
@@ -13,7 +13,7 @@ public sealed class EfCoreAggregateTrackerTests
         var stateOwner = (IStateOwner)probe;
         var persisted = stateOwner.State;
 
-        tracker.Track(probe, stateOwner, persisted);
+        tracker.Track(probe, stateOwner, persisted, "flush-probe", probe.Id.Value.ToString());
 
         var entry = Assert.Single(tracker.Entries);
         Assert.Same(probe, entry.Aggregate);
@@ -28,8 +28,8 @@ public sealed class EfCoreAggregateTrackerTests
         var probe = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
         var stateOwner = (IStateOwner)probe;
 
-        tracker.Track(probe, stateOwner, stateOwner.State);
-        tracker.Track(probe, stateOwner, stateOwner.State);
+        tracker.Track(probe, stateOwner, stateOwner.State, "flush-probe", probe.Id.Value.ToString());
+        tracker.Track(probe, stateOwner, stateOwner.State, "flush-probe", probe.Id.Value.ToString());
 
         Assert.Single(tracker.Entries);
     }
@@ -41,8 +41,8 @@ public sealed class EfCoreAggregateTrackerTests
         var first = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
         var second = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
 
-        tracker.Track(first, (IStateOwner)first, ((IStateOwner)first).State);
-        tracker.Track(second, (IStateOwner)second, ((IStateOwner)second).State);
+        tracker.Track(first, (IStateOwner)first, ((IStateOwner)first).State, "flush-probe", first.Id.Value.ToString());
+        tracker.Track(second, (IStateOwner)second, ((IStateOwner)second).State, "flush-probe", second.Id.Value.ToString());
 
         Assert.Equal([first, second], tracker.Entries.Select(entry => entry.Aggregate));
     }
@@ -54,9 +54,9 @@ public sealed class EfCoreAggregateTrackerTests
         var probe = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
         var stateOwner = (IStateOwner)probe;
 
-        Assert.Throws<ArgumentNullException>(() => tracker.Track(null!, stateOwner, stateOwner.State));
-        Assert.Throws<ArgumentNullException>(() => tracker.Track(probe, null!, stateOwner.State));
-        Assert.Throws<ArgumentNullException>(() => tracker.Track(probe, stateOwner, null!));
+        Assert.Throws<ArgumentNullException>(() => tracker.Track(null!, stateOwner, stateOwner.State, "flush-probe", "1"));
+        Assert.Throws<ArgumentNullException>(() => tracker.Track(probe, null!, stateOwner.State, "flush-probe", "1"));
+        Assert.Throws<ArgumentNullException>(() => tracker.Track(probe, stateOwner, null!, "flush-probe", "1"));
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public sealed class EfCoreAggregateTrackerTests
         var tracker = new EfCoreAggregateTracker();
         var probe = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
         var stateOwner = (IStateOwner)probe;
-        tracker.Track(probe, stateOwner, stateOwner.State);
+        tracker.Track(probe, stateOwner, stateOwner.State, "flush-probe", probe.Id.Value.ToString());
 
         Assert.NotEmpty(probe.DomainEvents);
 
@@ -82,7 +82,7 @@ public sealed class EfCoreAggregateTrackerTests
         var probe = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
         var stateOwner = (IStateOwner)probe;
         var persisted = stateOwner.State;
-        tracker.Track(probe, stateOwner, persisted);
+        tracker.Track(probe, stateOwner, persisted, "flush-probe", probe.Id.Value.ToString());
 
         probe.Rename("renamed");
 
@@ -91,3 +91,4 @@ public sealed class EfCoreAggregateTrackerTests
         Assert.Equal("renamed", Assert.IsType<FlushProbeState>(entry.StateOwner.State).Name);
     }
 }
+

@@ -1,4 +1,4 @@
-using BuildingBlocks.Application;
+﻿using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Messaging;
@@ -54,13 +54,14 @@ public sealed class IntegrationEventSinkDeliveryTests
     }
 
     private static DomainEventEnvelope WrapProbeEvent(string name)
-        => DomainEventEnvelopeSerializer.Wrap(new SinkProbeDomainEvent(name), Guid.NewGuid(), DateTimeOffset.UtcNow);
+        => new DomainEventEnvelopeSerializer(new DomainEventTypeRegistry([typeof(SinkProbeDomainEvent).Assembly]))
+            .Wrap(new SinkProbeDomainEvent(name), Guid.NewGuid(), "sink-probe", "1", 1, DateTimeOffset.UtcNow);
 
     private static async Task<IHost> StartHostAsync()
         => await Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
             {
-                services.AddBuildingBlocks(_ => { });
+                services.AddBuildingBlocks(options => options.AddDomainEventsFrom(typeof(SinkProbeDomainEvent).Assembly));
                 services.Replace(
                     ServiceDescriptor.Singleton<IIntegrationEventSinkFactory, WolverineIntegrationEventSinkFactory>());
                 services.AddSingleton<IIntegrationEventMapper, SinkProbeMapper>();
@@ -84,6 +85,7 @@ public sealed class IntegrationEventSinkDeliveryTests
             .StartAsync();
 }
 
+[EventName("sink-probe-v1")]
 public sealed record SinkProbeDomainEvent(string Name) : DomainEvent;
 
 public sealed record SinkProbeIntegrationEvent(string Name, Guid EventId, DateTimeOffset OccurredAt) : IIntegrationEvent;
@@ -158,3 +160,4 @@ public static class SinkProbeIntegrationEventHandler
         recorder.Record(envelope);
     }
 }
+

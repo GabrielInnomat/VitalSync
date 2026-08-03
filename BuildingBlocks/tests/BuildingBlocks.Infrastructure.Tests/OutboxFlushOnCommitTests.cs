@@ -1,4 +1,4 @@
-using BuildingBlocks.Application;
+﻿using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Messaging;
@@ -23,7 +23,11 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
         using var host = await Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
             {
-                services.AddBuildingBlocks(options => options.UseMartenEventSourcing(fixture.ConnectionString));
+                services.AddBuildingBlocks(options =>
+                {
+                    options.AddDomainEventsFrom(typeof(FlushCounterCreated).Assembly);
+                    options.UseMartenEventSourcing(fixture.ConnectionString);
+                });
                 services.AddScoped<ICommandHandler<CreateFlushCounter>, CreateFlushCounterHandler>();
                 services.AddScoped<IProjectionHandler<FlushCounterCreated>, FlushCounterProjection>();
                 services.AddSingleton<FlushDeliverySignal>();
@@ -55,7 +59,11 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
         var builder = Host.CreateApplicationBuilder();
 
         builder.AddBuildingBlocks(
-            options => options.UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString),
+            options =>
+            {
+                options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
+                options.UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString);
+            },
             ConfigureFlushOnlyDurability);
 
         builder.Services.AddScoped<ICommandHandler<StartFlushProbe>, StartFlushProbeHandler>();
@@ -70,7 +78,7 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
         {
             var context = scope.ServiceProvider.GetRequiredService<FlushProbeContext>();
             await context.Database.ExecuteSqlRawAsync(
-                "create table if not exists flush_probe_rows (id uuid primary key, name text not null)",
+                "create table if not exists flush_probe_rows (id uuid primary key, name text not null, version bigint not null)",
                 TestContext.Current.CancellationToken);
 
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
@@ -122,7 +130,7 @@ public sealed class CreateFlushCounterHandler(IRepository<FlushCounter, FlushCou
 
 public sealed class FlushCounterProjection(FlushDeliverySignal signal) : IProjectionHandler<FlushCounterCreated>
 {
-    public Task Handle(FlushCounterCreated domainEvent, CancellationToken cancellationToken)
+    public Task Handle(FlushCounterCreated domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
         signal.MarkDelivered(domainEvent);
         return Task.CompletedTask;
@@ -134,19 +142,21 @@ public readonly record struct FlushCounterId(Guid Value) : IEntityKey<Guid>
     public bool IsEmpty => Value == Guid.Empty;
 }
 
+[EventName("flush-counter-created-v1")]
 public sealed record FlushCounterCreated(FlushCounterId CounterId) : DomainEvent;
 
-public sealed record FlushCounterState(FlushCounterId Id) : IState<FlushCounterState, FlushCounterId>
+public sealed record FlushCounterState(FlushCounterId Id) : AggregateState<FlushCounterState, FlushCounterId>
 {
     public static FlushCounterState Empty => new(new FlushCounterId(Guid.Empty));
 
-    public FlushCounterState Apply(IDomainEvent domainEvent) => domainEvent switch
+    public override FlushCounterState Apply(IDomainEvent domainEvent) => domainEvent switch
     {
         FlushCounterCreated created => this with { Id = created.CounterId },
         _ => this,
     };
 }
 
+[AggregateName("flush-counter")]
 public sealed class FlushCounter : EventSourcedAggregateRoot<FlushCounterId, FlushCounterState>, IReconstitutable<FlushCounter>
 {
     private FlushCounter() : base(FlushCounterState.Empty)
@@ -178,15 +188,17 @@ public sealed class StartFlushProbeHandler(IRepository<FlushProbe, FlushProbeId>
 
 public sealed class FlushProbeProjection(FlushDeliverySignal signal) : IProjectionHandler<FlushProbeStarted>
 {
-    public Task Handle(FlushProbeStarted domainEvent, CancellationToken cancellationToken)
+    public Task Handle(FlushProbeStarted domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
         signal.MarkDelivered(domainEvent);
         return Task.CompletedTask;
     }
 }
 
+[EventName("flush-probe-started-v1")]
 public sealed record FlushProbeStarted(FlushProbeId ProbeId) : DomainEvent;
 
+[EventName("flush-probe-renamed-v1")]
 public sealed record FlushProbeRenamed(FlushProbeId ProbeId, string Name) : DomainEvent;
 
 public sealed record RenameFlushProbe(Guid Id, string Name) : ICommand;
@@ -214,11 +226,11 @@ public readonly record struct FlushProbeId(Guid Value) : IEntityKey<Guid>
     public bool IsEmpty => Value == Guid.Empty;
 }
 
-public sealed record FlushProbeState(FlushProbeId Id, string Name) : IState<FlushProbeState, FlushProbeId>
+public sealed record FlushProbeState(FlushProbeId Id, string Name) : AggregateState<FlushProbeState, FlushProbeId>
 {
     public static FlushProbeState Empty => new(default, string.Empty);
 
-    public FlushProbeState Apply(IDomainEvent domainEvent) => domainEvent switch
+    public override FlushProbeState Apply(IDomainEvent domainEvent) => domainEvent switch
     {
         FlushProbeStarted started => this with { Id = started.ProbeId, Name = "probe" },
         FlushProbeRenamed renamed => this with { Name = renamed.Name },
@@ -226,6 +238,7 @@ public sealed record FlushProbeState(FlushProbeId Id, string Name) : IState<Flus
     };
 }
 
+[AggregateName("flush-probe")]
 public sealed class FlushProbe : AggregateRoot<FlushProbeId, FlushProbeState>, IReconstitutable<FlushProbe>
 {
     private FlushProbe() : base(FlushProbeState.Empty)
@@ -259,8 +272,10 @@ public sealed class FlushProbeContext(DbContextOptions<FlushProbeContext> option
             entity.HasKey(state => state.Id);
             entity.Property(state => state.Id).HasColumnName("id");
             entity.Property(state => state.Name).HasColumnName("name");
+            entity.Property(state => state.Version).HasColumnName("version").IsConcurrencyToken();
         });
 
         modelBuilder.ApplyEntityKeyConversions();
     }
 }
+

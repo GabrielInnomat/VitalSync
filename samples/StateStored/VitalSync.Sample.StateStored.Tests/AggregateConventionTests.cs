@@ -35,6 +35,36 @@ public sealed class AggregateConventionTests
         }
     }
 
+    [Fact]
+    public void EveryAggregate_DeclaresItsPersistedName()
+    {
+        var aggregates = Aggregates();
+
+        Assert.NotEmpty(aggregates);
+        foreach (var aggregate in aggregates)
+        {
+            Assert.True(
+                aggregate.GetCustomAttribute<AggregateNameAttribute>(inherit: false) is not null,
+                $"'{aggregate}' needs an [AggregateName]; the class name is not a persistence contract (ADR-0030).");
+        }
+    }
+
+    [Fact]
+    public void EveryDomainEvent_DeclaresItsPersistedName()
+    {
+        var domainEvents = typeof(Widget).Assembly.GetTypes()
+            .Where(type => type is { IsClass: true, IsAbstract: false } && typeof(IDomainEvent).IsAssignableFrom(type))
+            .ToList();
+
+        Assert.NotEmpty(domainEvents);
+        foreach (var domainEvent in domainEvents)
+        {
+            Assert.True(
+                domainEvent.GetCustomAttribute<EventNameAttribute>(inherit: false) is not null,
+                $"'{domainEvent}' needs an [EventName]; the class name is not a persistence contract (ADR-0030).");
+        }
+    }
+
     private static List<Type> Aggregates() =>
         [.. typeof(Widget).Assembly.GetTypes().Where(type => !type.IsAbstract && DerivesFromAggregateRoot(type))];
 

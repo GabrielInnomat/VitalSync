@@ -1,4 +1,5 @@
 using BuildingBlocks.Domain;
+using BuildingBlocks.Infrastructure.Messaging;
 using BuildingBlocks.Infrastructure.Persistence;
 using JasperFx;
 using JasperFx.Events;
@@ -106,7 +107,12 @@ public sealed class MartenEventSourcedRepositoryTests(PostgreSqlFixture fixture)
 
     private static async Task Commit(IDocumentSession session, MartenAggregateTracker tracker)
     {
-        var unitOfWork = new MartenUnitOfWork(session, tracker, Substitute.For<IMartenOutbox>(), new StoppedClock(CommitTime));
+        var unitOfWork = new MartenUnitOfWork(
+            session,
+            tracker,
+            Substitute.For<IMartenOutbox>(),
+            new DomainEventEnvelopeSerializer(new DomainEventTypeRegistry([typeof(CounterCreated).Assembly])),
+            new StoppedClock(CommitTime));
         await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
     }
 
@@ -140,15 +146,17 @@ internal readonly record struct CounterId(Guid Value) : IEntityKey<Guid>
     public bool IsEmpty => Value == Guid.Empty;
 }
 
+[EventName("counter-created-v1")]
 internal sealed record CounterCreated(CounterId CounterId) : DomainEvent;
 
+[EventName("counter-incremented-v1")]
 internal sealed record CounterIncremented(CounterId CounterId, int By) : DomainEvent;
 
-internal sealed record CounterState(CounterId Id, int Total) : IState<CounterState, CounterId>
+internal sealed record CounterState(CounterId Id, int Total) : AggregateState<CounterState, CounterId>
 {
     public static CounterState Empty => new(new CounterId(Guid.Empty), 0);
 
-    public CounterState Apply(IDomainEvent domainEvent) => domainEvent switch
+    public override CounterState Apply(IDomainEvent domainEvent) => domainEvent switch
     {
         CounterCreated created => this with { Id = created.CounterId },
         CounterIncremented incremented => this with { Id = incremented.CounterId, Total = Total + incremented.By },
@@ -156,6 +164,7 @@ internal sealed record CounterState(CounterId Id, int Total) : IState<CounterSta
     };
 }
 
+[AggregateName("counter")]
 internal sealed class Counter : EventSourcedAggregateRoot<CounterId, CounterState>, IReconstitutable<Counter>
 {
     private Counter() : base(CounterState.Empty)

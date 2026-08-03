@@ -37,6 +37,8 @@ public sealed class BuildingBlocksOptions
     private readonly PipelineBehaviorRegistry _behaviorRegistry;
     private readonly Dictionary<Type, Type> _singleHandlers = [];
     private readonly HashSet<Assembly> _scannedAssemblies = [];
+    private readonly HashSet<Assembly> _domainEventAssemblies = [];
+    private DomainEventTypeRegistry? _domainEventTypeRegistry;
     private PersistenceStyle _persistenceStyle;
 
     internal BuildingBlocksOptions(IServiceCollection services, PipelineBehaviorRegistry behaviorRegistry)
@@ -52,6 +54,9 @@ public sealed class BuildingBlocksOptions
     internal WolverineWiringSettings WolverineWiring { get; } = new();
 
     internal IReadOnlyCollection<Assembly> ScannedAssemblies => _scannedAssemblies;
+
+    internal DomainEventTypeRegistry DomainEventTypeRegistry =>
+        _domainEventTypeRegistry ??= new DomainEventTypeRegistry(_domainEventAssemblies);
 
     private enum PersistenceStyle
     {
@@ -142,6 +147,21 @@ public sealed class BuildingBlocksOptions
         _services.AddScoped(contract, implementation);
     }
 
+    public BuildingBlocksOptions AddDomainEventsFrom(Assembly assembly)
+    {
+        ArgumentNullException.ThrowIfNull(assembly);
+
+        if (_domainEventTypeRegistry is not null)
+        {
+            throw new InvalidOperationException(
+                "AddDomainEventsFrom was called after the domain event names had already been read. " +
+                "Register every domain event assembly inside the AddBuildingBlocks callback.");
+        }
+
+        _domainEventAssemblies.Add(assembly);
+        return this;
+    }
+
     public BuildingBlocksOptions AddPipelineBehavior(Type openGenericBehavior, int order)
     {
         ArgumentNullException.ThrowIfNull(openGenericBehavior);
@@ -201,10 +221,20 @@ public sealed class BuildingBlocksOptions
 
         SelectPersistenceStyle(PersistenceStyle.Marten);
 
-        _services.AddMarten(options =>
+        _services.AddMarten(serviceProvider =>
         {
-            options.Connection(connectionString);
-            options.Events.StreamIdentity = StreamIdentity.AsString;
+            var storeOptions = new StoreOptions();
+            storeOptions.Connection(connectionString);
+            storeOptions.Events.StreamIdentity = StreamIdentity.AsString;
+
+            foreach (var (domainEventType, eventName) in serviceProvider
+                .GetRequiredService<DomainEventTypeRegistry>()
+                .NamesByType)
+            {
+                storeOptions.Events.MapEventType(domainEventType, eventName);
+            }
+
+            return storeOptions;
         }).UseLightweightSessions()
             .IntegrateWithWolverine();
 

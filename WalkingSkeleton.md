@@ -609,9 +609,9 @@ verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Impro
 
 | Nr.   | Titel                                                          | Herkunft     | Status    |
 | ----- | -------------------------------------------------------------- | ------------ | --------- |
-| WS-01 | Optimistische Nebenläufigkeit im state-stored Pfad fehlt       | EF-Lösung    | offen     |
+| WS-01 | Optimistische Nebenläufigkeit im state-stored Pfad fehlt       | EF-Lösung    | gelöst    |
 | WS-02 | `Activator.CreateInstance(…, nonPublic: true)` als Vertrag     | EF-Lösung    | gelöst    |
-| WS-03 | Reihenfolge über Events hinweg ist durch nichts garantiert     | Schritt 3    | offen     |
+| WS-03 | Reihenfolge über Events hinweg ist durch nichts garantiert     | Schritt 3    | gelöst    |
 | WS-04 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`     | Schritt 3    | offen     |
 | WS-05 | Vergessenes `[Topic]` fällt nicht auf                          | Etappe 1     | offen     |
 | WS-06 | Fehlkonfiguration ist ungleich abgedeckt                       | Etappe 1     | teilweise |
@@ -648,7 +648,12 @@ Zwei Nachzügler aus demselben Commit — siehe [todo.md](todo.md), TODO-45 und 
 
 ---
 
-### WS-01, Optimistische Nebenläufigkeit im state-stored Pfad fehlt
+### WS-01, Optimistische Nebenläufigkeit im state-stored Pfad fehlt — **gelöst (2026-08-03)**
+
+Siehe [TODO-02](todo.md) und [ADR-0030](docs/architecture/decisions/0030-persisted-names-and-aggregate-version.md).
+Die Version lebt auf dem State und wird state-stored als `IsConcurrencyToken()` gemappt; ein`r
+verlorenes Update ist jetzt eine `DbUpdateConcurrencyException` und damit ein `Conflict`.
+
 
 Der event-sourced Pfad hängt mit erwarteter Streamversion an; der state-stored Pfad hat
 nichts Vergleichbares. Der Concurrency-Token säße jetzt am State — verifiziert existiert
@@ -714,7 +719,11 @@ Siehe **TODO-10** (gelöst).
 
 ---
 
-### WS-03, Reihenfolge über Events hinweg ist durch nichts garantiert
+### WS-03, Reihenfolge über Events hinweg ist durch nichts garantiert — **gelöst (2026-08-03)**
+
+Siehe [TODO-02](todo.md). `IProjectionHandler.Handle` bekommt die `DomainEventMetadata` mit der
+Aggregat-Version; die Samples führen einen Wasserstand statt `RenameCount`.
+
 
 ADR-0022 verlangt „per-aggregate order-aware" Projektionen, aber der Handler bekommt ein
 nacktes `IDomainEvent` ohne Sequenznummer. Etappe 2 hat gezeigt, dass Event Sourcing das

@@ -23,7 +23,7 @@ public sealed class EfCoreRepository<TAggregate, TKey>(DbContext context, EfCore
         }
 
         stateOwner.Restore(state);
-        tracker.Track((IDomainEventOwner)aggregate, stateOwner, state);
+        Track(aggregate, stateOwner, state);
         return aggregate;
     }
 
@@ -36,9 +36,17 @@ public sealed class EfCoreRepository<TAggregate, TKey>(DbContext context, EfCore
         var state = stateOwner.State;
 
         context.Add(state);
-        tracker.Track((IDomainEventOwner)aggregate, stateOwner, state);
+        Track(aggregate, stateOwner, state);
         return Task.CompletedTask;
     }
+
+    private void Track(TAggregate aggregate, IStateOwner stateOwner, object state) =>
+        tracker.Track(
+            (IDomainEventOwner)aggregate,
+            stateOwner,
+            state,
+            EntityKeyFormatter.GetAggregateName(typeof(TAggregate)),
+            EntityKeyFormatter.GetKeyValue(aggregate.Id));
 
     private static void ThrowIfEmptyIdentity(TAggregate aggregate)
     {

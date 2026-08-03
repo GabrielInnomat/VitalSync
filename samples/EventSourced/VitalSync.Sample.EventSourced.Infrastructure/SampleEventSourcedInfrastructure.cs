@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using VitalSync.Sample.EventSourced.Application;
+using VitalSync.Sample.EventSourced.Domain;
 using VitalSync.Sample.EventSourced.Infrastructure.Read;
 
 namespace VitalSync.Sample.EventSourced.Infrastructure;
@@ -23,6 +24,7 @@ public static class SampleEventSourcedInfrastructure
         {
             options.AddHandlersFrom(typeof(CreateGadget).Assembly);
             options.AddHandlersFrom(typeof(SampleEventSourcedInfrastructure).Assembly);
+            options.AddDomainEventsFrom(typeof(Gadget).Assembly);
 
             options.UseMartenEventSourcing(writeConnectionString);
             options.UseWolverineMessaging(rabbitMqUri);

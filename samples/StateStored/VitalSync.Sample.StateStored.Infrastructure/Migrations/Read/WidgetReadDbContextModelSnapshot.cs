@@ -38,6 +38,10 @@ namespace VitalSync.Sample.StateStored.Infrastructure.Migrations.Read
                         .HasColumnType("integer")
                         .HasColumnName("rename_count");
 
+                    b.Property<long>("Version")
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
                     b.HasKey("Id");
 
                     b.ToTable("widgets", (string)null);

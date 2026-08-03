@@ -215,10 +215,18 @@ A small cluster of classes, using Marten as a **raw stream store**:
   change).
 - Wrapping and unwrapping are centralized in a `DomainEventEnvelopeSerializer`
   so the two unit-of-work implementations and the envelope handler share one
-  serialization scheme; the envelope carries the event's concrete type for
-  faithful round-tripping plus its identity — `EventId` and `OccurredAt`,
-  minted at commit (ADR-0029) — which the handler passes on as
-  `DomainEventMetadata`.
+  serialization scheme. The envelope carries the event's **declared name** from
+  its `[EventName]` — never `AssemblyQualifiedName`, and resolved through the
+  closed `DomainEventTypeRegistry` rather than `Type.GetType` (ADR-0030) — plus
+  its identity (`EventId`, `OccurredAt`, minted at commit, ADR-0029) and the
+  aggregate metadata (`AggregateName`, `AggregateId`, `Version`). The handler
+  passes all of it on as `DomainEventMetadata`. Each event in a commit gets its
+  own version, counted back from the aggregate's final version, so a projection
+  sees a strictly increasing per-aggregate sequence.
+- The same registry feeds `options.Events.MapEventType` in the Marten wiring, so
+  the event store writes the declared name into `mt_events.type` instead of
+  deriving one from the CLR type name. Renaming an event class is therefore a
+  refactoring, not data loss — in the outbox **and** in the event store.
 - **Dispatch:** after commit, Wolverine delivers each envelope to the single
   `DomainEventEnvelopeHandler` this package registers, which unwraps it and
   calls the **Publisher**. Both persistence paths flush the outbox

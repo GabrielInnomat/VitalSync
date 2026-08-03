@@ -38,6 +38,19 @@ public static class ServiceCollectionExtensions
                 "configured as well (ADR-0023).");
         }
 
+        var domainEventTypeRegistry = options.DomainEventTypeRegistry;
+
+        if (options.WolverineWiring.ApplyDomainEventRouting && domainEventTypeRegistry.NamesByType.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "A persistence strategy was configured but no domain event assembly was registered. Every domain " +
+                "event is written to the outbox under the name from its [EventName], so the names must be known " +
+                "before the first commit: call options.AddDomainEventsFrom(typeof(SomeDomainEvent).Assembly).");
+        }
+
+        services.TryAddSingleton(domainEventTypeRegistry);
+        services.TryAddSingleton<DomainEventEnvelopeSerializer>();
+
         if (options.ValidateHandlersOnStart)
         {
             services.AddHostedService(provider =>

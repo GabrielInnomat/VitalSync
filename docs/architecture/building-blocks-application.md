@@ -164,7 +164,7 @@ public interface IDomainEventPublisher
 public interface IProjectionHandler<in TDomainEvent>
     where TDomainEvent : IDomainEvent
 {
-    Task Handle(TDomainEvent domainEvent, CancellationToken ct);
+    Task Handle(TDomainEvent domainEvent, DomainEventMetadata metadata, CancellationToken ct);
 }
 ```
 
@@ -175,7 +175,10 @@ public interface IProjectionHandler<in TDomainEvent>
   themselves are pure value records without identity fields (ADR-0029).
 - `IProjectionHandler<TDomainEvent>` is implemented per service to update read
   models. Delivery is at-least-once, so idempotency is the handler's
-  responsibility (upsert by key, tracked via the envelope's stable `EventId`).
+  responsibility. The handler receives the same `DomainEventMetadata` as the
+  publisher, so it can keep the last processed `Version` per aggregate on its
+  read model and ignore anything at or below that watermark (ADR-0030) — that is
+  how ADR-0022's "per-aggregate order-aware" requirement is met.
 
 ### Integration events
 

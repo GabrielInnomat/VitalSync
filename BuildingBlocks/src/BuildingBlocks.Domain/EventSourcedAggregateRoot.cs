@@ -1,13 +1,11 @@
-﻿namespace BuildingBlocks.Domain;
+namespace BuildingBlocks.Domain;
 
 public abstract class EventSourcedAggregateRoot<TKey, TState>(TState initialState)
     : AggregateRoot<TKey, TState>(initialState), IEventSourcedAggregateRoot<TKey>
     where TKey : struct, IEntityKey
-    where TState : IState<TState, TKey>
+    where TState : AggregateState<TState, TKey>
 {
-    private long _version;
-
-    long IEventSourcedAggregateRoot<TKey>.Version => _version;
+    long IEventSourcedAggregateRoot<TKey>.Version => State.Version;
 
     void IEventSourcedAggregateRoot<TKey>.LoadFromHistory(IEnumerable<IDomainEvent> history)
     {
@@ -20,12 +18,6 @@ public abstract class EventSourcedAggregateRoot<TKey, TState>(TState initialStat
         foreach (var domainEvent in history)
         {
             ApplyEvent(domainEvent);
-            _version++;
         }
-    }
-
-    private protected sealed override void OnEventRaised()
-    {
-        _version++;
     }
 }

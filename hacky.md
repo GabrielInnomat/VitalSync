@@ -4,8 +4,8 @@
 
 | Nr. | Titel                                                          | Status |
 | --- | -------------------------------------------------------------- | ------ |
-| 1   | AssemblyQualifiedName als Persistenz-Contract                  | offen  |
-| 2   | CLR-Typname im Event-Stream-Key                                | offen  |
+| 1   | AssemblyQualifiedName als Persistenz-Contract                  | gelöst |
+| 2   | CLR-Typname im Event-Stream-Key                                | gelöst |
 | 3   | `FailureResults` sucht statische Methode per Name              | offen  |
 | 4   | `ApplyEntityKeyConversions` scannt CLR- statt Model-Properties | offen  |
 | 5   | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | gelöst    |
@@ -20,7 +20,14 @@
 
 ---
 
-# 1, AssemblyQualifiedName als Persistenz-Contract
+# 1, AssemblyQualifiedName als Persistenz-Contract — **gelöst (2026-08-03)**
+
+Siehe [TODO-03](todo.md) und [ADR-0030](docs/architecture/decisions/0030-persisted-names-and-aggregate-version.md).
+`[EventName]` ist Pflicht, eine `DomainEventTypeRegistry` löst Name↔Typ auf und `Type.GetType`
+ist weg. Der Befund war halbiert: Marten leitete `mt_events.type` ebenfalls aus dem CLR-Namen ab —
+dieselbe Registry speist jetzt `MapEventType`, sonst hätte der Event Store weiter am Klassennamen
+gehangen.
+
 
 In jeder Outbox-Zeile steht der assembly-qualifizierte Typname des Domain Events
 (`"Foo.WidgetCreated, MyAsm, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"`),
@@ -47,7 +54,12 @@ Nebeneffekt: Event-Versionierung wird überhaupt erst ausdrückbar (`-v2` neben 
 
 ---
 
-# 2, CLR-Typname im Event-Stream-Key
+# 2, CLR-Typname im Event-Stream-Key — **gelöst (2026-08-03)**
+
+Siehe [TODO-04](todo.md) und [ADR-0030](docs/architecture/decisions/0030-persisted-names-and-aggregate-version.md).
+`[AggregateName]` ist Pflicht und wirft bei Fehlen; der Name dient zugleich als Stream-Präfix und
+als `AggregateName` auf dem Envelope.
+
 
 Der Stream-Key wird als `$"{aggregateType.Name}/{keyValue}"` gebildet. Ein Rename von
 `Gadget` nach `Device` verwaist sämtliche existierenden Streams — im Event Store, wo es per

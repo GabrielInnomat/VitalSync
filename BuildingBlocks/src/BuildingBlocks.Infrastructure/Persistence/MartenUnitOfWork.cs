@@ -1,4 +1,4 @@
-﻿using BuildingBlocks.Application;
+using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.Messaging;
 using Marten;
@@ -6,7 +6,12 @@ using Wolverine.Marten;
 
 namespace BuildingBlocks.Infrastructure.Persistence;
 
-public sealed class MartenUnitOfWork(IDocumentSession session, MartenAggregateTracker tracker, IMartenOutbox outbox, IClock clock) : IUnitOfWork
+public sealed class MartenUnitOfWork(
+    IDocumentSession session,
+    MartenAggregateTracker tracker,
+    IMartenOutbox outbox,
+    DomainEventEnvelopeSerializer serializer,
+    IClock clock) : IUnitOfWork
 {
     public async Task CommitAsync(CancellationToken cancellationToken)
     {
@@ -23,11 +28,24 @@ public sealed class MartenUnitOfWork(IDocumentSession session, MartenAggregateTr
                 continue;
             }
 
-            session.Events.Append(entry.StreamKey(), entry.ExpectedVersion(), uncommittedEvents);
+            var expectedVersion = entry.Version();
+            var streamKey = EntityKeyFormatter.GetStreamKey(entry.AggregateName, entry.AggregateId);
+
+            session.Events.Append(streamKey, expectedVersion, uncommittedEvents);
+
+            var version = expectedVersion - uncommittedEvents.Count;
 
             foreach (var domainEvent in uncommittedEvents)
             {
-                await outbox.PublishAsync(DomainEventEnvelopeSerializer.Wrap(domainEvent, Guid.NewGuid(), occurredAt)).ConfigureAwait(false);
+                var envelope = serializer.Wrap(
+                    domainEvent,
+                    Guid.NewGuid(),
+                    entry.AggregateName,
+                    entry.AggregateId,
+                    ++version,
+                    occurredAt);
+
+                await outbox.PublishAsync(envelope).ConfigureAwait(false);
             }
         }
 

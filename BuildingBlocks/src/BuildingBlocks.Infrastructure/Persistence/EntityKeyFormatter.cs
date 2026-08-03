@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Linq.Expressions;
+using System.Reflection;
 using BuildingBlocks.Domain;
 
 namespace BuildingBlocks.Infrastructure.Persistence;
@@ -8,13 +9,25 @@ namespace BuildingBlocks.Infrastructure.Persistence;
 internal static class EntityKeyFormatter
 {
     private static readonly ConcurrentDictionary<Type, Func<object, object>> ValueAccessors = new();
+    private static readonly ConcurrentDictionary<Type, string> AggregateNames = new();
 
-    public static string GetStreamKey(Type aggregateType, object key) =>
-        string.Create(
-            CultureInfo.InvariantCulture,
-            $"{aggregateType.Name}/{GetKeyValue(key)}");
+    public static string GetAggregateName(Type aggregateType) =>
+        AggregateNames.GetOrAdd(aggregateType, ReadAggregateName);
 
-    private static object GetKeyValue(object key)
+    public static string GetKeyValue(object key) =>
+        string.Create(CultureInfo.InvariantCulture, $"{ReadKeyValue(key)}");
+
+    public static string GetStreamKey(string aggregateName, string keyValue) =>
+        string.Create(CultureInfo.InvariantCulture, $"{aggregateName}/{keyValue}");
+
+    private static string ReadAggregateName(Type aggregateType) =>
+        aggregateType.GetCustomAttribute<AggregateNameAttribute>(inherit: false)?.Name
+        ?? throw new InvalidOperationException(
+            $"The aggregate '{aggregateType}' has no [AggregateName]. The name prefixes every event stream and " +
+            "travels on every domain event envelope, so it is a persistence contract and must be chosen " +
+            "deliberately instead of following the CLR type name (ADR-0030).");
+
+    private static object ReadKeyValue(object key)
     {
         var accessor = ValueAccessors.GetOrAdd(key.GetType(), CreateValueAccessor);
         return accessor(key);

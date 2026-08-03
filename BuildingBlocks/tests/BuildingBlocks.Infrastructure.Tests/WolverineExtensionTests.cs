@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Dispatching;
@@ -218,7 +218,11 @@ public sealed class WolverineExtensionTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddBuildingBlocks(configure);
+        services.AddBuildingBlocks(options =>
+        {
+            options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
+            configure(options);
+        });
         return services.BuildServiceProvider();
     }
 
@@ -231,3 +235,4 @@ public sealed class SenderDependentProbeHandler
 {
     public static Task Handle(SenderDependentProbe probe, ISender sender) => Task.CompletedTask;
 }
+
