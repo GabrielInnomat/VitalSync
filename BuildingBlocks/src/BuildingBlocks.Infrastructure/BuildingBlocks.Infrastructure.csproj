@@ -15,10 +15,6 @@
     <PackageReference Include="WolverineFx.Marten" Version="6.23.0" />
     <PackageReference Include="WolverineFx.EntityFrameworkCore" Version="6.23.0" />
     <PackageReference Include="WolverineFx.Postgresql" Version="6.23.0" />
-    <!-- Wolverine 6 no longer ships the Roslyn compiler in its core package; without this the very
-         first handler codegen fails in the default TypeLoadMode. Referencing it here auto-loads
-         Wolverine's RuntimeCompilationModule, so hosts configure nothing (ADR-0027). Production can
-         later switch to pre-generated code (TypeLoadMode.Static) and drop Roslyn. -->
     <PackageReference Include="WolverineFx.RuntimeCompilation" Version="6.23.0" />
   </ItemGroup>
 

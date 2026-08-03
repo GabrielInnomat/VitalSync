@@ -27,8 +27,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Contracts\VitalSync.Sample.EventSourced.Contracts.csproj" />
-    <!-- The cross-context smoke test has to call the publishing service to trigger anything, so it needs the
-         other service's gRPC contract. Nothing else here does. -->
     <ProjectReference Include="..\..\StateStored\VitalSync.Sample.StateStored.Contracts\VitalSync.Sample.StateStored.Contracts.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Domain\VitalSync.Sample.EventSourced.Domain.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Infrastructure\VitalSync.Sample.EventSourced.Infrastructure.csproj" />

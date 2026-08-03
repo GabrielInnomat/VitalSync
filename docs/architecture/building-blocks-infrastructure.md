@@ -96,7 +96,7 @@ them.
 ## 2. Unit of work
 
 ```csharp
-public interface IUnitOfWork   // contract lives in Application (ADR-0024)
+public interface IUnitOfWork
 {
     Task CommitAsync(CancellationToken ct);
 }
@@ -129,7 +129,7 @@ Both persistence styles implement the **same** `IRepository<,>` contract from
 `Application` ([ADR-0026](./decisions/0026-single-repository-contract.md)):
 
 ```csharp
-public interface IRepository<TAggregate, in TKey>   // contract lives in Application (ADR-0024)
+public interface IRepository<TAggregate, in TKey>
     where TAggregate : class, IAggregateRoot<TKey>, IReconstitutable<TAggregate>
 {
     Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken ct);
@@ -296,7 +296,7 @@ for hosts, e.g.:
 services.AddBuildingBlocks(options =>
 {
     options.AddHandlersFrom(typeof(SomeHandler).Assembly);
-    options.UseEfCorePersistence<NutritionWriteDbContext>(writeConnectionString);   // or:
+    options.UseEfCorePersistence<NutritionWriteDbContext>(writeConnectionString);
     options.UseMartenEventSourcing(writeConnectionString);
     options.UseWolverineMessaging(rabbitMqUri);
 });
@@ -360,7 +360,6 @@ builder.AddBuildingBlocks(options =>
     options.UseEfCorePersistence<NutritionWriteDbContext>(writeConnectionString);
     options.UseWolverineMessaging(rabbitMqUri);
 });
-// no UseWolverine call - the write database was named once, above
 ```
 
 - It calls `UseWolverine` when the selection needs a runtime and applies the EF

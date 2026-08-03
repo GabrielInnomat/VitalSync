@@ -1,5 +1,3 @@
-<!-- Must match the Aspire.Hosting.* package versions below, and must stay in sync with
-     src/Aspire/VitalSync.AppHost: MSBuild resolves one version per SDK per build (MSB4240). -->
 <Project Sdk="Aspire.AppHost.Sdk/13.4.6">
 
   <PropertyGroup>

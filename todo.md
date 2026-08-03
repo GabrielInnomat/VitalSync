@@ -151,16 +151,13 @@ ist gestellt, aber von der Infrastruktur nicht bedienbar.
 Eine Zahl für drei Zwecke — Nebenläufigkeit, Projektions-Ordnung, Envelope-Metadatum:
 
 ```csharp
-// 1) Version an den State (WS-01, WS-03)
 public interface IState<TSelf, out TKey>
 {
     TKey Id { get; }
-    long Version { get; init; }        // vom Fold hochgezählt
+    long Version { get; init; }
     TSelf Apply(IDomainEvent domainEvent);
 }
-// im Write-DbContext: entity.Property(s => s.Version).IsConcurrencyToken();
 
-// 2) Metadaten in den Envelope (IMP-24, IMP-41, hacky-7)
 public sealed record DomainEventEnvelope(
     string EventName, string Payload, Guid EventId,
     string AggregateType, string AggregateId, long Version, DateTimeOffset OccurredAt);
@@ -192,10 +189,6 @@ Typ-Aktivierungsfläche.
 ```csharp
 [EventName("widget-created-v1")]
 public sealed record WidgetCreated(...) : DomainEvent;
-
-// Registry beim Start aus den gescannten Assemblies: name -> Type
-// Wrap:   fehlendes Attribut -> Startup-Fehler
-// Unwrap: _byName[name] ?? Type.GetType(name, throwOnError: true)   // Fallback für Altbestand
 ```
 
 Macht Event-Versionierung überhaupt erst ausdrückbar (`-v2` neben `-v1`). Gemeinsam mit TODO-02
@@ -288,7 +281,6 @@ Der ursprüngliche Vorschlag war, die beiden Strings beim Start zu **vergleichen
 stattdessen die Ursache: Building Blocks ruft `UseWolverine` selbst auf.
 
 ```csharp
-// BuildingBlocks.Infrastructure.DependencyInjection.HostApplicationBuilderExtensions
 builder.UseWolverine(options =>
 {
     if (wiring.EfCoreMessageStoreConnectionString is { } writeConnectionString)
@@ -331,7 +323,6 @@ die Outbox gebaut wurde.
 ## Lösungsvorschlag
 
 ```csharp
-// WolverineOptionsExtensions.ApplyBuildingBlockMessagingDefaults
 options.Publish(publishing => publishing
     .MessagesImplementing<IIntegrationEvent>()
     .ToRabbitTopics(IntegrationEventExchangeName, exchange => exchange.Durable = true));
@@ -362,15 +353,8 @@ Drei Befunde, die alle dieselbe fehlende Information brauchen — den eigenen Ko
 ## Lösungsvorschlag
 
 ```csharp
-// 1) Kontextname als Konfiguration — die fehlende Information
 options.ContextName = "nutrition";
 
-// 2) Startup-Validator analog zu HandlerRegistrationStartupValidator:
-//    - jeder IIntegrationEvent-Typ ohne [Topic]        -> Start abbrechen
-//    - [Topic]-Präfix != ContextName                    -> Start abbrechen
-//    - gebundenes Pattern ohne passenden bekannten Key  -> Warning (nicht Fehler!)
-
-// 3) beim Publish Header setzen, beim Listen eigene Nachrichten ack'en ohne Handler
 envelope.Headers["vitalsync.source-context"] = options.ContextName;
 ```
 
@@ -393,11 +377,10 @@ jedes Fixes daran, dass jemand lokal `dotnet test` tippt.
 ## Lösungsvorschlag
 
 ```yaml
-# .github/workflows/build.yml
 - run: dotnet build --configuration Release
 - run: dotnet test --configuration Release
   env:
-      VITALSYNC_REQUIRE_CONTAINERS: "1" # sonst skippen alle Testcontainers-Tests still
+      VITALSYNC_REQUIRE_CONTAINERS: "1"
 ```
 
 Die Umgebungsvariable ist der Punkt, an dem es sonst schiefgeht: ohne sie überspringen die
@@ -467,20 +450,17 @@ und eine Instanz zum Hineinfalten — zur **Compile-Zeit** feststeht. Umgesetzt 
 expliziter Domänenvertrag:
 
 ```csharp
-// BuildingBlocks.Domain
 public interface IReconstitutable<TSelf> where TSelf : IReconstitutable<TSelf>
 {
     static abstract TSelf CreateEmpty();
 }
 
-// Jedes Aggregat: Konstruktor privat, Implementierung explizit
 public sealed class Widget : AggregateRoot<WidgetId, WidgetState>, IReconstitutable<Widget>
 {
     private Widget() : base(WidgetState.Empty) { }
     static Widget IReconstitutable<Widget>.CreateEmpty() => new();
 }
 
-// Beide Repositories, identisch
 var aggregate = TAggregate.CreateEmpty();
 ```
 
@@ -536,7 +516,6 @@ internal sealed class NullUnitOfWork : IUnitOfWork
     public Task CommitAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
 
-// AddBuildingBlocks, am Ende:
 if (!services.Any(d => d.ServiceType == typeof(IUnitOfWork)))
 {
     services.AddScoped<IUnitOfWork, NullUnitOfWork>();
@@ -568,13 +547,10 @@ Reflection — aber die Codeskizzen widersprechen sich im Namen.
 abstrahieren, weil das `new`-Hiding in `Result<T>` sonst bestehen bleibt:
 
 ```csharp
-// Schritt 1 (IMP-39): Namenskollision auflösen
 public static Result Failed(Failure failure);
-public static Result<T> Failed<T>(Failure failure);   // kein "new" mehr nötig
+public static Result<T> Failed<T>(Failure failure);
 
-// Schritt 2 (IMP-27/hacky-3): static abstract statt Reflection
 public interface IFailureResult<out TSelf> { static abstract TSelf Failed(Failure failure); }
-// Behaviors: where TResponse : Result, IFailureResult<TResponse>
 return TResponse.Failed(Failure.Validation(...));
 ```
 
@@ -630,13 +606,7 @@ gibt also nicht einmal eine Id, über die man Buch führen könnte.
 Reihenfolge beachten — erst TODO-13 entscheiden, dann:
 
 ```csharp
-// 1) IIntegrationEvent bekommt Identität (IMP-11)
 public interface IIntegrationEvent { Guid EventId { get; } DateTimeOffset OccurredAt { get; } }
-
-// 2) Bookkeeping als Building Block, in der Write-DB des Konsumenten,
-//    in derselben Transaktion wie der Command:
-// processed_integration_events(event_id uuid primary key, consumed_at timestamptz)
-// INSERT ... ON CONFLICT DO NOTHING; 0 Zeilen betroffen = schon verarbeitet, ack
 ```
 
 Als Wolverine-Middleware auf dem Consumer-Pfad, damit kein Konsument daran denken muss. Bis dahin
@@ -665,20 +635,16 @@ Datenmodell so aussieht, als wäre sie vorgesehen.
 ## Lösungsvorschlag
 
 ```csharp
-// 1) Failure um Ziel und Metadaten erweitern
 public sealed record Failure(string Code, string Message, FailureCategory Category)
 {
-    public string? Target { get; init; }     // "Name", "Ingredients[2].Amount"
+    public string? Target { get; init; }
     public IReadOnlyDictionary<string, object?>? Metadata { get; init; }
 }
 
-// 2) ValidationBehavior auf dem reservierten Slot 200 (außerhalb der Unit of Work)
 public interface IRequestValidator<in TRequest>
 {
     ValueTask<IReadOnlyList<Failure>> ValidateAsync(TRequest request, CancellationToken ct);
 }
-
-// 3) Transport: Status-Code aus Failures[0], aber alle Failures in die Trailer
 ```
 
 Fachliche Codes kommen von der Regel selbst (`IBusinessRule.Code` → `recipe.name_required`), nicht
@@ -702,8 +668,8 @@ gRPC-Adapters; dasselbe gilt für einen bewusst zu einem `Result` degradierten I
 public enum FailureCategory
 {
     Validation, BusinessRule, NotFound, Conflict,
-    Forbidden,      // 403 — authentifiziert, aber nicht berechtigt
-    Unexpected,     // 500 — technischer Fehler, bewusst als Result transportiert
+    Forbidden,
+    Unexpected,
 }
 ```
 
@@ -720,9 +686,7 @@ compile-time-vollständigkeitsgeprüft.
 `rule?.IsBroken() == true` und `foreach (var rule in rules ?? [])`
 ([RuleChecker.cs:18-63](BuildingBlocks/src/BuildingBlocks.Domain/RuleChecker.cs:18)). Eine
 Factory, die versehentlich `null` liefert, bedeutet „Regel bestanden" — die Validierung schweigt
-genau im Fehlerfall. Begründet war das mit „damit Guard-Klauseln knapp bleiben"; die `<remarks>`,
-in denen das stand, sind mit
-[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) entfallen.
+genau im Fehlerfall. Begründet ist das mit „damit Guard-Klauseln knapp bleiben".
 
 ## Lösungsvorschlag
 
@@ -762,12 +726,10 @@ kollidiert also lautlos mit dem Logging und untergräbt die in IMP-03 hart erkä
 ## Lösungsvorschlag
 
 ```csharp
-// bestehende Registry wiederverwenden statt eine zweite zu erzeugen
 var behaviorRegistry = (PipelineBehaviorRegistry?)services
     .FirstOrDefault(d => d.ServiceType == typeof(PipelineBehaviorRegistry))?.ImplementationInstance
     ?? new PipelineBehaviorRegistry();
 
-// und Unbekanntes nicht auf einen belegten Wert fallen lassen
 public int GetOrder(Type closed) =>
     _orders.TryGetValue(Definition(closed), out var order)
         ? order
@@ -799,10 +761,10 @@ Beides in einem Durchgang, weil es dieselbe Schleife ist:
 ```csharp
 foreach (var entityType in modelBuilder.Model.GetEntityTypes())
 {
-    Konvertiere(entityType.GetProperties());                       // nur was EF kennt (hacky-4)
-    Konvertiere(entityType.GetKeys().SelectMany(k => k.Properties)); // plus der PK, der Grund für den Scan
+    Konvertiere(entityType.GetProperties());
+    Konvertiere(entityType.GetKeys().SelectMany(k => k.Properties));
 
-    foreach (var complex in entityType.GetComplexProperties())      // WS-15, rekursiv
+    foreach (var complex in entityType.GetComplexProperties())
     {
         Konvertiere(complex.ComplexType.GetProperties());
     }
@@ -831,12 +793,7 @@ Durchsatz ist auf ein Event zur Zeit gedeckelt.
 ## Lösungsvorschlag
 
 Nach Aggregat-Id partitionieren — gleiche Garantie, parallel über verschiedene Aggregate. Setzt
-**TODO-02** voraus, weil der Envelope die Aggregat-Identität heute nicht mitführt:
-
-```csharp
-// beim Publish: GroupId = envelope.AggregateId
-// Wolverine hält die Reihenfolge pro GroupId, parallelisiert über GroupIds hinweg
-```
+**TODO-02** voraus, weil der Envelope die Aggregat-Identität heute nicht mitführt.
 
 Vor der ersten Lastmessung nicht anfassen — hier steht es, damit die Entscheidung bewusst fällt
 statt als Default stehen zu bleiben.
@@ -910,7 +867,6 @@ internal static class BuildingBlocksActivitySource
     public static readonly ActivitySource Instance = new("VitalSync.BuildingBlocks", "1.0.0");
 }
 
-// eigenes TracingBehavior auf Order -100 (außerhalb des Loggings, ausdrücklich erlaubt)
 using var activity = BuildingBlocksActivitySource.Instance.StartActivity($"Send {requestName}");
 activity?.SetTag("vitalsync.request.type", requestName);
 ```
@@ -941,8 +897,7 @@ die Registrierungsreihenfolge, in welche Datenbank das Repository schreibt.
 Die Konvention ins Typsystem heben — die kleinste wirksame Änderung:
 
 ```csharp
-public interface IWriteDbContext;   // vom Write-Kontext des Service implementiert
-// Repository und UnitOfWork hängen an IWriteDbContext statt an DbContext
+public interface IWriteDbContext;
 ```
 
 Die saubere Variante (`EfCoreRepository<TContext, TAggregate, TKey>`) scheitert daran, dass C#
@@ -964,14 +919,7 @@ als `FailureCategory.Conflict` beim **Aufrufer** ankommt, prüft kein Szenario:
 
 ## Lösungsvorschlag
 
-Ein Szenario-Test gegen den echten Stack (Testcontainers, wie die übrigen):
-
-```csharp
-// zwei Repository-Instanzen laden dasselbe Gadget (Version 1)
-// beide benennen um, beide committen
-// -> der zweite Commit muss als FailureCategory.Conflict beim Aufrufer ankommen,
-//    nicht als Exception
-```
+Ein Szenario-Test gegen den echten Stack (Testcontainers, wie die übrigen).
 
 Sichert die Kette Marten → `ConcurrencyException` → `UnitOfWorkBehavior` → `Result` als Ganzes ab.
 Ohne ihn ist nur jedes Glied einzeln belegt. Sinnvollerweise zusammen mit TODO-02, das denselben
@@ -996,7 +944,7 @@ In BuildingBlocks lösen, nicht am Sample, sonst muss jeder Schlüsseltyp daran 
 ```csharp
 public interface IEntityKey
 {
-    [JsonIgnore] bool IsEmpty { get; }     // abgeleitet, nie Nutzlast
+    [JsonIgnore] bool IsEmpty { get; }
 }
 ```
 
@@ -1020,9 +968,7 @@ neuen Deployments ändert, ohne dass jemand es freigegeben hat.
 ## Lösungsvorschlag
 
 ```csharp
-// Produktion: Autoerzeugung aus, Schema als Migrationsartefakt ausliefern
 options.AutoCreateSchemaObjects = AutoCreate.None;
-// dazu: Schema-Anwendung als Schritt im MigrationService-Worker
 ```
 
 Gehört in denselben ADR wie die Frage, wie die Wolverine-Tabellen in Produktion entstehen — beide
@@ -1046,21 +992,14 @@ erzeugt. Für Commands und Queries ist genau diese Fehlerklasse längst ein Star
 ## Lösungsvorschlag
 
 ```csharp
-// 1) Mapper ohne Transport — Kompositionszeit-Prüfung
 if (mapperRegistriert && WolverineWiring.RabbitMqUri is null && !_noMessagingSelected)
     throw new InvalidOperationException(
         "Integration-Event-Mapper registriert, aber kein Transport konfiguriert.");
-
-// 2) UseNoMessaging() als bewusstes Opt-out statt stillem Null-Sink-Default
-// 3) AutoProvision an IHostEnvironment binden (nicht in Produktion)
-// 4) Retry differenzieren — JsonException ist nicht transient, NpgsqlException schon
 ```
 
 Für **Projektionen** bewusst nichts tun: mehrere Handler pro Event und Events ganz ohne Projektion
-sind beide legitim. Die Begründung gehört seit
-[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) nicht in den Code, sondern in
-`docs/architecture/cqrs-and-event-sourcing.md`, damit die Asymmetrie nicht später als Lücke
-missverstanden wird.
+sind beide legitim. Die Begründung gehört nach `docs/architecture/cqrs-and-event-sourcing.md`, damit
+die Asymmetrie nicht später als Lücke missverstanden wird.
 
 ---
 
@@ -1077,10 +1016,7 @@ Seite die andere wiederholt ausführt — tragfähig nur, solange beide idempote
 ## Lösungsvorschlag
 
 **Empfehlung: ein Handler, aber getrennte Fehlerbehandlung** mit ausdrücklicher Reihenfolge (erst
-Projektionen, dann Integration Events). Dass die Idempotenz beider Seiten die Voraussetzung ist,
-gehört seit [ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) in
-`docs/architecture/cqrs-and-event-sourcing.md` und in einen Test, der die doppelte Zustellung
-durchspielt — nicht als Kommentar an die Methode.
+Projektionen, dann Integration Events). Voraussetzung ist die Idempotenz beider Seiten.
 
 Zwei getrennte Wolverine-Handler auf demselben Envelope wären sauberer isoliert, kosten aber eine
 zweite Zustellung pro Event — erst wenn beide Seiten messbar unterschiedliche Fehlerraten haben.
@@ -1296,7 +1232,6 @@ Stattdessen den Massenvorgang als **eigenen Command** modellieren:
 
 ```csharp
 public sealed record ImportFoodCatalog(IReadOnlyList<FoodEntry> Entries) : ICommand<ImportSummary>;
-// ein Command, eine Transaktion, N Aggregate, N Events — die Infrastruktur trägt das bereits
 ```
 
 Deckt den Regelfall ab. Erst wenn ein Import die Transaktionsgröße sprengt, braucht es echtes
@@ -1389,9 +1324,8 @@ wird aus einer Aufräumaktion ein Breaking Change für jeden Service.
 
 ## Lösungsvorschlag
 
-`SenderContractTests` → `SenderSignatureTests`; dass das Verhalten in
-`BuildingBlocks.Infrastructure.Tests` geprüft wird, sagt der Name der Testklasse dort, nicht ein
-Kommentar hier ([ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md)). Die drei `internal` Methoden auf den Plural
+`SenderContractTests` → `SenderSignatureTests`; das Verhalten ist in
+`BuildingBlocks.Infrastructure.Tests` geprüft. Die drei `internal` Methoden auf den Plural
 vereinheitlichen (`ApplyBuildingBlocksDomainEventRouting` usw.) — kein Breaking Change nach außen.
 
 ---
@@ -1416,9 +1350,6 @@ entweder später „aufgeräumt" (eine Verschlechterung ohne Gegenwert) oder als
 
 Ein Absatz in `docs/architecture/building-blocks.md`: „Konstruktorinjektion für alles, was zur
 Kompositionszeit feststeht; Service Location nur, wo der Typ erst zur Laufzeit bekannt ist."
-Der ursprüngliche Vorschlag, das zusätzlich als `<remarks>` an die Typen zu schreiben, ist mit
-[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) hinfällig — Code trägt keine
-Kommentare, das *Warum* lebt im Architekturdokument.
 
 ---
 
@@ -1460,7 +1391,7 @@ Damit ist das Host-Muster über alle drei Services identisch und in
 ```csharp
 var builder = Host.CreateApplicationBuilder(args);
 builder.AddServiceDefaults();
-builder.Build();          // kein Run(), kein Migrationslauf
+builder.Build();
 ```
 
 ([Nutrition MigrationService Program.cs](src/Services/Nutrition/VitalSync.Nutrition.MigrationService/Program.cs),

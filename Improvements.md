@@ -330,16 +330,13 @@ alles).
 ## Lösungsvorschlag
 
 ```csharp
-// 1) Mapper ohne Transport ist fast immer ein Fehler, heute nur ein Warning pro Event
 if (registrierteMapper.Any() && WolverineWiring.RabbitMqUri is null && !_noMessagingSelected)
     throw new InvalidOperationException(
         "Integration-Event-Mapper registriert, aber kein Transport. UseWolverineMessaging(...) " +
         "aufrufen oder UseNoMessaging() explizit wählen.");
 
-// 2) AutoProvision nur außerhalb der Produktion
-options.UseRabbitMq(uri).AutoProvision();   // → an IHostEnvironment binden
+options.UseRabbitMq(uri).AutoProvision();
 
-// 3) Retry differenzieren: Serialisierungs-/Mapping-Fehler sind nicht transient
 options.Policies.OnException<JsonException>().MoveToErrorQueue();
 options.Policies.OnException<NpgsqlException>().RetryWithCooldown(...);
 ```
@@ -397,7 +394,6 @@ public interface IAggregateGraph<TState>
     static abstract IQueryable<TState> Include(IQueryable<TState> query);
 }
 
-// EfCoreRepository.GetByIdAsync
 var query = context.Set(stateOwner.StateType).AsQueryable();
 if (stateOwner is IAggregateGraphProvider provider) query = provider.Include(query);
 var state = await query.FirstOrDefaultAsync(...);
@@ -422,18 +418,15 @@ Ein `IRequestValidator`/`ValidationBehavior` existiert nicht.
 ## Lösungsvorschlag
 
 ```csharp
-// BuildingBlocks.Application
 public interface IRequestValidator<in TRequest>
 {
     ValueTask<IReadOnlyList<Failure>> ValidateAsync(TRequest request, CancellationToken ct);
 }
 
-// BuildingBlocks.Infrastructure, Order 200 — außerhalb der Unit of Work
 public sealed class ValidationBehavior<TRequest, TResponse>(
     IEnumerable<IRequestValidator<TRequest>> validators) : IPipelineBehavior<TRequest, TResponse>
     where TResponse : Result
 {
-    // alle Validatoren laufen, Failures werden gesammelt -> ein Result mit N Failures
 }
 ```
 
@@ -455,7 +448,7 @@ nicht fachlich, und damit für Internationalisierung und clientseitige Fallunter
 ```csharp
 public sealed record Failure(string Code, string Message, FailureCategory Category)
 {
-    public string? Target { get; init; }                          // "Name", "Ingredients[2].Amount"
+    public string? Target { get; init; }
     public IReadOnlyDictionary<string, object?>? Metadata { get; init; }
 }
 ```
@@ -483,8 +476,8 @@ public enum FailureCategory
     BusinessRule,
     NotFound,
     Conflict,
-    Forbidden,      // 403 — authentifiziert, aber nicht berechtigt
-    Unexpected,     // 500 — technischer Fehler, bewusst als Result transportiert
+    Forbidden,
+    Unexpected,
 }
 ```
 
@@ -547,7 +540,7 @@ Factory-Registrierung oder einen schmalen Marker lösen — Letzteres ist die kl
 die Konvention immerhin im Typsystem sichtbar:
 
 ```csharp
-public interface IWriteDbContext;   // vom Write-Kontext des Service implementiert
+public interface IWriteDbContext;
 ```
 
 ---
@@ -583,10 +576,6 @@ Stabiler logischer Eventname statt CLR-Identität, AQN höchstens als Fallback:
 ```csharp
 [EventName("widget-created-v1")]
 public sealed record WidgetCreated(...) : DomainEvent;
-
-// Registry beim Start aus den gescannten Assemblies: name -> Type
-// Wrap:   fehlendes Attribut -> Startup-Fehler
-// Unwrap: _byName[name] ?? Type.GetType(name, throwOnError: true)
 ```
 
 Macht Event-Versionierung überhaupt erst ausdrückbar. Gemeinsam mit IMP-23 und IMP-24 planen — alle
@@ -643,12 +632,12 @@ gestellt, aber nicht unterstützt.
 
 ```csharp
 public sealed record DomainEventEnvelope(
-    string EventName,          // IMP-22: logischer Name statt AQN
+    string EventName,
     string Payload,
     Guid EventId,
     string AggregateType,
     string AggregateId,
-    long Version,              // state-stored: fortlaufend pro Aggregat, nicht 0
+    long Version,
     DateTimeOffset OccurredAt);
 ```
 
@@ -678,12 +667,7 @@ Durchsatz eines Service ist damit auf ein Event zur Zeit gedeckelt.
 ## Lösungsvorschlag
 
 Nach Aggregat-Id partitionieren — gleiche Garantie, parallel über verschiedene Aggregate. Setzt IMP-24
-voraus, weil der Envelope die Aggregat-Identität heute nicht mitführt:
-
-```csharp
-// beim Publish: GroupId = envelope.AggregateId
-// Wolverine hält die Reihenfolge pro GroupId, parallelisiert über GroupIds hinweg
-```
+voraus, weil der Envelope die Aggregat-Identität heute nicht mitführt.
 
 Vor der ersten Lastmessung nicht anfassen. Hier festgehalten, damit die Entscheidung bewusst fällt und
 nicht als Default stehen bleibt.
@@ -717,11 +701,8 @@ B) Ein Handler, aber getrennte Fehlerbehandlung mit ausdrücklicher Reihenfolge:
    Ein Fehler im zweiten Schritt darf den ersten nicht rückgängig machen wollen.
 ```
 
-Empfehlung: B. Dass die Idempotenz beider Seiten die Voraussetzung ist, gehört seit
-[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) **nicht** als Kommentar in den
-Code, sondern nach `docs/architecture/cqrs-and-event-sourcing.md` und in einen Test, der die
-doppelte Zustellung ausdrücklich durchspielt. A erst, wenn Projektionen und Integration Events
-messbar unterschiedliche Fehlerraten haben.
+Empfehlung: B. Voraussetzung ist die Idempotenz beider Seiten. A erst, wenn Projektionen und
+Integration Events messbar unterschiedliche Fehlerraten haben.
 
 ---
 
@@ -740,10 +721,9 @@ Static abstract interface member (C# 11) — der Compiler erledigt es, die Klass
 ```csharp
 public interface IFailureResult<out TSelf> { static abstract TSelf Failure(Failure failure); }
 
-public class Result : IFailureResult<Result> { /* existiert bereits */ }
-public sealed class Result<TResult> : Result, IFailureResult<Result<TResult>> { /* dito */ }
+public class Result : IFailureResult<Result> { }
+public sealed class Result<TResult> : Result, IFailureResult<Result<TResult>> { }
 
-// Behaviors: where TResponse : Result, IFailureResult<TResponse>
 return TResponse.Failure(Failure.Validation(ValidationFailureCode, exception.Message));
 ```
 
@@ -806,10 +786,8 @@ internal static class BuildingBlocksActivitySource
     public static readonly ActivitySource Instance = new("VitalSync.BuildingBlocks", "1.0.0");
 }
 
-// LoggingBehavior (oder ein eigenes TracingBehavior auf Order -100, außerhalb des Loggings)
 using var activity = BuildingBlocksActivitySource.Instance.StartActivity($"Send {requestName}");
 activity?.SetTag("vitalsync.request.type", requestName);
-// bei Fehlschlag: activity?.SetStatus(ActivityStatusCode.Error) + Failure-Kategorien als Tag
 ```
 
 Analog in `ProjectionRunner` und `Publisher`. Der Service-Default registriert die Quelle dann per
@@ -858,7 +836,6 @@ den Massenvorgang als **eigenen Command** modellieren, der die Schleife im Handl
 
 ```csharp
 public sealed record ImportFoodCatalog(IReadOnlyList<FoodEntry> Entries) : ICommand<ImportSummary>;
-// ein Command, eine Transaktion, N Aggregate, N Events — die Infrastruktur trägt das bereits
 ```
 
 Das deckt den Regelfall ab. Erst wenn ein Import die Transaktionsgröße sprengt, braucht es echtes
@@ -886,7 +863,6 @@ public sealed class DailyAnalyticsSaga : Saga
 
     public void Handle(NutritionDayClosed e) { NutritionReported = true; }
     public void Handle(FitnessDayClosed e)   { FitnessReported = true; }
-    // wenn beide true: Command auslösen und MarkCompleted()
 }
 ```
 
@@ -937,10 +913,9 @@ Testisolation ist nicht betroffen, weil kein Cache Container- oder Scope-Zustand
 
 ## Lösungsvorschlag
 
-Keine Änderung. Die Begründung gehört allerdings festgehalten, damit niemand sie später „aufräumt"
-und die Caches pro Container instanziiert — das wäre eine Verschlechterung ohne Gegenwert. Seit
-[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) **nicht** mehr in `<remarks>`
-am Typ, sondern in `docs/architecture/building-blocks.md`. Das ist derselbe Punkt wie IMP-46 Schritt 2.
+Keine Änderung. Die Begründung gehört allerdings nach `docs/architecture/building-blocks.md`, damit
+niemand sie später „aufräumt" und die Caches pro Container instanziiert — das wäre eine
+Verschlechterung ohne Gegenwert. Das ist derselbe Punkt wie IMP-46 Schritt 2.
 
 ---
 
@@ -1045,7 +1020,7 @@ Drei Punkte, alle unverändert:
 Nur Punkt 1 lohnt eine Änderung, und er löst zugleich IMP-27:
 
 ```csharp
-public static Result Failed(Failure failure);            // statt Failure(...)
+public static Result Failed(Failure failure);
 public static Result<T> Failed<T>(Failure failure);
 ```
 
@@ -1172,9 +1147,6 @@ verspricht mehr, als sie leisten.
 Die Datei behalten, aber ehrlich benennen und ihren Zweck dokumentieren:
 
 ```csharp
-// Kompilierbarkeitstests: sie belegen, dass ICommand/IQuery/ISender-Signaturen und ihre
-// generischen Constraints zusammenpassen. Verhalten des echten Senders wird in
-// BuildingBlocks.Infrastructure.Tests geprüft (dort läuft die reale Pipeline).
 public sealed class SenderSignatureTests
 ```
 
@@ -1205,10 +1177,6 @@ IMP-35 (statische Caches) — beides sind bewusste Ausnahmen, die als solche dok
 > lässt sich also nicht per Konstruktor injizieren. Für Abhängigkeiten, die zur Kompositionszeit
 > feststehen, gilt weiterhin Konstruktorinjektion — siehe `UnitOfWorkBehavior`.
 
-Der ursprüngliche Vorschlag, das als `<remarks>` an die beiden Typen zu schreiben, ist mit
-[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) hinfällig: Code trägt keine
-Kommentare, das *Warum* lebt in den Architekturdokumenten.
-
 ---
 
 # IMP-47, Keine zentrale Paketverwaltung
@@ -1221,7 +1189,6 @@ Laufzeit-Bindungsdiskrepanz statt eines Build-Fehlers.
 ## Lösungsvorschlag
 
 ```xml
-<!-- Directory.Packages.props im Repo-Root -->
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
@@ -1229,7 +1196,6 @@ Laufzeit-Bindungsdiskrepanz statt eines Build-Fehlers.
   <ItemGroup>
     <PackageVersion Include="Marten" Version="9.20.1" />
     <PackageVersion Include="WolverineFx.RabbitMQ" Version="6.23.0" />
-    <!-- … -->
   </ItemGroup>
 </Project>
 ```

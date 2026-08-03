@@ -1,7 +1,4 @@
-﻿<!-- Must match the Aspire.Hosting.* package versions below, and must be identical in every AppHost of the
-     solution: MSBuild resolves one version per SDK per build (MSB4240) and silently ignores the other.
-     With 13.1.0 the host also fails at startup because DCP requires Aspire.Hosting.AppHost 13.4.6+. -->
-<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
+﻿<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>

@@ -21,8 +21,6 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageReference Include="NSubstitute" Version="6.0.0" />
-    <!-- Read the broker directly in the dead-letter test: the assertion is where a poison message ends up,
-         and asking Wolverine would only echo Wolverine's own view of it. -->
     <PackageReference Include="RabbitMQ.Client" Version="7.1.2" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.13.0" />
     <PackageReference Include="Testcontainers.RabbitMq" Version="4.13.0" />

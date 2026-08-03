@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-03
 - **Supersedes:** [ADR-0013](./0013-xml-documentation-conventions.md)
+- **Amended:** 2026-08-03 (scope covers every hand-written file, not only C#)
 
 ## Context
 
@@ -41,6 +42,18 @@ keeps them honest.
 - ordinary line comments (`//`), including trailing ones,
 - block comments (`/* … */`),
 - commented-out code.
+
+> **Amendment, 2026-08-03 — every hand-written file, not only C#.** The scope above stopped at
+> `*.cs`, which left the same drift free to accumulate one file type over. It now also covers
+> MSBuild and solution files (`*.csproj`, `*.props`, `*.targets`, `*.slnx` — no `<!-- … -->`),
+> workflows (`*.yml`, `*.yaml` — no `#`), and the fenced **code examples** in `*.md`. The decision
+> is unchanged; only the file set is.
+>
+> Untouched: `.editorconfig` (the enforcement surface itself), accepted ADRs (immutable, so the
+> annotated snippet in [ADR-0009](./0009-business-rules-and-domain-validation.md) stays as
+> accepted), and the `#` labels in the repository-map tree of the instruction files, which are
+> leader lines in a drawing rather than comments. A `//` inside a `text` fence is a comment and
+> goes — the fence language decides nothing, the marker does.
 
 ### The only exception: generated files
 

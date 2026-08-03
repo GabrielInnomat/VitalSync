@@ -6,9 +6,6 @@
 
   <ItemGroup>
     <PackageReference Include="protobuf-net.Grpc" Version="1.2.2" />
-    <!-- Roslyn analyzer that validates the contracts at build time: duplicate or out-of-range field
-         numbers, missing attributes, inheritance problems. With TreatWarningsAsErrors a duplicate
-         [ProtoMember] number breaks the build instead of silently overwriting a field at runtime. -->
     <PackageReference Include="protobuf-net.BuildTools" Version="3.2.52" PrivateAssets="all" />
   </ItemGroup>
 

@@ -6,8 +6,6 @@
 
   <ItemGroup>
     <PackageReference Include="protobuf-net.Grpc" Version="1.2.2" />
-    <!-- Validates the contract at build time: duplicate or out-of-range field numbers, missing
-         attributes, inheritance problems. -->
     <PackageReference Include="protobuf-net.BuildTools" Version="3.2.52" PrivateAssets="all" />
   </ItemGroup>
 

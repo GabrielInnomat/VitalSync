@@ -41,12 +41,6 @@ public sealed class EventNameAttribute(string name) : Attribute
 {
     public string Name { get; } = name;
 }
-
-// [EventName("widget-created-v1")] public sealed record WidgetCreated(...)
-
-// Registry beim Start aus den gescannten Assemblies aufbauen: name -> Type.
-// Wrap:   envelope.EventTypeName = attribute.Name  (fehlt das Attribut -> Startup-Fehler)
-// Unwrap: _byName.TryGetValue(name, out var type) ? type : Type.GetType(name, throwOnError: true)
 ```
 
 Nebeneffekt: Event-Versionierung wird überhaupt erst ausdrückbar (`-v2` neben `-v1`).
@@ -73,8 +67,6 @@ public sealed class StreamPrefixAttribute(string prefix) : Attribute
     public string Prefix { get; } = prefix;
 }
 
-// [StreamPrefix("gadget")] public sealed class Gadget : EventSourcedAggregateRoot<...>
-
 private static string PrefixOf(Type aggregateType) =>
     aggregateType.GetCustomAttribute<StreamPrefixAttribute>()?.Prefix
     ?? throw new InvalidOperationException(
@@ -100,16 +92,14 @@ Static abstract interface member (C# 11) — der Compiler erledigt es, die Klass
 komplett.
 
 ```csharp
-// BuildingBlocks.Application
 public interface IFailureResult<out TSelf>
 {
     static abstract TSelf Failure(Failure failure);
 }
 
-public class Result : IFailureResult<Result> { /* Failure(...) existiert bereits */ }
-public sealed class Result<TResult> : Result, IFailureResult<Result<TResult>> { /* dito */ }
+public class Result : IFailureResult<Result> { }
+public sealed class Result<TResult> : Result, IFailureResult<Result<TResult>> { }
 
-// Behaviors: where TResponse : Result, IFailureResult<TResponse>
 return TResponse.Failure(Failure.Validation(ValidationFailureCode, exception.Message));
 ```
 
@@ -123,10 +113,8 @@ nichts. Aus einem Laufzeitfehler wird ein Compile-Fehler.
 Der Scan läuft über `clrType.GetProperties(...)` und ruft dann
 `modelBuilder.Entity(clrType).Property(name)`. Dieser Aufruf _legt die Property im Modell an_,
 falls sie dort noch nicht existiert. Jede berechnete, get-only oder explizit `Ignore()`-te
-Property vom Key-Typ landet damit still als Spalte in der Tabelle. Der CLR-Scan war mit dem
-Primärschlüssel begründet — der Nebeneffekt trifft aber alles. (Die Begründung stand bis
-[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) als `<remarks>` am Typ und
-ist mit dem Kommentar entfallen; sie gehört bei der Behebung in einen ADR, nicht zurück in den Code.)
+Property vom Key-Typ landet damit still als Spalte in der Tabelle. Der CLR-Scan ist mit dem
+Primärschlüssel begründet — der Nebeneffekt trifft aber alles.
 
 `BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EntityKeyValueConverter.cs:74-103`
 
@@ -138,7 +126,6 @@ CLR-Scan überhaupt existiert.
 ```csharp
 var mutable = entityType as IConventionEntityType ?? (IConventionEntityType)entityType;
 
-// bereits gemappte Properties + deklarierte Key-Properties, sonst nichts
 var candidates = entityType.GetProperties()
     .Concat(entityType.GetKeys().SelectMany(key => key.Properties))
     .DistinctBy(property => property.Name);
@@ -193,7 +180,6 @@ public Task AddAsync(TAggregate aggregate, CancellationToken cancellationToken)
             $"'{typeof(TAggregate)}' hat keine Identität. Ein Aggregat erhält sie durch sein erstes " +
             "Event — der parameterlose Konstruktor dient nur der Rehydrierung.");
     }
-    // ...
 }
 ```
 
@@ -288,10 +274,6 @@ still weg.
 Der Wert liegt in DI bereit — beim Start vergleichen. Billigster großer Gewinn der Liste.
 
 ```csharp
-// UseBuildingBlocksEfCorePersistence merkt sich den übergebenen String am WolverineOptions-Token,
-// oder einfacher: die Extension schreibt ihn in ein Singleton, das der Validator liest.
-
-// WolverineWiringStartupValidator.Validate()
 if (settings.EfCoreMessageStoreConnectionString is { } declared
     && appliedStore is { } applied
     && !string.Equals(Normalize(declared), Normalize(applied), StringComparison.Ordinal))
@@ -324,13 +306,11 @@ Immer die Registry benutzen, die tatsächlich registriert ist, und Unbekanntes n
 belegten Wert fallen lassen.
 
 ```csharp
-// ServiceCollectionExtensions
 var behaviorRegistry = (PipelineBehaviorRegistry?)services
     .FirstOrDefault(d => d.ServiceType == typeof(PipelineBehaviorRegistry))?.ImplementationInstance
     ?? new PipelineBehaviorRegistry();
 services.TryAddSingleton(behaviorRegistry);
 
-// PipelineBehaviorRegistry
 public int GetOrder(Type closedBehaviorType) =>
     _orders.TryGetValue(Definition(closedBehaviorType), out var order)
         ? order
@@ -346,10 +326,8 @@ Dazu ein Test, der `AddBuildingBlocks` zweimal aufruft und die Order des zweiten
 # 10, `RuleChecker` schluckt `null`
 
 `rule?.IsBroken() == true` und `foreach (var rule in rules ?? [])`. Eine Factory, die
-versehentlich `null` liefert, bedeutet „Regel bestanden". Begründet war das mit „damit
+versehentlich `null` liefert, bedeutet „Regel bestanden". Begründet ist das mit „damit
 Guard-Klauseln knapp bleiben" — der Preis ist, dass die Validierung genau im Fehlerfall schweigt.
-(Die Begründung stand bis [ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) als
-`<remarks>` am Typ und ist mit dem Kommentar entfallen.)
 
 `BuildingBlocks/src/BuildingBlocks.Domain/RuleChecker.cs:18-63`
 
@@ -403,11 +381,9 @@ internal sealed class NullUnitOfWork : IUnitOfWork
     public Task CommitAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
 
-// ServiceCollectionExtensions, am Ende von AddBuildingBlocks:
 if (!services.Any(d => d.ServiceType == typeof(IUnitOfWork)))
 {
-    services.AddScoped<IUnitOfWork, NullUnitOfWork>();   // ersetzt MissingUnitOfWorkStartupLogger nicht,
-                                                          // der Startup-Hinweis bleibt sinnvoll
+    services.AddScoped<IUnitOfWork, NullUnitOfWork>();
 }
 ```
 
@@ -469,7 +445,6 @@ mitführt (heute tut er das nicht — siehe Nr. 1/7, dieselbe Stelle):
 
 ```csharp
 public sealed record DomainEventEnvelope(string EventTypeName, string Payload, string AggregateKey);
-// beim Publish: envelope.GroupId = AggregateKey  →  Wolverine hält die Reihenfolge pro GroupId
 ```
 
 Vor der ersten Lastmessung nicht anfassen — steht sinngemäß als offener Punkt in

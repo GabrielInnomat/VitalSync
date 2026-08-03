@@ -15,16 +15,16 @@ microservices using **DDD**, **CQRS**, and **selective Event Sourcing**.
 ## Build, test, run
 
 ```bash
-dotnet build                                        # build the solution (VitalSync.slnx)
-dotnet test                                         # run all tests
-dotnet test --filter "FullyQualifiedName~AggregateRootTests"   # run a single test class
-dotnet test BuildingBlocks/tests/BuildingBlocks.Domain.Tests   # run one test project
-dotnet run --project src/Aspire/VitalSync.AppHost   # run the full system via Aspire
+dotnet build
+dotnet test
+dotnet test --filter "FullyQualifiedName~AggregateRootTests"
+dotnet test BuildingBlocks/tests/BuildingBlocks.Domain.Tests
+dotnet run --project src/Aspire/VitalSync.AppHost
 ```
 
 Prerequisites: the .NET SDK pinned in `global.json` (`10.0.302`, `rollForward: latestFeature`) and Docker (for messaging/database infrastructure). **No Aspire workload** — the AppHosts reference `Aspire.AppHost.Sdk` as a package, and CI builds green without one.
 
-Global build settings (`Directory.Build.props`) apply solution-wide: nullable + implicit usings enabled, `latest-all` analysis level, and **warnings treated as errors**. No XML documentation file is generated — code carries no comments at all (ADR-0028). Respect `.editorconfig` at each level: the root one plus the per-project ones under `BuildingBlocks/src/*` and the test projects; test-only analyzer relaxations that no `.editorconfig` covers live in the test `.csproj` as `NoWarn`.
+Global build settings (`Directory.Build.props`) apply solution-wide: nullable + implicit usings enabled, `latest-all` analysis level, and **warnings treated as errors**. Respect `.editorconfig` at each level: the root one plus the per-project ones under `BuildingBlocks/src/*` and the test projects; test-only analyzer relaxations that no `.editorconfig` covers live in the test `.csproj` as `NoWarn`.
 
 ## Repository map
 
@@ -76,7 +76,7 @@ Guidance for finding things:
   mandatory; keep dependencies pointing inward (domain has no infrastructure deps).
 - **Contract placement** (ADR-0024): a contract lives in the **innermost layer
   whose language it speaks and that actually consumes it** — decided by its
-  *consumer*, not its implementor (implementations always live outside, per DIP).
+  _consumer_, not its implementor (implementations always live outside, per DIP).
   Domain vocabulary (`IDomainEvent`, business rules, `IClock`) → `Domain`;
   orchestration-facing contracts (`IRepository`, `IUnitOfWork`,
   projection-handler / event-publisher abstractions, integration-event marker) →
@@ -84,7 +84,7 @@ Guidance for finding things:
   use-case contracts of its own. New contract? Place it by asking who consumes it.
 - **Every service host wires the same defaults** (see any `src/Services/<Domain>/*.Api/Program.cs`):
   `builder.AddServiceDefaults()`, one `AddNpgSqlReadinessCheck` **per database the context
-  owns** (`<context>-write` *and* `<context>-read`), `AddRabbitMqReadinessCheck()`,
+  owns** (`<context>-write` _and_ `<context>-read`), `AddRabbitMqReadinessCheck()`,
   `AddProblemDetails()` + `app.UseExceptionHandler()` (ADR-0017's thin global handler),
   `app.MapDefaultEndpoints()`, and `await app.RunAsync().ConfigureAwait(false)`. The
   connection names **are** the Aspire resource names — `AddNpgSqlReadinessCheck` throws at
@@ -96,18 +96,18 @@ See `docs/architecture/communication.md` and the ADRs below.
 
 ## Technology stack
 
-| Concern                 | Choice                                                                                                                  |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Orchestration           | .NET Aspire 13                                                                                                          |
-| Frontend                | Blazor                                                                                                                  |
-| Backend-for-Frontend    | REST (to frontend) + code-first gRPC (to services)                                                                      |
-| Microservices           | ASP.NET Core, one per bounded context                                                                                   |
-| Inter-service messaging | RabbitMQ via Wolverine                                                                                                  |
-| Persistence             | EF Core on PostgreSQL by default; Marten (event sourcing) on PostgreSQL where ES adds value                             |
-| Database topology       | PostgreSQL; a **write + read database pair** per bounded context; shared server now, server-per-context possible later  |
-| Read models             | Event-driven projections in each context's read DB via an outbox-backed publisher                                       |
-| Patterns                | DDD, CQRS, Event Sourcing (selective)                                                                                   |
-| Testing                 | xUnit (incl. built-in asserts), NSubstitute, EF Core InMemory — **no FluentAssertions** (ADR-0014)                      |
+| Concern                 | Choice                                                                                                                 |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Orchestration           | .NET Aspire 13                                                                                                         |
+| Frontend                | Blazor                                                                                                                 |
+| Backend-for-Frontend    | REST (to frontend) + code-first gRPC (to services)                                                                     |
+| Microservices           | ASP.NET Core, one per bounded context                                                                                  |
+| Inter-service messaging | RabbitMQ via Wolverine                                                                                                 |
+| Persistence             | EF Core on PostgreSQL by default; Marten (event sourcing) on PostgreSQL where ES adds value                            |
+| Database topology       | PostgreSQL; a **write + read database pair** per bounded context; shared server now, server-per-context possible later |
+| Read models             | Event-driven projections in each context's read DB via an outbox-backed publisher                                      |
+| Patterns                | DDD, CQRS, Event Sourcing (selective)                                                                                  |
+| Testing                 | xUnit (incl. built-in asserts), NSubstitute, EF Core InMemory — **no FluentAssertions** (ADR-0014)                     |
 
 Language: **C#**. Solution file: `VitalSync.slnx`. Shared build config in
 `Directory.Build.props` and `.editorconfig`.
@@ -140,7 +140,7 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   **event-sourced base is additive** (`Version` + `LoadFromHistory` only), per
   ADR-0025 (which supersedes ADR-0012). Only apply ES where the event history
   carries business value.
-- **EF Core maps the aggregate's *state*, never the aggregate** (ADR-0025 amendment):
+- **EF Core maps the aggregate's _state_, never the aggregate** (ADR-0025 amendment):
   `Id => State.Id` is computed, so it cannot serve as a mapped primary key, and a
   positional record also fails as a `ComplexProperty`. The state record maps as an
   ordinary **entity type** — one table, one id column, no shadow key. Infrastructure
@@ -288,15 +288,6 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 ADRs are immutable once accepted; to change a decision, add a superseding ADR.
 Index: `docs/architecture/decisions/README.md`.
 
-## Comments (ADR-0028)
-
-- **Code contains no comments — none, anywhere.** No XML documentation (`///`, `<summary>`, `<remarks>`, `<inheritdoc/>`, …), no line comments (`//`, including trailing ones), no block comments (`/* … */`), no commented-out code. This holds for `BuildingBlocks/**`, `src/**`, `samples/**` and `tests/**` alike. Never add one back, and never "improve" code by explaining it in place.
-- **The only exception is generated code** — EF Core's scaffolded output under `**/Migrations/**` (marked `generated_code = true` in the root `.editorconfig`) and compiler/SDK output under `obj/`. Leave their `// <auto-generated/>` markers alone.
-- **Whoever finds a comment removes it**, in the same change, regardless of who wrote it. There is no grace period and no backlog item for it.
-- `#pragma`, attributes, `#region` and `#if` are not comments and stay — but a `#pragma warning disable` carries **no** trailing justification comment.
-- **Put the knowledge where it survives instead:** _what_ → better names and smaller methods; _how_ → a test; _why_ → an ADR or `docs/architecture/*`; repo-wide conventions → these instruction files.
-- ADR-0013 (XML documentation conventions, `<remarks>` why/how/when, canonical phrasings) is **superseded** and must not be followed. `CS1591` is `None` in the root `.editorconfig` and `GenerateDocumentationFile` is gone from `Directory.Build.props` — do not reinstate either.
-
 ## Testing
 
 - Frameworks: **xUnit** (including built-in `Assert.*`), **NSubstitute**, **EF Core InMemory**. Do **not** use FluentAssertions — removed for licensing reasons (ADR-0014).
@@ -326,7 +317,7 @@ Index: `docs/architecture/decisions/README.md`.
 3. Follow the DDD/CQRS/ES ADR conventions above.
 4. Keep layer boundaries clean; don't leak infrastructure into the domain.
 5. Add or update tests (mirror the project structure).
-6. Write **no comments** — no XML docs, no `//`, no `/* */`, anywhere except generated files (ADR-0028); delete any comment you come across.
+6. Write **no comments** — not in `*.cs`, `*.csproj`, workflow YAML, or the code examples in `*.md` (ADR-0028); delete any comment you come across.
 7. If a change affects architecture, add or update an ADR using the template in `docs/architecture/decisions/README.md`.
 8. Match existing style; respect `.editorconfig` and `Directory.Build.props`.
 9. **Always commit and push directly to the `main` branch** — never work on separate branches, and never ask which branch to use; `main` is always the target.

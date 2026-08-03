@@ -125,8 +125,8 @@ public interface IState<TSelf, out TKey>
     where TSelf : IState<TSelf, TKey>
     where TKey : struct, IEntityKey
 {
-    TKey Id { get; }                    // the aggregate's identity
-    TSelf Apply(IDomainEvent domainEvent); // the evolve/apply function, returns the next state
+    TKey Id { get; }
+    TSelf Apply(IDomainEvent domainEvent);
 }
 ```
 
@@ -245,7 +245,7 @@ public sealed class Widget : AggregateRoot<WidgetId, WidgetState>, IReconstituta
 
     static Widget IReconstitutable<Widget>.CreateEmpty() => new();
 
-    public static Widget Create(WidgetId id, string name) { … }   // the only public way in
+    public static Widget Create(WidgetId id, string name) { … }
 }
 ```
 
@@ -310,7 +310,7 @@ DomainEvents  (read-only, side-effect free)
 ```csharp
 public interface IDomainEvent
 {
-    Guid EventId { get; }            // stable unique id (outbox / idempotency)
+    Guid EventId { get; }
     DateTimeOffset OccurredAt { get; }
 }
 ```
@@ -331,8 +331,8 @@ Two distinct concepts, each with its own rule interface and exception:
 `RuleChecker` evaluates them:
 
 ```csharp
-RuleChecker.Check(new RecipeNameMustNotBeEmpty(name)); // throws if broken
-RuleChecker.Check(rule1, rule2, rule3);                // params overload, short-circuits on first failure
+RuleChecker.Check(new RecipeNameMustNotBeEmpty(name));
+RuleChecker.Check(rule1, rule2, rule3);
 ```
 
 See [ADR-0009](./decisions/0009-business-rules-and-domain-validation.md).
@@ -342,13 +342,11 @@ See [ADR-0009](./decisions/0009-business-rules-and-domain-validation.md).
 The aggregate carries only the command API; the state carries the apply logic. The same code works for a state-stored aggregate (base `AggregateRoot<RecipeId, RecipeState>`) and an event-sourced one (base `EventSourcedAggregateRoot<RecipeId, RecipeState>`).
 
 ```csharp
-// Key: defines its own emptiness rule.
 public readonly record struct RecipeId(Guid Value) : IEntityKey<Guid>
 {
     public bool IsEmpty => Value == Guid.Empty;
 }
 
-// State: owns Id + all apply logic. Lives in its own file, however large.
 public sealed record RecipeState(RecipeId Id, string Name)
     : IState<RecipeState, RecipeId>
 {
@@ -362,7 +360,6 @@ public sealed record RecipeState(RecipeId Id, string Name)
     };
 }
 
-// Aggregate: only the public command surface. No apply noise, no ES ceremony.
 public sealed class Recipe : EventSourcedAggregateRoot<RecipeId, RecipeState>
 {
     private Recipe() : base(RecipeState.Empty) { }
@@ -371,7 +368,7 @@ public sealed class Recipe : EventSourcedAggregateRoot<RecipeId, RecipeState>
     {
         RuleChecker.Check(new RecipeNameMustNotBeEmpty(name));
         var recipe = new Recipe();
-        recipe.RaiseEvent(new RecipeCreated(id, name)); // first event sets State.Id
+        recipe.RaiseEvent(new RecipeCreated(id, name));
         return recipe;
     }
 

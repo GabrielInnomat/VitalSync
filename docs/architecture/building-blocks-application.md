@@ -46,7 +46,7 @@ is independent of VitalSync.
     {
         public async Task<Result<RecipeId>> Handle(CreateRecipeCommand command, CancellationToken ct)
         {
-            var recipe = Recipe.Create(command.Name);   // may throw domain exceptions
+            var recipe = Recipe.Create(command.Name);
             await _repository.AddAsync(recipe, ct);
             return Result.Success(recipe.Id);
         }
@@ -57,7 +57,6 @@ is independent of VitalSync.
 
     ```csharp
     public sealed record DeleteRecipeCommand(RecipeId Id) : ICommand;
-    // handler returns Task<Result>
     ```
 
 ## Dispatcher

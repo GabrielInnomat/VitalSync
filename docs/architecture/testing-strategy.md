@@ -86,8 +86,7 @@ the results. For these cases:
   compile). The root namespace equals the project name.
 - **Rules:** fixture projects set `IsPackable=false`, reference only what the scenario needs
   (typically `BuildingBlocks.Domain` / `BuildingBlocks.Application`), and contain **no tests**
-  themselves. Like all code, they carry **no comments** ([ADR-0028](decisions/0028-no-comments-in-code.md));
-  what a fixture exists to prove belongs in the name of the test that consumes it.
+  themselves.
 
 Existing examples: `ValidHandlersFixture`, `ConflictingHandlersFixture`,
 `OrphanRequestsFixture`, `AmbiguousRequestsFixture` (used by

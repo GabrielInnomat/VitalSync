@@ -12,10 +12,13 @@ The domain layer is the heart of each microservice. These rules are **mandatory*
 ## Tactical building blocks
 
 ### Entity
+
 An object with an identity that persists over time. Equality is based on identity (same type + same id).
 
 ### Aggregate Root
+
 The consistency boundary and entry point for a cluster of domain objects. It:
+
 - exposes behavior (not setters) to enforce invariants,
 - **raises domain events** to announce business-relevant changes,
 - exposes those events **read-only** to the outside.
@@ -29,12 +32,15 @@ The consistency boundary and entry point for a cluster of domain objects. It:
 ```
 
 ### Value Object
+
 An immutable object defined by its attributes, with structural equality. Examples likely in VitalSync: a nutritional value, a quantity with unit, a calorie amount.
 
 ### Domain Event
+
 A record of something business-relevant that happened in the domain. Pure business data, no infrastructure types. Internal to the service; may be translated into an **integration event** at the boundary.
 
 ### Strongly Typed Identifier
+
 A Value Object wrapping the underlying primitive (e.g., a `Guid`). For example, a `RecipeId` and an `IngredientId` are distinct, incompatible types even though both wrap a `Guid`. See [ADR-0005](./decisions/0005-strongly-typed-aggregate-identifiers.md).
 
 ## Ownership of domain events (important)
@@ -42,16 +48,16 @@ A Value Object wrapping the underlying primitive (e.g., a `Guid`). For example, 
 The flow is deliberately constrained:
 
 ```text
-Aggregate.RaiseDomainEvent(...)   // only the aggregate, internally
+Aggregate.RaiseDomainEvent(...)
         │
         ▼
-Aggregate.DomainEvents            // read-only view for other layers
+Aggregate.DomainEvents
         │
         ▼
 Persistence collects on save  ──► Dispatcher / Outbox  ──► Messaging
         │
         ▼
-Aggregate.ClearDomainEvents()     // after they have been handled
+Aggregate.ClearDomainEvents()
 ```
 
 Other layers **cannot** add or remove events — they can only read and (after dispatch) trigger a clear through the aggregate's own method.

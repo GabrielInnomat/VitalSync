@@ -144,7 +144,7 @@ Der wichtigste Befund des Durchstichs. Diese Analyse sollte erhalten bleiben.
 `AggregateRoot<TKey, TState>` deklariert:
 
 ```csharp
-public sealed override TKey Id => State.Id;   // berechnet, kein Setter, kein Backing Field
+public sealed override TKey Id => State.Id;
 ```
 
 EF Core kann das nicht als Primärschlüssel abbilden:
@@ -666,11 +666,9 @@ Sequenznummer aus WS-03:
 public interface IState<TSelf, out TKey>
 {
     TKey Id { get; }
-    long Version { get; init; }      // vom Fold hochgezählt, von EF als Concurrency-Token gemappt
+    long Version { get; init; }
     TSelf Apply(IDomainEvent domainEvent);
 }
-
-// im Write-DbContext: entity.Property(s => s.Version).IsConcurrencyToken();
 ```
 
 Gemeinsam mit WS-03 und IMP-24 entscheiden — es ist dieselbe Zahl für drei Zwecke
@@ -738,7 +736,7 @@ Die Sequenznummer in den Envelope legen, wo beide Persistenzstile sie füllen k�
 public sealed record DomainEventEnvelope(
     string EventName, string Payload, Guid EventId,
     string AggregateType, string AggregateId,
-    long Version,                      // ES: Streamversion; state-stored: State.Version (WS-01)
+    long Version,
     DateTimeOffset OccurredAt);
 ```
 
@@ -790,8 +788,6 @@ denselben gescannten Assemblies:
 internal sealed class IntegrationEventTopicStartupValidator(
     IReadOnlyCollection<Assembly> scannedAssemblies) : IHostedService
 {
-    // jeder nicht-abstrakte IIntegrationEvent-Typ ohne [Topic] -> Start abbrechen,
-    // alle betroffenen Typnamen in der Meldung
 }
 ```
 
@@ -824,10 +820,8 @@ if (mapperRegistriert && WolverineWiring.RabbitMqUri is null)
         "Integration-Event-Mapper registriert, aber kein Transport konfiguriert.");
 ```
 
-Für Projektionen bewusst nichts tun. Die Begründung gehört seit
-[ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md) **nicht** als Kommentar in
-den Code, sondern in einen ADR bzw. `docs/architecture/*` — dort ist die Asymmetrie auffindbar
-und wird nicht später als Lücke missverstanden.
+Für Projektionen bewusst nichts tun, und die Begründung in `docs/architecture/*` festhalten, damit
+die Asymmetrie nicht später als Lücke missverstanden wird.
 
 ---
 
@@ -865,7 +859,6 @@ Zusage, für die die Outbox gebaut wurde.
 #### Lösungsvorschlag
 
 ```csharp
-// WolverineOptionsExtensions.ApplyBuildingBlockMessagingDefaults
 options.Publish(publishing => publishing
     .MessagesImplementing<IIntegrationEvent>()
     .ToRabbitTopics(IntegrationEventExchangeName, exchange => exchange.Durable = true));
@@ -891,7 +884,6 @@ eine dauerhafte Entscheidung, die gerade unbemerkt getroffen wird.
 Nicht am Sample, sondern in BuildingBlocks lösen, sonst muss jeder Schlüsseltyp daran denken:
 
 ```csharp
-// BuildingBlocks.Domain — IsEmpty ist abgeleitet, nie Nutzlast
 public interface IEntityKey
 {
     [JsonIgnore] bool IsEmpty { get; }
@@ -918,14 +910,7 @@ nicht mit einer echten Kollision.
 #### Lösungsvorschlag
 
 Ein Szenario-Test gegen den echten Stack (Testcontainers, wie die übrigen), der die
-komplette Übersetzungskette belegt:
-
-```csharp
-// zwei Repository-Instanzen laden dasselbe Gadget (Version 1)
-// beide benennen um, beide committen
-// -> der zweite Commit muss als FailureCategory.Conflict beim Aufrufer ankommen,
-//    nicht als Exception
-```
+komplette Übersetzungskette belegt.
 
 Das ist der Test, der die Kette Marten → `ConcurrencyException` → `UnitOfWorkBehavior` →
 `Result` als Ganzes absichert. Ohne ihn ist nur jedes Glied einzeln belegt.
@@ -946,9 +931,7 @@ Für den Sample nichts ändern — das Verhalten ist Marten-Standard und hier ko
 dokumentiert. Für den ersten echten event-sourced Service die Entscheidung bewusst treffen:
 
 ```csharp
-// Produktion: Schema-Autoerzeugung abschalten, Schema als Migrationsartefakt ausliefern
 options.AutoCreateSchemaObjects = AutoCreate.None;
-// dazu: dotnet run --apply-marten-changes im MigrationService-Worker
 ```
 
 Gehört in denselben ADR wie die Frage, wie Wolverine-Tabellen in Produktion entstehen —
@@ -969,13 +952,7 @@ bzw. [IMP-11](Improvements.md) gibt es nicht einmal eine `EventId` am Integratio
 #### Lösungsvorschlag
 
 Reihenfolge beachten: erst `IIntegrationEvent` eine `EventId` geben
-([IMP-11](Improvements.md)), dann das Bookkeeping als Building Block anbieten:
-
-```csharp
-// in der Write-DB des Konsumenten, in derselben Transaktion wie der Command:
-// processed_integration_events(event_id uuid primary key, consumed_at timestamptz)
-// -> INSERT ... ON CONFLICT DO NOTHING; 0 betroffene Zeilen = schon verarbeitet, ack
-```
+([IMP-11](Improvements.md)), dann das Bookkeeping als Building Block anbieten.
 
 Als Wolverine-Middleware auf dem Consumer-Pfad umsetzbar, damit kein Konsument daran denken
 muss. Bis dahin gilt: geteilte Identität ist der einzige sanktionierte Idempotenz-Weg — das
@@ -992,12 +969,7 @@ Folgenlosigkeit beruht auf der Abwesenheit von Code, nicht auf einer Regel.
 
 #### Lösungsvorschlag
 
-Absenderkennung setzen und beim Konsumieren auswerten:
-
-```csharp
-// beim Publish: envelope.Headers["vitalsync.source-context"] = <Kontextname>
-// beim Listen:  Nachrichten mit eigener Kennung verwerfen (ack ohne Handler-Aufruf)
-```
+Absenderkennung setzen und beim Konsumieren auswerten.
 
 Setzt voraus, dass ein Kontext seinen eigenen Namen kennt — heute nirgends hinterlegt.
 Kleiner Zusatz zu `BuildingBlocksOptions` (`options.ContextName = "nutrition"`), der
@@ -1019,13 +991,7 @@ Fehlerarten.
 
 #### Lösungsvorschlag
 
-Gemeinsam mit WS-05 lösen, beide brauchen dieselbe Quelle:
-
-```csharp
-// Startup: alle [Topic]-Werte der referenzierten Vertrags-Assemblies einsammeln.
-// Für jedes gebundene Pattern prüfen, ob mindestens ein bekannter Routing Key darauf passt.
-// Kein Treffer -> Start abbrechen mit Pattern und den bekannten Keys in der Meldung.
-```
+Gemeinsam mit WS-05 lösen, beide brauchen dieselbe Quelle.
 
 Wichtig: als **Warnung statt Fehler** ausführen, wenn ein Service bewusst auf einen noch
 nicht existierenden Upstream-Kontext bindet — sonst blockiert die Prüfung genau die
@@ -1054,7 +1020,7 @@ foreach (var entityType in modelBuilder.Model.GetEntityTypes())
 
     foreach (var complex in entityType.GetComplexProperties())
     {
-        Konvertiere(complex.ComplexType.GetProperties());   // rekursiv, Complex Types schachteln
+        Konvertiere(complex.ComplexType.GetProperties());
     }
 }
 ```
@@ -1079,11 +1045,10 @@ automatischen Build, keinen Testlauf und keine Prüfung der „warnings as error
 #### Lösungsvorschlag
 
 ```yaml
-# .github/workflows/build.yml
 - run: dotnet build --configuration Release
 - run: dotnet test --configuration Release
   env:
-    VITALSYNC_REQUIRE_CONTAINERS: "1" # sonst skippen alle Testcontainers-Tests still
+    VITALSYNC_REQUIRE_CONTAINERS: "1"
 ```
 
 Die Umgebungsvariable ist der Punkt, an dem es sonst schiefgeht: ohne sie überspringen die
@@ -1107,7 +1072,6 @@ das entweder flaky oder — schlimmer — grün, obwohl die Nachricht 300 ms sp�
 Auf ein deterministisches Signal umstellen statt auf eine Frist:
 
 ```csharp
-// Wolverines Tracked-Session wartet auf definierte Aktivität statt auf Ablauf einer Zeit
 var session = await host.TrackActivity()
     .IncludeExternalTransports()
     .WaitForMessageToBeReceivedAt<DomainEventEnvelope>(host)
@@ -1126,10 +1090,6 @@ will. Betrifft auch die übrigen `Task.Delay`-Stellen in den Sample-Smoke-Tests.
 
 Ordner-lokale `.editorconfig`-Regeln erbt ein neuer Top-Level-Ordner **nicht**:
 
-- **CS1591** (fehlende XML-Docs) — erledigt seit
-  [ADR-0028](docs/architecture/decisions/0028-no-comments-in-code.md): `CS1591` steht global
-  auf `None`, `GenerateDocumentationFile` ist aus den `Directory.Build.props` verschwunden, und
-  Code trägt ohnehin keine Kommentare mehr. Ein neuer Ordner muss dafür nichts mehr abschalten.
 - **CA1707** (Unterstriche in Methodennamen) — sprengt jeden Testnamen im
   `Given_When_Then`-Stil; Testordner brauchen eine eigene `.editorconfig` analog zu
   `BuildingBlocks/tests/.editorconfig` oder ein `NoWarn` im Test-`.csproj` (so gelöst in
