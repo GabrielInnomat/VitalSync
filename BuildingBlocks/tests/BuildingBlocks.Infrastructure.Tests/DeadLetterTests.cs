@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RabbitMQ.Client;
 using Wolverine;
+using Wolverine.RabbitMQ;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
@@ -27,9 +28,10 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
 
         var recorder = new AttemptRecorder();
         using var host = await StartHostAsync(recorder);
+        using var upstream = await StartUpstreamPublisherAsync();
         var name = Guid.NewGuid().ToString();
 
-        await host.Services.GetRequiredService<IMessageBus>()
+        await upstream.Services.GetRequiredService<IMessageBus>()
             .PublishAsync(new AlwaysFailsIntegrationEvent(name));
 
         var deadLettered = await WaitForDeadLetterAsync(name, recorder);
@@ -82,14 +84,30 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
                 {
                     options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
                     options.UseMartenEventSourcing(postgres.ConnectionString);
-                    options.UseWolverineMessaging(rabbit.ConnectionUri);
+                    options.UseWolverineMessaging(rabbit.ConnectionUri, TestMessaging.ExchangeName, TestMessaging.ContextName);
                     options.SubscribeToIntegrationEvents(
                         QueueName,
                         typeof(AlwaysFailsConsumer).Assembly,
-                        "probe.*");
+                        "upstream.*");
                 });
             })
             .UseWolverine(options => options.Durability.Mode = DurabilityMode.Solo)
+            .StartAsync(TestContext.Current.CancellationToken);
+
+    private async Task<IHost> StartUpstreamPublisherAsync() =>
+        await Host.CreateDefaultBuilder()
+            .UseWolverine(options =>
+            {
+                options.Durability.Mode = DurabilityMode.Solo;
+
+                options.UseRabbitMq(rabbit.ConnectionUri)
+                    .AutoProvision()
+                    .DeclareExchange(TestMessaging.ExchangeName, exchange => exchange.IsDurable = true);
+
+                options.PublishMessagesToRabbitMqExchange<AlwaysFailsIntegrationEvent>(
+                    TestMessaging.ExchangeName,
+                    _ => "upstream.always-fails");
+            })
             .StartAsync(TestContext.Current.CancellationToken);
 }
 

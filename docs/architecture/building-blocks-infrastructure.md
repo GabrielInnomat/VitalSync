@@ -311,7 +311,8 @@ A small cluster of classes, using Marten as a **raw stream store**:
 - **Routing.** Connecting the transport moves nothing on its own — Wolverine
   routes only what a routing rule matches, and `PublishAsync` silently discards
   an unroutable message. `UseWolverineMessaging` therefore installs the rule
-  `PublishMessagesToRabbitMqExchange<IIntegrationEvent>("vitalsync.integration-events", …)`.
+  `PublishMessagesToRabbitMqExchange<IIntegrationEvent>(exchangeName, …)` with the
+  exchange name the host supplied.
   Matching the marker rather than all messages is load-bearing: `DomainEventEnvelope`
   does not implement `IIntegrationEvent` and so can never be routed onto the
   broker (ADR-0022/0023, pinned by `IntegrationEventRoutingTests`). Each
@@ -320,6 +321,12 @@ A small cluster of classes, using Marten as a **raw stream store**:
   `BuildingBlocks.Application` — resolved by the routing rule's topic source, so
   publishing an event without it throws instead of silently using a CLR-derived
   key (ADR-0023 amendment 2026-08-03).
+- **Context identity.** The host also names its own bounded context
+  (ADR-0023 amendment 2026-08-05). The topic source compares the first segment of
+  every routing key against that name and **throws** when they differ, so a service
+  cannot publish under another context's identity. Every published event carries the
+  header `buildingblocks.source-context`, and a consumer-side middleware discards an
+  integration event whose source is the consuming context itself.
 - **Durability.** The topology is declared durable end to end (ADR-0023 amendment
   2026-08-04). The exchange and the subscriber queue are declared `IsDurable`, and
   queues are **quorum** queues configured on the transport rather than per
@@ -361,7 +368,7 @@ services.AddBuildingBlocks(options =>
     options.AddHandlersFrom(typeof(SomeHandler).Assembly);
     options.UseEfCorePersistence<NutritionWriteDbContext>(writeConnectionString);
     options.UseMartenEventSourcing(writeConnectionString);
-    options.UseWolverineMessaging(rabbitMqUri);
+    options.UseWolverineMessaging(rabbitMqUri, exchangeName, "nutrition");
 });
 ```
 
@@ -380,9 +387,14 @@ services.AddBuildingBlocks(options =>
   scheme, §3) and **lightweight sessions** (no identity-map/change-tracking
   overhead — appends are staged explicitly by the repository), and integrates
   the session with Wolverine so it can be enrolled in the transactional outbox.
-- `UseWolverineMessaging(rabbitMqUri)` takes the broker URI (typically the
-  Aspire-provided connection string) so the RabbitMQ defaults can be applied
-  automatically (ADR-0027). It **requires a persistence selection**:
+- `UseWolverineMessaging(rabbitMqUri, exchangeName, contextName)` takes the three
+  transport coordinates together (ADR-0027, ADR-0023 amendment 2026-08-05): the broker
+  URI (typically the Aspire-provided connection string), the platform exchange name,
+  and the host's own bounded-context name. The exchange name belongs to the product,
+  not to Building Blocks — VitalSync defines it once in `VitalSync.ServiceDefaults` and
+  every host passes that constant. `contextName` must be a single lower-case kebab-case
+  word; a value containing a dot is rejected, because it is almost certainly the
+  exchange name in the wrong position. The call **requires a persistence selection**:
   `AddBuildingBlocks` throws when a broker URI was given without
   `UseEfCorePersistence` or `UseMartenEventSourcing`, because the durable sending
   endpoint has no message store to write to and Wolverine would degrade quietly to
@@ -405,16 +417,16 @@ services.AddBuildingBlocks(options =>
   registration (naming both types) rather than letting the container silently pick
   one. A `ReflectionTypeLoadException` while scanning is rewrapped into a clear
   `InvalidOperationException` (usually a missing package reference) (IMP-05).
-- **Startup handler validation is on by default**: `AddBuildingBlocks` registers a
+- **Startup handler validation always runs**: `AddBuildingBlocks` registers a
   hosted service that, when the host starts, resolves the handler for every
   `ICommand`/`ICommand<>`/`IQuery<>` implementation found in the scanned
   assemblies and fails the host with every unresolvable request type named —
   turning "no service registered" production errors into fail-fast startup
-  errors. The service host needs no extra wiring; a host that intentionally
-  registers handlers outside the assembly scan can opt out via
-  `options.ValidateHandlersOnStart = false`. The check runs only inside a real
-  host (`IHostedService`), so bare service providers in unit tests are
-  unaffected (IMP-05).
+  errors. The service host needs no extra wiring, and there is no switch to turn
+  it off (ADR-0027 amendment 2026-08-05): every one of these checks exists because
+  the failure it catches is otherwise silent, so an opt-out would only restore a
+  silent failure. The check runs only inside a real host (`IHostedService`), so
+  bare service providers in unit tests are unaffected (IMP-05).
 
 **Every host whose selection flows through the outbox must additionally run
 Wolverine** — and since the ADR-0027 amendment of 2026-08-03 the host does not
@@ -426,7 +438,7 @@ builder.AddBuildingBlocks(options =>
 {
     options.AddHandlersFrom(typeof(CreateRecipe).Assembly);
     options.UseEfCorePersistence<NutritionWriteDbContext>(writeConnectionString);
-    options.UseWolverineMessaging(rabbitMqUri);
+    options.UseWolverineMessaging(rabbitMqUri, exchangeName, "nutrition");
 });
 ```
 
@@ -448,11 +460,19 @@ builder.AddBuildingBlocks(options =>
   registers handlers, Marten, and messaging for hosts that wire Wolverine
   themselves — but a **state-stored** context must register through the host
   builder.
-- **Startup Wolverine validation is on by default** (ADR-0027): when a selected
+- **Startup Wolverine validation always runs** (ADR-0027): when a selected
   capability requires Wolverine but no runtime is registered — reachable only on
   that manual path now — a hosted service fails the host at startup with an
   actionable message, instead of surfacing as a missing outbox on the first
-  commit in production. Opt out via `options.ValidateWolverineOnStart = false`.
+  commit in production.
+- **Startup subscription validation always runs** when the host subscribed
+  (ADR-0023 amendment 2026-08-05): once Wolverine has compiled its handler graph,
+  every integration event handled by the declared consumer assembly must be matched
+  by at least one bound topic pattern, and none of them may belong to the host's own
+  context. Both cases fail the host, naming the type, its topic and the bound
+  patterns. The reverse direction — a pattern with no matching contract — is
+  deliberately not checked: binding ahead of an upstream context that does not exist
+  yet is legitimate.
 - A service that selects **no** persistence and **no** messaging needs no
   Wolverine at all; a service with purely in-context projections needs no
   RabbitMQ (the domain-event route is a local durable queue).

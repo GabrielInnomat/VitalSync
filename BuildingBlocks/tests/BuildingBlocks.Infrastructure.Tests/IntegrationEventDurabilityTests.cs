@@ -42,8 +42,8 @@ public sealed class IntegrationEventDurabilityTests(PostgreSqlFixture postgres, 
             cancellationToken: TestContext.Current.CancellationToken);
         await channel.QueueBindAsync(
             SinkQueueName,
-            BuildingBlockDefaults.IntegrationEventExchangeName,
-            "durability.*",
+            TestMessaging.ExchangeName,
+            "probe.*",
             cancellationToken: TestContext.Current.CancellationToken);
 
         var name = Guid.NewGuid().ToString();
@@ -71,7 +71,7 @@ public sealed class IntegrationEventDurabilityTests(PostgreSqlFixture postgres, 
             host.Services.GetRequiredService<IWolverineRuntime>().Options.Transports
                 .SelectMany(transport => transport.Endpoints()),
             candidate => candidate.Uri.ToString()
-                .Contains(BuildingBlockDefaults.IntegrationEventExchangeName, StringComparison.Ordinal));
+                .Contains(TestMessaging.ExchangeName, StringComparison.Ordinal));
 
         Assert.Equal(EndpointMode.Durable, endpoint.Mode);
 
@@ -153,18 +153,18 @@ public sealed class IntegrationEventDurabilityTests(PostgreSqlFixture postgres, 
                 {
                     options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
                     options.UseMartenEventSourcing(postgres.ConnectionString);
-                    options.UseWolverineMessaging(rabbit.ConnectionUri);
+                    options.UseWolverineMessaging(rabbit.ConnectionUri, TestMessaging.ExchangeName, TestMessaging.ContextName);
                     options.SubscribeToIntegrationEvents(
                         SubscriberQueueName,
                         typeof(AlwaysFailsConsumer).Assembly,
-                        "never-published.*");
+                        "upstream.*");
                 });
             })
             .UseWolverine(options => options.Durability.Mode = DurabilityMode.Solo)
             .StartAsync(TestContext.Current.CancellationToken);
 }
 
-[IntegrationEventTopic("durability.probe")]
+[IntegrationEventTopic("probe.durability")]
 public sealed record DurabilityProbeIntegrationEvent(string Name) : IIntegrationEvent
 {
     public Guid EventId { get; init; } = Guid.NewGuid();

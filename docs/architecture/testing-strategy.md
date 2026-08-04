@@ -21,7 +21,7 @@ Automated tests are implemented for **both the Building Blocks and the individua
 | **NSubstitute**      | Mocking/substitutes                                      |
 | **EF Core InMemory** | Fast persistence-layer tests                             |
 | **Testcontainers (PostgreSQL)** | Integration tests against a real PostgreSQL for Marten optimistic concurrency, strongly-typed key persistence, aggregate child collections (owned types), and outbox flush-on-commit; skipped automatically when Docker is unavailable |
-| **Testcontainers (RabbitMQ)** | Integration tests for integration-event routing to the platform topic exchange and for the durability of that delivery (persistent message, durable sending endpoint, quorum queues including the dead-letter queue); skipped automatically when Docker is unavailable |
+| **Testcontainers (RabbitMQ)** | Integration tests for integration-event routing to the platform topic exchange, for the durability of that delivery (persistent message, durable sending endpoint, quorum queues including the dead-letter queue), and for the context rules (start-up refusal of an unreachable or own-context handler, suppression of self-published events by their source header); skipped automatically when Docker is unavailable |
 | **Smoke tests over gRPC**     | End-to-end checks against a running system (Aspire host, real broker, real databases); skipped unless the service's `SAMPLE_*_API_URL` is set |
 
 > Integration and component-communication tests may additionally use containerized infrastructure (e.g., via Testcontainers) once the messaging platform is selected.

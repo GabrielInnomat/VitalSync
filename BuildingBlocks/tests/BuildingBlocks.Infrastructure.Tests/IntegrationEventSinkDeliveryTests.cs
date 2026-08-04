@@ -1,4 +1,4 @@
-﻿using BuildingBlocks.Application;
+using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Messaging;
@@ -63,7 +63,8 @@ public sealed class IntegrationEventSinkDeliveryTests
             {
                 services.AddBuildingBlocks(options => options.AddDomainEventsFrom(typeof(SinkProbeDomainEvent).Assembly));
                 services.Replace(
-                    ServiceDescriptor.Singleton<IIntegrationEventSinkFactory, WolverineIntegrationEventSinkFactory>());
+                    ServiceDescriptor.Singleton<IIntegrationEventSinkFactory>(
+                        new WolverineIntegrationEventSinkFactory(TestMessaging.ContextName)));
                 services.AddSingleton<IIntegrationEventMapper, SinkProbeMapper>();
                 services.AddSingleton<IIntegrationEventMapper, SinkProbeCrashingMapper>();
                 services.AddSingleton<SinkProbeRecorder>();
@@ -89,7 +90,6 @@ public sealed class IntegrationEventSinkDeliveryTests
 public sealed record SinkProbeDomainEvent(string Name) : DomainEvent;
 
 public sealed record SinkProbeIntegrationEvent(string Name, Guid EventId, DateTimeOffset OccurredAt) : IIntegrationEvent;
-
 public sealed class SinkProbeRecorder
 {
     private readonly List<Envelope> _received = [];

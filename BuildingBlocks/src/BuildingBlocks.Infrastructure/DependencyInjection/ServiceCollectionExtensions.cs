@@ -31,7 +31,7 @@ public static class ServiceCollectionExtensions
         var options = new BuildingBlocksOptions(services, behaviorRegistry);
         configure(options);
 
-        if (options.WolverineWiring.Subscription is not null && options.WolverineWiring.RabbitMqUri is null)
+        if (options.WolverineWiring.Subscription is not null && options.WolverineWiring.Messaging is null)
         {
             throw new InvalidOperationException(
                 "SubscribeToIntegrationEvents was selected without UseWolverineMessaging. Subscribing declares a " +
@@ -39,7 +39,7 @@ public static class ServiceCollectionExtensions
                 "configured as well (ADR-0023).");
         }
 
-        if (options.WolverineWiring.RabbitMqUri is not null && !options.WolverineWiring.HasMessageStore)
+        if (options.WolverineWiring.Messaging is not null && !options.WolverineWiring.HasMessageStore)
         {
             throw new InvalidOperationException(
                 "UseWolverineMessaging was selected without a persistence strategy. Integration events are sent " +
@@ -67,15 +67,18 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton(domainEventTypeRegistry);
         services.TryAddSingleton<DomainEventEnvelopeSerializer>();
 
-        if (options.ValidateHandlersOnStart)
-        {
-            services.AddHostedService(provider =>
-                new HandlerRegistrationStartupValidator(provider, options.ScannedAssemblies));
-        }
+        services.AddHostedService(provider =>
+            new HandlerRegistrationStartupValidator(provider, options.ScannedAssemblies));
 
-        if (options.ValidateWolverineOnStart && options.WolverineWiring.RequiresWolverine)
+        if (options.WolverineWiring.RequiresWolverine)
         {
             services.AddHostedService<WolverineWiringStartupValidator>();
+        }
+
+        if (options.WolverineWiring.Subscription is not null)
+        {
+            services.AddHostedService(provider =>
+                new IntegrationEventSubscriptionStartupValidator(provider, options.WolverineWiring));
         }
 
         if (!services.Any(descriptor => descriptor.ServiceType == typeof(IUnitOfWork)))

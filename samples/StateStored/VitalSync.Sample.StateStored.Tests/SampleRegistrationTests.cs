@@ -55,7 +55,8 @@ public sealed class SampleRegistrationTests
         builder.AddSampleStateStoredInfrastructure(
             "Host=localhost;Database=unused-write",
             "Host=localhost;Database=unused-read",
-            new Uri("amqp://localhost"));
+            new Uri("amqp://localhost"),
+            "test-platform.integration-events");
 
         return builder.Services.BuildServiceProvider();
     }

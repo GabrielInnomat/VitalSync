@@ -532,6 +532,24 @@ A message published to the messaging backbone to communicate **across services**
 Distinct from a **domain event** (internal to one service); domain events are
 translated into integration events at the service boundary.
 
+Its routing key is declared on the contract as
+`[IntegrationEventTopic("<context>.<event>")]`, and the first segment names the
+**owning bounded context**. A service declares its own context name when it
+configures messaging, which makes three things enforceable: it cannot publish
+under a foreign context, it never consumes an event it published itself (every
+event carries a `buildingblocks.source-context` header, and a consumer-side
+middleware drops its own), and a handler whose topic no bound pattern matches
+fails the host at start-up (ADR-0023 amendment 2026-08-05).
+
+### Platform exchange
+
+The single RabbitMQ topic exchange all integration events are published to. Its
+name is **not** a Building Blocks constant — the host supplies it, so the package
+stays product-independent (ADR-0018 amendment 2026-08-05). VitalSync defines it
+once as `VitalSyncMessaging.IntegrationEventExchangeName`
+(`vitalsync.integration-events`) in `VitalSync.ServiceDefaults`; every host passes
+that constant rather than a literal.
+
 ### Outbox (transactional outbox)
 
 A reliability pattern: domain events collected on save are written and then

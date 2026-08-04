@@ -50,8 +50,8 @@ public sealed class IntegrationEventRoutingTests(PostgreSqlFixture postgres, Rab
         var integrationEventRouting = runtime.ExplainRoutingFor(typeof(RoutingProbeIntegrationEvent)).ToText();
         var envelopeRouting = runtime.ExplainRoutingFor(typeof(DomainEventEnvelope)).ToText();
 
-        Assert.Contains(BuildingBlockDefaults.IntegrationEventExchangeName, integrationEventRouting, StringComparison.Ordinal);
-        Assert.DoesNotContain(BuildingBlockDefaults.IntegrationEventExchangeName, envelopeRouting, StringComparison.Ordinal);
+        Assert.Contains(TestMessaging.ExchangeName, integrationEventRouting, StringComparison.Ordinal);
+        Assert.DoesNotContain(TestMessaging.ExchangeName, envelopeRouting, StringComparison.Ordinal);
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
@@ -80,7 +80,7 @@ public sealed class IntegrationEventRoutingTests(PostgreSqlFixture postgres, Rab
                 {
                     options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
                     options.UseMartenEventSourcing(postgres.ConnectionString);
-                    options.UseWolverineMessaging(rabbit.ConnectionUri);
+                    options.UseWolverineMessaging(rabbit.ConnectionUri, TestMessaging.ExchangeName, TestMessaging.ContextName);
                 });
                 services.AddSingleton<RoutingProbeSignal>();
             })
@@ -94,7 +94,7 @@ public sealed class IntegrationEventRoutingTests(PostgreSqlFixture postgres, Rab
                 options.ListenToRabbitQueue(ProbeQueueName)
                     .ConfigureQueue(queue => queue
                         .BindTopic("probe.*")
-                        .ToExchange(BuildingBlockDefaults.IntegrationEventExchangeName));
+                        .ToExchange(TestMessaging.ExchangeName));
             })
             .StartAsync(TestContext.Current.CancellationToken);
 }

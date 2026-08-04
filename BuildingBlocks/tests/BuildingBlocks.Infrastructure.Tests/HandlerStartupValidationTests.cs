@@ -62,13 +62,14 @@ public sealed class HandlerStartupValidationTests
     }
 
     [Fact]
-    public void StartupValidation_OptedOut_IsNotRegistered()
+    public void StartupValidation_CannotBeTurnedOff()
     {
-        using var provider = BuildProvider(options => options.ValidateHandlersOnStart = false);
+        var switches = typeof(BuildingBlocksOptions)
+            .GetProperties()
+            .Select(property => property.Name)
+            .Where(name => name.Contains("Validate", StringComparison.Ordinal));
 
-        Assert.DoesNotContain(
-            provider.GetServices<IHostedService>(),
-            service => service is HandlerRegistrationStartupValidator);
+        Assert.Empty(switches);
     }
 
     private static ServiceProvider BuildProvider(Action<BuildingBlocksOptions> configure)

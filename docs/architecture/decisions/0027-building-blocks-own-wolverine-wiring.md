@@ -106,9 +106,7 @@ success"):
 3. **A startup check catches the one remaining failure mode.** `UseWolverine` lives on the host builder and
    cannot be issued from an `IServiceCollection` extension. When a selected capability requires Wolverine, a
    hosted `WolverineWiringStartupValidator` verifies at startup that a Wolverine runtime is registered and
-   otherwise fails the host with an actionable message. Opt-out via
-   `BuildingBlocksOptions.ValidateWolverineOnStart = false` (on by default, matching IMP-05's
-   `ValidateHandlersOnStart`).
+   otherwise fails the host with an actionable message.
 
 The complete host contract shrinks to: `AddBuildingBlocks(options => …)` plus an empty `UseWolverine()` call.
 
@@ -138,3 +136,15 @@ The complete host contract shrinks to: `AddBuildingBlocks(options => …)` plus 
 - **Take a connection-string *name* and resolve it from `IConfiguration`.** More Aspire-idiomatic, but couples
   the options builder to configuration and hides the dependency; the host passing
   `builder.Configuration.GetConnectionString(...)` explicitly keeps the seam visible and testable.
+
+> **The start-up checks are not optional (amendment 2026-08-05).** The two switches
+> `ValidateHandlersOnStart` and `ValidateWolverineOnStart` are removed; both checks now
+> always run, and a third joins them (integration-event subscription coverage,
+> [ADR-0023](./0023-wolverine-messaging-transport.md)).
+>
+> Every one of these checks exists because the failure it catches is otherwise silent.
+> An opt-out is therefore a switch whose only effect is to restore a silent failure, and
+> a default-on flag that nobody sets is configuration surface without a purpose. The
+> accepted cost: a host that registers handlers outside the scanned assemblies now fails
+> at start instead of at the first request. No such host exists. Should a legitimate one
+> appear, optionality can come back deliberately � narrower than a global on/off switch.

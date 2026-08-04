@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Dispatching;
@@ -18,6 +18,9 @@ public sealed class WolverineExtensionTests
     private const string ConnectionString = "Host=localhost;Database=test;Username=test;Password=test";
 
     private static readonly Uri RabbitMqUri = new("amqp://guest:guest@localhost:5672");
+
+    private static readonly MessagingSettings TestMessagingSettings =
+        new(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName);
 
     private static readonly Assembly TestAssembly = typeof(WolverineExtensionTests).Assembly;
 
@@ -41,7 +44,7 @@ public sealed class WolverineExtensionTests
         Assert.False(settings.RequiresWolverine);
         Assert.False(settings.ApplyDomainEventRouting);
         Assert.Null(settings.EfCoreMessageStoreConnectionString);
-        Assert.Null(settings.RabbitMqUri);
+        Assert.Null(settings.Messaging);
     }
 
     [Fact]
@@ -54,7 +57,7 @@ public sealed class WolverineExtensionTests
 
         Assert.True(settings.ApplyDomainEventRouting);
         Assert.Equal(ConnectionString, settings.EfCoreMessageStoreConnectionString);
-        Assert.Null(settings.RabbitMqUri);
+        Assert.Null(settings.Messaging);
     }
 
     [Fact]
@@ -67,7 +70,7 @@ public sealed class WolverineExtensionTests
 
         Assert.True(settings.ApplyDomainEventRouting);
         Assert.Null(settings.EfCoreMessageStoreConnectionString);
-        Assert.Null(settings.RabbitMqUri);
+        Assert.Null(settings.Messaging);
     }
 
     [Fact]
@@ -75,11 +78,11 @@ public sealed class WolverineExtensionTests
     {
         using var provider = BuildProvider(options => options
             .UseMartenEventSourcing(ConnectionString)
-            .UseWolverineMessaging(RabbitMqUri));
+            .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
 
         var settings = provider.GetRequiredService<WolverineWiringSettings>();
 
-        Assert.Equal(RabbitMqUri, settings.RabbitMqUri);
+        Assert.Equal(RabbitMqUri, settings.Messaging!.RabbitMqUri);
         Assert.True(settings.RequiresWolverine);
     }
 
@@ -87,7 +90,7 @@ public sealed class WolverineExtensionTests
     public void MessagingWithoutAPersistenceStrategy_FailsAtCompositionTime()
     {
         var thrown = Assert.Throws<InvalidOperationException>(() =>
-            BuildProvider(options => options.UseWolverineMessaging(RabbitMqUri)));
+            BuildProvider(options => options.UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)));
 
         Assert.Contains("durable", thrown.Message, StringComparison.Ordinal);
         Assert.Contains("UseMartenEventSourcing", thrown.Message, StringComparison.Ordinal);
@@ -97,7 +100,7 @@ public sealed class WolverineExtensionTests
     public void MessagingAfterAPersistenceStrategy_IsAcceptedRegardlessOfCallOrder()
     {
         using var provider = BuildProvider(options => options
-            .UseWolverineMessaging(RabbitMqUri)
+            .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
             .UseMartenEventSourcing(ConnectionString));
 
         Assert.True(provider.GetRequiredService<WolverineWiringSettings>().HasMessageStore);
@@ -146,7 +149,7 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithBrokerUri_AddsTheRabbitMqTransport()
     {
-        var options = ConfigureOptions(new WolverineWiringSettings { RabbitMqUri = RabbitMqUri });
+        var options = ConfigureOptions(new WolverineWiringSettings { Messaging = TestMessagingSettings });
 
         Assert.Contains(options.Transports, transport => transport.Protocol == "rabbitmq");
     }
@@ -154,10 +157,10 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithBrokerUri_DeclaresThePlatformExchangeAsDurable()
     {
-        var options = ConfigureOptions(new WolverineWiringSettings { RabbitMqUri = RabbitMqUri });
+        var options = ConfigureOptions(new WolverineWiringSettings { Messaging = TestMessagingSettings });
 
         var exchange = RabbitMqTransportOf(options)
-            .Exchanges[BuildingBlockDefaults.IntegrationEventExchangeName];
+            .Exchanges[TestMessaging.ExchangeName];
 
         Assert.True(exchange.IsDurable);
     }
@@ -167,7 +170,7 @@ public sealed class WolverineExtensionTests
     {
         var options = ConfigureOptions(new WolverineWiringSettings
         {
-            RabbitMqUri = RabbitMqUri,
+            Messaging = TestMessagingSettings,
             Subscription = new IntegrationEventSubscription("fitness.integration-events", ["nutrition.*"], TestAssembly),
         });
 
@@ -184,7 +187,7 @@ public sealed class WolverineExtensionTests
     {
         using var provider = BuildProvider(options => options
             .UseMartenEventSourcing(ConnectionString)
-            .UseWolverineMessaging(RabbitMqUri)
+            .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
             .SubscribeToIntegrationEvents("fitness.integration-events", TestAssembly, "nutrition.*", "analytics.*"));
 
         var subscription = provider.GetRequiredService<WolverineWiringSettings>().Subscription;
@@ -211,7 +214,7 @@ public sealed class WolverineExtensionTests
         var thrown = Assert.Throws<InvalidOperationException>(() =>
             BuildProvider(options => options
                 .UseMartenEventSourcing(ConnectionString)
-                .UseWolverineMessaging(RabbitMqUri)
+                .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
                 .SubscribeToIntegrationEvents("first", TestAssembly, "nutrition.*")
                 .SubscribeToIntegrationEvents("second", TestAssembly, "fitness.*")));
 
@@ -224,7 +227,7 @@ public sealed class WolverineExtensionTests
         Assert.Throws<ArgumentException>(() =>
             BuildProvider(options => options
                 .UseMartenEventSourcing(ConnectionString)
-                .UseWolverineMessaging(RabbitMqUri)
+                .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
                 .SubscribeToIntegrationEvents("fitness.integration-events", TestAssembly)));
     }
 
@@ -234,7 +237,7 @@ public sealed class WolverineExtensionTests
         Assert.Throws<ArgumentException>(() =>
             BuildProvider(options => options
                 .UseMartenEventSourcing(ConnectionString)
-                .UseWolverineMessaging(RabbitMqUri)
+                .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
                 .SubscribeToIntegrationEvents("fitness.integration-events", TestAssembly, "  ")));
     }
 
@@ -243,7 +246,7 @@ public sealed class WolverineExtensionTests
     {
         var options = ConfigureOptions(new WolverineWiringSettings
         {
-            RabbitMqUri = RabbitMqUri,
+            Messaging = TestMessagingSettings,
             Subscription = new IntegrationEventSubscription("fitness.integration-events", ["nutrition.*"], TestAssembly),
         });
 

@@ -15,7 +15,7 @@ public sealed class IntegrationEventTopicAttribute : Attribute
         ArgumentException.ThrowIfNullOrWhiteSpace(topic);
 
         var segments = topic.Split('.');
-        return segments.Length == 2 && Array.TrueForAll(segments, IsKebabCase)
+        return segments.Length == 2 && Array.TrueForAll(segments, KebabCase.IsValid)
             ? topic
             : throw new ArgumentException(
                 $"'{topic}' is not a valid integration event topic. A topic is the published routing key " +
@@ -23,38 +23,5 @@ public sealed class IntegrationEventTopicAttribute : Attribute
                 "(for example 'nutrition.recipe-created'), so that consumer bindings such as 'nutrition.*' " +
                 "stay stable and independent of the CLR type the attribute happens to be written on.",
                 nameof(topic));
-    }
-
-    private static bool IsKebabCase(string segment)
-    {
-        if (segment.Length == 0 || segment[0] == '-' || segment[^1] == '-')
-        {
-            return false;
-        }
-
-        var previousWasHyphen = false;
-
-        foreach (var character in segment)
-        {
-            if (character == '-')
-            {
-                if (previousWasHyphen)
-                {
-                    return false;
-                }
-
-                previousWasHyphen = true;
-                continue;
-            }
-
-            if (!char.IsAsciiLetterLower(character) && !char.IsAsciiDigit(character))
-            {
-                return false;
-            }
-
-            previousWasHyphen = false;
-        }
-
-        return true;
     }
 }

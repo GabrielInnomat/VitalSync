@@ -4,7 +4,7 @@ using VitalSync.Sample.EventSourced.Domain;
 
 namespace VitalSync.Sample.EventSourced.Infrastructure.Integration;
 
-[IntegrationEventTopic("sample.gadget-retired")]
+[IntegrationEventTopic("sample-event-sourced.gadget-retired")]
 public sealed record GadgetRetiredIntegrationEvent(Guid GadgetId, string Reason, Guid EventId, DateTimeOffset OccurredAt) : IIntegrationEvent;
 
 public sealed class GadgetIntegrationEventMapper : IIntegrationEventMapper

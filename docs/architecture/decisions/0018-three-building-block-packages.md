@@ -91,3 +91,13 @@ Blocks at all.**
 - **Two packages** (fold `Application` into `Infrastructure`) â€” rejected: this
   sacrifices the valuable purity boundary that keeps the use-case contracts
   framework-agnostic and reusable.
+
+> **The independence promise now holds literally (amendment 2026-08-05).** Until now
+> `BuildingBlocks.Infrastructure` contained one VitalSync string: the integration-event
+> exchange name `vitalsync.integration-events`, defended in
+> [ADR-0023](./0023-wolverine-messaging-transport.md) as safer than letting each host
+> restate it. The exchange name is now a host argument, VitalSync defines it once in
+> `VitalSync.ServiceDefaults`, and `vitalsync` no longer appears anywhere under
+> `BuildingBlocks/src`. The rule for future contributions: a product name in Building
+> Blocks is a defect, not a shortcut — if a value is deployment-specific, the host names
+> it.

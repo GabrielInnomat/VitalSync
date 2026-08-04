@@ -9,8 +9,6 @@ internal static class WolverineOptionsExtensions
 {
     public const string DomainEventLocalQueueName = "building-blocks-domain-events";
 
-    public const string IntegrationEventExchangeName = "vitalsync.integration-events";
-
     public static WolverineOptions ApplyBuildingBlockDomainEventRouting(this WolverineOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -30,19 +28,21 @@ internal static class WolverineOptionsExtensions
         return options;
     }
 
-    public static WolverineOptions ApplyBuildingBlockMessagingDefaults(this WolverineOptions options, Uri rabbitMqUri)
+    public static WolverineOptions ApplyBuildingBlockMessagingDefaults(
+        this WolverineOptions options,
+        MessagingSettings messaging)
     {
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(rabbitMqUri);
+        ArgumentNullException.ThrowIfNull(messaging);
 
-        options.UseRabbitMq(rabbitMqUri)
+        options.UseRabbitMq(messaging.RabbitMqUri)
             .AutoProvision()
             .UseQuorumQueues()
-            .DeclareExchange(IntegrationEventExchangeName, exchange => exchange.IsDurable = true);
+            .DeclareExchange(messaging.ExchangeName, exchange => exchange.IsDurable = true);
 
         options.PublishMessagesToRabbitMqExchange<IIntegrationEvent>(
-                IntegrationEventExchangeName,
-                integrationEvent => IntegrationEventTopic.For(integrationEvent.GetType()))
+                messaging.ExchangeName,
+                integrationEvent => IntegrationEventTopic.For(integrationEvent.GetType(), messaging.ContextName))
             .UseDurableOutbox();
 
         options.Policies.OnException<Exception>()
@@ -57,16 +57,23 @@ internal static class WolverineOptionsExtensions
 
     public static WolverineOptions ApplyBuildingBlockSubscription(
         this WolverineOptions options,
-        IntegrationEventSubscription subscription)
+        IntegrationEventSubscription subscription,
+        string exchangeName)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(subscription);
+        ArgumentException.ThrowIfNullOrWhiteSpace(exchangeName);
 
         options.Discovery.IncludeAssembly(subscription.ConsumerAssembly);
 
+        options.CodeGeneration.AlwaysUseServiceLocationFor<IntegrationEventSourceContext>();
+        options.Policies.AddMiddleware(
+            typeof(OwnContextIntegrationEventFilter),
+            chain => chain.MessageType.IsAssignableTo(typeof(IIntegrationEvent)));
+
         options.ListenToRabbitQueue(subscription.QueueName, queue => queue.IsDurable = true).UseDurableInbox();
 
-        var exchange = options.UseRabbitMq().BindExchange(IntegrationEventExchangeName);
+        var exchange = options.UseRabbitMq().BindExchange(exchangeName);
         foreach (var topicPattern in subscription.TopicPatterns)
         {
             exchange.ToQueue(subscription.QueueName, bindingKey: topicPattern);

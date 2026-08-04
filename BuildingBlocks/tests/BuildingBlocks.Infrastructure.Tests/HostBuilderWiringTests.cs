@@ -1,4 +1,4 @@
-﻿using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -51,7 +51,7 @@ public sealed class HostBuilderWiringTests
     {
         var builder = BuildHost(options => options
             .UseMartenEventSourcing(WriteConnectionString)
-            .UseWolverineMessaging(RabbitMqUri));
+            .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
 
         Assert.Contains(builder.Services, descriptor => descriptor.ServiceType == typeof(IWolverineRuntime));
     }

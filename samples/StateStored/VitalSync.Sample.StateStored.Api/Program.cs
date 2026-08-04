@@ -9,7 +9,8 @@ builder.AddServiceDefaults();
 builder.AddSampleStateStoredInfrastructure(
     builder.Configuration.GetConnectionString("statestored-write")!,
     builder.Configuration.GetConnectionString("statestored-read")!,
-    new Uri(builder.Configuration.GetConnectionString("messaging")!));
+    new Uri(builder.Configuration.GetConnectionString("messaging")!),
+    VitalSyncMessaging.IntegrationEventExchangeName);
 
 builder.Services.AddCodeFirstGrpc();
 

@@ -2,6 +2,7 @@ using BuildingBlocks.Infrastructure.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using VitalSync.Sample.Contracts;
 using VitalSync.Sample.EventSourced.Application;
 using VitalSync.Sample.EventSourced.Domain;
 using VitalSync.Sample.EventSourced.Infrastructure.Read;
@@ -10,11 +11,14 @@ namespace VitalSync.Sample.EventSourced.Infrastructure;
 
 public static class SampleEventSourcedInfrastructure
 {
+    public const string ContextName = SampleContexts.EventSourced;
+
     public static IHostApplicationBuilder AddSampleEventSourcedInfrastructure(
         this IHostApplicationBuilder builder,
         string writeConnectionString,
         string readConnectionString,
-        Uri rabbitMqUri)
+        Uri rabbitMqUri,
+        string exchangeName)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
@@ -27,12 +31,12 @@ public static class SampleEventSourcedInfrastructure
             options.AddDomainEventsFrom(typeof(Gadget).Assembly);
 
             options.UseMartenEventSourcing(writeConnectionString);
-            options.UseWolverineMessaging(rabbitMqUri);
+            options.UseWolverineMessaging(rabbitMqUri, exchangeName, ContextName);
 
             options.SubscribeToIntegrationEvents(
                 "eventsourced.integration-events",
                 typeof(SampleEventSourcedInfrastructure).Assembly,
-                "sample.*");
+                SampleContexts.StateStored + ".*");
         });
 
         services.AddDbContext<GadgetReadDbContext>(builder => builder.UseNpgsql(readConnectionString));

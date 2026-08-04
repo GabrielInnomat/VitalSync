@@ -199,6 +199,59 @@ everything else from ADR-0004 intact.
 >   queue and the dead-letter queue are quorum and durable) and, without Docker, by
 >   `WolverineExtensionTests`.
 
+> **Context identity and exchange ownership (amendment 2026-08-05).** A host now names
+> its own bounded context, and the exchange name moves out of Building Blocks:
+> `UseWolverineMessaging(rabbitMqUri, exchangeName, contextName)`. All three are
+> transport coordinates, so they are given together and none can be set without the
+> others.
+>
+> - **This revises the 2026-08-01 point "the exchange name stays internal to Building
+>   Blocks".** That reasoning was right about the risk and wrong about who bears it:
+>   `vitalsync.integration-events` was the single VitalSync string inside a package
+>   whose whole purpose ([ADR-0018](./0018-three-building-block-packages.md)) is to be
+>   reusable and product-independent. The promise wins; the risk is mitigated instead
+>   of avoided — VitalSync defines the name **once** in
+>   `VitalSync.ServiceDefaults` (`VitalSyncMessaging.IntegrationEventExchangeName`) and
+>   every host passes that constant, never a literal.
+> - **The context name is mandatory** as soon as messaging is selected, and it is
+>   validated as a single lower-case kebab-case word. A value containing a dot is
+>   rejected with a hint, because it is almost always the exchange name in the wrong
+>   position — the two arguments are adjacent strings.
+> - **Publishing under a foreign context throws** (`IntegrationEventTopic.For(type,
+>   contextName)`). The first segment of a routing key names the owner of the contract
+>   and consumers bind to it, so publishing `fitness.…` from Nutrition makes one service
+>   impersonate another. Before this, nothing noticed.
+> - **A context does not consume its own integration events.** This closes the
+>   2026-08-01 "consequence to know" (a pattern like `sample.*` also matches the
+>   subscriber's own events) with a rule instead of a warning, in two layers:
+>   - Every published event carries the header `buildingblocks.source-context`, and a
+>     consumer-side Wolverine middleware stops any integration event whose source is the
+>     consuming context itself.
+>   - At start-up, a handler for an event of the **own** context fails the host — it
+>     would be unreachable by the rule above, and an unreachable handler is exactly the
+>     silent failure this ADR keeps eliminating.
+>
+>   The two together make the suppression **provably lossless**: it can never skip a
+>   handler that was allowed to exist. Read the middleware only in that light; on its
+>   own it would look like precisely the quiet discard we fight elsewhere.
+> - **Handler ⇒ pattern is checked at start-up, and it is an error.** For every
+>   integration event handled by the declared consumer assembly, at least one bound
+>   topic pattern must match its topic; otherwise the host fails, naming the type, the
+>   topic and the bound patterns. Direction matters: "does anyone publish on my pattern?"
+>   is not locally decidable, but "do I receive what I have a handler for?" is — and it
+>   is the direction in which a typo actually costs messages. The reverse (a pattern with
+>   no matching contract) stays deliberately unchecked: binding ahead of an upstream
+>   context that does not exist yet is legitimate.
+> - **Consequence for the samples.** Both walking-skeleton slices published under one
+>   prefix `sample.` — two bounded contexts sharing one identity, which the rules above
+>   make impossible. They are now `sample-state-stored` and `sample-event-sourced`, and
+>   the event-sourced slice binds `sample-state-stored.*`.
+> - **Pinned by** `IntegrationEventContextTests` and `TopicPatternMatcherTests` (without
+>   Docker) and `IntegrationEventSubscriptionValidationTests` (with a real broker: both
+>   start-up refusals, plus an event stopped by its source header while an event from a
+>   foreign context reaches the handler).
+
+
 > **Scope note — Wolverine is the transport, not the mediator.** Wolverine is
 > adopted **only** as the inter-service messaging transport. It is **not** used
 > as the in-process CQRS mediator: the hand-rolled `ISender` dispatcher of

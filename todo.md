@@ -41,7 +41,7 @@ eine Entscheidung, keinen Code.
 | TODO-05 | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | **P1** | gelöst            | hacky-5                               |
 | TODO-06 | Connection String zweimal, ohne Abgleich                       | **P1** | gelöst            | hacky-8, IMP-13                       |
 | TODO-07 | Integration Events sind nicht persistent                       | **P1** | gelöst            | WS-08                                 |
-| TODO-08 | Topic-Validierung und Kontextkennung                           | **P1** | teilweise gelöst  | WS-05, WS-13, WS-14                   |
+| TODO-08 | Topic-Validierung und Kontextkennung                           | **P1** | gelöst            | WS-05, WS-13, WS-14                   |
 | TODO-09 | Keine CI-Pipeline                                              | **P1** | gelöst            | WS-16                                 |
 | TODO-10 | Rehydrierung: `new()` oder `Activator`?                        | **P1** | gelöst            | hacky-5, IMP-14, WS-02                |
 | TODO-11 | Optionalität von `IUnitOfWork`                                 | **P2** | **Konflikt**      | IMP-07, hacky-11, IMP-46              |
@@ -534,7 +534,7 @@ dann an deren Exchange-Konfiguration statt an `ToRabbitTopics`.
 
 # TODO-08, Topic-Validierung und Kontextkennung
 
-**P1 · teilweise gelöst · WS-05 + WS-13 + WS-14**
+**P1 · gelöst · WS-05 + WS-13 + WS-14**
 
 Drei Befunde, die alle dieselbe fehlende Information brauchen — den eigenen Kontextnamen:
 
@@ -548,7 +548,38 @@ Drei Befunde, die alle dieselbe fehlende Information brauchen — den eigenen Ko
 - **Eigene Events konsumieren** (WS-13): folgenlos nur solange kein Handler existiert — die
   Folgenlosigkeit beruht auf der Abwesenheit von Code, nicht auf einer Regel.
 
-## Lösungsvorschlag
+## Lösung (ADR-0023-Amendment 2026-08-05, ADR-0027- und ADR-0018-Amendment)
+
+`UseWolverineMessaging(rabbitMqUri, exchangeName, contextName)` nimmt die drei
+Transport-Koordinaten gemeinsam entgegen. Der Kontextname ist **verpflichtend** und ein
+einzelnes kebab-case-Wort; ein Punkt darin wird abgewiesen, weil das fast immer der
+Exchange-Name an der falschen Stelle ist.
+
+- **Publish-Guard:** Das Präfix aus `[IntegrationEventTopic]` muss dem eigenen Kontext
+  entsprechen, sonst wirft der Topic-Provider der Publishing-Regel.
+- **Absenderkennung:** Jedes publizierte Event trägt den Header
+  `buildingblocks.source-context`; eine Consumer-Middleware verwirft ein Integration Event,
+  dessen Quelle der konsumierende Kontext selbst ist.
+- **Handler ⇒ Pattern statt Pattern ⇒ Vertrag:** Die im Lösungsvorschlag unten geplante
+  *Warnung* entfällt. Die Prüfrichtung wurde umgedreht — „publiziert jemand auf mein Pattern?"
+  ist lokal nicht entscheidbar, „bekomme ich, wofür ich einen Handler habe?" schon. Damit ist
+  es ein **harter Startfehler**, und der Tippfehler wird genau dann gefangen, wenn er weh tut.
+  Ein Handler auf ein Event des **eigenen** Kontexts ist ebenfalls ein Startfehler — zusammen
+  mit der Unterdrückung ist diese beweisbar verlustfrei.
+- **Exchange-Name:** verlässt Building Blocks (siehe ADR-0018-Amendment). VitalSync definiert
+  ihn einmal in `VitalSync.ServiceDefaults`; `vitalsync` kommt unter `BuildingBlocks/src` nicht
+  mehr vor.
+- **Abschaltbare Checks entfallen:** `ValidateHandlersOnStart` und `ValidateWolverineOnStart`
+  sind gestrichen. Ein Opt-out für eine Prüfung, die eine sonst stille Fehlerlage abfängt,
+  stellt genau diese stille Fehlerlage wieder her. Querbezug: TODO-11 entscheidet weiterhin
+  eigenständig über `MissingUnitOfWorkStartupLogger`.
+- **Folge für die Samples:** Beide Durchstiche publizierten unter dem Präfix `sample.` — zwei
+  Kontexte mit einer Kennung. Sie heißen jetzt `sample-state-stored` und `sample-event-sourced`.
+
+Gepinnt durch `IntegrationEventContextTests`, `TopicPatternMatcherTests` (ohne Docker) und
+`IntegrationEventSubscriptionValidationTests` (mit echtem Broker).
+
+## Ursprünglicher Lösungsvorschlag
 
 ```csharp
 options.ContextName = "nutrition";

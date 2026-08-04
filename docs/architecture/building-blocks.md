@@ -12,6 +12,8 @@ The **Building Blocks** are a reusable platform of shared concepts and component
 
 The platform is deliberately split into exactly **three** packages. The boundary between them is not functional (persistence vs. messaging vs. …) — it is about **purity and third-party dependencies**. See [ADR-0018](./decisions/0018-three-building-block-packages.md).
 
+None of the three knows anything about VitalSync. Since the ADR-0023 amendment 2026-08-05 that holds **literally**: the last VitalSync-specific string — the integration-event exchange name — moved out to the host, and `vitalsync` no longer occurs anywhere under `BuildingBlocks/src`. A host names the exchange and its own bounded context when it calls `UseWolverineMessaging(rabbitMqUri, exchangeName, contextName)`.
+
 ### `BuildingBlocks.Domain`
 
 `BuildingBlocks.Domain` is the pure core of the platform. It provides the tactical Domain-Driven Design primitives that every service's domain layer builds upon: entities, the unified aggregate-root base classes (state fold, with event sourcing additive — ADR-0025), domain events, value objects, strongly typed identifiers, domain exceptions, business-rule and validation abstractions, and the `IClock` abstraction.

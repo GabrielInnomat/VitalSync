@@ -2,7 +2,7 @@ using BuildingBlocks.Application;
 
 namespace DeadLetterFixture;
 
-[IntegrationEventTopic("probe.always-fails")]
+[IntegrationEventTopic("upstream.always-fails")]
 public sealed record AlwaysFailsIntegrationEvent(string Name) : IIntegrationEvent
 {
     public Guid EventId { get; init; } = Guid.NewGuid();

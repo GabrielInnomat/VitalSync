@@ -61,7 +61,8 @@ public sealed class SampleRegistrationTests
         builder.AddSampleEventSourcedInfrastructure(
             "Host=localhost;Database=unused-write;Username=postgres;Password=postgres",
             "Host=localhost;Database=unused-read",
-            new Uri("amqp://localhost"));
+            new Uri("amqp://localhost"),
+            "test-platform.integration-events");
 
         return builder.Services.BuildServiceProvider();
     }

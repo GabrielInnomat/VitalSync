@@ -48,15 +48,12 @@ public sealed class WolverineWiringStartupValidationTests
     }
 
     [Fact]
-    public void OptedOut_ValidatorIsNotRegistered()
+    public void WolverineCapabilitySelected_ValidatorAlwaysRuns()
     {
         using var provider = BuildProvider(options =>
-        {
-            options.UseEfCorePersistence<TestDbContext>(ConnectionString);
-            options.ValidateWolverineOnStart = false;
-        });
+            options.UseEfCorePersistence<TestDbContext>(ConnectionString));
 
-        Assert.DoesNotContain(
+        Assert.Contains(
             provider.GetServices<IHostedService>(),
             service => service is WolverineWiringStartupValidator);
     }

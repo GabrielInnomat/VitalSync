@@ -230,8 +230,13 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   in the scanned assemblies resolves to a handler (fail-fast instead of
   "no service registered" on the first request) and rejects request types that
   implement **more than one** `ICommand<>`/`IQuery<>` contract — a command or query
-  has exactly one result type; opt out only deliberately via
-  `options.ValidateHandlersOnStart = false`.
+  has exactly one result type.
+- **The start-up checks are not optional** (ADR-0027 amendment 2026-08-05). The former
+  `ValidateHandlersOnStart` and `ValidateWolverineOnStart` switches are **deleted**, and no
+  new check gets one. Every one of these checks exists because the failure it catches is
+  otherwise silent at run time; an opt-out restores exactly that silence, and the only host
+  that would reach for it is the one already in trouble. Do not add an "escape hatch" flag to
+  `BuildingBlocksOptions` — if a check is too strict, fix the check.
 - **Commands** return `Result` or `Result<T>` (a **create** returns the new typed id,
   e.g. `Result<RecipeId>`; **delete/void** returns `Result`). **Queries** return `Result<T>`.
 - Expected domain errors (`BusinessRuleViolationException`, `DomainValidationException`)
@@ -329,8 +334,32 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 - **In-context** projections use **domain** events directly; **integration** events
   (RabbitMQ) are the **only** cross-context signal — never read another context's
   database.
-- **Broker topology** (ADR-0023 amendment): one topic exchange
-  `vitalsync.integration-events` for the whole platform. The publishing rule matches
+- **Broker topology** (ADR-0023 amendments): one topic exchange for the whole platform. Its
+  **name comes from the host**, not from Building Blocks — VitalSync declares it once as
+  `VitalSyncMessaging.IntegrationEventExchangeName` (`vitalsync.integration-events`) in
+  `VitalSync.ServiceDefaults`, and every host passes it down. Never write the string as a
+  literal in a host, and never move it back into Building Blocks: since the 2026-08-05
+  amendment the string `vitalsync` does not occur anywhere under `BuildingBlocks/src`, which
+  is what makes ADR-0018's independence promise literally true.
+- **A context knows its own name** (ADR-0023 amendment 2026-08-05). The three transport
+  coordinates are supplied together —
+  `options.UseWolverineMessaging(rabbitMqUri, exchangeName, contextName)`. `contextName` is
+  **mandatory** and a single kebab-case word; a dot in it is rejected, because that is almost
+  always the exchange name in the wrong argument. Three rules hang off it:
+  1. **Publish guard** — the prefix of `[IntegrationEventTopic]` must equal the context name.
+     Publishing `fitness.…` from Nutrition throws instead of quietly impersonating another
+     context.
+  2. **Self-consumption is suppressed** — every published event carries the header
+     `buildingblocks.source-context`, and `OwnContextIntegrationEventFilter` discards an
+     incoming integration event whose source is the consuming context itself. This is
+     provably lossless only because of rule 3.
+  3. **Handler ⇒ pattern, checked at start-up** — for every integration event handled in the
+     subscription's consumer assembly, at least one bound topic pattern must match its topic,
+     and its topic must **not** be the consumer's own context. Both are hard start-up errors.
+     The opposite direction (a pattern with no matching contract) stays unchecked on purpose:
+     binding to an upstream context that does not exist yet is legitimate and locally
+     undecidable.
+- The publishing rule matches
   the `IIntegrationEvent` marker (`PublishMessagesToRabbitMqExchange<IIntegrationEvent>`)
   — **never** all messages, so
   `DomainEventEnvelope` cannot leak onto the broker. Every integration event **must**
@@ -347,8 +376,7 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   would mistake `CreateRecipeHandler` for a message handler. Beware: Wolverine
   **silently discards** a message with no route, and a message whose consumer was never
   discovered is marked handled and dropped without a retry or a dead letter — both
-  failures are invisible. Note that `nutrition.*` also matches the subscriber's own
-  published events. A consumer that keeps throwing is retried three times and the message
+  failures are invisible. A consumer that keeps throwing is retried three times and the message
   then goes to Wolverine's `wolverine-dead-letter-queue` **on the broker** — not to the
   `wolverine_dead_letters` table in the write database, which stays empty (`DeadLetterTests`).
 - **Integration-event delivery is durable** (ADR-0023 amendment 2026-08-04): the publish

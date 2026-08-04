@@ -47,10 +47,6 @@ public sealed class BuildingBlocksOptions
         _behaviorRegistry = behaviorRegistry;
     }
 
-    public bool ValidateHandlersOnStart { get; set; } = true;
-
-    public bool ValidateWolverineOnStart { get; set; } = true;
-
     internal WolverineWiringSettings WolverineWiring { get; } = new();
 
     internal IReadOnlyCollection<Assembly> ScannedAssemblies => _scannedAssemblies;
@@ -250,12 +246,26 @@ public sealed class BuildingBlocksOptions
         return this;
     }
 
-    public BuildingBlocksOptions UseWolverineMessaging(Uri rabbitMqUri)
+    public BuildingBlocksOptions UseWolverineMessaging(Uri rabbitMqUri, string exchangeName, string contextName)
     {
         ArgumentNullException.ThrowIfNull(rabbitMqUri);
+        ArgumentException.ThrowIfNullOrWhiteSpace(exchangeName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contextName);
 
-        _services.Replace(ServiceDescriptor.Singleton<IIntegrationEventSinkFactory, WolverineIntegrationEventSinkFactory>());
-        WolverineWiring.RabbitMqUri = rabbitMqUri;
+        if (!KebabCase.IsValid(contextName))
+        {
+            throw new ArgumentException(
+                $"'{contextName}' is not a valid bounded-context name. It is the first segment of every routing " +
+                "key this service publishes, so it must be a single lower-case kebab-case word without a dot " +
+                "(for example \"nutrition\"). A value containing a dot is almost always the exchange name passed " +
+                "in the wrong position.",
+                nameof(contextName));
+        }
+
+        _services.Replace(ServiceDescriptor.Singleton<IIntegrationEventSinkFactory>(
+            new WolverineIntegrationEventSinkFactory(contextName)));
+        _services.Replace(ServiceDescriptor.Singleton(new IntegrationEventSourceContext(contextName)));
+        WolverineWiring.Messaging = new MessagingSettings(rabbitMqUri, exchangeName, contextName);
         return this;
     }
 

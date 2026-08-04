@@ -9,7 +9,8 @@ builder.AddServiceDefaults();
 builder.AddSampleEventSourcedInfrastructure(
     builder.Configuration.GetConnectionString("eventsourced-write")!,
     builder.Configuration.GetConnectionString("eventsourced-read")!,
-    new Uri(builder.Configuration.GetConnectionString("messaging")!));
+    new Uri(builder.Configuration.GetConnectionString("messaging")!),
+    VitalSyncMessaging.IntegrationEventExchangeName);
 
 builder.Services.AddCodeFirstGrpc();
 

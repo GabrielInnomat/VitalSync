@@ -11,14 +11,14 @@ internal sealed class BuildingBlocksWolverineExtension(WolverineWiringSettings s
             options.ApplyBuildingBlockDomainEventRouting();
         }
 
-        if (settings.RabbitMqUri is { } rabbitMqUri)
+        if (settings.Messaging is { } messaging)
         {
-            options.ApplyBuildingBlockMessagingDefaults(rabbitMqUri);
-        }
+            options.ApplyBuildingBlockMessagingDefaults(messaging);
 
-        if (settings.Subscription is { } subscription)
-        {
-            options.ApplyBuildingBlockSubscription(subscription);
+            if (settings.Subscription is { } subscription)
+            {
+                options.ApplyBuildingBlockSubscription(subscription, messaging.ExchangeName);
+            }
         }
     }
 }

@@ -66,8 +66,8 @@ Wegwerf-Code abhängen. Beim Aufräumen wird genau ein Ordner gelöscht.
 | Ablage            | `samples/` als Wegwerf-Durchstich (nicht `src/Services/`)                                                                                    |
 | Persistenz        | **beide** — je ein Service für EF Core und Marten                                                                                            |
 | Migrationen       | eigener MigrationService-Worker, Api wartet per `WaitForCompletion`                                                                          |
-| Routing-Topologie | ein Topic-Exchange `vitalsync.integration-events`                                                                                            |
-| Topic-Namen       | explizites `[Topic("<kontext>.<event>")]` in kebab-case, **ohne** Startup-Validator (inzwischen gelöst: `[IntegrationEventTopic]` mit Publish-Fail-Fast, siehe WS-05)     |
+| Routing-Topologie | ein Topic-Exchange für die ganze Plattform; der Name kommt seit TODO-08 vom Host (`VitalSyncMessaging.IntegrationEventExchangeName` = `vitalsync.integration-events`) |
+| Topic-Namen       | explizites `[Topic("<kontext>.<event>")]` in kebab-case, **ohne** Startup-Validator (inzwischen gelöst: `[IntegrationEventTopic]` mit Publish-Fail-Fast und Präfix-Guard gegen den eigenen Kontextnamen, siehe WS-05 und WS-14)     |
 | Umfang Messaging  | zuerst nur Publish-Seite; die Subscribe-Seite kam in Etappe 3 und liegt seither ebenfalls in BuildingBlocks (ADR-0023-Amendment)             |
 | gRPC              | code-first (ADR-0003) — die Bibliothekswahl (`protobuf-net.Grpc`) trifft der Sample faktisch für die Plattform und verdient später einen ADR |
 
@@ -450,7 +450,9 @@ Kriterium 10 geht über das entsprechende Kriterium 9 aus Etappe 1 hinaus: dort 
 belegt, dass der Exchange **existiert**. Hier wurde eine Probe-Queue mit `sample.*`
 gebunden, ein Retire ausgelöst und die Nachricht aus der Queue gelesen — mit Routing
 Key, Correlation-Id und JSON-Payload. Das ist der erste echte Beleg, dass die
-Publish-Hälfte durchgängig funktioniert.
+Publish-Hälfte durchgängig funktioniert. (Die Topic-Präfixe der beiden Samples heißen seit
+TODO-08 `sample-state-stored` und `sample-event-sourced`; hier stehen sie im Wortlaut des
+damaligen Laufs.)
 
 ### Befunde
 
@@ -494,10 +496,10 @@ Publish-Hälfte durchgängig funktioniert.
 ```
 StateStored.Api ── Command ──▶ EF-Commit (Aggregat + Outbox, eine Transaktion)
                           └──▶ Projection ──▶ statestored-read
-                          └──▶ Integration Event ──▶ vitalsync.integration-events
-                                                              │  [Topic: sample.widget-created]
+                          └──▶ Integration Event ──▶ <Plattform-Exchange>
+                                                              │  [Topic: sample-state-stored.widget-created]
                                                               ▼
-EventSourced.Api ◀── eigene Queue, gebunden mit sample.*
+EventSourced.Api ◀── eigene Queue, gebunden mit sample-state-stored.*
                  └──▶ Command via ISender ──▶ Marten-Append + Outbox
                                          └──▶ Projection ──▶ eventsourced-read
 ```
@@ -517,6 +519,8 @@ Was Variante „Service verdrahtet selbst" gekostet hat:
   Exchange-Binding).
 - Den **Exchange-Namen als Literal**, weil BuildingBlocks seine Konstante `internal`
   hält — ein Konsument konnte den Wert, den er treffen muss, nicht referenzieren.
+  (Seit TODO-08 gibt es diese Konstante in BuildingBlocks gar nicht mehr: den Namen
+  bestimmt der Host und reicht ihn an `UseWolverineMessaging` durch.)
 - **Abnahmekriterium 11 aus Etappe 2** (blankes `UseWolverine()`) war wieder weg.
 - Und der eigentliche Fehler (siehe unten) steckte trotzdem in BuildingBlocks, war für
   den Service also gar nicht behebbar.
@@ -560,7 +564,7 @@ daran. Das Vorgehen steht in §11.
 | 2   | Beide Kontexte teilen **nur** den Identifikator, keine Datenbank, keinen Aufruf    | belegt |
 | 3   | Read-Modell des Konsumenten zeigt den gespiegelten Namen                           | belegt |
 | 4   | Umbenennung im Konsumenten reist **nicht** zurück (der Spiegel ist einseitig)      | belegt |
-| 5   | Queue `eventsourced.integration-events`, gebunden mit `sample.*` — von BuildingBlocks | belegt |
+| 5   | Queue `eventsourced.integration-events`, gebunden mit `sample-state-stored.*` — von BuildingBlocks | belegt |
 | 6   | `Program.cs` ohne Wolverine-Konfiguration außer `UseWolverine()`                   | belegt |
 | 7   | Wiederholte Zustellung erzeugt kein zweites Gadget                                 | Test   |
 | 8   | Ein dauerhaft scheiternder Konsument wird 3× wiederholt und dann dead-lettert      | Test   |
@@ -588,10 +592,13 @@ falschen Stelle — die Tabelle existiert nämlich, sie bleibt nur leer.
 
 ### Weitere Befunde
 
-- **Ein Kontext bekommt seine eigenen Integration Events zurück.** `sample.*` matcht
-  auch `sample.gadget-retired`, das der Konsument selbst publiziert. Hier folgenlos
-  (kein Handler), aber wer unter einem Präfix publiziert **und** konsumiert, muss damit
-  rechnen. Steht jetzt im ADR-0023-Amendment.
+- **Ein Kontext bekommt seine eigenen Integration Events zurück.** `sample.*` matchte zur
+  Zeit dieser Etappe auch `sample.gadget-retired`, das der Konsument selbst publizierte.
+  Damals folgenlos (kein Handler), aber wer unter einem Präfix publiziert **und**
+  konsumiert, muss damit rechnen. **Inzwischen gelöst** (WS-13, TODO-08): Beide Samples
+  haben eigene Kontextnamen (`sample-state-stored`, `sample-event-sourced`), jedes Event
+  trägt seinen Absenderkontext im Header, ein eigenes Event wird vor dem Handler verworfen,
+  und ein Handler auf den eigenen Kontext scheitert beim Start.
 - **Die Consumer-Assembly muss explizit angegeben werden.** Naheliegend wäre, die
   Assemblies aus `AddHandlersFrom` wiederzuverwenden — das wäre ein Fehler: Wolverine
   erkennt Handler an der Namenskonvention und würde `CreateGadgetHandler` als
@@ -636,8 +643,8 @@ verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Impro
 | WS-10 | Marten-Nebenläufigkeit verdrahtet, aber im Sample unbelegt     | Etappe 2     | offen     |
 | WS-11 | Der Migrations-Worker ist asymmetrisch                         | Etappe 2     | offen     |
 | WS-12 | Kein Idempotenz-Bookkeeping über die Kontextgrenze             | Etappe 3     | offen     |
-| WS-13 | Ein Kontext konsumiert seine eigenen Integration Events        | Etappe 3     | offen     |
-| WS-14 | Die Verbindung Vertrag → Konsument ist unbewacht               | Etappe 3     | teilweise |
+| WS-13 | Ein Kontext konsumiert seine eigenen Integration Events        | Etappe 3     | gelöst    |
+| WS-14 | Die Verbindung Vertrag → Konsument ist unbewacht               | Etappe 3     | gelöst    |
 | WS-15 | `ApplyEntityKeyConversions` erfasst keine Complex Types        | vorbestehend | offen     |
 | WS-16 | Keine CI-Pipeline                                              | vorbestehend | gelöst    |
 | WS-17 | Zeitbasierte Negativassertion im Sink-Test                     | vorbestehend | teilweise |
@@ -1021,11 +1028,20 @@ kopiert.
 
 ### WS-13, Ein Kontext konsumiert seine eigenen Integration Events
 
+**Gelöst** (ADR-0023-Amendment 2026-08-05, TODO-08).
+
 Bindet ein Service ein Topic-Pattern, das auch seine eigenen Routing Keys matcht, bekommt er
 seine eigenen Events zugestellt. Folgenlos, solange kein Handler existiert — aber die
 Folgenlosigkeit beruht auf der Abwesenheit von Code, nicht auf einer Regel.
 
-#### Lösungsvorschlag
+Jetzt gilt die Regel: `UseWolverineMessaging` verlangt den eigenen Kontextnamen, jedes
+publizierte Event trägt den Header `buildingblocks.source-context`, und eine
+Consumer-Middleware verwirft ein Event, dessen Quelle der konsumierende Kontext selbst ist.
+Ein Handler auf ein Event des eigenen Kontexts scheitert beim Start — beides zusammen macht
+die Unterdrückung beweisbar verlustfrei. Gepinnt durch
+`IntegrationEventSubscriptionValidationTests`.
+
+#### Ursprünglicher Lösungsvorschlag
 
 Absenderkennung setzen und beim Konsumieren auswerten.
 
@@ -1037,17 +1053,20 @@ nebenbei WS-05 und WS-14 nützt: aus ihm ließe sich das `[Topic]`-Präfix valid
 
 ### WS-14, Die Verbindung Vertrag → Konsument ist unbewacht
 
-**Teilweise.** `SubscriptionDiscoveryTests` fängt inzwischen die vergessene
-Consumer-Assembly ab — mit zwei Tests, die belegen, dass Wolverine ohne sie **gar keinen**
-Handler findet
-([SubscriptionDiscoveryTests.cs:19,36](samples/EventSourced/VitalSync.Sample.EventSourced.Tests/SubscriptionDiscoveryTests.cs:19)).
+**Gelöst** (ADR-0023-Amendment 2026-08-05, TODO-08). `SubscriptionDiscoveryTests` fängt die
+vergessene Consumer-Assembly ab
+([SubscriptionDiscoveryTests.cs:19,36](samples/EventSourced/VitalSync.Sample.EventSourced.Tests/SubscriptionDiscoveryTests.cs:19)),
+und beim Start prüft Building Blocks zusätzlich, dass jedes vom Consumer-Assembly behandelte
+Integration Event von mindestens einem gebundenen Pattern getroffen wird — sonst scheitert der
+Host mit Typ, Topic und den gebundenen Pattern.
 
-**Offen:** Nichts prüft, dass die gebundenen Topic-Pattern zu den `[Topic]`-Attributen der
-Verträge passen, die der Service konsumieren will. Ein Tippfehler im Pattern verhält sich
-exakt wie ein Upstream-Kontext, der noch nichts publiziert hat — die stillste aller
-Fehlerarten.
+Die Prüfrichtung wurde gegenüber dem Vorschlag unten **umgedreht**, und damit wurde aus der
+geplanten Warnung ein harter Fehler: „publiziert jemand auf mein Pattern?" ist lokal nicht
+entscheidbar, „bekomme ich, wofür ich einen Handler habe?" schon. Die Gegenrichtung bleibt
+absichtlich ungeprüft — auf einen noch nicht existierenden Upstream-Kontext zu binden ist
+legitim.
 
-#### Lösungsvorschlag
+#### Ursprünglicher Lösungsvorschlag
 
 Gemeinsam mit WS-05 lösen, beide brauchen dieselbe Quelle.
 

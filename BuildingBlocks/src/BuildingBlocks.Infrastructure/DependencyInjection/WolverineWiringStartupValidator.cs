@@ -23,8 +23,7 @@ internal sealed class WolverineWiringStartupValidator(IServiceProvider servicePr
                 "Wolverine, but no Wolverine runtime is registered. Register through the host-builder overload — " +
                 "builder.AddBuildingBlocks(...) — which calls UseWolverine() and applies the Building Block " +
                 "configuration itself. A host that deliberately wires Wolverine on top of the IServiceCollection " +
-                "overload calls UseWolverine() on the host builder instead. To run without this check, set " +
-                "BuildingBlocksOptions.ValidateWolverineOnStart to false.");
+                "overload calls UseWolverine() on the host builder instead.");
         }
     }
 }
