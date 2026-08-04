@@ -284,6 +284,14 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   `Persistence/Marten/` folder would break every `using Marten;` in it, because C#
   resolves against the enclosing namespaces first. Hence `StateStored`/`EventSourced`
   and `Wiring` — which describe the role and are the better names anyway.
+- **`BuildingBlocksOptions` is a fluent facade, not a worker.** Each method validates
+  its arguments and delegates to one collaborator in `DependencyInjection/Registration/`
+  — `HandlerRegistrar` (scanning, handlers, behaviors), `PersistenceRegistrar` (EF Core
+  and Marten), `MessagingRegistrar` (RabbitMQ selection and subscription),
+  `DomainEventCatalog` (domain-event assemblies and the registry they freeze into).
+  The options type references no third-party persistence or transport package at all,
+  so each of those concerns has exactly one file. New selection method? Add it to the
+  matching registrar and keep the facade method a delegation.
 - **The composition root is phased.** `ServiceCollectionExtensions` is a facade; the
   internal `BuildingBlocksComposition` runs `Configure` → `Validate` → `RegisterCore` →
   `RegisterStartupChecks`. The order is load-bearing: `Validate` materialises the

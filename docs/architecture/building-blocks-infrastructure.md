@@ -80,6 +80,7 @@ capability. The folder is the namespace.
 | `Messaging/IntegrationEvents/`     | the cross-context contract: topics, sink, source context, filter    |
 | `Time/`                            | `IClock` implementation on top of `TimeProvider`                    |
 | `DependencyInjection/`             | entry points, options, and the composition root                     |
+| `DependencyInjection/Registration/`| what a host selected, one collaborator per capability               |
 | `DependencyInjection/Wiring/`      | how Wolverine itself is configured                                  |
 | `DependencyInjection/Validation/`  | the start-up checks (ADR-0027)                                      |
 
@@ -543,8 +544,25 @@ builder.AddBuildingBlocks(options =>
 
 ### Inside the composition root
 
-`ServiceCollectionExtensions` is a facade; the work lives in the internal
-`BuildingBlocksComposition`, which runs four named phases in a fixed order:
+`BuildingBlocksOptions` is the fluent surface a host sees and nothing more. Each of its
+methods validates its own arguments and delegates to one internal collaborator in
+`DependencyInjection/Registration/`:
+
+| Collaborator          | Owns                                                                    |
+| --------------------- | ----------------------------------------------------------------------- |
+| `HandlerRegistrar`    | assembly scanning, handler/mapper/projection registration, behaviors    |
+| `PersistenceRegistrar`| EF Core and Marten wiring — the only place that knows either            |
+| `MessagingRegistrar`  | the RabbitMQ selection and the single subscription                      |
+| `DomainEventCatalog`  | the domain-event assemblies and the registry they are frozen into       |
+
+The split is what keeps the options type honest: it no longer references EF Core,
+Npgsql, Marten, or Wolverine at all, so a third-party concern has exactly one file it
+can be changed in. The public API is unchanged — the fluent chain still reads
+`options.AddHandlersFrom(...).UseEfCorePersistence<T>(...)`, and each method still
+returns `this`.
+
+The work itself lives in the internal `BuildingBlocksComposition`, which runs four
+named phases in a fixed order:
 
 | Phase                   | Does                                                                    |
 | ----------------------- | ----------------------------------------------------------------------- |

@@ -49,6 +49,7 @@ public sealed class PublicSurfaceTests
                     || type.Namespace.EndsWith(".Events", StringComparison.Ordinal)
                     || type.Namespace.EndsWith(".Time", StringComparison.Ordinal)
                     || type.Namespace.EndsWith(".Wiring", StringComparison.Ordinal)
+                    || type.Namespace.EndsWith(".Registration", StringComparison.Ordinal)
                     || type.Namespace.EndsWith(".Validation", StringComparison.Ordinal)))
             .Select(type => type.FullName)
             .ToArray();

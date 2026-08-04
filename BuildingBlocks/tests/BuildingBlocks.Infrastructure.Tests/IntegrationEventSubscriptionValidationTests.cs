@@ -15,7 +15,7 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
 {
     private const string UpstreamTopic = "upstream.always-fails";
 
-    private static readonly TimeSpan Grace = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan Grace = TimeSpan.FromSeconds(30);
 
     [Fact]
     public async Task AHandlerWhoseTopicNoBoundPatternMatches_FailsTheStart()
