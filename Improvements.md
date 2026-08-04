@@ -48,15 +48,15 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-33 | Keine Saga- oder Process-Manager-Abstraktion                             | offen             |
 | IMP-34 | `Result` hat keine Kombinatoren                                          | offen             |
 | IMP-35 | Statische Caches über Container-Grenzen hinweg                           | wird nicht gelöst |
-| IMP-36 | `RuleChecker` schluckt `null` still                                      | offen             |
-| IMP-37 | Async-Suffix ist inkonsistent                                            | offen             |
+| IMP-36 | `RuleChecker` schluckt `null` still                                      | **gelöst**    |
+| IMP-37 | Async-Suffix ist inkonsistent                                            | **gelöst**    |
 | IMP-38 | Sichtbarkeits-Disziplin ist uneinheitlich                                | teilweise         |
 | IMP-39 | `Result`-API: Namenskollision und implizite Konvertierungen              | offen             |
 | IMP-40 | `State` ist `public` und bricht die Kapselung                            | gelöst            |
 | IMP-41 | `DomainEvent` als `record` mit garantiert ungleicher Wertgleichheit      | gelöst            |
 | IMP-42 | `IRepository`-API ist asymmetrisch und irreführend benannt               | gelöst            |
 | IMP-43 | Wirkungslose Varianz-Modifikatoren                                       | offen             |
-| IMP-44 | Uneinheitliche Projektstruktur                                           | offen             |
+| IMP-44 | Uneinheitliche Projektstruktur                                           | offen (blockiert) |
 | IMP-45 | `SenderContractTests` testet NSubstitute statt Produktionscode           | offen             |
 | IMP-46 | Behaviors nutzen Service Locator statt optionaler Abhängigkeiten         | teilweise         |
 | IMP-47 | Keine zentrale Paketverwaltung                                           | offen             |
@@ -1181,6 +1181,15 @@ BuildingBlocks.Domain/
 
 Namespaces bewusst **nicht** mitziehen (`BuildingBlocks.Application` bleibt flach), sonst wird aus einer
 Aufräumaktion ein Breaking Change für jeden Service.
+
+## Blockiert: der Vorschlag ist in diesem Repository nicht baubar (2026-08-05)
+
+`.editorconfig` (Wurzel, Zeile 86) setzt `dotnet_style_namespace_match_folder = true:error`, und
+`Directory.Build.props` schaltet `EnforceCodeStyleInBuild` ein. Ein Ordner ohne passenden Namespace ist
+damit **IDE0130 als Fehler**. „Ordner ja, Namespaces nein" gibt es hier also nicht — siehe TODO-42 für
+die drei verbleibenden Optionen und die Kostenabwägung (in `Infrastructure` ist fast alles `internal`
+und die Namespaces sind unsichtbar; in `Domain`/`Application` ist alles public, und aus einem `using`
+würden drei bis vier in jeder Aggregat-Datei jedes Services).
 
 ---
 

@@ -6,7 +6,7 @@ namespace VitalSync.Sample.StateStored.Infrastructure.Read;
 
 public sealed class WidgetCreatedProjection(WidgetReadDbContext context) : IProjectionHandler<WidgetCreated>
 {
-    public async Task Handle(WidgetCreated domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
+    public async Task HandleAsync(WidgetCreated domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
         ArgumentNullException.ThrowIfNull(metadata);
@@ -37,7 +37,7 @@ public sealed class WidgetCreatedProjection(WidgetReadDbContext context) : IProj
 
 public sealed class WidgetPartAddedProjection(WidgetReadDbContext context) : IProjectionHandler<WidgetPartAdded>
 {
-    public Task Handle(WidgetPartAdded domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
+    public Task HandleAsync(WidgetPartAdded domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
 
@@ -57,7 +57,7 @@ public sealed class WidgetPartAddedProjection(WidgetReadDbContext context) : IPr
 public sealed class WidgetPartQuantityChangedProjection(WidgetReadDbContext context)
     : IProjectionHandler<WidgetPartQuantityChanged>
 {
-    public Task Handle(
+    public Task HandleAsync(
         WidgetPartQuantityChanged domainEvent,
         DomainEventMetadata metadata,
         CancellationToken cancellationToken)
@@ -75,7 +75,7 @@ public sealed class WidgetPartQuantityChangedProjection(WidgetReadDbContext cont
 
 public sealed class WidgetPartRemovedProjection(WidgetReadDbContext context) : IProjectionHandler<WidgetPartRemoved>
 {
-    public Task Handle(WidgetPartRemoved domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
+    public Task HandleAsync(WidgetPartRemoved domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
 
@@ -125,7 +125,7 @@ internal static class WidgetPartProjection
 
 public sealed class WidgetRenamedProjection(WidgetReadDbContext context) : IProjectionHandler<WidgetRenamed>
 {
-    public async Task Handle(WidgetRenamed domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
+    public async Task HandleAsync(WidgetRenamed domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
         ArgumentNullException.ThrowIfNull(metadata);

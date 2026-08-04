@@ -7,7 +7,7 @@ public sealed record GetWidget(WidgetId WidgetId) : IQuery<WidgetView>;
 
 public sealed class GetWidgetHandler(IWidgetReadStore readStore) : IQueryHandler<GetWidget, WidgetView>
 {
-    public async Task<Result<WidgetView>> Handle(GetWidget query, CancellationToken cancellationToken)
+    public async Task<Result<WidgetView>> HandleAsync(GetWidget query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
 

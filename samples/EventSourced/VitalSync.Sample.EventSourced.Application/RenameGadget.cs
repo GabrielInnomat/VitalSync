@@ -8,7 +8,7 @@ public sealed record RenameGadget(GadgetId GadgetId, string Name) : ICommand;
 public sealed class RenameGadgetHandler(IRepository<Gadget, GadgetId> repository)
     : ICommandHandler<RenameGadget>
 {
-    public async Task<Result> Handle(RenameGadget command, CancellationToken cancellationToken)
+    public async Task<Result> HandleAsync(RenameGadget command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 

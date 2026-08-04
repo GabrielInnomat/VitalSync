@@ -13,7 +13,7 @@ internal sealed class WidgetGrpcService(ISender sender) : IWidgetService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var result = await sender.Send(new CreateWidget(request.Name), context.CancellationToken)
+        var result = await sender.SendAsync(new CreateWidget(request.Name), context.CancellationToken)
             .ConfigureAwait(false);
 
         return result.IsSuccess
@@ -26,7 +26,7 @@ internal sealed class WidgetGrpcService(ISender sender) : IWidgetService
         ArgumentNullException.ThrowIfNull(request);
 
         var command = new RenameWidget(ParseId(request.WidgetId), request.Name);
-        var result = await sender.Send(command, context.CancellationToken).ConfigureAwait(false);
+        var result = await sender.SendAsync(command, context.CancellationToken).ConfigureAwait(false);
 
         return result.IsSuccess ? new RenameWidgetReply() : throw ToRpcException(result);
     }
@@ -36,7 +36,7 @@ internal sealed class WidgetGrpcService(ISender sender) : IWidgetService
         ArgumentNullException.ThrowIfNull(request);
 
         var query = new GetWidget(ParseId(request.WidgetId));
-        var result = await sender.Send(query, context.CancellationToken).ConfigureAwait(false);
+        var result = await sender.SendAsync(query, context.CancellationToken).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {
@@ -61,7 +61,7 @@ internal sealed class WidgetGrpcService(ISender sender) : IWidgetService
         ArgumentNullException.ThrowIfNull(request);
 
         var command = new AddWidgetPart(ParseId(request.WidgetId), request.Label, request.Quantity);
-        var result = await sender.Send(command, context.CancellationToken).ConfigureAwait(false);
+        var result = await sender.SendAsync(command, context.CancellationToken).ConfigureAwait(false);
 
         return result.IsSuccess
             ? new AddWidgetPartReply { PartId = result.Value.Value.ToString() }
@@ -78,7 +78,7 @@ internal sealed class WidgetGrpcService(ISender sender) : IWidgetService
             ParseId(request.WidgetId),
             ParsePartId(request.PartId),
             request.Quantity);
-        var result = await sender.Send(command, context.CancellationToken).ConfigureAwait(false);
+        var result = await sender.SendAsync(command, context.CancellationToken).ConfigureAwait(false);
 
         return result.IsSuccess ? new ChangeWidgetPartQuantityReply() : throw ToRpcException(result);
     }
@@ -90,7 +90,7 @@ internal sealed class WidgetGrpcService(ISender sender) : IWidgetService
         ArgumentNullException.ThrowIfNull(request);
 
         var command = new RemoveWidgetPart(ParseId(request.WidgetId), ParsePartId(request.PartId));
-        var result = await sender.Send(command, context.CancellationToken).ConfigureAwait(false);
+        var result = await sender.SendAsync(command, context.CancellationToken).ConfigureAwait(false);
 
         return result.IsSuccess
             ? new RemoveWidgetPartReply { Label = result.Value }

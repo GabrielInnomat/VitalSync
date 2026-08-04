@@ -62,7 +62,7 @@ public sealed class GadgetTests
         var gadget = Gadget.Create(GadgetId.New(), "first");
         gadget.Rename("second");
 
-        Assert.Equal(2, ((IEventSourcedAggregateRoot<GadgetId>)gadget).Version);
+        Assert.Equal(2, ((IStateOwner)gadget).Version);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class GadgetTests
         Assert.Equal("second", gadget.Name);
         Assert.Equal(1, gadget.RenameCount);
         Assert.True(gadget.IsRetired);
-        Assert.Equal(3, ((IEventSourcedAggregateRoot<GadgetId>)gadget).Version);
+        Assert.Equal(3, ((IStateOwner)gadget).Version);
 
         Assert.Empty(gadget.DomainEvents);
     }
@@ -123,7 +123,7 @@ public sealed class GadgetTests
 
         Assert.Equal("mirror", gadget.Component(componentId).Label);
         Assert.Equal(3, gadget.DomainEvents.Count);
-        Assert.Equal(3, ((IEventSourcedAggregateRoot<GadgetId>)gadget).Version);
+        Assert.Equal(3, ((IStateOwner)gadget).Version);
 
         var raised = Assert.IsType<GadgetComponentRelabelled>(gadget.DomainEvents.Last());
         Assert.Equal(componentId, raised.ComponentId);
@@ -178,7 +178,7 @@ public sealed class GadgetTests
         ((IEventSourcedAggregateRoot<GadgetId>)gadget).LoadFromHistory(history);
 
         Assert.Equal("mirror", gadget.Component(componentId).Label);
-        Assert.Equal(3, ((IEventSourcedAggregateRoot<GadgetId>)gadget).Version);
+        Assert.Equal(3, ((IStateOwner)gadget).Version);
         Assert.Empty(gadget.DomainEvents);
     }
 

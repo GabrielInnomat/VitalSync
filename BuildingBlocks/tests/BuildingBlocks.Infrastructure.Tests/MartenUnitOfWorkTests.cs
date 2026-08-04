@@ -105,14 +105,14 @@ public sealed class MartenUnitOfWorkTests
         await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal([1L, 2L, 3L], published.Select(envelope => envelope.Version));
-        Assert.Equal(((IEventSourcedAggregateRoot<CounterId>)counter).Version, published[^1].Version);
+        Assert.Equal(((IStateOwner)counter).Version, published[^1].Version);
     }
 
     private static MartenAggregateTracker TrackerWith(out Counter counter)
     {
         var tracker = new MartenAggregateTracker();
         var aggregate = Counter.Create(new CounterId(Guid.NewGuid()));
-        tracker.Track(aggregate, "counter", aggregate.Id.Value.ToString(), () => ((IEventSourcedAggregateRoot<CounterId>)aggregate).Version);
+        tracker.Track(aggregate, "counter", aggregate.Id.Value.ToString(), () => ((IStateOwner)aggregate).Version);
         counter = aggregate;
         return tracker;
     }

@@ -15,7 +15,7 @@ public sealed class EventSourcedAggregateRootTests
         Assert.Equal(new TestId(5), aggregate.Id);
         Assert.Equal(5, aggregate.CurrentState.Value);
         Assert.Single(aggregate.DomainEvents);
-        Assert.Equal(1, ((IEventSourcedAggregateRoot<TestId>)aggregate).Version);
+        Assert.Equal(1, ((IStateOwner)aggregate).Version);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public sealed class EventSourcedAggregateRootTests
         aggregate.Raise(new TestDomainEvent(3));
 
         Assert.Equal(3, aggregate.DomainEvents.Count);
-        Assert.Equal(3, ((IEventSourcedAggregateRoot<TestId>)aggregate).Version);
+        Assert.Equal(3, ((IStateOwner)aggregate).Version);
         Assert.Equal(3, aggregate.CurrentState.Value);
     }
 
@@ -57,7 +57,7 @@ public sealed class EventSourcedAggregateRootTests
 
         Assert.Equal(new TestId(3), aggregate.Id);
         Assert.Equal(3, aggregate.CurrentState.Value);
-        Assert.Equal(3, ((IEventSourcedAggregateRoot<TestId>)aggregate).Version);
+        Assert.Equal(3, ((IStateOwner)aggregate).Version);
         Assert.Empty(aggregate.DomainEvents);
     }
 
@@ -84,7 +84,7 @@ public sealed class EventSourcedAggregateRootTests
 
         aggregate.Raise(new TestDomainEvent(3));
 
-        Assert.Equal(3, ((IEventSourcedAggregateRoot<TestId>)aggregate).Version);
+        Assert.Equal(3, ((IStateOwner)aggregate).Version);
         Assert.Single(aggregate.DomainEvents);
         Assert.Equal(3, aggregate.CurrentState.Value);
     }
@@ -148,7 +148,7 @@ public sealed class EventSourcedAggregateRootTests
         ]);
 
         Assert.Equal(9, aggregate.Child(new TestId(2)).Value);
-        Assert.Equal(3, ((IEventSourcedAggregateRoot<TestId>)aggregate).Version);
+        Assert.Equal(3, ((IStateOwner)aggregate).Version);
         Assert.Empty(aggregate.DomainEvents);
     }
 

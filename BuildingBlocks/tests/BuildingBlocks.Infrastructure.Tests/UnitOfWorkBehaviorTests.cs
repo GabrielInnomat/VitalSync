@@ -18,7 +18,7 @@ public sealed class UnitOfWorkBehaviorTests
         using var provider = BuildProvider(unitOfWork, new PassingCommandHandler());
         var sender = provider.GetRequiredService<ISender>();
 
-        var result = await sender.Send(new ProbeCommand(), CancellationToken.None);
+        var result = await sender.SendAsync(new ProbeCommand(), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, unitOfWork.CommitCount);
@@ -31,7 +31,7 @@ public sealed class UnitOfWorkBehaviorTests
         using var provider = BuildProvider(unitOfWork, new FailingCommandHandler());
         var sender = provider.GetRequiredService<ISender>();
 
-        var result = await sender.Send(new ProbeCommand(), CancellationToken.None);
+        var result = await sender.SendAsync(new ProbeCommand(), CancellationToken.None);
 
         Assert.True(result.IsFailure);
         Assert.Equal(0, unitOfWork.CommitCount);
@@ -50,7 +50,7 @@ public sealed class UnitOfWorkBehaviorTests
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
-        var result = await sender.Send(new ProbeQuery(), CancellationToken.None);
+        var result = await sender.SendAsync(new ProbeQuery(), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(0, unitOfWork.CommitCount);
@@ -63,7 +63,7 @@ public sealed class UnitOfWorkBehaviorTests
         using var provider = BuildProvider(unitOfWork, new PassingCommandHandler());
         var sender = provider.GetRequiredService<ISender>();
 
-        var result = await sender.Send(new ProbeCommand(), CancellationToken.None);
+        var result = await sender.SendAsync(new ProbeCommand(), CancellationToken.None);
 
         Assert.True(result.IsFailure);
         var failure = Assert.Single(result.Failures);
@@ -82,7 +82,7 @@ public sealed class UnitOfWorkBehaviorTests
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
-        var result = await sender.Send(new ProbeCommand(), CancellationToken.None);
+        var result = await sender.SendAsync(new ProbeCommand(), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
     }
@@ -92,7 +92,7 @@ public sealed class UnitOfWorkBehaviorTests
     {
         var behavior = new UnitOfWorkBehavior<ProbeCommand, Result>();
 
-        var result = await behavior.Handle(
+        var result = await behavior.HandleAsync(
             new ProbeCommand(),
             _ => Task.FromResult(Result.Success()),
             CancellationToken.None);
@@ -170,19 +170,19 @@ public sealed class UnitOfWorkBehaviorTests
 
     private sealed class PassingCommandHandler : ICommandHandler<ProbeCommand>
     {
-        public Task<Result> Handle(ProbeCommand command, CancellationToken cancellationToken) =>
+        public Task<Result> HandleAsync(ProbeCommand command, CancellationToken cancellationToken) =>
             Task.FromResult(Result.Success());
     }
 
     private sealed class FailingCommandHandler : ICommandHandler<ProbeCommand>
     {
-        public Task<Result> Handle(ProbeCommand command, CancellationToken cancellationToken) =>
+        public Task<Result> HandleAsync(ProbeCommand command, CancellationToken cancellationToken) =>
             Task.FromResult(Result.Failure(Failure.NotFound("probe.not_found", "Nothing here.")));
     }
 
     private sealed class ProbeQueryHandler : IQueryHandler<ProbeQuery, int>
     {
-        public Task<Result<int>> Handle(ProbeQuery query, CancellationToken cancellationToken) =>
+        public Task<Result<int>> HandleAsync(ProbeQuery query, CancellationToken cancellationToken) =>
             Task.FromResult(Result.Success(42));
     }
 

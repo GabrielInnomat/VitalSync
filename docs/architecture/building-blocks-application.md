@@ -44,7 +44,7 @@ is independent of VitalSync.
 
     public sealed class CreateRecipeHandler : ICommandHandler<CreateRecipeCommand, RecipeId>
     {
-        public async Task<Result<RecipeId>> Handle(CreateRecipeCommand command, CancellationToken ct)
+        public async Task<Result<RecipeId>> HandleAsync(CreateRecipeCommand command, CancellationToken ct)
         {
             var recipe = Recipe.Create(command.Name);
             await _repository.AddAsync(recipe, ct);
@@ -64,9 +64,9 @@ is independent of VitalSync.
 ```csharp
 public interface ISender
 {
-    Task<Result> Send(ICommand command, CancellationToken ct);
-    Task<Result<TResult>> Send<TResult>(ICommand<TResult> command, CancellationToken ct);
-    Task<Result<TResult>> Send<TResult>(IQuery<TResult> query, CancellationToken ct);
+    Task<Result> SendAsync(ICommand command, CancellationToken ct);
+    Task<Result<TResult>> SendAsync<TResult>(ICommand<TResult> command, CancellationToken ct);
+    Task<Result<TResult>> SendAsync<TResult>(IQuery<TResult> query, CancellationToken ct);
 }
 ```
 
@@ -79,7 +79,7 @@ pipeline behaviors from the container.
 ```csharp
 public interface IPipelineBehavior<TRequest, TResponse>
 {
-    Task<TResponse> Handle(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken ct);
+    Task<TResponse> HandleAsync(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken ct);
 }
 ```
 
@@ -162,7 +162,7 @@ public interface IDomainEventPublisher
 public interface IProjectionHandler<in TDomainEvent>
     where TDomainEvent : IDomainEvent
 {
-    Task Handle(TDomainEvent domainEvent, DomainEventMetadata metadata, CancellationToken ct);
+    Task HandleAsync(TDomainEvent domainEvent, DomainEventMetadata metadata, CancellationToken ct);
 }
 ```
 

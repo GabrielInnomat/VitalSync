@@ -8,7 +8,7 @@ public sealed record RetireGadget(GadgetId GadgetId, string Reason) : ICommand;
 public sealed class RetireGadgetHandler(IRepository<Gadget, GadgetId> repository)
     : ICommandHandler<RetireGadget>
 {
-    public async Task<Result> Handle(RetireGadget command, CancellationToken cancellationToken)
+    public async Task<Result> HandleAsync(RetireGadget command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 

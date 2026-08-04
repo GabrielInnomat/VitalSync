@@ -97,7 +97,7 @@ public sealed class EfCoreAggregateRoundTripTests(PostgreSqlFixture fixture)
     {
         using var scope = host.Services.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var result = await sender.Send(command, TestContext.Current.CancellationToken);
+        var result = await sender.SendAsync(command, TestContext.Current.CancellationToken);
         Assert.True(result.IsSuccess);
     }
 

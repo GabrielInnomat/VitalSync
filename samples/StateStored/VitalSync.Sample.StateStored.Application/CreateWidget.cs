@@ -8,7 +8,7 @@ public sealed record CreateWidget(string Name) : ICommand<WidgetId>;
 public sealed class CreateWidgetHandler(IRepository<Widget, WidgetId> repository)
     : ICommandHandler<CreateWidget, WidgetId>
 {
-    public async Task<Result<WidgetId>> Handle(CreateWidget command, CancellationToken cancellationToken)
+    public async Task<Result<WidgetId>> HandleAsync(CreateWidget command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 

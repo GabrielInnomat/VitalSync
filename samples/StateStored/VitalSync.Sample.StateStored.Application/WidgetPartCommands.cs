@@ -8,7 +8,7 @@ public sealed record AddWidgetPart(WidgetId WidgetId, string Label, int Quantity
 public sealed class AddWidgetPartHandler(IRepository<Widget, WidgetId> repository)
     : ICommandHandler<AddWidgetPart, WidgetPartId>
 {
-    public async Task<Result<WidgetPartId>> Handle(AddWidgetPart command, CancellationToken cancellationToken)
+    public async Task<Result<WidgetPartId>> HandleAsync(AddWidgetPart command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -25,7 +25,7 @@ public sealed record ChangeWidgetPartQuantity(WidgetId WidgetId, WidgetPartId Pa
 public sealed class ChangeWidgetPartQuantityHandler(IRepository<Widget, WidgetId> repository)
     : ICommandHandler<ChangeWidgetPartQuantity>
 {
-    public async Task<Result> Handle(ChangeWidgetPartQuantity command, CancellationToken cancellationToken)
+    public async Task<Result> HandleAsync(ChangeWidgetPartQuantity command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -45,7 +45,7 @@ public sealed record RemoveWidgetPart(WidgetId WidgetId, WidgetPartId PartId) : 
 public sealed class RemoveWidgetPartHandler(IRepository<Widget, WidgetId> repository)
     : ICommandHandler<RemoveWidgetPart, string>
 {
-    public async Task<Result<string>> Handle(RemoveWidgetPart command, CancellationToken cancellationToken)
+    public async Task<Result<string>> HandleAsync(RemoveWidgetPart command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 

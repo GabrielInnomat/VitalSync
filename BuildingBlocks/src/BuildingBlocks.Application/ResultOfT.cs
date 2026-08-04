@@ -22,7 +22,11 @@ public sealed class Result<TResult> : Result
             ? _value
             : throw new InvalidOperationException("The value of a failed result cannot be accessed.");
 
-    public static Result<TResult> Success(TResult value) => new(value);
+    public static Result<TResult> Success(TResult value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        return new Result<TResult>(value);
+    }
 
     public static new Result<TResult> Failure(Failure failure)
     {
@@ -30,7 +34,11 @@ public sealed class Result<TResult> : Result
         return new Result<TResult>([failure]);
     }
 
-    public static new Result<TResult> Failure(IReadOnlyList<Failure> failures) => new(failures);
+    public static new Result<TResult> Failure(IReadOnlyList<Failure> failures)
+    {
+        ArgumentNullException.ThrowIfNull(failures);
+        return new Result<TResult>(failures);
+    }
 
     public static implicit operator Result<TResult>(TResult value) => Success(value);
 

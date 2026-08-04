@@ -151,6 +151,9 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   the declaring assembly via `options.AddDomainEventsFrom(assembly)` — configuring persistence
   without it throws at startup, and a missing or duplicated `[EventName]` throws at
   registration. `Type.GetType` over stored data is gone; the readable type set is closed.
+  There is **one** kebab-case validator, `BuildingBlocks.Domain.KebabCase`, used by both the
+  persisted-name attributes and `[IntegrationEventTopic]`. It is public purely because
+  `Infrastructure` needs it; never write a second copy of the character loop.
 - **The state is an abstract record, not an interface** (ADR-0030, amending ADR-0010): a state
   derives from `AggregateState<TSelf, TKey>` and writes only its fields, `Empty` and
   `override Apply`. The base carries `Id` and `Version`; because a record's copy constructor is
@@ -163,12 +166,19 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   Marten's expected stream version, the EF `IsConcurrencyToken()` column that finally gives
   state-stored contexts optimistic concurrency, and the per-aggregate sequence on
   `DomainEventEnvelope`/`DomainEventMetadata` (`AggregateName`, `AggregateId`, `Version`) that
-  projections use as an order watermark.
-- **Business rules and domain validation** follow ADR-0009.
+  projections use as an order watermark. It has **exactly one source**: the explicitly
+  implemented `IStateOwner.Version`. `IEventSourcedAggregateRoot<TKey>` declares
+  `LoadFromHistory` and nothing else (ADR-0030 amendment 2026-08-06) — read a version with
+  `((IStateOwner)aggregate).Version` on both persistence paths.
+- **Business rules and domain validation** follow ADR-0009, and a `null` rule **throws**
+  (amendment 2026-08-06). `RuleChecker` used to evaluate `rule?.IsBroken() == true`, so the
+  validation layer fell silent in exactly the case it exists for: a factory returning `null`
+  meant "rule passed". All four overloads guard with `ArgumentNullException.ThrowIfNull`; the
+  `params` ones guard the array too. Short-circuiting is unchanged.
 - Aggregates use an **aggregate state object** (ADR-0010).
 - **One aggregate authoring model** — every aggregate derives from the state-fold
   base `AggregateRoot<TKey, TState>` and mutates only via `RaiseEvent`; the
-  **event-sourced base is additive** (`Version` + `LoadFromHistory` only), per
+  **event-sourced base is additive** (`LoadFromHistory` only), per
   ADR-0025 (which supersedes ADR-0012). Only apply ES where the event history
   carries business value.
 - **EF Core maps the aggregate's _state_, never the aggregate** (ADR-0025 amendment):
@@ -220,7 +230,16 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   **`BuildingBlocks.Application`** (depends only on `Domain`). A **hand-rolled
   dispatcher** is used instead of MediatR (ADR-0015); the DI-based implementation
   lives in `BuildingBlocks.Infrastructure`.
-- Handlers and dispatch are **async-only** with a `CancellationToken`; no sync overloads.
+- Handlers and dispatch are **async-only** with a `CancellationToken`; no sync overloads,
+  and every awaitable contract method **carries the `Async` suffix** — `ISender.SendAsync`,
+  `ICommandHandler`/`IQueryHandler`/`IProjectionHandler`/`IPipelineBehavior.HandleAsync`,
+  alongside the already-suffixed `CommitAsync`/`GetByIdAsync` (ADR-0015 amendment 2026-08-06).
+  **One deliberate exception:** a method that satisfies **Wolverine's** discovery convention
+  rather than one of our contracts keeps the name Wolverine expects — today
+  `DomainEventEnvelopeHandler.Handle` and the samples' `WidgetCreatedConsumer.Handle`.
+  Neither implements a Building Blocks interface, so the compiler cannot catch a rename
+  there: Wolverine would silently stop discovering the handler and the message would be
+  dropped with no route and no error. Only rename methods that implement one of our contracts.
 - **Handler registration** via `BuildingBlocksOptions.AddHandlersFrom(assembly)` is
   idempotent for multi-handler contracts (`IProjectionHandler<>`,
   `IIntegrationEventMapper`) and enforces **exactly one** handler per command/query —

@@ -15,9 +15,9 @@ public sealed class SenderContractTests
     {
         var sender = Substitute.For<ISender>();
         var command = new DeleteRecipeCommand();
-        sender.Send(command, Arg.Any<CancellationToken>()).Returns(Result.Success());
+        sender.SendAsync(command, Arg.Any<CancellationToken>()).Returns(Result.Success());
 
-        var result = await sender.Send(command, CancellationToken.None);
+        var result = await sender.SendAsync(command, CancellationToken.None);
 
         Assert.True(result.IsSuccess);
     }
@@ -27,9 +27,9 @@ public sealed class SenderContractTests
     {
         var sender = Substitute.For<ISender>();
         var command = new CreateRecipeCommand();
-        sender.Send(command, Arg.Any<CancellationToken>()).Returns(Result.Success(99));
+        sender.SendAsync(command, Arg.Any<CancellationToken>()).Returns(Result.Success(99));
 
-        var result = await sender.Send(command, CancellationToken.None);
+        var result = await sender.SendAsync(command, CancellationToken.None);
 
         Assert.Equal(99, result.Value);
     }
@@ -39,9 +39,9 @@ public sealed class SenderContractTests
     {
         var sender = Substitute.For<ISender>();
         var query = new GetRecipeQuery();
-        sender.Send(query, Arg.Any<CancellationToken>()).Returns(Result.Success("soup"));
+        sender.SendAsync(query, Arg.Any<CancellationToken>()).Returns(Result.Success("soup"));
 
-        var result = await sender.Send(query, CancellationToken.None);
+        var result = await sender.SendAsync(query, CancellationToken.None);
 
         Assert.Equal("soup", result.Value);
     }

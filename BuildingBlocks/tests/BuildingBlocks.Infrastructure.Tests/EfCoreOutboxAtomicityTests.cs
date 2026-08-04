@@ -53,7 +53,7 @@ public sealed class EfCoreOutboxAtomicityTests(PostgreSqlFixture fixture)
         using (var scope = host.Services.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            var result = await sender.Send(
+            var result = await sender.SendAsync(
                 new StartFlushProbe(Guid.NewGuid()),
                 TestContext.Current.CancellationToken);
 

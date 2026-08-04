@@ -15,7 +15,7 @@ public sealed class SubscriptionDiscoveryTests
     public async Task WithTheConsumerAssemblyIncluded_TheEventReachesACommand()
     {
         var sender = Substitute.For<ISender>();
-        sender.Send(Arg.Any<ICommand>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
+        sender.SendAsync(Arg.Any<ICommand>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
         var widgetId = Guid.NewGuid();
 
         using var host = await BuildHost(sender, includeConsumerAssembly: true);
@@ -23,7 +23,7 @@ public sealed class SubscriptionDiscoveryTests
         await host.Services.GetRequiredService<IMessageBus>()
             .InvokeAsync(new WidgetCreatedIntegrationEvent(widgetId, "mirrored", Guid.NewGuid(), DateTimeOffset.UtcNow), TestContext.Current.CancellationToken);
 
-        await sender.Received(1).Send(
+        await sender.Received(1).SendAsync(
             Arg.Is<ICommand>(command => ((MirrorWidget)command).WidgetId == widgetId),
             Arg.Any<CancellationToken>());
     }

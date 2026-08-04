@@ -7,7 +7,7 @@ public sealed record MirrorWidget(Guid WidgetId, string Name) : ICommand;
 
 public sealed class MirrorWidgetHandler(IRepository<Gadget, GadgetId> repository) : ICommandHandler<MirrorWidget>
 {
-    public async Task<Result> Handle(MirrorWidget command, CancellationToken cancellationToken)
+    public async Task<Result> HandleAsync(MirrorWidget command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 

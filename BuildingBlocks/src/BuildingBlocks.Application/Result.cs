@@ -8,12 +8,9 @@ public class Result
 
     private readonly ReadOnlyCollection<Failure> _failures;
 
-    protected Result(bool isSuccess, IReadOnlyList<Failure> failures)
+    private protected Result(bool isSuccess, IReadOnlyList<Failure> failures)
     {
-        if (failures == null)
-        {
-            throw new ArgumentException("The failures collection cannot be null.", nameof(failures));
-        }
+        ArgumentNullException.ThrowIfNull(failures);
 
         if (isSuccess && failures.Count > 0)
         {

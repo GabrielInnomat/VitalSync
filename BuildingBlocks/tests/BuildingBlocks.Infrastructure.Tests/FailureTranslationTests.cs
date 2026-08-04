@@ -41,7 +41,7 @@ public sealed class FailureTranslationTests
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
-        var result = await sender.Send(new ThrowingCommand(), CancellationToken.None).ConfigureAwait(false);
+        var result = await sender.SendAsync(new ThrowingCommand(), CancellationToken.None).ConfigureAwait(false);
         return result;
     }
 
@@ -49,7 +49,7 @@ public sealed class FailureTranslationTests
 
     private sealed class ThrowingCommandHandler(Exception exception) : ICommandHandler<ThrowingCommand>
     {
-        public Task<Result> Handle(ThrowingCommand command, CancellationToken cancellationToken) => throw exception;
+        public Task<Result> HandleAsync(ThrowingCommand command, CancellationToken cancellationToken) => throw exception;
     }
 
     private sealed class NoOpUnitOfWork : IUnitOfWork

@@ -12,7 +12,7 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
     private static readonly ConcurrentDictionary<DispatcherKey, object> CommandWithResultDispatchers = new();
     private static readonly ConcurrentDictionary<DispatcherKey, object> QueryDispatchers = new();
 
-    public Task<Result> Send(ICommand command, CancellationToken cancellationToken)
+    public Task<Result> SendAsync(ICommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -21,10 +21,10 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
             static type => (CommandDispatcher)Activator.CreateInstance(
                 typeof(CommandDispatcher<>).MakeGenericType(type))!);
 
-        return dispatcher.Dispatch(command, serviceProvider, cancellationToken);
+        return dispatcher.DispatchAsync(command, serviceProvider, cancellationToken);
     }
 
-    public Task<Result<TResult>> Send<TResult>(ICommand<TResult> command, CancellationToken cancellationToken)
+    public Task<Result<TResult>> SendAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -33,10 +33,10 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
             static key => Activator.CreateInstance(
                 typeof(CommandWithResultDispatcher<,>).MakeGenericType(key.Request, key.Result))!);
 
-        return dispatcher.Dispatch(command, serviceProvider, cancellationToken);
+        return dispatcher.DispatchAsync(command, serviceProvider, cancellationToken);
     }
 
-    public Task<Result<TResult>> Send<TResult>(IQuery<TResult> query, CancellationToken cancellationToken)
+    public Task<Result<TResult>> SendAsync<TResult>(IQuery<TResult> query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
 
@@ -45,7 +45,7 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
             static key => Activator.CreateInstance(
                 typeof(QueryDispatcher<,>).MakeGenericType(key.Request, key.Result))!);
 
-        return dispatcher.Dispatch(query, serviceProvider, cancellationToken);
+        return dispatcher.DispatchAsync(query, serviceProvider, cancellationToken);
     }
 
     private static RequestPipelineContinuation<TResponse> BuildPipeline<TRequest, TResponse>(
@@ -64,7 +64,7 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
         {
             var next = pipeline;
             var current = behavior;
-            pipeline = cancellationToken => current.Handle(request, next, cancellationToken);
+            pipeline = cancellationToken => current.HandleAsync(request, next, cancellationToken);
         }
 
         return pipeline;
@@ -72,19 +72,19 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
 
     private abstract class CommandDispatcher
     {
-        public abstract Task<Result> Dispatch(ICommand command, IServiceProvider services, CancellationToken cancellationToken);
+        public abstract Task<Result> DispatchAsync(ICommand command, IServiceProvider services, CancellationToken cancellationToken);
     }
 
     private sealed class CommandDispatcher<TCommand> : CommandDispatcher
         where TCommand : ICommand
     {
-        public override Task<Result> Dispatch(ICommand command, IServiceProvider services, CancellationToken cancellationToken)
+        public override Task<Result> DispatchAsync(ICommand command, IServiceProvider services, CancellationToken cancellationToken)
         {
             var typedCommand = (TCommand)command;
             var handler = services.GetRequiredService<ICommandHandler<TCommand>>();
             var pipeline = BuildPipeline<TCommand, Result>(
                 typedCommand,
-                ct => handler.Handle(typedCommand, ct),
+                ct => handler.HandleAsync(typedCommand, ct),
                 services);
             return pipeline(cancellationToken);
         }
@@ -92,19 +92,19 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
 
     private abstract class CommandWithResultDispatcher<TResult>
     {
-        public abstract Task<Result<TResult>> Dispatch(ICommand<TResult> command, IServiceProvider services, CancellationToken cancellationToken);
+        public abstract Task<Result<TResult>> DispatchAsync(ICommand<TResult> command, IServiceProvider services, CancellationToken cancellationToken);
     }
 
     private sealed class CommandWithResultDispatcher<TCommand, TResult> : CommandWithResultDispatcher<TResult>
         where TCommand : ICommand<TResult>
     {
-        public override Task<Result<TResult>> Dispatch(ICommand<TResult> command, IServiceProvider services, CancellationToken cancellationToken)
+        public override Task<Result<TResult>> DispatchAsync(ICommand<TResult> command, IServiceProvider services, CancellationToken cancellationToken)
         {
             var typedCommand = (TCommand)command;
             var handler = services.GetRequiredService<ICommandHandler<TCommand, TResult>>();
             var pipeline = BuildPipeline<TCommand, Result<TResult>>(
                 typedCommand,
-                ct => handler.Handle(typedCommand, ct),
+                ct => handler.HandleAsync(typedCommand, ct),
                 services);
             return pipeline(cancellationToken);
         }
@@ -112,19 +112,19 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
 
     private abstract class QueryDispatcher<TResult>
     {
-        public abstract Task<Result<TResult>> Dispatch(IQuery<TResult> query, IServiceProvider services, CancellationToken cancellationToken);
+        public abstract Task<Result<TResult>> DispatchAsync(IQuery<TResult> query, IServiceProvider services, CancellationToken cancellationToken);
     }
 
     private sealed class QueryDispatcher<TQuery, TResult> : QueryDispatcher<TResult>
         where TQuery : IQuery<TResult>
     {
-        public override Task<Result<TResult>> Dispatch(IQuery<TResult> query, IServiceProvider services, CancellationToken cancellationToken)
+        public override Task<Result<TResult>> DispatchAsync(IQuery<TResult> query, IServiceProvider services, CancellationToken cancellationToken)
         {
             var typedQuery = (TQuery)query;
             var handler = services.GetRequiredService<IQueryHandler<TQuery, TResult>>();
             var pipeline = BuildPipeline<TQuery, Result<TResult>>(
                 typedQuery,
-                ct => handler.Handle(typedQuery, ct),
+                ct => handler.HandleAsync(typedQuery, ct),
                 services);
             return pipeline(cancellationToken);
         }

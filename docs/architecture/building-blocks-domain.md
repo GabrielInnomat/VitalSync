@@ -27,18 +27,19 @@ The block provides a **single aggregate authoring model**: every aggregate deriv
 | `IDomainEventRaiser`                      | interface       | The aggregate-internal channel a child raises through (explicit, never called by application code). |
 | `AggregateState<TSelf, TKey>`             | abstract record | An aggregate's state: owns the identity, the version, and the event-apply ("evolve") logic. |
 | `IAggregateRoot<TKey>`                    | interface       | Marker for an aggregate root; exposes events **read-only**.                          |
-| `IEventSourcedAggregateRoot<TKey>`        | interface       | Infrastructure-only capability exposing `Version` + `LoadFromHistory` for ES.        |
+| `IEventSourcedAggregateRoot<TKey>`        | interface       | Infrastructure-only capability exposing `LoadFromHistory` for ES replay.               |
 | `AggregateRoot<TKey, TState>`             | abstract class  | The single aggregate base: state fold via `RaiseEvent`, identity derived from state. |
-| `EventSourcedAggregateRoot<TKey, TState>` | abstract class  | Additive base for **event-sourced** aggregates: adds `Version` + `LoadFromHistory`.  |
+| `EventSourcedAggregateRoot<TKey, TState>` | abstract class  | Additive base for **event-sourced** aggregates: adds `LoadFromHistory`, nothing else. |
 | `IHasDomainEvents`                        | interface       | Read-only access to an aggregate's domain events.                                    |
 | `IDomainEventOwner`                       | interface       | Privileged contract that can **clear** events (infrastructure-only, explicit).       |
-| `IStateOwner`                             | interface       | Privileged access to the aggregate's state object (infrastructure-only, explicit).   |
+| `IStateOwner`                             | interface       | Privileged access to the aggregate's state object **and its `Version`** (infrastructure-only, explicit). |
 | `IDomainEvent`                            | interface       | Pure business event marker — no identity fields (ADR-0029).                          |
 | `DomainEvent`                             | abstract record | Convenience base; identity travels on the envelope, not the event.                   |
 | `IClock`                                  | interface       | Abstraction over "now" for deterministic time.                                       |
 | `IBusinessRule`                           | interface       | An invariant that can be _broken_.                                                   |
 | `IDomainValidationRule`                   | interface       | A validation constraint that can be _invalid_.                                       |
-| `RuleChecker`                             | static class    | Evaluates rules and throws the matching exception.                                   |
+| `RuleChecker`                             | static class    | Evaluates rules and throws the matching exception; a `null` rule throws.           |
+| `KebabCase`                               | static class    | The single kebab-case validator, shared by persisted names and integration-event topics. |
 | `BusinessRuleViolationException`          | exception       | Raised when a business rule is broken.                                               |
 | `DomainValidationException`               | exception       | Raised when a domain validation rule is invalid.                                     |
 
@@ -285,7 +286,7 @@ public abstract class EventSourcedAggregateRoot<TKey, TState>
 
 - It adds an internal version (stream position) that advances on every raise/replay.
 - It adds `LoadFromHistory(history)` — replay a persisted stream to rebuild state (rehydration; records nothing).
-- It implements `IEventSourcedAggregateRoot<TKey>` (`Version` + `LoadFromHistory`) **explicitly**, so those event-sourcing members are **not** on a concrete aggregate's public surface — a caller must deliberately cast to reach them.
+- It implements `IEventSourcedAggregateRoot<TKey>` (`LoadFromHistory`) **explicitly**, so replay is **not** on a concrete aggregate's public surface — a caller must deliberately cast to reach it. The aggregate's `Version` is **not** part of this interface: since [ADR-0030](./decisions/0030-persisted-names-and-aggregate-version.md) every aggregate carries one on its state, readable through `IStateOwner.Version`. Duplicating it here would have meant two names for one number.
 
 Choosing the event-sourced base is a statement that the aggregate's **event history itself carries business value**. Because the authoring model is identical, moving an aggregate between the two worlds is a base-class change plus a composition-layer change — the business logic, state type, and tests stay untouched ([ADR-0025](./decisions/0025-unified-state-fold-aggregate-model.md)).
 
@@ -324,7 +325,8 @@ void IDomainEventOwner.ClearDomainEvents() => _domainEvents.Clear();
 The same explicit-implementation technique hides the event-sourcing capability on the ES base:
 
 ```text
-IEventSourcedAggregateRoot<TKey>  → long Version; void LoadFromHistory(...)   (ES infrastructure only)
+IEventSourcedAggregateRoot<TKey>  → void LoadFromHistory(...)                  (ES infrastructure only)
+IStateOwner                       → long Version; object State; Restore(...)   (persistence only)
 ```
 
 Both `ClearDomainEvents` and the ES members are reachable **only** by code that deliberately casts to the respective interface — by convention, the persistence layer.
@@ -348,7 +350,7 @@ The private constructor keeps `new Widget()` a compile error everywhere, so the 
 
 ### Access matrix (event-sourced base)
 
-| Caller holds…                             | Read events? | Clear events?              | Raise events?               | ES members (`Version`/`LoadFromHistory`)? |
+| Caller holds…                             | Read events? | Clear events?              | Raise events?               | `LoadFromHistory`? |
 | ----------------------------------------- | ------------ | -------------------------- | --------------------------- | ----------------------------------------- |
 | The concrete aggregate (e.g. `Recipe`)    | ✅           | ❌ (not on surface)        | ❌ (only internally)        | ❌ (not on surface)                       |
 | `IAggregateRoot<TKey>`                    | ✅           | ❌                         | ❌                          | ❌                                        |
@@ -357,7 +359,7 @@ The private constructor keeps `new Widget()` a compile error everywhere, so the 
 | `IEventSourcedAggregateRoot<TKey>` (cast) | ✅           | ❌                         | ❌                          | ✅                                        |
 | A subclass of the ES base                 | ✅           | ❌ (explicit, not visible) | ✅ (`protected RaiseEvent`) | ❌ (explicit, not visible)                |
 
-> The state-stored base is identical except that it has no `IEventSourcedAggregateRoot<TKey>` members at all (last column is not applicable).
+> The state-stored base is identical except that it has no `IEventSourcedAggregateRoot<TKey>` members at all (last column is not applicable). The aggregate's `Version` is missing from this matrix on purpose: it is not an event-sourcing member. Both bases carry it on their state, and both expose it the same way, through the explicitly implemented `IStateOwner` ([ADR-0030](./decisions/0030-persisted-names-and-aggregate-version.md)).
 
 ### Why clearing (and ES capability) is separated
 
@@ -423,6 +425,13 @@ Two distinct concepts, each with its own rule interface and exception:
 RuleChecker.Check(new RecipeNameMustNotBeEmpty(name));
 RuleChecker.Check(rule1, rule2, rule3);
 ```
+
+**A `null` rule is a bug, not a satisfied rule.** Every overload guards its argument with
+`ArgumentNullException.ThrowIfNull`, and the `params` overloads guard the array as well. The
+earlier `rule?.IsBroken() == true` kept guard clauses short at the price of the validation layer
+falling silent in exactly the case it exists for — a factory that accidentally returns `null` used
+to mean "rule passed". Short-circuiting is unchanged: the first broken rule throws and the
+remaining rules are never evaluated.
 
 See [ADR-0009](./decisions/0009-business-rules-and-domain-validation.md).
 
@@ -490,7 +499,7 @@ Switching this aggregate between the two worlds means changing its base class an
 4. **Identity validation is type-agnostic**, driven by `IEntityKey.IsEmpty`. Entities validate in the constructor; aggregates validate at **every transition** (no post-creation check).
 5. Equality is **identity-based** and type-sensitive, implemented once on `EntityBase<TKey>`.
 6. Aggregates **own** their events; outsiders read only; clearing is **explicit** and infrastructure-only.
-7. **Event-sourcing capability** (`Version`/`LoadFromHistory`) is exposed via **explicit** `IEventSourcedAggregateRoot<TKey>` implementation — off the public surface — and `LoadFromHistory` is guarded against replay misuse (throws if uncommitted events exist), which keeps snapshotting possible.
+7. **Event-sourcing capability** (`LoadFromHistory`, and nothing else) is exposed via **explicit** `IEventSourcedAggregateRoot<TKey>` implementation — off the public surface — and is guarded against replay misuse (throws if uncommitted events exist), which keeps snapshotting possible. The `Version` is **not** part of it: every aggregate carries one on its state, read through `IStateOwner` (ADR-0030).
 8. Domain events are **pure value records** without identity fields; identity lives on the envelope (ADR-0029).
 9. Business rules and domain validation are **distinct**, with distinct exceptions.
 

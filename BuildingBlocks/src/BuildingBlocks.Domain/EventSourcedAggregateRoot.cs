@@ -5,10 +5,10 @@ public abstract class EventSourcedAggregateRoot<TKey, TState>(TState initialStat
     where TKey : struct, IEntityKey
     where TState : AggregateState<TState, TKey>
 {
-    long IEventSourcedAggregateRoot<TKey>.Version => State.Version;
-
     void IEventSourcedAggregateRoot<TKey>.LoadFromHistory(IEnumerable<IDomainEvent> history)
     {
+        ArgumentNullException.ThrowIfNull(history);
+
         if (DomainEvents.Count > 0)
         {
             throw new InvalidOperationException(

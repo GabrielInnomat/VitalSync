@@ -14,7 +14,7 @@ public sealed class WidgetCreatedConsumer
         ArgumentNullException.ThrowIfNull(message);
         ArgumentNullException.ThrowIfNull(sender);
 
-        var result = await sender.Send(new MirrorWidget(message.WidgetId, message.Name), cancellationToken)
+        var result = await sender.SendAsync(new MirrorWidget(message.WidgetId, message.Name), cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)

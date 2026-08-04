@@ -2,9 +2,9 @@ namespace BuildingBlocks.Application;
 
 public interface ISender
 {
-    Task<Result> Send(ICommand command, CancellationToken cancellationToken);
+    Task<Result> SendAsync(ICommand command, CancellationToken cancellationToken);
 
-    Task<Result<TResult>> Send<TResult>(ICommand<TResult> command, CancellationToken cancellationToken);
+    Task<Result<TResult>> SendAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken);
 
-    Task<Result<TResult>> Send<TResult>(IQuery<TResult> query, CancellationToken cancellationToken);
+    Task<Result<TResult>> SendAsync<TResult>(IQuery<TResult> query, CancellationToken cancellationToken);
 }

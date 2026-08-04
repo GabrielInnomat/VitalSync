@@ -1,17 +1,17 @@
 namespace BuildingBlocks.Domain.Tests.TestDoubles;
 
-internal sealed class ReconstitutableAggregate
+internal sealed class ReconstitutedAggregate
     : AggregateRoot<TestId, TestState>
 {
-    private ReconstitutableAggregate() : base(TestState.Empty)
+    private ReconstitutedAggregate() : base(TestState.Empty)
     {
     }
 
     public TestState CurrentState => State;
 
-    public static ReconstitutableAggregate Create(int value)
+    public static ReconstitutedAggregate Create(int value)
     {
-        var aggregate = new ReconstitutableAggregate();
+        var aggregate = new ReconstitutedAggregate();
         aggregate.RaiseEvent(new TestDomainEvent(value));
         return aggregate;
     }

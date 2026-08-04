@@ -40,7 +40,7 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
         using (var scope = host.Services.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            var result = await sender.Send(new CreateFlushCounter(id), TestContext.Current.CancellationToken);
+            var result = await sender.SendAsync(new CreateFlushCounter(id), TestContext.Current.CancellationToken);
             Assert.True(result.IsSuccess);
         }
 
@@ -83,7 +83,7 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
                 TestContext.Current.CancellationToken);
 
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            var result = await sender.Send(new StartFlushProbe(id), TestContext.Current.CancellationToken);
+            var result = await sender.SendAsync(new StartFlushProbe(id), TestContext.Current.CancellationToken);
             Assert.True(result.IsSuccess);
         }
 
@@ -121,7 +121,7 @@ public sealed record CreateFlushCounter(Guid Id) : ICommand;
 public sealed class CreateFlushCounterHandler(IRepository<FlushCounter, FlushCounterId> repository)
     : ICommandHandler<CreateFlushCounter>
 {
-    public async Task<Result> Handle(CreateFlushCounter command, CancellationToken cancellationToken)
+    public async Task<Result> HandleAsync(CreateFlushCounter command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
         await repository.AddAsync(FlushCounter.Create(new FlushCounterId(command.Id)), cancellationToken);
@@ -131,7 +131,7 @@ public sealed class CreateFlushCounterHandler(IRepository<FlushCounter, FlushCou
 
 public sealed class FlushCounterProjection(FlushDeliverySignal signal) : IProjectionHandler<FlushCounterCreated>
 {
-    public Task Handle(FlushCounterCreated domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
+    public Task HandleAsync(FlushCounterCreated domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
         signal.MarkDelivered(domainEvent);
         return Task.CompletedTask;
@@ -177,7 +177,7 @@ public sealed record StartFlushProbe(Guid Id) : ICommand;
 public sealed class StartFlushProbeHandler(IRepository<FlushProbe, FlushProbeId> repository)
     : ICommandHandler<StartFlushProbe>
 {
-    public async Task<Result> Handle(StartFlushProbe command, CancellationToken cancellationToken)
+    public async Task<Result> HandleAsync(StartFlushProbe command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
         await repository.AddAsync(FlushProbe.Create(new FlushProbeId(command.Id)), cancellationToken);
@@ -187,7 +187,7 @@ public sealed class StartFlushProbeHandler(IRepository<FlushProbe, FlushProbeId>
 
 public sealed class FlushProbeProjection(FlushDeliverySignal signal) : IProjectionHandler<FlushProbeStarted>
 {
-    public Task Handle(FlushProbeStarted domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
+    public Task HandleAsync(FlushProbeStarted domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
         signal.MarkDelivered(domainEvent);
         return Task.CompletedTask;
@@ -205,7 +205,7 @@ public sealed record RenameFlushProbe(Guid Id, string Name) : ICommand;
 public sealed class RenameFlushProbeHandler(IRepository<FlushProbe, FlushProbeId> repository)
     : ICommandHandler<RenameFlushProbe>
 {
-    public async Task<Result> Handle(RenameFlushProbe command, CancellationToken cancellationToken)
+    public async Task<Result> HandleAsync(RenameFlushProbe command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 

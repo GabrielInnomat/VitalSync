@@ -13,7 +13,7 @@
 | 7   | `DomainEventStamper` erkennt „unstamped" über Sentinel         | gelöst |
 | 8   | Connection String zweimal, ohne Abgleich                       | gelöst |
 | 9   | `AddBuildingBlocks` ist nicht idempotent                       | offen  |
-| 10  | `RuleChecker` schluckt `null`                                  | offen  |
+| 10  | `RuleChecker` schluckt `null`                                  | gelöst |
 | 11  | Optionale Constructor-Injection für `IUnitOfWork`              | offen  |
 | 12  | Nur `Failures[0]` erreicht den Client                          | offen  |
 | 13  | Global sequentielle Domain-Event-Queue                         | offen  |

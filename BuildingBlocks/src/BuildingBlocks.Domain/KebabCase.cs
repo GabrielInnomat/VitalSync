@@ -1,4 +1,4 @@
-namespace BuildingBlocks.Application;
+namespace BuildingBlocks.Domain;
 
 public static class KebabCase
 {

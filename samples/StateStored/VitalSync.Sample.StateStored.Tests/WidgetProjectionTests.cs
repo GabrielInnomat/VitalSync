@@ -14,10 +14,10 @@ public sealed class WidgetProjectionTests
         var id = WidgetId.New();
         var created = new WidgetCreated(id, "first");
 
-        await new WidgetCreatedProjection(context).Handle(created, MetadataFor(id, 1), TestContext.Current.CancellationToken);
-        await new WidgetRenamedProjection(context).Handle(
+        await new WidgetCreatedProjection(context).HandleAsync(created, MetadataFor(id, 1), TestContext.Current.CancellationToken);
+        await new WidgetRenamedProjection(context).HandleAsync(
             new WidgetRenamed(id, "second", 1), MetadataFor(id, 2), TestContext.Current.CancellationToken);
-        await new WidgetCreatedProjection(context).Handle(created, MetadataFor(id, 1), TestContext.Current.CancellationToken);
+        await new WidgetCreatedProjection(context).HandleAsync(created, MetadataFor(id, 1), TestContext.Current.CancellationToken);
 
         var row = await context.Widgets.SingleAsync(TestContext.Current.CancellationToken);
         Assert.Equal("second", row.Name);
@@ -31,9 +31,9 @@ public sealed class WidgetProjectionTests
         await using var context = NewContext();
         var id = WidgetId.New();
 
-        await new WidgetRenamedProjection(context).Handle(
+        await new WidgetRenamedProjection(context).HandleAsync(
             new WidgetRenamed(id, "second", 1), MetadataFor(id, 2), TestContext.Current.CancellationToken);
-        await new WidgetCreatedProjection(context).Handle(
+        await new WidgetCreatedProjection(context).HandleAsync(
             new WidgetCreated(id, "first"), MetadataFor(id, 1), TestContext.Current.CancellationToken);
 
         var row = await context.Widgets.SingleAsync(TestContext.Current.CancellationToken);
@@ -48,8 +48,8 @@ public sealed class WidgetProjectionTests
         var id = WidgetId.New();
         var projection = new WidgetRenamedProjection(context);
 
-        await projection.Handle(new WidgetRenamed(id, "third", 2), MetadataFor(id, 3), TestContext.Current.CancellationToken);
-        await projection.Handle(new WidgetRenamed(id, "second", 1), MetadataFor(id, 2), TestContext.Current.CancellationToken);
+        await projection.HandleAsync(new WidgetRenamed(id, "third", 2), MetadataFor(id, 3), TestContext.Current.CancellationToken);
+        await projection.HandleAsync(new WidgetRenamed(id, "second", 1), MetadataFor(id, 2), TestContext.Current.CancellationToken);
 
         var row = await context.Widgets.SingleAsync(TestContext.Current.CancellationToken);
         Assert.Equal("third", row.Name);
@@ -66,15 +66,15 @@ public sealed class WidgetProjectionTests
         var second = WidgetPartId.New();
         var token = TestContext.Current.CancellationToken;
 
-        await new WidgetCreatedProjection(context).Handle(new WidgetCreated(id, "first"), MetadataFor(id, 1), token);
+        await new WidgetCreatedProjection(context).HandleAsync(new WidgetCreated(id, "first"), MetadataFor(id, 1), token);
         await new WidgetPartAddedProjection(context)
-            .Handle(new WidgetPartAdded(id, first, "bolt", 3), MetadataFor(id, 2), token);
+            .HandleAsync(new WidgetPartAdded(id, first, "bolt", 3), MetadataFor(id, 2), token);
         await new WidgetPartAddedProjection(context)
-            .Handle(new WidgetPartAdded(id, second, "nut", 1), MetadataFor(id, 3), token);
+            .HandleAsync(new WidgetPartAdded(id, second, "nut", 1), MetadataFor(id, 3), token);
         await new WidgetPartQuantityChangedProjection(context)
-            .Handle(new WidgetPartQuantityChanged(id, first, 7, 3), MetadataFor(id, 4), token);
+            .HandleAsync(new WidgetPartQuantityChanged(id, first, 7, 3), MetadataFor(id, 4), token);
         await new WidgetPartRemovedProjection(context)
-            .Handle(new WidgetPartRemoved(id, second, 1), MetadataFor(id, 5), token);
+            .HandleAsync(new WidgetPartRemoved(id, second, 1), MetadataFor(id, 5), token);
 
         var row = await context.Widgets.SingleAsync(token);
         Assert.Equal(1, row.PartCount);
@@ -91,9 +91,9 @@ public sealed class WidgetProjectionTests
         var token = TestContext.Current.CancellationToken;
         var added = new WidgetPartAdded(id, partId, "bolt", 3);
 
-        await new WidgetCreatedProjection(context).Handle(new WidgetCreated(id, "first"), MetadataFor(id, 1), token);
-        await new WidgetPartAddedProjection(context).Handle(added, MetadataFor(id, 2), token);
-        await new WidgetPartAddedProjection(context).Handle(added, MetadataFor(id, 2), token);
+        await new WidgetCreatedProjection(context).HandleAsync(new WidgetCreated(id, "first"), MetadataFor(id, 1), token);
+        await new WidgetPartAddedProjection(context).HandleAsync(added, MetadataFor(id, 2), token);
+        await new WidgetPartAddedProjection(context).HandleAsync(added, MetadataFor(id, 2), token);
 
         var row = await context.Widgets.SingleAsync(token);
         Assert.Equal(1, row.PartCount);

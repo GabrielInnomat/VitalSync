@@ -47,6 +47,6 @@ internal sealed class MartenEventSourcedRepository<TAggregate, TKey>(IDocumentSe
             (IDomainEventOwner)aggregate,
             aggregateName,
             EntityKeyFormatter.GetKeyValue(aggregate.Id),
-            () => ((IEventSourcedAggregateRoot<TKey>)aggregate).Version);
+            () => ((IStateOwner)aggregate).Version);
     }
 }

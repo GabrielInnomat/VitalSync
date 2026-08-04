@@ -50,7 +50,7 @@ eine Entscheidung, keinen Code.
 | TODO-14 | Idempotenz-Bookkeeping über die Kontextgrenze                  | **P2** | offen             | IMP-11, WS-12                         |
 | TODO-15 | Mehrfachfehler und Feldvalidierung end-to-end                  | **P2** | offen             | IMP-16, IMP-17, hacky-12              |
 | TODO-16 | `FailureCategory` fehlen Autorisierung und Unerwartet          | **P2** | offen             | IMP-18                                |
-| TODO-17 | `RuleChecker` schluckt `null`                                  | **P2** | offen             | hacky-10, IMP-36                      |
+| TODO-17 | `RuleChecker` schluckt `null`                                  | **P2** | **gelöst**        | hacky-10, IMP-36                      |
 | TODO-18 | `AddBuildingBlocks` ist nicht idempotent                       | **P2** | offen             | hacky-9                               |
 | TODO-19 | `ApplyEntityKeyConversions` scannt und mappt zu viel           | **P2** | offen             | hacky-4, WS-15                        |
 | TODO-20 | Global sequentielle Domain-Event-Queue                         | **P2** | offen             | hacky-13, IMP-25                      |
@@ -65,7 +65,7 @@ eine Entscheidung, keinen Code.
 | TODO-29 | `DomainEventPublisher` koppelt Projektion und Integration-Publikation     | **P3** | offen             | IMP-26                                |
 | TODO-30 | `IIntegrationEventMapper` ist untypisiert                      | **P3** | offen             | IMP-12                                |
 | TODO-31 | `Result` hat keine Kombinatoren                                | **P3** | offen             | IMP-34                                |
-| TODO-32 | Async-Suffix ist inkonsistent                                  | **P3** | offen             | IMP-37                                |
+| TODO-32 | Async-Suffix ist inkonsistent                                  | **P3** | **gelöst**        | IMP-37                                |
 | TODO-33 | Ein Assembly für alle Persistenz-Pakete                        | **P3** | offen             | IMP-19                                |
 | TODO-34 | Keine zentrale Paketverwaltung                                 | **P3** | offen             | IMP-47                                |
 | TODO-35 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`     | **P3** | offen             | WS-04                                 |
@@ -935,7 +935,7 @@ compile-time-vollständigkeitsgeprüft.
 
 # TODO-17, `RuleChecker` schluckt `null`
 
-**P2 · offen · hacky-10 + IMP-36**
+**P2 · gelöst (2026-08-05) · hacky-10 + IMP-36**
 
 `rule?.IsBroken() == true` und `foreach (var rule in rules ?? [])`
 ([RuleChecker.cs:18-63](BuildingBlocks/src/BuildingBlocks.Domain/RuleChecker.cs:18)). Eine
@@ -959,6 +959,14 @@ public static void Check(IBusinessRule rule)
 Analog für die `params`-Überladung und für `IDomainValidationRule`. Bestehende Tests, die die
 Null-Toleranz festschreiben, mitziehen. Kleiner Eingriff, entfernt eine stille Sicherheitslücke
 in der Domänenvalidierung.
+
+## Umgesetzt (2026-08-05)
+
+Alle vier Überladungen prüfen ihr Argument mit `ArgumentNullException.ThrowIfNull`; die
+`params`-Varianten prüfen zusätzlich das Array selbst. Es gab **keinen** Test, der die alte
+Null-Toleranz festschrieb — sechs neue Fakten in `RuleCheckerTests` decken die Lücke jetzt ab,
+darunter zwei, die belegen, dass eine `null`-Regel *inmitten* eines `params`-Arrays die
+nachfolgenden Regeln gar nicht erst auswertet.
 
 ---
 
@@ -1334,7 +1342,7 @@ schlank bleibt.
 
 # TODO-32, Async-Suffix ist inkonsistent
 
-**P3 · offen · IMP-37**
+**P3 · gelöst (2026-08-05) · IMP-37**
 
 `Handle` ohne Suffix in `ICommandHandler`, `IQueryHandler`, `IProjectionHandler`,
 `IPipelineBehavior` — dagegen `GetByIdAsync`, `AddAsync`, `CommitAsync`, `PublishAsync` mit
@@ -1352,6 +1360,21 @@ Task<Result> HandleAsync(TCommand command, CancellationToken cancellationToken);
 Breaking Change über alle Handler, aber rein mechanisch und ohne Verhaltensänderung. **Jetzt
 billig, mit dem ersten Produktions-Service teuer** — deshalb P3 statt P4. Entscheidung in die
 `.editorconfig`-Konventionen bzw. eine kurze ADR.
+
+## Umgesetzt (2026-08-05)
+
+`ICommandHandler`, `IQueryHandler`, `IProjectionHandler` und `IPipelineBehavior` heißen jetzt
+`HandleAsync`, `ISender` heißt `SendAsync`. 33 Dateien, rein mechanisch — der Compiler war das
+Gerüst: erst die vier Verträge umbenennen, dann jede Bruchstelle abarbeiten.
+
+**Eine Falle, die der Compiler *nicht* zeigt:** Wolverine entdeckt Handler über den
+**Methodennamen**. `DomainEventEnvelopeHandler.Handle` und der Sample-Consumer
+`WidgetCreatedConsumer.Handle` implementieren **kein** Building-Blocks-Interface, sondern erfüllen
+Wolverines Konvention — sie behalten `Handle` und wurden nach einem versehentlichen Rename wieder
+zurückgesetzt. Wolverine akzeptiert zwar auch `HandleAsync`, aber die Konvention eines fremden
+Frameworks ist kein Ort für unsere Namenspolitik. Regel für die Zukunft: **nur Methoden umbenennen,
+die einen unserer Verträge implementieren.** Ebenfalls geprüft: Es gibt keinen
+Reflection-Zugriff auf den Namen `"Handle"`, der still gebrochen wäre.
 
 ---
 
@@ -1572,6 +1595,23 @@ Ergebnismodell, Persistenz-Ports und Event-Ports unsortiert nebeneinander.
 Die Ordnerstruktur der Infrastructure übertragen (`Cqrs/`, `Results/`, `Persistence/`, `Events/`
 bzw. `Model/`, `Identity/`, `Events/`, `Rules/`). Namespaces bewusst **nicht** mitziehen, sonst
 wird aus einer Aufräumaktion ein Breaking Change für jeden Service.
+
+## Der Lösungsvorschlag ist so nicht umsetzbar (Befund 2026-08-05)
+
+Die Wurzel-`.editorconfig` setzt `dotnet_style_namespace_match_folder = true:error`, und
+`Directory.Build.props` schaltet `EnforceCodeStyleInBuild` ein. **Ordner ohne passenden Namespace
+sind damit ein Build-Fehler (IDE0130)** — die Sparvariante „Ordner ja, Namespaces nein" existiert
+in diesem Repository nicht. Es bleiben drei ehrliche Optionen: Ordner **samt** Namespaces (und
+damit der Breaking Change, den der Vorschlag vermeiden wollte), gar keine Ordner, oder nur
+`Application` aufteilen.
+
+Abzuwägen ist dabei ein Kostenpunkt, den der Vorschlag nicht nennt: In `Infrastructure` ist fast
+alles `internal`, die Namespaces sind für Konsumenten also unsichtbar. In `Domain`/`Application`
+ist **alles public**; aus dem einen `using BuildingBlocks.Domain;` würden in jeder Aggregat-Datei
+jedes Services drei bis vier usings — dauerhaft, in genau dem Code, der am häufigsten geschrieben
+wird. Dem steht ein geringerer Nutzen gegenüber als bei `Infrastructure`: dort lagen wirklich
+verschiedene Anliegen nebeneinander (Persistenz, Messaging, DI, Prüfungen), hier sind es 30
+winzige Dateien mit einem einzigen Anliegen — dem Domänenmodell.
 
 ---
 

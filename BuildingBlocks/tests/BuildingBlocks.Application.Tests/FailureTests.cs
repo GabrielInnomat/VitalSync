@@ -80,4 +80,11 @@ public sealed class FailureTests
 
         Assert.Equal(a, b);
     }
+
+    [Fact]
+    public void Constructor_WithUndeclaredCategory_Throws()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new Failure("code", "message", (FailureCategory)99));
+    }
 }

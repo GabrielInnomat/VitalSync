@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-24
+- **Amended:** 2026-08-06 (a `null` rule throws — see the note below)
 
 ## Context
 
@@ -40,3 +41,16 @@ Rules are small, named, self-describing types carrying their own `Message`.
 - **A single rule interface / single exception:** simpler, but loses the business-vs-validation distinction that callers need.
 - **Inline `if` + `throw`:** scatters invariants through the code, harder to reuse and test, and less self-documenting.
 - **Returning a result object instead of throwing:** reasonable in the application layer, but within the domain a thrown exception keeps invariant enforcement unambiguous and prevents an aggregate from continuing in an invalid state.
+
+## Amendment, 2026-08-06: a `null` rule is a bug, not a satisfied rule
+
+`RuleChecker` evaluated `rule?.IsBroken() == true`, so a `null` rule passed silently. That is the
+one failure mode the validation layer exists to prevent: a factory that accidentally returns
+`null` — a mistyped conditional, a not-yet-assigned field, a collection initialiser with a hole —
+produced a *valid* domain object instead of an exception, and the resulting bad state surfaced
+much later, far from its cause.
+
+All four overloads now guard with `ArgumentNullException.ThrowIfNull`, and the `params`
+overloads guard the array itself as well. Nothing else changes: the first broken rule still
+throws and the remaining rules are still not evaluated. No test had pinned the old tolerance,
+which is itself evidence that it was never a decision.

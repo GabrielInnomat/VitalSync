@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-03
+- **Amended:** 2026-08-06 (the version has exactly one source, `IStateOwner` — see the note below)
 
 ## Context
 
@@ -161,3 +162,19 @@ ignores anything at or below that watermark.
   build integration and the debugging of generated code — and it would leave the guard in place.
 - **Leave projections on `Handle(TEvent, ct)`.** Smaller change, but the version would reach the
   envelope and die there, leaving ADR-0022's requirement as unbacked prose.
+
+## Amendment, 2026-08-06: the version has exactly one source
+
+This ADR moved the version onto the state and, for continuity, left it readable through both
+the infrastructure-only `IStateOwner.Version` and the event-sourced
+`IEventSourcedAggregateRoot.Version`. Two members returning the same field is one member too
+many: `EventSourcedAggregateRoot` had to re-implement a property whose value it does not own,
+and a reader had to check both declarations to learn that they cannot disagree.
+
+`IEventSourcedAggregateRoot<TKey>` now declares `LoadFromHistory` and nothing else — it is
+purely the replay capability, which is the only thing event sourcing actually adds. Every
+version read, in Building Blocks and in tests, goes through `((IStateOwner)aggregate).Version`,
+the same way both repositories already read it. The state-stored path never had a second
+source, so this also removes the last asymmetry between the two persistence paths.
+
+Line 93 above, which names both members as the version's sources, is superseded by this note.

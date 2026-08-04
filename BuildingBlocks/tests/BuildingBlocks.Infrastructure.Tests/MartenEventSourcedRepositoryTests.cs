@@ -44,7 +44,7 @@ public sealed class MartenEventSourcedRepositoryTests(PostgreSqlFixture fixture)
 
             Assert.NotNull(reloaded);
             Assert.Equal(5, reloaded!.Total);
-            Assert.Equal(2, ((IEventSourcedAggregateRoot<CounterId>)reloaded).Version);
+            Assert.Equal(2, ((IStateOwner)reloaded).Version);
         }
     }
 
@@ -74,7 +74,7 @@ public sealed class MartenEventSourcedRepositoryTests(PostgreSqlFixture fixture)
             var reloaded = await repository.GetByIdAsync(id, TestContext.Current.CancellationToken);
 
             Assert.Equal(8, reloaded!.Total);
-            Assert.Equal(3, ((IEventSourcedAggregateRoot<CounterId>)reloaded).Version);
+            Assert.Equal(3, ((IStateOwner)reloaded).Version);
         }
     }
 

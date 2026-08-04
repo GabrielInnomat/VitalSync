@@ -1,3 +1,5 @@
+using BuildingBlocks.Domain;
+
 namespace BuildingBlocks.Application;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]

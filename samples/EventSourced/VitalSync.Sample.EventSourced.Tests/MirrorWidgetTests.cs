@@ -18,7 +18,7 @@ public sealed class MirrorWidgetTests
         _repository.GetByIdAsync(Arg.Any<GadgetId>(), Arg.Any<CancellationToken>()).Returns((Gadget?)null);
 
         var result = await new MirrorWidgetHandler(_repository)
-            .Handle(new MirrorWidget(widgetId, "mirrored"), TestContext.Current.CancellationToken);
+            .HandleAsync(new MirrorWidget(widgetId, "mirrored"), TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
 
@@ -35,7 +35,7 @@ public sealed class MirrorWidgetTests
             .Returns(Gadget.Create(new GadgetId(widgetId), "mirrored"));
 
         var result = await new MirrorWidgetHandler(_repository)
-            .Handle(new MirrorWidget(widgetId, "mirrored"), TestContext.Current.CancellationToken);
+            .HandleAsync(new MirrorWidget(widgetId, "mirrored"), TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
         await _repository.DidNotReceive().AddAsync(Arg.Any<Gadget>(), Arg.Any<CancellationToken>());
@@ -45,7 +45,7 @@ public sealed class MirrorWidgetTests
     public async Task TheSubscribingHandler_TranslatesTheContractIntoACommand()
     {
         var sender = Substitute.For<ISender>();
-        sender.Send(Arg.Any<ICommand>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
+        sender.SendAsync(Arg.Any<ICommand>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
         var widgetId = Guid.NewGuid();
 
         await WidgetCreatedConsumer.Handle(
@@ -53,7 +53,7 @@ public sealed class MirrorWidgetTests
             sender,
             TestContext.Current.CancellationToken);
 
-        await sender.Received(1).Send(
+        await sender.Received(1).SendAsync(
             Arg.Is<ICommand>(command =>
                 ((MirrorWidget)command).WidgetId == widgetId
                 && ((MirrorWidget)command).Name == "from-state-stored"),
@@ -64,7 +64,7 @@ public sealed class MirrorWidgetTests
     public async Task TheSubscribingHandler_TurnsAFailedCommandIntoAnException()
     {
         var sender = Substitute.For<ISender>();
-        sender.Send(Arg.Any<ICommand>(), Arg.Any<CancellationToken>())
+        sender.SendAsync(Arg.Any<ICommand>(), Arg.Any<CancellationToken>())
             .Returns(Failure.Conflict("gadget.conflict", "someone else got there first"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>

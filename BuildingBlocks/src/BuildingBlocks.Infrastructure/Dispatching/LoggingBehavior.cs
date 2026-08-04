@@ -8,7 +8,7 @@ internal sealed class LoggingBehavior<TRequest, TResponse>(ILogger<LoggingBehavi
     : IPipelineBehavior<TRequest, TResponse>
     where TResponse : Result
 {
-    public async Task<TResponse> Handle(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken cancellationToken)
+    public async Task<TResponse> HandleAsync(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(continuation);
 

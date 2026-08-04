@@ -12,19 +12,19 @@ public sealed record RegistrationEvent : DomainEvent;
 
 public sealed class RegistrationCommandHandler : ICommandHandler<RegistrationCommand>
 {
-    public Task<Result> Handle(RegistrationCommand command, CancellationToken cancellationToken) =>
+    public Task<Result> HandleAsync(RegistrationCommand command, CancellationToken cancellationToken) =>
         Task.FromResult(Result.Success());
 }
 
 public sealed class RegistrationQueryHandler : IQueryHandler<RegistrationQuery, int>
 {
-    public Task<Result<int>> Handle(RegistrationQuery query, CancellationToken cancellationToken) =>
+    public Task<Result<int>> HandleAsync(RegistrationQuery query, CancellationToken cancellationToken) =>
         Task.FromResult(Result.Success(0));
 }
 
 public sealed class RegistrationProjectionHandler : IProjectionHandler<RegistrationEvent>
 {
-    public Task Handle(RegistrationEvent domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken) =>
+    public Task HandleAsync(RegistrationEvent domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken) =>
         Task.CompletedTask;
 }
 

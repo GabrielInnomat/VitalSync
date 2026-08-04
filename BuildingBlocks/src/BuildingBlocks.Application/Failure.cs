@@ -4,10 +4,16 @@ public sealed record Failure
 {
     public Failure(string code, string message, FailureCategory category)
     {
-        ArgumentNullException.ThrowIfNull(code);
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
-        ArgumentNullException.ThrowIfNull(message);
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
+
+        if (!Enum.IsDefined(category))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(category),
+                category,
+                "The failure category must be one of the declared values, because the transport layer maps it to a status code.");
+        }
 
         Code = code;
         Message = message;

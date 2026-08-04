@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-07-24
+- **Amended:** 2026-08-06 (awaitable contract methods carry the `Async` suffix — see the note below)
 
 ## Context
 
@@ -76,3 +77,20 @@ dispatcher — so the maintenance cost is low and fully under our control.
 - **No mediator (inject handlers directly)** — viable, but loses a single,
   uniform place to apply cross-cutting pipeline behaviors (e.g. exception-to-Result
   translation). Rejected in favor of a thin dispatcher.
+
+## Amendment, 2026-08-06: awaitable contract methods carry the `Async` suffix
+
+The dispatcher contracts were async-only from the start, but only some of them said so.
+`IUnitOfWork.CommitAsync` and `IRepository.GetByIdAsync` used the suffix while `ISender.Send`,
+`ICommandHandler.Handle`, `IQueryHandler.Handle`, `IProjectionHandler.Handle` and
+`IPipelineBehavior.Handle` did not — the same package teaching two conventions.
+
+All five are renamed to `SendAsync` / `HandleAsync`. This is a breaking rename of public
+contracts, taken now while the only implementors are the samples and Building Blocks itself.
+
+One exception is deliberate and must stay: a method that satisfies **Wolverine's** discovery
+convention rather than one of our contracts keeps the name Wolverine expects. Today that is
+`DomainEventEnvelopeHandler.Handle` and the samples' `WidgetCreatedConsumer.Handle`. Neither
+implements a Building Blocks interface, so the compiler cannot catch a rename there — Wolverine
+would simply stop discovering the handler and messages would be dropped with no route and no
+error. A foreign framework's convention is not a place for our naming policy.

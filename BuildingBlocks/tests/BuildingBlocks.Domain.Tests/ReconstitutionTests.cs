@@ -2,30 +2,30 @@ using BuildingBlocks.Domain.Tests.TestDoubles;
 
 namespace BuildingBlocks.Domain.Tests;
 
-public sealed class ReconstitutableTests
+public sealed class ReconstitutionTests
 {
     [Fact]
-    public void CreateEmpty_ReturnsAnUnidentifiedAggregateWithoutEvents()
+    public void Reconstitute_ReturnsAnUnidentifiedAggregateWithoutEvents()
     {
-        var aggregate = Reconstitute<ReconstitutableAggregate>();
+        var aggregate = Reconstitute<ReconstitutedAggregate>();
 
         Assert.True(aggregate.Id.IsEmpty);
         Assert.Empty(aggregate.DomainEvents);
     }
 
     [Fact]
-    public void CreateEmpty_ReturnsADistinctInstanceEachTime()
+    public void Reconstitute_ReturnsADistinctInstanceEachTime()
     {
-        var first = Reconstitute<ReconstitutableAggregate>();
-        var second = Reconstitute<ReconstitutableAggregate>();
+        var first = Reconstitute<ReconstitutedAggregate>();
+        var second = Reconstitute<ReconstitutedAggregate>();
 
         Assert.NotSame(first, second);
     }
 
     [Fact]
-    public void CreateEmpty_YieldsAHullThatRestoresPersistedState()
+    public void Reconstitute_YieldsAHullThatRestoresPersistedState()
     {
-        var aggregate = Reconstitute<ReconstitutableAggregate>();
+        var aggregate = Reconstitute<ReconstitutedAggregate>();
         var persisted = new TestState(new TestId(42), 42);
 
         ((IStateOwner)aggregate).Restore(persisted);
@@ -37,7 +37,7 @@ public sealed class ReconstitutableTests
     }
 
     [Fact]
-    public void CreateEmpty_YieldsAHullThatReplaysHistory()
+    public void Reconstitute_YieldsAHullThatReplaysHistory()
     {
         var aggregate = Reconstitute<ReconstitutableEventSourcedAggregate>();
 
@@ -45,14 +45,14 @@ public sealed class ReconstitutableTests
             .LoadFromHistory([new TestDomainEvent(1), new TestDomainEvent(2)]);
 
         Assert.Equal(new TestId(2), aggregate.Id);
-        Assert.Equal(2, ((IEventSourcedAggregateRoot<TestId>)aggregate).Version);
+        Assert.Equal(2, ((IStateOwner)aggregate).Version);
         Assert.Empty(aggregate.DomainEvents);
     }
 
     [Fact]
     public void NamedFactory_ProducesAnIdentifiedAggregateThatRecordedItsEvent()
     {
-        var aggregate = ReconstitutableAggregate.Create(7);
+        var aggregate = ReconstitutedAggregate.Create(7);
 
         Assert.Equal(new TestId(7), aggregate.Id);
         Assert.Single(aggregate.DomainEvents);

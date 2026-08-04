@@ -7,7 +7,7 @@ public sealed record GetGadget(GadgetId GadgetId) : IQuery<GadgetView>;
 
 public sealed class GetGadgetHandler(IGadgetReadStore readStore) : IQueryHandler<GetGadget, GadgetView>
 {
-    public async Task<Result<GadgetView>> Handle(GetGadget query, CancellationToken cancellationToken)
+    public async Task<Result<GadgetView>> HandleAsync(GetGadget query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
 

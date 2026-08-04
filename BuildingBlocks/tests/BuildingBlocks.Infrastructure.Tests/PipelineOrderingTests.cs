@@ -29,7 +29,7 @@ public sealed class PipelineOrderingTests
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
-        var result = await sender.Send(new ProbeCommand(), CancellationToken.None);
+        var result = await sender.SendAsync(new ProbeCommand(), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(["outer", "middle", "inner", "handler"], recorder.Entries);
@@ -46,7 +46,7 @@ public sealed class PipelineOrderingTests
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
-        var result = await sender.Send(new ThrowingCommand(), CancellationToken.None);
+        var result = await sender.SendAsync(new ThrowingCommand(), CancellationToken.None);
 
         Assert.True(result.IsFailure);
 
@@ -66,7 +66,7 @@ public sealed class PipelineOrderingTests
 
     private sealed class ProbeCommandHandler(ExecutionRecorder recorder) : ICommandHandler<ProbeCommand>
     {
-        public Task<Result> Handle(ProbeCommand command, CancellationToken cancellationToken)
+        public Task<Result> HandleAsync(ProbeCommand command, CancellationToken cancellationToken)
         {
             recorder.Entries.Add("handler");
             return Task.FromResult(Result.Success());
@@ -80,7 +80,7 @@ public sealed class PipelineOrderingTests
 
     private sealed class ThrowingCommandHandler : ICommandHandler<ThrowingCommand>
     {
-        public Task<Result> Handle(ThrowingCommand command, CancellationToken cancellationToken) =>
+        public Task<Result> HandleAsync(ThrowingCommand command, CancellationToken cancellationToken) =>
             throw new DomainValidationException("Name must not be empty.");
     }
 
@@ -88,7 +88,7 @@ public sealed class PipelineOrderingTests
         : IPipelineBehavior<TRequest, TResponse>
         where TResponse : Result
     {
-        public Task<TResponse> Handle(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken cancellationToken)
+        public Task<TResponse> HandleAsync(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken cancellationToken)
         {
             recorder.Entries.Add(name);
             return continuation(cancellationToken);

@@ -22,6 +22,28 @@ public sealed class ResultOfTTests
     }
 
     [Fact]
+    public void Success_WithNullValue_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => Result<string>.Success(null!));
+    }
+
+    [Fact]
+    public void ImplicitConversion_FromNullValue_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+        {
+            Result<string> result = (string)null!;
+            return result;
+        });
+    }
+
+    [Fact]
+    public void Failure_WithNullFailureList_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => Result<int>.Failure((IReadOnlyList<Failure>)null!));
+    }
+
+    [Fact]
     public void Failure_WithDescription_CreatesFailedResult()
     {
         var failure = Failure.NotFound("recipe.not_found", "The recipe was not found.");

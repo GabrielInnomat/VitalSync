@@ -13,7 +13,7 @@ internal sealed class GadgetGrpcService(ISender sender) : IGadgetService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var result = await sender.Send(new CreateGadget(request.Name), context.CancellationToken)
+        var result = await sender.SendAsync(new CreateGadget(request.Name), context.CancellationToken)
             .ConfigureAwait(false);
 
         return result.IsSuccess
@@ -26,7 +26,7 @@ internal sealed class GadgetGrpcService(ISender sender) : IGadgetService
         ArgumentNullException.ThrowIfNull(request);
 
         var command = new RenameGadget(ParseId(request.GadgetId), request.Name);
-        var result = await sender.Send(command, context.CancellationToken).ConfigureAwait(false);
+        var result = await sender.SendAsync(command, context.CancellationToken).ConfigureAwait(false);
 
         return result.IsSuccess ? new RenameGadgetReply() : throw ToRpcException(result);
     }
@@ -36,7 +36,7 @@ internal sealed class GadgetGrpcService(ISender sender) : IGadgetService
         ArgumentNullException.ThrowIfNull(request);
 
         var command = new RetireGadget(ParseId(request.GadgetId), request.Reason);
-        var result = await sender.Send(command, context.CancellationToken).ConfigureAwait(false);
+        var result = await sender.SendAsync(command, context.CancellationToken).ConfigureAwait(false);
 
         return result.IsSuccess ? new RetireGadgetReply() : throw ToRpcException(result);
     }
@@ -46,7 +46,7 @@ internal sealed class GadgetGrpcService(ISender sender) : IGadgetService
         ArgumentNullException.ThrowIfNull(request);
 
         var query = new GetGadget(ParseId(request.GadgetId));
-        var result = await sender.Send(query, context.CancellationToken).ConfigureAwait(false);
+        var result = await sender.SendAsync(query, context.CancellationToken).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

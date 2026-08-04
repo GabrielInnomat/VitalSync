@@ -43,7 +43,7 @@ internal sealed class ProjectionRunner(IServiceProvider serviceProvider)
             var typedEvent = (TDomainEvent)domainEvent;
             foreach (var handler in services.GetServices<IProjectionHandler<TDomainEvent>>())
             {
-                await handler.Handle(typedEvent, metadata, cancellationToken).ConfigureAwait(false);
+                await handler.HandleAsync(typedEvent, metadata, cancellationToken).ConfigureAwait(false);
             }
         }
     }

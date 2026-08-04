@@ -10,7 +10,7 @@ internal sealed class ExceptionToResultBehavior<TRequest, TResponse> : IPipeline
 
     public const string BusinessRuleFailureCode = "domain.business_rule";
 
-    public async Task<TResponse> Handle(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken cancellationToken)
+    public async Task<TResponse> HandleAsync(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(continuation);
 

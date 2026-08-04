@@ -6,7 +6,7 @@ namespace VitalSync.Sample.EventSourced.Infrastructure.Read;
 
 public sealed class GadgetCreatedProjection(GadgetReadDbContext context) : IProjectionHandler<GadgetCreated>
 {
-    public async Task Handle(GadgetCreated domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
+    public async Task HandleAsync(GadgetCreated domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
         ArgumentNullException.ThrowIfNull(metadata);
@@ -38,7 +38,7 @@ public sealed class GadgetCreatedProjection(GadgetReadDbContext context) : IProj
 
 public sealed class GadgetRenamedProjection(GadgetReadDbContext context) : IProjectionHandler<GadgetRenamed>
 {
-    public async Task Handle(GadgetRenamed domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
+    public async Task HandleAsync(GadgetRenamed domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
         ArgumentNullException.ThrowIfNull(metadata);
@@ -70,7 +70,7 @@ public sealed class GadgetRenamedProjection(GadgetReadDbContext context) : IProj
 
 public sealed class GadgetRetiredProjection(GadgetReadDbContext context) : IProjectionHandler<GadgetRetired>
 {
-    public async Task Handle(GadgetRetired domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
+    public async Task HandleAsync(GadgetRetired domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
         ArgumentNullException.ThrowIfNull(metadata);

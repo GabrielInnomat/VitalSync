@@ -16,7 +16,7 @@ internal sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork? unitO
             typeof(TRequest).GetInterfaces(),
             static @interface => @interface.IsGenericType && @interface.GetGenericTypeDefinition() == typeof(ICommand<>));
 
-    public async Task<TResponse> Handle(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken cancellationToken)
+    public async Task<TResponse> HandleAsync(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(continuation);
 

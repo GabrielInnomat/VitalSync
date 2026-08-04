@@ -93,6 +93,50 @@ public sealed class RuleCheckerTests
     }
 
     [Fact]
+    public void Check_NullBusinessRule_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => RuleChecker.Check((IBusinessRule)null!));
+    }
+
+    [Fact]
+    public void Check_NullValidationRule_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => RuleChecker.Check((IDomainValidationRule)null!));
+    }
+
+    [Fact]
+    public void Check_NullBusinessRuleArray_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => RuleChecker.Check((IBusinessRule[])null!));
+    }
+
+    [Fact]
+    public void Check_NullValidationRuleArray_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => RuleChecker.Check((IDomainValidationRule[])null!));
+    }
+
+    [Fact]
+    public void Check_NullRuleAmongBusinessRules_ThrowsAndDoesNotEvaluateLaterRules()
+    {
+        var later = new FakeBusinessRule(isBroken: true, message: "later");
+
+        Assert.Throws<ArgumentNullException>(() => RuleChecker.Check(null!, later));
+
+        Assert.False(later.Evaluated);
+    }
+
+    [Fact]
+    public void Check_NullRuleAmongValidationRules_ThrowsAndDoesNotEvaluateLaterRules()
+    {
+        var later = new FakeValidationRule(isInvalid: true, message: "later");
+
+        Assert.Throws<ArgumentNullException>(() => RuleChecker.Check(null!, later));
+
+        Assert.False(later.Evaluated);
+    }
+
+    [Fact]
     public void Check_EmptyBusinessRuleParams_DoesNotThrow()
     {
         RuleChecker.Check(Array.Empty<IBusinessRule>());

@@ -5,5 +5,5 @@ namespace BuildingBlocks.Application;
 public interface IProjectionHandler<in TDomainEvent>
     where TDomainEvent : IDomainEvent
 {
-    Task Handle(TDomainEvent domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken);
+    Task HandleAsync(TDomainEvent domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken);
 }

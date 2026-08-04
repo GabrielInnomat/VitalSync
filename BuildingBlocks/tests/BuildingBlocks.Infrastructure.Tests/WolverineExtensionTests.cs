@@ -302,6 +302,6 @@ public sealed record SenderDependentProbe;
 
 public sealed class SenderDependentProbeHandler
 {
-    public static Task Handle(SenderDependentProbe probe, ISender sender) => Task.CompletedTask;
+    public static Task HandleAsync(SenderDependentProbe probe, ISender sender) => Task.CompletedTask;
 }
 
