@@ -17,6 +17,9 @@ public sealed class MartenUnitOfWorkTests
     private static readonly DomainEventEnvelopeSerializer Serializer =
         new(new DomainEventTypeRegistry([typeof(CounterCreated).Assembly]));
 
+    private static readonly DomainEventEnvelopeFactory EnvelopeFactory =
+        new(Serializer, new StoppedClock(CommitTime));
+
     [Fact]
     public async Task Commit_EnrollsOutboxBeforeSaving()
     {
@@ -27,7 +30,7 @@ public sealed class MartenUnitOfWorkTests
         session.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(Task.CompletedTask)
             .AndDoes(_ => calls.Add("save"));
 
-        var unitOfWork = new MartenUnitOfWork(session, TrackerWith(out _), outbox, Serializer, new StoppedClock(CommitTime));
+        var unitOfWork = new MartenUnitOfWork(session, TrackerWith(out _), outbox, EnvelopeFactory);
         await unitOfWork.CommitAsync(CancellationToken.None);
 
         Assert.Equal(["enroll", "save"], calls);
@@ -48,7 +51,7 @@ public sealed class MartenUnitOfWorkTests
         var tracker = TrackerWith(out var counter);
         counter.Increment(1);
 
-        var unitOfWork = new MartenUnitOfWork(session, tracker, outbox, Serializer, new StoppedClock(CommitTime));
+        var unitOfWork = new MartenUnitOfWork(session, tracker, outbox, EnvelopeFactory);
         await unitOfWork.CommitAsync(CancellationToken.None);
 
         Assert.Equal(["publish", "publish", "save"], calls);
@@ -60,7 +63,7 @@ public sealed class MartenUnitOfWorkTests
         var session = Substitute.For<IDocumentSession>();
         var tracker = TrackerWith(out var counter);
 
-        var unitOfWork = new MartenUnitOfWork(session, tracker, Substitute.For<IMartenOutbox>(), Serializer, new StoppedClock(CommitTime));
+        var unitOfWork = new MartenUnitOfWork(session, tracker, Substitute.For<IMartenOutbox>(), EnvelopeFactory);
         await unitOfWork.CommitAsync(CancellationToken.None);
 
         Assert.Empty(counter.DomainEvents);
@@ -75,7 +78,7 @@ public sealed class MartenUnitOfWorkTests
             .Returns(Task.FromException(new InvalidOperationException("commit failed")));
         var tracker = TrackerWith(out var counter);
 
-        var unitOfWork = new MartenUnitOfWork(session, tracker, Substitute.For<IMartenOutbox>(), Serializer, new StoppedClock(CommitTime));
+        var unitOfWork = new MartenUnitOfWork(session, tracker, Substitute.For<IMartenOutbox>(), EnvelopeFactory);
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => unitOfWork.CommitAsync(CancellationToken.None));
 
@@ -83,11 +86,33 @@ public sealed class MartenUnitOfWorkTests
         Assert.NotEmpty(tracker.Entries);
     }
 
+    [Fact]
+    public async Task Commit_NumbersPublishedEnvelopesConsecutivelyUpToTheAggregateVersion()
+    {
+        var published = new List<DomainEventEnvelope>();
+        var session = Substitute.For<IDocumentSession>();
+        var outbox = Substitute.For<IMartenOutbox>();
+#pragma warning disable CA2012
+        outbox.When(o => o.PublishAsync(Arg.Any<DomainEventEnvelope>()))
+            .Do(call => published.Add(call.Arg<DomainEventEnvelope>()!));
+#pragma warning restore CA2012
+
+        var tracker = TrackerWith(out var counter);
+        counter.Increment(1);
+        counter.Increment(2);
+
+        var unitOfWork = new MartenUnitOfWork(session, tracker, outbox, EnvelopeFactory);
+        await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal([1L, 2L, 3L], published.Select(envelope => envelope.Version));
+        Assert.Equal(((IEventSourcedAggregateRoot<CounterId>)counter).Version, published[^1].Version);
+    }
+
     private static MartenAggregateTracker TrackerWith(out Counter counter)
     {
         var tracker = new MartenAggregateTracker();
         var aggregate = Counter.Create(new CounterId(Guid.NewGuid()));
-        tracker.Track(aggregate, "counter", aggregate.Id.Value.ToString(), () => aggregate.DomainEvents.Count);
+        tracker.Track(aggregate, "counter", aggregate.Id.Value.ToString(), () => ((IEventSourcedAggregateRoot<CounterId>)aggregate).Version);
         counter = aggregate;
         return tracker;
     }

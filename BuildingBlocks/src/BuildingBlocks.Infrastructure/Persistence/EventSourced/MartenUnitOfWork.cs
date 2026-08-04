@@ -12,14 +12,11 @@ internal sealed class MartenUnitOfWork(
     IDocumentSession session,
     MartenAggregateTracker tracker,
     IMartenOutbox outbox,
-    DomainEventEnvelopeSerializer serializer,
-    IClock clock) : IUnitOfWork
+    DomainEventEnvelopeFactory envelopeFactory) : IUnitOfWork
 {
     public async Task CommitAsync(CancellationToken cancellationToken)
     {
         outbox.Enroll(session);
-
-        var occurredAt = clock.Now;
 
         foreach (var entry in tracker.Entries)
         {
@@ -30,25 +27,14 @@ internal sealed class MartenUnitOfWork(
                 continue;
             }
 
-            var expectedVersion = entry.Version();
             var streamKey = EntityKeyFormatter.GetStreamKey(entry.AggregateName, entry.AggregateId);
 
-            session.Events.Append(streamKey, expectedVersion, uncommittedEvents);
+            session.Events.Append(streamKey, entry.CurrentVersion, uncommittedEvents);
+        }
 
-            var version = expectedVersion - uncommittedEvents.Count;
-
-            foreach (var domainEvent in uncommittedEvents)
-            {
-                var envelope = serializer.Wrap(
-                    domainEvent,
-                    Guid.NewGuid(),
-                    entry.AggregateName,
-                    entry.AggregateId,
-                    ++version,
-                    occurredAt);
-
-                await outbox.PublishAsync(envelope).ConfigureAwait(false);
-            }
+        foreach (var envelope in envelopeFactory.WrapUncommitted(tracker.Entries))
+        {
+            await outbox.PublishAsync(envelope).ConfigureAwait(false);
         }
 
         await session.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

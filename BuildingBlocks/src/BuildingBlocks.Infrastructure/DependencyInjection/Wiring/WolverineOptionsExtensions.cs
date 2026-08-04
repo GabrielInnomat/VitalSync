@@ -44,7 +44,7 @@ internal static class WolverineOptionsExtensions
 
         options.PublishMessagesToRabbitMqExchange<IIntegrationEvent>(
                 messaging.ExchangeName,
-                integrationEvent => IntegrationEventTopic.For(integrationEvent.GetType(), messaging.ContextName))
+                integrationEvent => TopicResolver.For(integrationEvent.GetType(), messaging.ContextName))
             .UseDurableOutbox();
 
         options.Policies.OnException<Exception>()

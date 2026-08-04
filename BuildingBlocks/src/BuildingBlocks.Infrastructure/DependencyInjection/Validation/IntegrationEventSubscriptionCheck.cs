@@ -36,9 +36,9 @@ internal sealed class IntegrationEventSubscriptionCheck(
 
         foreach (var messageType in handledIntegrationEvents)
         {
-            var topic = IntegrationEventTopic.For(messageType);
+            var topic = TopicResolver.For(messageType);
 
-            if (IntegrationEventTopic.ContextOf(topic).Equals(messaging.ContextName, StringComparison.Ordinal))
+            if (TopicResolver.ContextOf(topic).Equals(messaging.ContextName, StringComparison.Ordinal))
             {
                 problems.Add(
                     $"'{messageType.FullName}' publishes under '{topic}', which belongs to this very context " +

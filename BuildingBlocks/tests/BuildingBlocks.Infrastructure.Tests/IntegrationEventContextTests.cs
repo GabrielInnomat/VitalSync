@@ -62,13 +62,13 @@ public sealed class IntegrationEventContextTests
     public void PublishingUnderTheOwnContext_IsAccepted() =>
         Assert.Equal(
             "probe.own",
-            IntegrationEventTopic.For(typeof(OwnContextIntegrationEvent), TestMessaging.ContextName));
+            TopicResolver.For(typeof(OwnContextIntegrationEvent), TestMessaging.ContextName));
 
     [Fact]
     public void PublishingUnderAForeignContext_Throws()
     {
         var thrown = Assert.Throws<InvalidOperationException>(() =>
-            IntegrationEventTopic.For(typeof(ForeignContextIntegrationEvent), TestMessaging.ContextName));
+            TopicResolver.For(typeof(ForeignContextIntegrationEvent), TestMessaging.ContextName));
 
         Assert.Contains("impersonate", thrown.Message, StringComparison.Ordinal);
         Assert.Contains(TestMessaging.ContextName, thrown.Message, StringComparison.Ordinal);
@@ -78,7 +78,7 @@ public sealed class IntegrationEventContextTests
     [InlineData("nutrition.recipe-created", "nutrition")]
     [InlineData("nutrition", "nutrition")]
     public void ContextOf_ReadsTheFirstSegment(string topic, string expected) =>
-        Assert.Equal(expected, IntegrationEventTopic.ContextOf(topic));
+        Assert.Equal(expected, TopicResolver.ContextOf(topic));
 
     [Fact]
     public void TheContextName_IsAvailableToTheConsumerSideFilter()

@@ -1080,7 +1080,7 @@ Reihenfolge, in der man Kontexte normalerweise baut.
 
 Verifiziert: der Helper kennt **keine** Complex-Type-Behandlung, er läuft über
 `Model.GetEntityTypes()`
-([EntityKeyValueConverter.cs:66](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EntityKeyValueConverter.cs:66)).
+([EntityKeyValueConverter.cs:66](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EntityKeyValueConverter.cs)).
 Ein typisierter Schlüssel innerhalb eines Complex Type bekäme keinen Konverter — und
 scheiterte damit erst beim Migrieren gegen PostgreSQL, nicht beim Modellaufbau.
 

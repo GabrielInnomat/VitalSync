@@ -2,7 +2,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.Messaging;
 
-namespace BuildingBlocks.Infrastructure.Events;
+namespace BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 
 internal sealed class DomainEventPublisher(
     ProjectionRunner projectionRunner,

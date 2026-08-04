@@ -72,11 +72,10 @@ capability. The folder is the namespace.
 | Folder                             | Capability                                                          |
 | ---------------------------------- | ------------------------------------------------------------------- |
 | `Dispatching/`                     | DI-based `ISender` implementation + pipeline behaviors              |
-| `Persistence/`                     | shared: aggregate reconstitution, typed-key conversion for EF Core  |
+| `Persistence/`                     | shared: aggregate reconstitution, tracking base, envelope factory, typed-key conversion for EF Core |
 | `Persistence/StateStored/`         | EF Core write path — repository, unit of work, tracker, state graph |
 | `Persistence/EventSourced/`        | Marten write path — repository, unit of work, tracker               |
-| `Events/`                          | Domain-event publisher, projection runner                           |
-| `Messaging/DomainEvents/`          | the in-context envelope: type registry, serializer, handler         |
+| `Messaging/DomainEvents/`          | in-context events: publisher, projection runner, type registry, serializer, handler |
 | `Messaging/IntegrationEvents/`     | the cross-context contract: topics, sink, source context, filter    |
 | `Time/`                            | `IClock` implementation on top of `TimeProvider`                    |
 | `DependencyInjection/`             | entry points, options, and the composition root                     |
@@ -187,6 +186,16 @@ public interface IUnitOfWork
   an EF Core–backed unit of work and a Marten-session–backed unit of work.
   Wolverine's native Marten/EF Core integration provides the shared
   transaction + outbox enlistment (ADR-0023).
+- **Steps 2 and 3 have exactly one implementation, not one per persistence style.**
+  Tracking is `AggregateTracker<TEntry>`, whose subclasses add only what their store
+  needs to know about an entry; both entry types expose the same `ITrackedAggregate`
+  view (aggregate, aggregate name, aggregate id, current version). Envelope minting is
+  `DomainEventEnvelopeFactory.WrapUncommitted(entries)` — the single place that reads
+  `IClock.Now` **once per commit** and counts each event's per-aggregate `Version`
+  backwards from the aggregate's current version, so ADR-0029 (identity is minted at
+  commit) and ADR-0030 (the version is the projection watermark) are enforced in one
+  file rather than in two that must be kept in step. A unit of work therefore contains
+  no envelope arithmetic at all.
 
 ## 3. Generic repositories
 
@@ -647,6 +656,12 @@ both, the bare name forced a second look. Neither rename fixes a bug the compile
 have caught; they buy the reader the right guess on the first try. The rule: **do not
 name an Infrastructure type with a bare noun that Wolverine, Marten, or EF Core also
 uses.** Qualify it with what it actually operates on.
+
+The rule also covers collisions with **our own** types: the helper that derives a routing
+key from an event type is `TopicResolver`, not `IntegrationEventTopic`, because
+`[IntegrationEventTopic]` in `BuildingBlocks.Application` is the attribute it reads. A
+class and an attribute that differ only by the compiler-elided `Attribute` suffix both
+compile and both read the same in a call site, which is precisely the problem.
 
 ## 8. Clock (`IClock` implementation)
 

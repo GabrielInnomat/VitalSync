@@ -265,11 +265,22 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 - **Folder = namespace, and the cut carries meaning.** `Persistence/StateStored/` and
   `Persistence/EventSourced/` are the two mutually exclusive write paths; the shared
   `Persistence/` parent holds only what both need — including `EntityKeyValueConverter`,
-  because an event-sourced context still uses EF Core for its **read** models. Configuring
+  because an event-sourced context still uses EF Core for its **read** models, and the
+  tracking base plus the envelope factory, because both write paths mint identity the same
+  way. Configuring
   Wolverine is not messaging: it happens once at composition time and lives under
-  `DependencyInjection/Wiring/`, while `Messaging/DomainEvents/` and
+  `DependencyInjection/Wiring/`, while `Messaging/DomainEvents/` (publisher, projection
+  runner, envelope) and
   `Messaging/IntegrationEvents/` hold what runs per message. Start-up checks live in
   `DependencyInjection/Validation/`.
+- **An event's identity is minted in exactly one place.** `DomainEventEnvelopeFactory`
+  reads `IClock.Now` **once per commit** and counts each event's per-aggregate `Version`
+  backwards from the aggregate's current version; both units of work call it and contain
+  no envelope arithmetic of their own. Duplicating that block per persistence path is how
+  ADR-0029 and ADR-0030 drift apart silently — a wrong `Version` breaks the projection
+  watermark, and no projection test asserts it. The same applies one level down:
+  `AggregateTracker<TEntry>` owns tracking, validation and event clearing, and a subclass
+  adds only what its store must remember about an entry.
 - **The persistence selection is one value, not flags.** `PersistenceChoice` is a closed
   hierarchy — `None`, `Marten`, `EfCore(connectionString)` — with private subtypes.
   "Route domain events" and "a message store exists" are the same fact (`IsSelected`),
@@ -287,7 +298,9 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   for **type** names a vendor already uses for something else: the dispatcher is
   `RequestSender` and the publication step is `DomainEventPublisher`, because Wolverine
   means a transport endpoint by `ISender` and "putting a message on the broker" by
-  *publish*. Qualify a bare noun with what it actually operates on.
+  *publish*. Qualify a bare noun with what it actually operates on. The rule covers our
+  own types too: the routing-key helper is `TopicResolver`, never `IntegrationEventTopic`,
+  which is the attribute it reads.
 - **`BuildingBlocksOptions` is a fluent facade, not a worker.** Each method validates
   its arguments and delegates to one collaborator in `DependencyInjection/Registration/`
   — `HandlerRegistrar` (scanning, handlers, behaviors), `PersistenceRegistrar` (EF Core

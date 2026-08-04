@@ -10,8 +10,7 @@ namespace BuildingBlocks.Infrastructure.Persistence.StateStored;
 internal sealed class EfCoreUnitOfWork<TContext>(
     IDbContextOutbox<TContext> outbox,
     EfCoreAggregateTracker tracker,
-    DomainEventEnvelopeSerializer serializer,
-    IClock clock) : IUnitOfWork
+    DomainEventEnvelopeFactory envelopeFactory) : IUnitOfWork
     where TContext : DbContext
 {
     public async Task CommitAsync(CancellationToken cancellationToken)
@@ -25,25 +24,9 @@ internal sealed class EfCoreUnitOfWork<TContext>(
             AggregateStateGraph.Reconcile(tracked, entry.StateOwner.State);
         }
 
-        var occurredAt = clock.Now;
-
-        foreach (var entry in entries)
+        foreach (var envelope in envelopeFactory.WrapUncommitted(entries))
         {
-            var domainEvents = entry.Aggregate.DomainEvents;
-            var version = entry.StateOwner.Version - domainEvents.Count;
-
-            foreach (var domainEvent in domainEvents)
-            {
-                var envelope = serializer.Wrap(
-                    domainEvent,
-                    Guid.NewGuid(),
-                    entry.AggregateName,
-                    entry.AggregateId,
-                    ++version,
-                    occurredAt);
-
-                await outbox.PublishAsync(envelope).ConfigureAwait(false);
-            }
+            await outbox.PublishAsync(envelope).ConfigureAwait(false);
         }
 
         await outbox.SaveChangesAndFlushMessagesAsync(cancellationToken).ConfigureAwait(false);

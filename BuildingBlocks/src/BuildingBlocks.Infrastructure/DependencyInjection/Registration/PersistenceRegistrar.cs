@@ -2,6 +2,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
+using BuildingBlocks.Infrastructure.Persistence;
 using BuildingBlocks.Infrastructure.Persistence.EventSourced;
 using BuildingBlocks.Infrastructure.Persistence.StateStored;
 using JasperFx.Events;
@@ -29,6 +30,7 @@ internal sealed class PersistenceRegistrar(IServiceCollection services, Wolverin
 
         services.TryAddScoped<DbContext>(static provider => provider.GetRequiredService<TContext>());
         services.TryAddScoped<EfCoreAggregateTracker>();
+        services.TryAddSingleton<DomainEventEnvelopeFactory>();
         services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork<TContext>>();
         services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
         services.TryAddEnumerable(
@@ -57,6 +59,7 @@ internal sealed class PersistenceRegistrar(IServiceCollection services, Wolverin
             .IntegrateWithWolverine();
 
         services.TryAddScoped<MartenAggregateTracker>();
+        services.TryAddSingleton<DomainEventEnvelopeFactory>();
         services.TryAddScoped<IUnitOfWork, MartenUnitOfWork>();
         services.TryAddScoped(typeof(IRepository<,>), typeof(MartenEventSourcedRepository<,>));
     }

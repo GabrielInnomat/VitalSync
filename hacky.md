@@ -128,7 +128,7 @@ falls sie dort noch nicht existiert. Jede berechnete, get-only oder explizit `Ig
 Property vom Key-Typ landet damit still als Spalte in der Tabelle. Der CLR-Scan ist mit dem
 Primärschlüssel begründet — der Nebeneffekt trifft aber alles.
 
-`BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EntityKeyValueConverter.cs:74-103`
+`BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EntityKeyModelBuilderExtensions.cs`
 
 ## Lösungsvorschlag
 

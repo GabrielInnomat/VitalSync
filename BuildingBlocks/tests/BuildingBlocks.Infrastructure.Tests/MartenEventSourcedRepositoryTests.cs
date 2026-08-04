@@ -113,8 +113,9 @@ public sealed class MartenEventSourcedRepositoryTests(PostgreSqlFixture fixture)
             session,
             tracker,
             Substitute.For<IMartenOutbox>(),
-            new DomainEventEnvelopeSerializer(new DomainEventTypeRegistry([typeof(CounterCreated).Assembly])),
-            new StoppedClock(CommitTime));
+            new DomainEventEnvelopeFactory(
+                new DomainEventEnvelopeSerializer(new DomainEventTypeRegistry([typeof(CounterCreated).Assembly])),
+                new StoppedClock(CommitTime)));
         await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
     }
 

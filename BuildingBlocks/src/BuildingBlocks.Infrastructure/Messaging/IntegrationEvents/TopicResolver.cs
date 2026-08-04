@@ -4,7 +4,7 @@ using BuildingBlocks.Application;
 
 namespace BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 
-internal static class IntegrationEventTopic
+internal static class TopicResolver
 {
     private static readonly ConcurrentDictionary<Type, string> Topics = new();
 

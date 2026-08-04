@@ -3,7 +3,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BuildingBlocks.Infrastructure.Events;
+namespace BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 
 internal sealed class ProjectionRunner(IServiceProvider serviceProvider)
 {
