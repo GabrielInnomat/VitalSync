@@ -1,6 +1,7 @@
-﻿using BuildingBlocks.Application;
+using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using BuildingBlocks.Infrastructure.Messaging;
 using BuildingBlocks.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;

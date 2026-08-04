@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Wolverine;
 using Wolverine.EntityFrameworkCore;
 using Wolverine.Postgresql;
+using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection;
 

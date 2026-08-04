@@ -1,4 +1,6 @@
 using BuildingBlocks.Domain;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
+using BuildingBlocks.Infrastructure.Persistence.StateStored;
 using BuildingBlocks.Infrastructure.Persistence;
 using Marten;
 using Microsoft.EntityFrameworkCore;

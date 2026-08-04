@@ -1,4 +1,5 @@
-﻿using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

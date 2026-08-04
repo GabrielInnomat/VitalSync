@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace BuildingBlocks.Infrastructure.Persistence;
 
-public sealed class EntityKeyValueConverter<TKey, TValue>() : ValueConverter<TKey, TValue>(
+internal sealed class EntityKeyValueConverter<TKey, TValue>() : ValueConverter<TKey, TValue>(
     key => key.Value,
     value => KeyFactory(value))
     where TKey : struct, IEntityKey<TValue>

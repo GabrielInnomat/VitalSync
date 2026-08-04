@@ -1,3 +1,4 @@
+using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 using BuildingBlocks.Infrastructure.Messaging;
 
 namespace BuildingBlocks.Infrastructure.Tests;

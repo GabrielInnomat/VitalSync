@@ -1,7 +1,7 @@
 using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Microsoft.EntityFrameworkCore;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 

@@ -1,4 +1,5 @@
-﻿using BuildingBlocks.Domain;
+using BuildingBlocks.Domain;
+using BuildingBlocks.Infrastructure.Persistence.StateStored;
 using BuildingBlocks.Infrastructure.Persistence;
 
 namespace BuildingBlocks.Infrastructure.Tests;

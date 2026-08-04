@@ -1,11 +1,12 @@
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Dispatching;
+using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
+using Microsoft.Extensions.Logging;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 

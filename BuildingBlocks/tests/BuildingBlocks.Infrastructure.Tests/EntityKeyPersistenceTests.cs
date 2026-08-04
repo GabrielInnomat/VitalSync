@@ -1,8 +1,8 @@
 using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 

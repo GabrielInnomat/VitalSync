@@ -1,13 +1,19 @@
 using System.Reflection;
 using BuildingBlocks.Application;
+using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
+using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Dispatching;
+using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
+using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 using BuildingBlocks.Infrastructure.Messaging;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
+using BuildingBlocks.Infrastructure.Persistence.StateStored;
 using BuildingBlocks.Infrastructure.Persistence;
 using JasperFx.Events;
 using Marten;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Wolverine.EntityFrameworkCore;
 using Wolverine.Marten;
 

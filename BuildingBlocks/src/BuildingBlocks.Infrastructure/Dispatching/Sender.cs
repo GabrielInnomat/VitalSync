@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.Dispatching;
 
-public sealed class Sender(IServiceProvider serviceProvider) : ISender
+internal sealed class Sender(IServiceProvider serviceProvider) : ISender
 {
     private readonly record struct DispatcherKey(Type Request, Type Result);
 

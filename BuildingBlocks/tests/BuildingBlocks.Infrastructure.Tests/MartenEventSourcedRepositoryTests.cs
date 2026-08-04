@@ -1,8 +1,10 @@
 using BuildingBlocks.Domain;
+using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using BuildingBlocks.Infrastructure.Messaging;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
 using BuildingBlocks.Infrastructure.Persistence;
-using JasperFx;
 using JasperFx.Events;
+using JasperFx;
 using Marten;
 using NSubstitute;
 using Wolverine.Marten;

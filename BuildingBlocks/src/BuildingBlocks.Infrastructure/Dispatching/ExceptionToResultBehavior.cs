@@ -3,7 +3,7 @@ using BuildingBlocks.Domain;
 
 namespace BuildingBlocks.Infrastructure.Dispatching;
 
-public sealed class ExceptionToResultBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+internal sealed class ExceptionToResultBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TResponse : Result
 {
     public const string ValidationFailureCode = "domain.validation";

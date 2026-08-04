@@ -1,16 +1,17 @@
 using BuildingBlocks.Application;
+using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 using DeadLetterFixture;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RabbitMQ.Client;
-using Wolverine;
 using Wolverine.Configuration;
-using Wolverine.RabbitMQ;
 using Wolverine.RabbitMQ.Internal;
+using Wolverine.RabbitMQ;
 using Wolverine.Runtime;
-
-using BuildingBlockDefaults = BuildingBlocks.Infrastructure.Messaging.WolverineOptionsExtensions;
+using Wolverine;
+using BuildingBlockDefaults = BuildingBlocks.Infrastructure.DependencyInjection.Wiring.WolverineOptionsExtensions;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 

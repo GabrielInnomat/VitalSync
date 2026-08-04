@@ -38,20 +38,63 @@ Building Block allowed to reference third-party packages.
   the `Domain` / `Application` abstractions.
 - **Async-only.** Same rule as `Application`: every operation returns `Task<...>`
   and accepts a `CancellationToken`.
+- **`internal` unless something outside genuinely needs the type.** A host consumes
+  Infrastructure through DI, so an implementation registered in the container has no
+  reason to be visible. The public surface is exactly four types plus the handful that
+  Wolverine's runtime code generation forces open (see below), and
+  `PublicSurfaceTests` fails the build if it grows.
+
+## Public surface
+
+Everything else is `internal`, with `InternalsVisibleTo` for the test assembly.
+
+| Type                              | Why it is public                                                  |
+| --------------------------------- | ----------------------------------------------------------------- |
+| `ServiceCollectionExtensions`     | `AddBuildingBlocks` — the entry point                             |
+| `HostApplicationBuilderExtensions`| `AddBuildingBlocks` on the host builder (ADR-0027)                |
+| `BuildingBlocksOptions`           | the configuration surface passed to it                            |
+| `EntityKeyModelBuilderExtensions` | `ApplyEntityKeyConversions`, called from a host's `DbContext`     |
+
+Seven further types are public **only** because Wolverine generates C# at runtime and
+the generated code names them: `DomainEventEnvelope`, `DomainEventEnvelopeHandler`,
+`DomainEventEnvelopeSerializer`, `DomainEventTypeRegistry`, `IIntegrationEventSinkFactory`,
+`IntegrationEventSourceContext`, `OwnContextIntegrationEventFilter`. Generated code lives
+in another assembly, so an `internal` type there fails — at run time for a service-located
+dependency, at compile time for a handler's constructor parameter. This is a constraint of
+the transport, not a design intent; `PublicSurfaceTests` lists them separately so the
+distinction survives.
 
 ## Capabilities (internal organization)
 
 `Infrastructure` is deliberately one package (ADR-0018), organized internally by
-capability. Top-level namespaces/folders:
+capability. The folder is the namespace.
 
-| Folder                 | Capability                                                     |
-| ---------------------- | -------------------------------------------------------------- |
-| `Dispatching/`         | DI-based `ISender` implementation + pipeline behaviors         |
-| `Persistence/`         | Unit of work, EF Core generic repository, Marten ES repository |
-| `Events/`              | Domain-event publisher, projection runner                      |
-| `Messaging/`           | Wolverine/RabbitMQ integration-event transport                 |
-| `Time/`                | `IClock` implementation on top of `TimeProvider`               |
-| `DependencyInjection/` | `IServiceCollection` registration extensions                   |
+| Folder                             | Capability                                                          |
+| ---------------------------------- | ------------------------------------------------------------------- |
+| `Dispatching/`                     | DI-based `ISender` implementation + pipeline behaviors              |
+| `Persistence/`                     | shared: aggregate reconstitution, typed-key conversion for EF Core  |
+| `Persistence/StateStored/`         | EF Core write path — repository, unit of work, tracker, state graph |
+| `Persistence/EventSourced/`        | Marten write path — repository, unit of work, tracker               |
+| `Events/`                          | Domain-event publisher, projection runner                           |
+| `Messaging/DomainEvents/`          | the in-context envelope: type registry, serializer, handler         |
+| `Messaging/IntegrationEvents/`     | the cross-context contract: topics, sink, source context, filter    |
+| `Time/`                            | `IClock` implementation on top of `TimeProvider`                    |
+| `DependencyInjection/`             | entry points, options, and the composition root                     |
+| `DependencyInjection/Wiring/`      | how Wolverine itself is configured                                  |
+| `DependencyInjection/Validation/`  | the start-up checks (ADR-0027)                                      |
+
+Two cuts here carry meaning rather than tidiness:
+
+- **`StateStored` and `EventSourced` are mutually exclusive.** A bounded context picks
+  one (ADR-0019/0020), and `BuildingBlocksOptions` throws when a host selects both. The
+  folders make that visible; the shared parent holds only what both need. Note that
+  `ApplyEntityKeyConversions` stays in the shared parent on purpose: an event-sourced
+  context still uses EF Core for its **read** models.
+- **Configuring Wolverine is not messaging.** `WolverineWiringSettings`,
+  `MessagingSettings`, `IntegrationEventSubscription`, `WolverineOptionsExtensions`, and
+  `BuildingBlocksWolverineExtension` describe what the host asked for and translate it
+  into Wolverine's options; they run once at composition time and never on a message.
+  They live under `DependencyInjection/Wiring/`, not under `Messaging/`.
 
 ---
 
@@ -477,6 +520,34 @@ builder.AddBuildingBlocks(options =>
   Wolverine at all; a service with purely in-context projections needs no
   RabbitMQ (the domain-event route is a local durable queue).
 
+### Inside the composition root
+
+`ServiceCollectionExtensions` is a facade; the work lives in the internal
+`BuildingBlocksComposition`, which runs four named phases in a fixed order:
+
+| Phase                   | Does                                                                    |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `Configure`             | runs the caller's options lambda                                        |
+| `Validate`              | rejects contradictory selections and **freezes** the domain-event registry |
+| `RegisterCore`          | dispatcher, behaviors, persistence, publisher, messaging, clock          |
+| `RegisterStartupChecks` | the hosted services from `DependencyInjection/Validation/`               |
+
+The order is load-bearing rather than cosmetic. `Validate` materialises the
+`DomainEventTypeRegistry`, which is what makes `AddDomainEventsFrom` a
+composition-time decision instead of a mutable setting — every later phase reads a
+frozen set. `RegisterStartupChecks` runs last because the order of
+`AddHostedService` calls **is** the order the checks execute in, and the
+missing-unit-of-work log must see the finished registrations.
+
+### A note on folder names
+
+There is no `Persistence/Marten/` or `DependencyInjection/Wolverine/` folder, and there
+must not be. C# resolves a name against the enclosing namespaces first, so inside
+`BuildingBlocks.Infrastructure.Persistence.Marten` a plain `using Marten;` binds to the
+own namespace and every Marten type stops resolving. The names `StateStored`,
+`EventSourced`, and `Wiring` avoid the collision and happen to describe the *role*
+rather than the vendor, which is the better name anyway.
+
 ## 8. Clock (`IClock` implementation)
 
 `IClock` is the narrow time port declared in `BuildingBlocks.Domain` ("the
@@ -539,5 +610,8 @@ entity-key mapping are covered by fast in-memory tests against the real `Sender`
 and a DI container. Marten optimistic concurrency and strongly-typed key
 persistence are covered by integration tests against a disposable PostgreSQL
 instance via Testcontainers (skipped automatically when Docker is unavailable).
-A small set of architecture tests enforces the layer-dependency rules. See
-[Testing strategy](./testing-strategy.md).
+A small set of architecture tests enforces the layer-dependency rules, and
+`PublicSurfaceTests` pins the exported types of this assembly against the table in
+[Public surface](#public-surface): adding a `public` type fails the test until it is
+listed with a reason, which keeps "internal by default" from eroding one convenient
+exception at a time. See [Testing strategy](./testing-strategy.md).

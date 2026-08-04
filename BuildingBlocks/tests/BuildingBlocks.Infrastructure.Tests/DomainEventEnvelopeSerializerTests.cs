@@ -1,4 +1,5 @@
 using BuildingBlocks.Domain;
+using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using BuildingBlocks.Infrastructure.Messaging;
 
 namespace BuildingBlocks.Infrastructure.Tests;

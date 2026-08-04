@@ -250,6 +250,37 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   slots; services add their own via `BuildingBlocksOptions.AddPipelineBehavior(type, order)`
   (negative runs before built-ins, higher runs after).
 
+## Infrastructure package layout
+
+- **`internal` is the default in `BuildingBlocks.Infrastructure`.** A host consumes it
+  through DI, so an implementation registered in the container has no reason to be
+  visible. Exactly four types are public API — `ServiceCollectionExtensions`,
+  `HostApplicationBuilderExtensions`, `BuildingBlocksOptions`,
+  `EntityKeyModelBuilderExtensions`. Seven more are public **only** because Wolverine
+  generates C# into another assembly and names them (`DomainEventEnvelope`,
+  `DomainEventEnvelopeHandler`, `DomainEventEnvelopeSerializer`, `DomainEventTypeRegistry`,
+  `IIntegrationEventSinkFactory`, `IntegrationEventSourceContext`,
+  `OwnContextIntegrationEventFilter`). `PublicSurfaceTests` pins both lists — a new
+  `public` type fails it until it is listed with a reason.
+- **Folder = namespace, and the cut carries meaning.** `Persistence/StateStored/` and
+  `Persistence/EventSourced/` are the two mutually exclusive write paths; the shared
+  `Persistence/` parent holds only what both need — including `EntityKeyValueConverter`,
+  because an event-sourced context still uses EF Core for its **read** models. Configuring
+  Wolverine is not messaging: it happens once at composition time and lives under
+  `DependencyInjection/Wiring/`, while `Messaging/DomainEvents/` and
+  `Messaging/IntegrationEvents/` hold what runs per message. Start-up checks live in
+  `DependencyInjection/Validation/`.
+- **Never name a folder after a vendor whose namespace you use.** A
+  `Persistence/Marten/` folder would break every `using Marten;` in it, because C#
+  resolves against the enclosing namespaces first. Hence `StateStored`/`EventSourced`
+  and `Wiring` — which describe the role and are the better names anyway.
+- **The composition root is phased.** `ServiceCollectionExtensions` is a facade; the
+  internal `BuildingBlocksComposition` runs `Configure` → `Validate` → `RegisterCore` →
+  `RegisterStartupChecks`. The order is load-bearing: `Validate` materialises the
+  `DomainEventTypeRegistry` and thereby freezes `AddDomainEventsFrom`, and the order of
+  `AddHostedService` calls **is** the order the start-up checks run in. Add new
+  registration work inside the matching phase, not at the end of the method.
+
 ## Persistence & event sourcing (from accepted ADRs)
 
 - EF Core is the default; Event Sourcing is selective, applied only where the event history carries business value (ADR-0012).

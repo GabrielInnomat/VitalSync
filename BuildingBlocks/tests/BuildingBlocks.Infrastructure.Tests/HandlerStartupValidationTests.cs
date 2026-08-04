@@ -1,5 +1,6 @@
 using AmbiguousRequestsFixture;
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OrphanRequestsFixture;

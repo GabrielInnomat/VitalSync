@@ -1,15 +1,15 @@
 using System.Reflection;
 using BuildingBlocks.Application;
+using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Dispatching;
 using BuildingBlocks.Infrastructure.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Wolverine;
 using Wolverine.RabbitMQ.Internal;
-
-using BuildingBlockDefaults = BuildingBlocks.Infrastructure.Messaging.WolverineOptionsExtensions;
+using Wolverine;
+using BuildingBlockDefaults = BuildingBlocks.Infrastructure.DependencyInjection.Wiring.WolverineOptionsExtensions;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 

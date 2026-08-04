@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingBlocks.Infrastructure.Dispatching;
 
-public sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork? unitOfWork = null)
+internal sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork? unitOfWork = null)
     : IPipelineBehavior<TRequest, TResponse>
     where TResponse : Result
 {

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BuildingBlocks.Infrastructure.Dispatching;
 
-public sealed class LoggingBehavior<TRequest, TResponse>(ILogger<LoggingBehavior<TRequest, TResponse>> logger)
+internal sealed class LoggingBehavior<TRequest, TResponse>(ILogger<LoggingBehavior<TRequest, TResponse>> logger)
     : IPipelineBehavior<TRequest, TResponse>
     where TResponse : Result
 {
