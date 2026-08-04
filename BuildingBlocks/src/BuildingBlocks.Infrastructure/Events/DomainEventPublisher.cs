@@ -4,7 +4,7 @@ using BuildingBlocks.Infrastructure.Messaging;
 
 namespace BuildingBlocks.Infrastructure.Events;
 
-internal sealed class Publisher(
+internal sealed class DomainEventPublisher(
     ProjectionRunner projectionRunner,
     IEnumerable<IIntegrationEventMapper> mappers) : IDomainEventPublisher
 {

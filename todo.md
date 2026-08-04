@@ -62,7 +62,7 @@ eine Entscheidung, keinen Code.
 | TODO-26 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | **P2** | offen             | WS-09                                 |
 | TODO-27 | Schema-Erzeugung zur Laufzeit in Produktion                    | **P2** | offen             | WS-11                                 |
 | TODO-28 | Restliche Messaging-Guard-Rails                                | **P2** | teilweise         | IMP-13, WS-06                         |
-| TODO-29 | `Publisher` koppelt Projektion und Integration-Publikation     | **P3** | offen             | IMP-26                                |
+| TODO-29 | `DomainEventPublisher` koppelt Projektion und Integration-Publikation     | **P3** | offen             | IMP-26                                |
 | TODO-30 | `IIntegrationEventMapper` ist untypisiert                      | **P3** | offen             | IMP-12                                |
 | TODO-31 | `Result` hat keine Kombinatoren                                | **P3** | offen             | IMP-34                                |
 | TODO-32 | Async-Suffix ist inkonsistent                                  | **P3** | offen             | IMP-37                                |
@@ -1131,7 +1131,7 @@ using var activity = BuildingBlocksActivitySource.Instance.StartActivity($"Send 
 activity?.SetTag("vitalsync.request.type", requestName);
 ```
 
-Analog in `ProjectionRunner` und `Publisher`; der Service-Default registriert die Quelle per
+Analog in `ProjectionRunner` und `DomainEventPublisher`; der Service-Default registriert die Quelle per
 `AddSource("VitalSync.BuildingBlocks")`. Kleiner Aufwand, hoher Betriebsnutzen — sinnvollerweise
 zusammen mit dem ersten produktiven Service.
 
@@ -1263,12 +1263,12 @@ die Asymmetrie nicht später als Lücke missverstanden wird.
 
 ---
 
-# TODO-29, `Publisher` koppelt Projektion und Integration-Publikation
+# TODO-29, `DomainEventPublisher` koppelt Projektion und Integration-Publikation
 
 **P3 · offen · IMP-26**
 
 Zwei Belange in einer Methode ohne Fehlerisolierung
-([Publisher.cs:32-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Events/Publisher.cs:32)):
+([DomainEventPublisher.cs:32-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Events/DomainEventPublisher.cs:32)):
 wirft eine Projektion, wird kein Integration Event publiziert; wirft ein Mapper, laufen bei der
 Redelivery alle Projektionen erneut. Bei at-least-once heißt das, dass ein Fehler auf der einen
 Seite die andere wiederholt ausführt — tragfähig nur, solange beide idempotent sind.
@@ -1303,7 +1303,7 @@ public interface IIntegrationEventMapper<in TDomainEvent>
 ```
 
 Registrierung über denselben `MultiHandlerInterfaceDefinitions`-Pfad wie `IProjectionHandler<>`,
-im `Publisher` ein `MapperRunner` als Zwilling des `ProjectionRunner`. Nebeneffekt: der
+im `DomainEventPublisher` ein `MapperRunner` als Zwilling des `ProjectionRunner`. Nebeneffekt: der
 `_ => []`-Default-Arm entfällt, und „welche Events verlassen diesen Kontext" wird an der
 Typsignatur ablesbar statt im `switch` versteckt.
 
@@ -1523,7 +1523,7 @@ zum Prozess-Host aufgewertet wird. Das ist eine bewusste Aufweichung der bisheri
 **P4 · teilweise · IMP-38**
 
 Die Messaging-Typen sind inzwischen konsequent `internal`. Offen bleibt: `ProjectionRunner` ist
-`public`, obwohl er nur vom `internal` `Publisher` genutzt wird; ebenso `EfCoreUnitOfWork`,
+`public`, obwohl er nur vom `internal` `DomainEventPublisher` genutzt wird; ebenso `EfCoreUnitOfWork`,
 `MartenUnitOfWork`, `EfCoreRepository`, `MartenEventSourcedRepository` und beide Tracker — alle
 ausschließlich über `BuildingBlocksOptions` registriert, nie direkt referenziert.
 
@@ -1600,11 +1600,11 @@ vereinheitlichen (`ApplyBuildingBlocksDomainEventRouting` usw.) — kein Breakin
 
 Zwei Muster, die wie Nachlässigkeit aussehen, aber richtig sind:
 
-- **Fünf prozessglobale statische Caches** (`Sender` 3×, `ProjectionRunner`, `FailureResults`,
+- **Fünf prozessglobale statische Caches** (`RequestSender` 3×, `ProjectionRunner`, `FailureResults`,
   `EntityKeyFormatter`, `EntityKeyModelBuilderExtensions`). Alle ausschließlich `Type`-gekeyed mit
   unveränderlichen, rein typabgeleiteten Werten. Die einzige reale Fehlwirkung war der
-  unvollständige Schlüssel in `Sender` — behoben. Testisolation ist nicht betroffen.
-- **`IServiceProvider` in `Sender` und `ProjectionRunner`**: der aufzulösende Handler-Typ ergibt
+  unvollständige Schlüssel in `RequestSender` — behoben. Testisolation ist nicht betroffen.
+- **`IServiceProvider` in `RequestSender` und `ProjectionRunner`**: der aufzulösende Handler-Typ ergibt
   sich erst aus dem Laufzeittyp des Requests, lässt sich also nicht per Konstruktor injizieren.
 
 **Kein Code zu ändern** — aber die Begründung ist nirgends festgehalten, und ohne sie wird beides

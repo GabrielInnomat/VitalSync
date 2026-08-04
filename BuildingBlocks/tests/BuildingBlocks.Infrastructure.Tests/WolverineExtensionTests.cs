@@ -133,7 +133,7 @@ public sealed class WolverineExtensionTests
     public async Task Configure_WithDomainEventRouting_LetsAHandlerDependOnISender()
     {
         using var host = await Host.CreateDefaultBuilder()
-            .ConfigureServices(services => services.AddScoped<ISender, Sender>())
+            .ConfigureServices(services => services.AddScoped<ISender, RequestSender>())
             .UseWolverine(options =>
             {
                 new BuildingBlocksWolverineExtension(

@@ -12,11 +12,13 @@ public sealed record AlwaysFailsIntegrationEvent(string Name) : IIntegrationEven
 
 public sealed class AttemptRecorder
 {
-    private int _attempts;
+    private readonly System.Collections.Concurrent.ConcurrentQueue<string> _names = new();
 
-    public int Attempts => Volatile.Read(ref _attempts);
+    public int Attempts => _names.Count;
 
-    public void Record() => Interlocked.Increment(ref _attempts);
+    public IReadOnlyCollection<string> Names => [.. _names];
+
+    public void Record(string name) => _names.Enqueue(name);
 }
 
 public sealed class AlwaysFailsConsumer
@@ -26,7 +28,7 @@ public sealed class AlwaysFailsConsumer
         ArgumentNullException.ThrowIfNull(message);
         ArgumentNullException.ThrowIfNull(recorder);
 
-        recorder.Record();
+        recorder.Record(message.Name);
 
         throw new InvalidOperationException($"'{message.Name}' can never be handled.");
     }

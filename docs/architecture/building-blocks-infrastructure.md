@@ -636,6 +636,18 @@ own namespace and every Marten type stops resolving. The names `StateStored`,
 `EventSourced`, and `Wiring` avoid the collision and happen to describe the *role*
 rather than the vendor, which is the better name anyway.
 
+### A note on type names
+
+The same caution applies one level down, to type names that a *vendor* already uses for
+something else. The dispatcher is `RequestSender`, not `Sender`, and the domain-event
+publication step is `DomainEventPublisher`, not `Publisher`. Both short names were
+already taken by Wolverine for a different concept — `ISender` is a transport endpoint
+there, and "publish" means putting a message on the broker — so in any file that sees
+both, the bare name forced a second look. Neither rename fixes a bug the compiler would
+have caught; they buy the reader the right guess on the first try. The rule: **do not
+name an Infrastructure type with a bare noun that Wolverine, Marten, or EF Core also
+uses.** Qualify it with what it actually operates on.
+
 ## 8. Clock (`IClock` implementation)
 
 `IClock` is the narrow time port declared in `BuildingBlocks.Domain` ("the
@@ -694,7 +706,7 @@ Adding any further third-party dependency to the platform requires it to land
 `BuildingBlocks.Infrastructure.Tests` mirrors this project. Tests use xUnit
 (built-in asserts), NSubstitute, and EF Core InMemory where applicable
 (ADR-0014). Dispatching, DI wiring, failure translation, serialization, and
-entity-key mapping are covered by fast in-memory tests against the real `Sender`
+entity-key mapping are covered by fast in-memory tests against the real `RequestSender`
 and a DI container. Marten optimistic concurrency and strongly-typed key
 persistence are covered by integration tests against a disposable PostgreSQL
 instance via Testcontainers (skipped automatically when Docker is unavailable).

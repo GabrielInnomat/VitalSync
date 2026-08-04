@@ -69,14 +69,27 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
         var recorder = new AttemptRecorder();
         using var host = await StartConsumerAsync(queueName, TestMessaging.ContextName, "upstream.*", recorder);
         using var publisher = await StartPublisherAsync();
+        var bus = publisher.Services.GetRequiredService<IMessageBus>();
 
-        await publisher.Services.GetRequiredService<IMessageBus>().PublishAsync(
-            new AlwaysFailsIntegrationEvent("suppressed"),
-            SourceContextHeader(TestMessaging.ContextName));
+        var deadline = DateTime.UtcNow + Grace;
+        while (!recorder.Names.Contains("control") && DateTime.UtcNow < deadline)
+        {
+            await bus.PublishAsync(
+                new AlwaysFailsIntegrationEvent("suppressed"),
+                SourceContextHeader(TestMessaging.ContextName));
+
+            await bus.PublishAsync(
+                new AlwaysFailsIntegrationEvent("control"),
+                SourceContextHeader(TestMessaging.UpstreamContextName));
+
+            await Task.Delay(200, TestContext.Current.CancellationToken);
+        }
+
+        Assert.Contains("control", recorder.Names);
 
         await WaitForTheQueueToDrainAsync(queueName);
 
-        Assert.Equal(0, recorder.Attempts);
+        Assert.DoesNotContain("suppressed", recorder.Names);
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
@@ -92,14 +105,15 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
         var recorder = new AttemptRecorder();
         using var host = await StartConsumerAsync(queueName, TestMessaging.ContextName, "upstream.*", recorder);
         using var publisher = await StartPublisherAsync();
-
-        await publisher.Services.GetRequiredService<IMessageBus>().PublishAsync(
-            new AlwaysFailsIntegrationEvent("delivered"),
-            SourceContextHeader(TestMessaging.UpstreamContextName));
+        var bus = publisher.Services.GetRequiredService<IMessageBus>();
 
         var deadline = DateTime.UtcNow + Grace;
         while (recorder.Attempts == 0 && DateTime.UtcNow < deadline)
         {
+            await bus.PublishAsync(
+                new AlwaysFailsIntegrationEvent("delivered"),
+                SourceContextHeader(TestMessaging.UpstreamContextName));
+
             await Task.Delay(200, TestContext.Current.CancellationToken);
         }
 

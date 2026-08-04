@@ -87,14 +87,14 @@ internal static class BuildingBlocksComposition
 
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<IClock, SystemClock>();
-        services.TryAddScoped<ISender, Sender>();
+        services.TryAddScoped<ISender, RequestSender>();
 
         options.AddPipelineBehavior(typeof(LoggingBehavior<,>), BuildingBlocksOptions.LoggingBehaviorOrder);
         options.AddPipelineBehavior(typeof(ExceptionToResultBehavior<,>), BuildingBlocksOptions.ExceptionToResultBehaviorOrder);
         options.AddPipelineBehavior(typeof(UnitOfWorkBehavior<,>), BuildingBlocksOptions.UnitOfWorkBehaviorOrder);
 
         services.TryAddScoped<ProjectionRunner>();
-        services.TryAddScoped<IDomainEventPublisher, Publisher>();
+        services.TryAddScoped<IDomainEventPublisher, DomainEventPublisher>();
     }
 
     private static void RegisterStartupChecks(IServiceCollection services, BuildingBlocksOptions options)

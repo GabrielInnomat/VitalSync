@@ -24,7 +24,7 @@ dotnet run --project src/Aspire/VitalSync.AppHost
 
 Prerequisites: the .NET SDK pinned in `global.json` (`10.0.302`, `rollForward: latestFeature`) and Docker (for messaging/database infrastructure). **No Aspire workload** — the AppHosts reference `Aspire.AppHost.Sdk` as a package, and CI builds green without one.
 
-Global build settings (`Directory.Build.props`) apply solution-wide: nullable + implicit usings enabled, `latest-all` analysis level, and **warnings treated as errors**. Respect `.editorconfig` at each level: the root one plus the per-project ones under `BuildingBlocks/src/*` and the test projects; test-only analyzer relaxations that no `.editorconfig` covers live in the test `.csproj` as `NoWarn`.
+Global build settings (`Directory.Build.props`) apply solution-wide: nullable + implicit usings enabled, `latest-all` analysis level, and **warnings treated as errors**. Respect `.editorconfig` at each level: the root one, plus exactly **two** project-level ones under `BuildingBlocks/src` — `BuildingBlocks.Domain` relaxes `CA1033` (`IDomainEventOwner`/`IStateOwner` are implemented *explicitly* on purpose, ADR-0007) and `BuildingBlocks.Application` relaxes `CA1000` (`Result<T>` needs static factories) — plus one for the test projects. **`BuildingBlocks.Infrastructure` has none and needs none**: it carries the full analyzer set unrelaxed, and it should stay that way — a new suppression there is a smell worth arguing about first. Test-only analyzer relaxations that no `.editorconfig` covers live in the test `.csproj` as `NoWarn`.
 
 ## Repository map
 
@@ -283,7 +283,11 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 - **Never name a folder after a vendor whose namespace you use.** A
   `Persistence/Marten/` folder would break every `using Marten;` in it, because C#
   resolves against the enclosing namespaces first. Hence `StateStored`/`EventSourced`
-  and `Wiring` — which describe the role and are the better names anyway.
+  and `Wiring` — which describe the role and are the better names anyway. The same goes
+  for **type** names a vendor already uses for something else: the dispatcher is
+  `RequestSender` and the publication step is `DomainEventPublisher`, because Wolverine
+  means a transport endpoint by `ISender` and "putting a message on the broker" by
+  *publish*. Qualify a bare noun with what it actually operates on.
 - **`BuildingBlocksOptions` is a fluent facade, not a worker.** Each method validates
   its arguments and delegates to one collaborator in `DependencyInjection/Registration/`
   — `HandlerRegistrar` (scanning, handlers, behaviors), `PersistenceRegistrar` (EF Core

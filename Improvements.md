@@ -18,7 +18,7 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-03 | Erwartete Domänenfehler werden als Error geloggt                         | gelöst            |
 | IMP-04 | Integrations-Event-Transport nutzt `IMessageBus` statt `IMessageContext` | gelöst            |
 | IMP-05 | `AddHandlersFrom` erzeugt Duplikate und überschreibt still               | gelöst            |
-| IMP-06 | `Sender`-Cache ist nur nach Request-Typ gekeyed                          | gelöst            |
+| IMP-06 | `RequestSender`-Cache ist nur nach Request-Typ gekeyed                          | gelöst            |
 | IMP-07 | `UnitOfWorkBehavior` wirft ohne konfigurierte Persistenz                 | gelöst            |
 | IMP-08 | `MartenUnitOfWork` flusht die Outbox nicht                               | gelöst            |
 | IMP-09 | Kein Testprojekt für `BuildingBlocks.Infrastructure`                     | gelöst            |
@@ -38,7 +38,7 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-23 | Marten-Stream-Key hängt am Klassennamen                                  | gelöst            |
 | IMP-24 | `DomainEventEnvelope` trägt zu wenig Metadaten                           | gelöst            |
 | IMP-25 | `Sequential()` auf einer einzigen Queue für alle Domain Events           | offen             |
-| IMP-26 | `Publisher` koppelt Projektion und Integration-Event-Publikation         | offen             |
+| IMP-26 | `DomainEventPublisher` koppelt Projektion und Integration-Event-Publikation         | offen             |
 | IMP-27 | `FailureResults`-Reflection ist vermeidbar                               | offen             |
 | IMP-28 | Kein `IClock` im Container                                               | gelöst            |
 | IMP-29 | Unique-Constraint-Verletzungen werden nicht übersetzt                    | offen             |
@@ -109,7 +109,7 @@ nicht-atomar ermöglicht (ADR-0019/0020/0021).
 UnitOfWork(300)`
 ([BuildingBlocksOptions.cs:40-60](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/BuildingBlocksOptions.cs:40)),
 `Sender.BuildPipeline` sortiert `OrderByDescending`, sodass niedrige Orders außen liegen
-([Sender.cs:73-88](BuildingBlocks/src/BuildingBlocks.Infrastructure/Dispatching/Sender.cs:73)).
+([RequestSender.cs:73-88](BuildingBlocks/src/BuildingBlocks.Infrastructure/Dispatching/RequestSender.cs:73)).
 
 ## Lösungsvorschlag
 
@@ -162,13 +162,13 @@ Umgesetzt (Schritte 1–4), abgesichert durch `HandlerRegistrationTests` und
 
 ---
 
-# IMP-06, `Sender`-Cache ist nur nach Request-Typ gekeyed
+# IMP-06, `RequestSender`-Cache ist nur nach Request-Typ gekeyed
 
 Ein Typ mit zwei Ergebnisverträgen holte den falschen Dispatcher aus dem Cache →
 `InvalidCastException`, zustandsabhängig und schwer diagnostizierbar.
 
 **Verifiziert gelöst.** `private readonly record struct DispatcherKey(Type Request, Type Result)`
-([Sender.cs:23-27](BuildingBlocks/src/BuildingBlocks.Infrastructure/Dispatching/Sender.cs:23)).
+([RequestSender.cs:23-27](BuildingBlocks/src/BuildingBlocks.Infrastructure/Dispatching/RequestSender.cs:23)).
 Zusätzlich lehnt der Startup-Validator mehrdeutige Request-Typen ab
 ([HandlerRegistrationStartupValidator.cs:77-84](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/HandlerRegistrationStartupValidator.cs:77)).
 
@@ -297,7 +297,7 @@ das benachbarte `IProjectionHandler<in TDomainEvent>` typisiert ist und vom `Pro
 aufgelöst wird. Zwei funktional analoge Konzepte, gegensätzlich entworfen.
 
 [IIntegrationEventMapper.cs](BuildingBlocks/src/BuildingBlocks.Application/IIntegrationEventMapper.cs),
-Aufruf in [Publisher.cs:34-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Events/Publisher.cs:34).
+Aufruf in [DomainEventPublisher.cs:34-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Events/DomainEventPublisher.cs:34).
 
 ## Lösungsvorschlag
 
@@ -312,7 +312,7 @@ public interface IIntegrationEventMapper<in TDomainEvent>
 ```
 
 `AddHandlersFrom` registriert sie dann über denselben `MultiHandlerInterfaceDefinitions`-Pfad wie
-`IProjectionHandler<>`; im `Publisher` ersetzt ein `MapperRunner` (Zwilling des `ProjectionRunner`)
+`IProjectionHandler<>`; im `DomainEventPublisher` ersetzt ein `MapperRunner` (Zwilling des `ProjectionRunner`)
 die Schleife über alle Mapper. Nebeneffekt: der `_ => []`-Default-Arm in jedem Mapper entfällt, und
 „welche Events verlassen diesen Kontext" wird an der Typsignatur ablesbar statt im `switch` versteckt.
 
@@ -713,14 +713,14 @@ nicht als Default stehen bleibt.
 
 ---
 
-# IMP-26, `Publisher` koppelt Projektion und Integration-Event-Publikation
+# IMP-26, `DomainEventPublisher` koppelt Projektion und Integration-Event-Publikation
 
 ```csharp
 await projectionRunner.RunAsync(domainEvent, cancellationToken);
 foreach (var mapper in _mappers) { foreach (...) await sink.PublishAsync(...); }
 ```
 
-([Publisher.cs:32-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Events/Publisher.cs:32))
+([DomainEventPublisher.cs:32-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Events/DomainEventPublisher.cs:32))
 
 Zwei Belange in einer Methode, ohne Fehlerisolierung: wirft eine Projektion, wird kein einziges
 Integration Event publiziert; wirft ein Mapper, laufen bei der Redelivery alle Projektionen erneut.
@@ -835,7 +835,7 @@ using var activity = BuildingBlocksActivitySource.Instance.StartActivity($"Send 
 activity?.SetTag("vitalsync.request.type", requestName);
 ```
 
-Analog in `ProjectionRunner` und `Publisher`. Der Service-Default registriert die Quelle dann per
+Analog in `ProjectionRunner` und `DomainEventPublisher`. Der Service-Default registriert die Quelle dann per
 `AddSource("VitalSync.BuildingBlocks")`. Kleiner Aufwand, hoher Betriebsnutzen — sinnvollerweise
 zusammen mit dem ersten produktiven Service.
 
@@ -947,13 +947,13 @@ gRPC-Adapter. Als Extensions in `BuildingBlocks.Application`, damit `Result` sel
 
 # IMP-35, Statische Caches über Container-Grenzen hinweg
 
-Fünf prozessglobale Caches: `Sender` (3×), `ProjectionRunner`, `FailureResults`, `EntityKeyFormatter`,
+Fünf prozessglobale Caches: `RequestSender` (3×), `ProjectionRunner`, `FailureResults`, `EntityKeyFormatter`,
 `EntityKeyModelBuilderExtensions`.
 
 **Status: wird nicht gelöst.** Alle fünf sind ausschließlich `Type`-gekeyed und speichern
 unveränderliche, rein typabgeleitete Werte (Dispatcher, kompilierte Accessors, Konverter). Für einen
 gegebenen Typ ist das Ergebnis über die Prozesslebensdauer konstant, unabhängig vom Container. Die
-einzige reale Fehlwirkung war der unvollständige Schlüssel in `Sender` — das war IMP-06 und ist behoben.
+einzige reale Fehlwirkung war der unvollständige Schlüssel in `RequestSender` — das war IMP-06 und ist behoben.
 Testisolation ist nicht betroffen, weil kein Cache Container- oder Scope-Zustand hält.
 
 ## Lösungsvorschlag
@@ -1016,13 +1016,13 @@ die `.editorconfig`-Konventionen bzw. eine kurze ADR.
 # IMP-38, Sichtbarkeits-Disziplin ist uneinheitlich
 
 **Teilweise gelöst.** Das ursprünglich beanstandete Transport-Trio existiert nicht mehr; die
-Messaging-Typen sind heute konsequent `internal` (`Publisher`, `WolverineIntegrationEventSink`,
+Messaging-Typen sind heute konsequent `internal` (`DomainEventPublisher`, `WolverineIntegrationEventSink`,
 `NullIntegrationEventSink`, `BuildingBlocksWolverineExtension`, `WolverineOptionsExtensions`, beide
 Startup-Validatoren, `DomainEventEnvelopeSerializer`, `DomainEventStamper`, `PipelineBehaviorRegistry`,
 `EntityKeyFormatter`).
 
 **Offen bleibt eine Inkonsistenz:** `ProjectionRunner` ist `public`, obwohl er ausschließlich vom
-`internal` `Publisher` genutzt wird. Ebenso sind `EfCoreUnitOfWork`, `MartenUnitOfWork`,
+`internal` `DomainEventPublisher` genutzt wird. Ebenso sind `EfCoreUnitOfWork`, `MartenUnitOfWork`,
 `EfCoreRepository`, `MartenEventSourcedRepository` und beide Tracker `public`, obwohl sie ausnahmslos
 über `BuildingBlocksOptions` registriert und nie direkt referenziert werden.
 
@@ -1211,8 +1211,8 @@ Test hat seine Lücke also nicht mehr zu füllen — nur seinen Namen zu korrigi
 **Teilweise gelöst.** Schritt 1 ist umgesetzt: `UnitOfWorkBehavior` nutzt Konstruktorinjektion mit
 `IUnitOfWork? = null` und ist ohne Container instanziierbar.
 
-**Offen:** `Sender` und `ProjectionRunner` nehmen weiterhin einen `IServiceProvider`
-([Sender.cs:19](BuildingBlocks/src/BuildingBlocks.Infrastructure/Dispatching/Sender.cs:19),
+**Offen:** `RequestSender` und `ProjectionRunner` nehmen weiterhin einen `IServiceProvider`
+([RequestSender.cs:19](BuildingBlocks/src/BuildingBlocks.Infrastructure/Dispatching/RequestSender.cs:19),
 [ProjectionRunner.cs:20](BuildingBlocks/src/BuildingBlocks.Infrastructure/Events/ProjectionRunner.cs:20)).
 Das ist dort **richtig** — beide lösen zur Laufzeit typabhängig auf, was per Konstruktor nicht geht —
 aber nirgends begründet. Ohne diese Begründung ist der Service-Locator-Zugriff ein Muster, das kopiert
@@ -1223,7 +1223,7 @@ wird.
 Die Regel in `docs/architecture/building-blocks.md` festhalten, gemeinsam mit der Begründung aus
 IMP-35 (statische Caches) — beides sind bewusste Ausnahmen, die als solche dokumentiert gehören:
 
-> Der `IServiceProvider` ist in `Sender` und `ProjectionRunner` bewusst gewählt und keine
+> Der `IServiceProvider` ist in `RequestSender` und `ProjectionRunner` bewusst gewählt und keine
 > Nachlässigkeit: der aufzulösende Handler-Typ ergibt sich erst aus dem Laufzeittyp des Requests,
 > lässt sich also nicht per Konstruktor injizieren. Für Abhängigkeiten, die zur Kompositionszeit
 > feststehen, gilt weiterhin Konstruktorinjektion — siehe `UnitOfWorkBehavior`.
