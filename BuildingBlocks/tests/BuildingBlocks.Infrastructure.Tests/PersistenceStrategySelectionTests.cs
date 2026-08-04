@@ -44,6 +44,32 @@ public sealed class PersistenceStrategySelectionTests
     }
 
     [Fact]
+    public void AddBuildingBlocks_WithEfCoreSelectedTwiceUnderDifferentConnectionStrings_Throws()
+    {
+        var services = new ServiceCollection();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            services.AddBuildingBlocks(options => WithDomainEvents(options)
+                .UseEfCorePersistence<TestDbContext>(ConnectionString)
+                .UseEfCorePersistence<TestDbContext>("Host=elsewhere;Database=other;Username=test;******")));
+
+        Assert.Contains("different databases", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AddBuildingBlocks_WithMartenSelectedTwice_DoesNotThrow()
+    {
+        var services = new ServiceCollection();
+
+        var exception = Record.Exception(() =>
+            services.AddBuildingBlocks(options => WithDomainEvents(options)
+                .UseMartenEventSourcing(ConnectionString)
+                .UseMartenEventSourcing(ConnectionString)));
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
     public void AddBuildingBlocks_WithEfCoreThenMarten_Throws()
     {
         var services = new ServiceCollection();
@@ -54,6 +80,8 @@ public sealed class PersistenceStrategySelectionTests
                 .UseMartenEventSourcing(ConnectionString)));
 
         Assert.Contains("persistence strateg", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("UseEfCorePersistence", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("UseMartenEventSourcing", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

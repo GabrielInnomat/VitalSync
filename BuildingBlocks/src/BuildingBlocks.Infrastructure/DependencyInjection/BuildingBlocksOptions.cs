@@ -45,7 +45,6 @@ public sealed class BuildingBlocksOptions
     private readonly HashSet<Assembly> _scannedAssemblies = [];
     private readonly HashSet<Assembly> _domainEventAssemblies = [];
     private DomainEventTypeRegistry? _domainEventTypeRegistry;
-    private PersistenceStyle _persistenceStyle;
 
     internal BuildingBlocksOptions(IServiceCollection services, PipelineBehaviorRegistry behaviorRegistry)
     {
@@ -61,29 +60,6 @@ public sealed class BuildingBlocksOptions
 
     internal DomainEventTypeRegistry DomainEventTypeRegistry =>
         _domainEventTypeRegistry ??= new DomainEventTypeRegistry(_domainEventAssemblies);
-
-    private enum PersistenceStyle
-    {
-        None = 0,
-        EfCore,
-        Marten,
-    }
-
-    private void SelectPersistenceStyle(PersistenceStyle style)
-    {
-        if (_persistenceStyle != PersistenceStyle.None && _persistenceStyle != style)
-        {
-            throw new InvalidOperationException(
-                "Two persistence strategies were configured for the same host (EF Core and Marten). " +
-                "A microservice hosts exactly one bounded context, and a bounded context uses exactly one " +
-                "persistence strategy (ADR-0019/0020/0021): state-stored via EF Core, or event-sourced via Marten. " +
-                "A commit cannot span both stores atomically because they live in separate databases (ADR-0020). " +
-                "A context that appears to need both is a sign it is cut wrong and should be split into two " +
-                "bounded contexts, each in its own microservice with its own single persistence strategy.");
-        }
-
-        _persistenceStyle = style;
-    }
 
     public BuildingBlocksOptions AddHandlersFrom(Assembly assembly)
     {
@@ -201,7 +177,7 @@ public sealed class BuildingBlocksOptions
     {
         ArgumentNullException.ThrowIfNull(connectionString);
 
-        SelectPersistenceStyle(PersistenceStyle.EfCore);
+        WolverineWiring.SelectPersistence(PersistenceChoice.EfCore(connectionString));
 
         _services.AddDbContextWithWolverineIntegration<TContext>(builder =>
         {
@@ -215,8 +191,6 @@ public sealed class BuildingBlocksOptions
         _services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
         _services.AddHostedService(static provider => new AggregateStateModelStartupValidator<TContext>(provider));
 
-        WolverineWiring.ApplyDomainEventRouting = true;
-        WolverineWiring.EfCoreMessageStoreConnectionString = connectionString;
         return this;
     }
 
@@ -224,7 +198,7 @@ public sealed class BuildingBlocksOptions
     {
         ArgumentNullException.ThrowIfNull(connectionString);
 
-        SelectPersistenceStyle(PersistenceStyle.Marten);
+        WolverineWiring.SelectPersistence(PersistenceChoice.Marten);
 
         _services.AddMarten(serviceProvider =>
         {
@@ -247,8 +221,6 @@ public sealed class BuildingBlocksOptions
         _services.TryAddScoped<IUnitOfWork, MartenUnitOfWork>();
         _services.TryAddScoped(typeof(IRepository<,>), typeof(MartenEventSourcedRepository<,>));
 
-        WolverineWiring.ApplyDomainEventRouting = true;
-        WolverineWiring.MartenMessageStoreSelected = true;
         return this;
     }
 
@@ -271,7 +243,7 @@ public sealed class BuildingBlocksOptions
         _services.Replace(ServiceDescriptor.Singleton<IIntegrationEventSinkFactory>(
             new WolverineIntegrationEventSinkFactory(contextName)));
         _services.Replace(ServiceDescriptor.Singleton(new IntegrationEventSourceContext(contextName)));
-        WolverineWiring.Messaging = new MessagingSettings(rabbitMqUri, exchangeName, contextName);
+        WolverineWiring.SelectMessaging(new MessagingSettings(rabbitMqUri, exchangeName, contextName));
         return this;
     }
 
@@ -292,18 +264,10 @@ public sealed class BuildingBlocksOptions
                 nameof(topicPatterns));
         }
 
-        if (WolverineWiring.Subscription is not null)
-        {
-            throw new InvalidOperationException(
-                "SubscribeToIntegrationEvents was called more than once. A microservice hosts exactly one bounded " +
-                "context and owns exactly one queue (ADR-0023); bind every topic pattern it consumes to that one " +
-                "queue in a single call instead.");
-        }
-
-        WolverineWiring.Subscription = new IntegrationEventSubscription(
+        WolverineWiring.SelectSubscription(new IntegrationEventSubscription(
             queueName,
             [.. topicPatterns],
-            consumerAssembly);
+            consumerAssembly));
 
         return this;
     }

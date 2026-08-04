@@ -42,8 +42,8 @@ public sealed class WolverineExtensionTests
         var settings = provider.GetRequiredService<WolverineWiringSettings>();
 
         Assert.False(settings.RequiresWolverine);
-        Assert.False(settings.ApplyDomainEventRouting);
-        Assert.Null(settings.EfCoreMessageStoreConnectionString);
+        Assert.False(settings.Persistence.IsSelected);
+        Assert.Null(settings.Persistence.EfCoreWriteConnectionString);
         Assert.Null(settings.Messaging);
     }
 
@@ -55,8 +55,8 @@ public sealed class WolverineExtensionTests
 
         var settings = provider.GetRequiredService<WolverineWiringSettings>();
 
-        Assert.True(settings.ApplyDomainEventRouting);
-        Assert.Equal(ConnectionString, settings.EfCoreMessageStoreConnectionString);
+        Assert.True(settings.Persistence.IsSelected);
+        Assert.Equal(ConnectionString, settings.Persistence.EfCoreWriteConnectionString);
         Assert.Null(settings.Messaging);
     }
 
@@ -68,8 +68,8 @@ public sealed class WolverineExtensionTests
 
         var settings = provider.GetRequiredService<WolverineWiringSettings>();
 
-        Assert.True(settings.ApplyDomainEventRouting);
-        Assert.Null(settings.EfCoreMessageStoreConnectionString);
+        Assert.True(settings.Persistence.IsSelected);
+        Assert.Null(settings.Persistence.EfCoreWriteConnectionString);
         Assert.Null(settings.Messaging);
     }
 
@@ -103,7 +103,7 @@ public sealed class WolverineExtensionTests
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
             .UseMartenEventSourcing(ConnectionString));
 
-        Assert.True(provider.GetRequiredService<WolverineWiringSettings>().HasMessageStore);
+        Assert.True(provider.GetRequiredService<WolverineWiringSettings>().Persistence.IsSelected);
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithDomainEventRouting_RoutesTheEnvelopeToTheLocalQueue()
     {
-        var options = ConfigureOptions(new WolverineWiringSettings { ApplyDomainEventRouting = true });
+        var options = ConfigureOptions(Settings(settings => settings.SelectPersistence(PersistenceChoice.Marten)));
 
         var endpoints = options.Transports.SelectMany(transport => transport.Endpoints());
 
@@ -136,7 +136,8 @@ public sealed class WolverineExtensionTests
             .ConfigureServices(services => services.AddScoped<ISender, Sender>())
             .UseWolverine(options =>
             {
-                new BuildingBlocksWolverineExtension(new WolverineWiringSettings { ApplyDomainEventRouting = true })
+                new BuildingBlocksWolverineExtension(
+                    Settings(settings => settings.SelectPersistence(PersistenceChoice.Marten)))
                     .Configure(options);
                 options.Discovery.IncludeAssembly(typeof(WolverineExtensionTests).Assembly);
             })
@@ -149,7 +150,7 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithBrokerUri_AddsTheRabbitMqTransport()
     {
-        var options = ConfigureOptions(new WolverineWiringSettings { Messaging = TestMessagingSettings });
+        var options = ConfigureOptions(Settings(settings => settings.SelectMessaging(TestMessagingSettings)));
 
         Assert.Contains(options.Transports, transport => transport.Protocol == "rabbitmq");
     }
@@ -157,7 +158,7 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithBrokerUri_DeclaresThePlatformExchangeAsDurable()
     {
-        var options = ConfigureOptions(new WolverineWiringSettings { Messaging = TestMessagingSettings });
+        var options = ConfigureOptions(Settings(settings => settings.SelectMessaging(TestMessagingSettings)));
 
         var exchange = RabbitMqTransportOf(options)
             .Exchanges[TestMessaging.ExchangeName];
@@ -168,11 +169,12 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithSubscription_DeclaresTheQueueAsDurable()
     {
-        var options = ConfigureOptions(new WolverineWiringSettings
+        var options = ConfigureOptions(Settings(settings =>
         {
-            Messaging = TestMessagingSettings,
-            Subscription = new IntegrationEventSubscription("fitness.integration-events", ["nutrition.*"], TestAssembly),
-        });
+            settings.SelectMessaging(TestMessagingSettings);
+            settings.SelectSubscription(
+                new IntegrationEventSubscription("fitness.integration-events", ["nutrition.*"], TestAssembly));
+        }));
 
         var queue = RabbitMqTransportOf(options).Queues["fitness.integration-events"];
 
@@ -244,11 +246,12 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithSubscription_ListensOnTheQueue()
     {
-        var options = ConfigureOptions(new WolverineWiringSettings
+        var options = ConfigureOptions(Settings(settings =>
         {
-            Messaging = TestMessagingSettings,
-            Subscription = new IntegrationEventSubscription("fitness.integration-events", ["nutrition.*"], TestAssembly),
-        });
+            settings.SelectMessaging(TestMessagingSettings);
+            settings.SelectSubscription(
+                new IntegrationEventSubscription("fitness.integration-events", ["nutrition.*"], TestAssembly));
+        }));
 
         Assert.Contains(
             options.Transports.SelectMany(transport => transport.Endpoints()),
@@ -264,6 +267,13 @@ public sealed class WolverineExtensionTests
         Assert.DoesNotContain(
             options.Transports.SelectMany(transport => transport.Endpoints()),
             endpoint => endpoint.Uri.ToString().Contains("building-blocks-domain-events", StringComparison.Ordinal));
+    }
+
+    private static WolverineWiringSettings Settings(Action<WolverineWiringSettings> configure)
+    {
+        var settings = new WolverineWiringSettings();
+        configure(settings);
+        return settings;
     }
 
     private static WolverineOptions ConfigureOptions(WolverineWiringSettings settings)

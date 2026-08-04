@@ -86,7 +86,7 @@ capability. The folder is the namespace.
 Two cuts here carry meaning rather than tidiness:
 
 - **`StateStored` and `EventSourced` are mutually exclusive.** A bounded context picks
-  one (ADR-0019/0020), and `BuildingBlocksOptions` throws when a host selects both. The
+  one (ADR-0019/0020), and the selection throws when a host selects both. The
   folders make that visible; the shared parent holds only what both need. Note that
   `ApplyEntityKeyConversions` stays in the shared parent on purpose: an event-sourced
   context still uses EF Core for its **read** models.
@@ -95,6 +95,27 @@ Two cuts here carry meaning rather than tidiness:
   `BuildingBlocksWolverineExtension` describe what the host asked for and translate it
   into Wolverine's options; they run once at composition time and never on a message.
   They live under `DependencyInjection/Wiring/`, not under `Messaging/`.
+
+### The persistence selection is one value, not a set of flags
+
+What a host selected is a single `PersistenceChoice` — a closed hierarchy of exactly
+`None`, `Marten`, and `EfCore(connectionString)`, whose subtypes are private so no
+fourth case can appear elsewhere. Everything Wolverine needs to know is derived from
+it rather than stored beside it: `IsSelected` answers both "route domain events" and
+"a message store exists" (they are the same fact), and `EfCoreWriteConnectionString`
+is non-null for exactly one case. That is why the outbox cannot end up pointed at a
+different database than the aggregates — there is no second place to write the
+connection string to.
+
+`WolverineWiringSettings` therefore has no public setters. Selecting is a method, and
+the two guards that need nothing but the selection itself live there: choosing two
+different strategies throws (naming both calls), and choosing the **same** strategy
+twice with **different** arguments throws too, because a bounded context has exactly
+one write database (ADR-0021). Repeating an identical call stays legal — the choice is
+a record, so it compares by value. The cross-cutting checks that need the whole picture
+(subscription without messaging, messaging without persistence) stay in the composition
+root's `Validate` phase, since they are order-independent and only decidable once the
+options lambda has run.
 
 ---
 

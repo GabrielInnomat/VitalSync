@@ -1,0 +1,75 @@
+using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
+
+namespace BuildingBlocks.Infrastructure.Tests;
+
+public sealed class PersistenceChoiceTests
+{
+    private const string ConnectionString = "Host=localhost;Database=test;Username=test;******";
+
+    [Fact]
+    public void None_IsNotSelectedAndCarriesNoConnectionString()
+    {
+        Assert.False(PersistenceChoice.None.IsSelected);
+        Assert.Null(PersistenceChoice.None.EfCoreWriteConnectionString);
+    }
+
+    [Fact]
+    public void Marten_IsSelectedButCarriesNoEfCoreConnectionString()
+    {
+        Assert.True(PersistenceChoice.Marten.IsSelected);
+        Assert.Null(PersistenceChoice.Marten.EfCoreWriteConnectionString);
+    }
+
+    [Fact]
+    public void EfCore_IsSelectedAndCarriesItsConnectionString()
+    {
+        var choice = PersistenceChoice.EfCore(ConnectionString);
+
+        Assert.True(choice.IsSelected);
+        Assert.Equal(ConnectionString, choice.EfCoreWriteConnectionString);
+    }
+
+    [Fact]
+    public void TwoEfCoreChoicesOverTheSameConnectionString_AreEqual()
+    {
+        Assert.Equal(PersistenceChoice.EfCore(ConnectionString), PersistenceChoice.EfCore(ConnectionString));
+        Assert.NotEqual(PersistenceChoice.EfCore(ConnectionString), PersistenceChoice.EfCore("Host=elsewhere"));
+    }
+
+    [Fact]
+    public void TheHierarchyIsClosed()
+    {
+        var declared = typeof(PersistenceChoice).Assembly
+            .GetTypes()
+            .Where(type => type != typeof(PersistenceChoice) && typeof(PersistenceChoice).IsAssignableFrom(type))
+            .ToArray();
+
+        Assert.Equal(3, declared.Length);
+        Assert.All(declared, type => Assert.Equal(typeof(PersistenceChoice), type.DeclaringType));
+    }
+
+    [Fact]
+    public void SelectingTheSameChoiceTwice_IsAccepted()
+    {
+        var settings = new WolverineWiringSettings();
+
+        settings.SelectPersistence(PersistenceChoice.EfCore(ConnectionString));
+        settings.SelectPersistence(PersistenceChoice.EfCore(ConnectionString));
+
+        Assert.Equal(ConnectionString, settings.Persistence.EfCoreWriteConnectionString);
+    }
+
+    [Fact]
+    public void EitherPersistenceChoice_MakesWolverineRequired()
+    {
+        var efCore = new WolverineWiringSettings();
+        efCore.SelectPersistence(PersistenceChoice.EfCore(ConnectionString));
+
+        var marten = new WolverineWiringSettings();
+        marten.SelectPersistence(PersistenceChoice.Marten);
+
+        Assert.False(new WolverineWiringSettings().RequiresWolverine);
+        Assert.True(efCore.RequiresWolverine);
+        Assert.True(marten.RequiresWolverine);
+    }
+}

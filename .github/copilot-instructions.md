@@ -270,6 +270,16 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   `DependencyInjection/Wiring/`, while `Messaging/DomainEvents/` and
   `Messaging/IntegrationEvents/` hold what runs per message. Start-up checks live in
   `DependencyInjection/Validation/`.
+- **The persistence selection is one value, not flags.** `PersistenceChoice` is a closed
+  hierarchy — `None`, `Marten`, `EfCore(connectionString)` — with private subtypes.
+  "Route domain events" and "a message store exists" are the same fact (`IsSelected`),
+  and the EF Core write connection string has exactly one home, which is why the outbox
+  cannot end up in a different database than the aggregates. `WolverineWiringSettings`
+  has no public setters: selecting is a method, and it throws both when two different
+  strategies are chosen and when the same strategy is chosen twice with different
+  arguments (a bounded context has one write database, ADR-0021). An identical repeated
+  call stays legal. Do not add a derived flag next to the choice — derive it from the
+  choice.
 - **Never name a folder after a vendor whose namespace you use.** A
   `Persistence/Marten/` folder would break every `using Marten;` in it, because C#
   resolves against the enclosing namespaces first. Hence `StateStored`/`EventSourced`

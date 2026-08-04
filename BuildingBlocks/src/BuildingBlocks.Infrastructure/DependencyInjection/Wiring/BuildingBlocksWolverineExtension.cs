@@ -6,7 +6,7 @@ internal sealed class BuildingBlocksWolverineExtension(WolverineWiringSettings s
 {
     public void Configure(WolverineOptions options)
     {
-        if (settings.ApplyDomainEventRouting)
+        if (settings.Persistence.IsSelected)
         {
             options.ApplyBuildingBlockDomainEventRouting();
         }

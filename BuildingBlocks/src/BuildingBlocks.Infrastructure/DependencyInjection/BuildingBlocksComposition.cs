@@ -50,7 +50,7 @@ internal static class BuildingBlocksComposition
                 "configured as well (ADR-0023).");
         }
 
-        if (wiring.Messaging is not null && !wiring.HasMessageStore)
+        if (wiring.Messaging is not null && !wiring.Persistence.IsSelected)
         {
             throw new InvalidOperationException(
                 "UseWolverineMessaging was selected without a persistence strategy. Integration events are sent " +
@@ -60,7 +60,7 @@ internal static class BuildingBlocksComposition
                 "(writeConnectionString) or UseMartenEventSourcing(writeConnectionString) as well.");
         }
 
-        if (!wiring.ApplyDomainEventRouting)
+        if (!wiring.Persistence.IsSelected)
         {
             return;
         }

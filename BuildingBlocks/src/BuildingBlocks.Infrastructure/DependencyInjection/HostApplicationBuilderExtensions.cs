@@ -26,7 +26,7 @@ public static class HostApplicationBuilderExtensions
 
         builder.UseWolverine(options =>
         {
-            if (wiring.EfCoreMessageStoreConnectionString is { } writeConnectionString)
+            if (wiring.Persistence.EfCoreWriteConnectionString is { } writeConnectionString)
             {
                 options.PersistMessagesWithPostgresql(writeConnectionString);
                 options.UseEntityFrameworkCoreTransactions();
