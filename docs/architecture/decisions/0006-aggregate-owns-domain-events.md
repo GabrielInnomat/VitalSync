@@ -33,3 +33,7 @@ The aggregate base is the **sole owner** of its domain events:
 
 - **Public mutable list / public `Clear`:** rejected — allows any layer to corrupt the event stream or drop undispatched events.
 - **Drain-on-read (`GetDomainEvents()` that clears):** rejected — a query with a hidden side effect; loses events if a later save/dispatch fails, and is surprising to callers.
+
+## Amendment, 2026-08-04: events raised by child entities
+
+[ADR-0032](./0032-child-entities-raise-via-root.md) gives a child entity inside an aggregate its own behaviour. It does **not** give it its own events: the child raises through `IDomainEventRaiser`, which `AggregateRoot` implements explicitly, and the event lands in the root's single list through the root's own `RaiseEvent`. Ownership as decided here is therefore unchanged — one list, one order, one privileged `ClearDomainEvents()`, and no event list anywhere but on the root.

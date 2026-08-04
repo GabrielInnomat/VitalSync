@@ -58,6 +58,40 @@ public sealed class ReconstitutableTests
         Assert.Single(aggregate.DomainEvents);
     }
 
+    [Fact]
+    public void Restore_BringsBackTheChildrenCarriedByTheState()
+    {
+        var aggregate = Reconstitute<ParentAggregate>();
+        var persisted = new ParentState(new TestId(1), 0)
+        {
+            Version = 5,
+            Children = new List<ChildState> { new(new TestId(2), 3) },
+        };
+
+        ((IStateOwner)aggregate).Restore(persisted);
+
+        var child = Assert.Single(aggregate.Children);
+        Assert.Equal(new TestId(2), child.Id);
+        Assert.Equal(3, child.Value);
+        Assert.Empty(aggregate.DomainEvents);
+    }
+
+    [Fact]
+    public void Restore_YieldsChildViewsThatStayLiveAgainstTheRoot()
+    {
+        var aggregate = Reconstitute<ParentAggregate>();
+        ((IStateOwner)aggregate).Restore(new ParentState(new TestId(1), 0)
+        {
+            Version = 5,
+            Children = new List<ChildState> { new(new TestId(2), 3) },
+        });
+
+        aggregate.Child(new TestId(2)).ChangeValue(9);
+
+        Assert.Equal(9, aggregate.Child(new TestId(2)).Value);
+        Assert.Equal(6, ((IStateOwner)aggregate).Version);
+    }
+
     private static TAggregate Reconstitute<TAggregate>()
         where TAggregate : class =>
         (TAggregate)Activator.CreateInstance(typeof(TAggregate), nonPublic: true)!;

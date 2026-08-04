@@ -22,7 +22,9 @@ The block provides a **single aggregate authoring model**: every aggregate deriv
 | `IEntityKey<TValue>`                      | interface       | A strongly typed key that exposes its underlying `Value` (any `notnull` type).       |
 | `IEntity<TKey>`                           | interface       | An entity with a strongly typed identity.                                            |
 | `EntityBase<TKey>`                        | abstract class  | Shared identity-equality base for entities and aggregate roots (single equality implementation). |
-| `Entity<TKey>`                            | abstract class  | Base for non-aggregate entities: constructor-set identity, guard, identity equality. |
+| `Entity<TKey, TState>`                    | abstract class  | The base for a **non-aggregate entity**, always a child inside an aggregate: constructor-set identity with guard, identity equality, its own state read through the root, and `RaiseEvent` via the root's channel. |
+| `EntityState<TSelf, TKey>`                | abstract record | A child entity's state: identity plus a pure `Apply`. Carries **no** version.        |
+| `IDomainEventRaiser`                      | interface       | The aggregate-internal channel a child raises through (explicit, never called by application code). |
 | `AggregateState<TSelf, TKey>`             | abstract record | An aggregate's state: owns the identity, the version, and the event-apply ("evolve") logic. |
 | `IAggregateRoot<TKey>`                    | interface       | Marker for an aggregate root; exposes events **read-only**.                          |
 | `IEventSourcedAggregateRoot<TKey>`        | interface       | Infrastructure-only capability exposing `Version` + `LoadFromHistory` for ES.        |
@@ -79,19 +81,22 @@ Because each aggregate has its own key type, passing the wrong key is a **compil
 
 There are two cases, by design:
 
-- **Non-aggregate entities** (`Entity<TKey>`) receive their identity in the **constructor** and expose it get-only. The `IsEmpty` guard runs in that constructor.
+- **Non-aggregate entities** (`Entity<TKey, TState>`) receive their identity in the **constructor** and expose it get-only. The `IsEmpty` guard runs in that constructor.
 - **Aggregate roots** (`AggregateRoot<TKey, TState>` and its event-sourced derivative) take their identity from their **state** (`Id => State.Id`). A freshly created aggregate therefore starts with a default `Id`; the **first applied event** must set a non-empty identity.
 
 ### Identity validation
 
-For `Entity<TKey>` the guard runs **in the constructor**, before the id is assigned:
+For `Entity<TKey, TState>` the guard runs **in the constructor**, before the id is assigned:
 
 ```csharp
-protected Entity(TKey id)
+protected Entity(IDomainEventRaiser raiser, TKey id, Func<TKey, TState?> stateLookup)
 {
     if (id.IsEmpty)
         throw new DomainValidationException("The id of an entity cannot be empty.");
+    ArgumentNullException.ThrowIfNull(raiser);
+    ArgumentNullException.ThrowIfNull(stateLookup);
     Id = id;
+    …
 }
 ```
 
@@ -107,7 +112,7 @@ There is deliberately **no** separate post-creation validity check on the aggreg
 
 ### Identity equality
 
-The identity-equality implementation lives **once**, on `EntityBase<TKey>`, from which both `Entity<TKey>` and `AggregateRoot<TKey, TState>` derive: two instances are equal when they are the **same concrete type** and have **equal ids**. `Equals(object?)` and `GetHashCode()` are `sealed`. `EntityBase<TKey>`'s constructor is `private protected`, so domain code always derives from `Entity<TKey>` or an aggregate base, never from it directly.
+The identity-equality implementation lives **once**, on `EntityBase<TKey>`, which has exactly two children — `Entity<TKey, TState>` and `AggregateRoot<TKey, TState>`: two instances are equal when they are the **same concrete type** and have **equal ids**. `Equals(object?)` and `GetHashCode()` are `sealed`. `EntityBase<TKey>`'s constructor is `private protected`, so domain code always derives from `Entity<TKey, TState>` or an aggregate base, never from it directly.
 
 ```text
 left.Equals(right)  ⇔  left.GetType() == right.GetType()  ∧  left.Id == right.Id
@@ -194,6 +199,63 @@ The children may themselves own children — the commit reconciles the whole own
 
 A child is not a reference to another aggregate. To point at one, hold its typed id as a scalar ([ADR-0005](./decisions/0005-strongly-typed-aggregate-identifiers.md)).
 
+### Child entities with behaviour
+
+A child that has invariants of its own is modelled as an entity, not as a bare record ([ADR-0032](./decisions/0032-child-entities-raise-via-root.md)). Its data lives in an `EntityState<TSelf, TKey>` — the child counterpart of `AggregateState`, without a version, because the version belongs to the aggregate ([ADR-0030](./decisions/0030-persisted-names-and-aggregate-version.md)):
+
+```csharp
+public sealed record IngredientState(IngredientId Id, string Name, int Grams)
+    : EntityState<IngredientState, IngredientId>
+{
+    public override IngredientState Apply(IDomainEvent e) => e switch
+    {
+        IngredientRegrammed regrammed => this with { Grams = regrammed.Grams },
+        _ => this
+    };
+}
+```
+
+The behaviour sits on a thin hull over that state:
+
+```csharp
+public sealed class Ingredient : Entity<IngredientId, IngredientState>
+{
+    private readonly Recipe _recipe;
+
+    internal Ingredient(Recipe recipe, IngredientId id)
+        : base(recipe, id, recipe.FindIngredient) => _recipe = recipe;
+
+    public int Grams => GetCurrentState().Grams;
+
+    public void Regram(int grams)
+    {
+        RuleChecker.Check(new IngredientGramsMustBePositive(grams));
+
+        RaiseEvent(new IngredientRegrammed(_recipe.Id, Id, grams));
+    }
+}
+```
+
+The root builds hulls on demand and keeps the lookup to itself:
+
+```csharp
+public IReadOnlyCollection<Ingredient> Ingredients =>
+    State.Ingredients.Select(i => new Ingredient(this, i.Id)).ToList();
+
+internal IngredientState? FindIngredient(IngredientId id) =>
+    State.Ingredients.FirstOrDefault(i => i.Id == id);
+```
+
+Four properties follow, and they are the whole point of the design:
+
+- **The root stays the sole owner of the uncommitted events.** `RaiseEvent` on the child hands the event to `AggregateRoot.RaiseEvent` through `IDomainEventRaiser`, which the root implements explicitly. One list, one order, one `ClearDomainEvents()`.
+- **The child raising an event advances the aggregate version** — the same number that is the EF Core concurrency token and the projection watermark. A child-only change is therefore never invisible.
+- **A hull is a view, not a copy.** `GetCurrentState()` looks the state up through the root on every call, so two hulls for the same child are equal and both see the latest data. It is a method, not a property, because it throws when the child was removed in the same command — reading a removed child must fail, not return stale values.
+- **Nothing new happens on the fold path.** The child's state is part of the root's state, so `State.Apply(e)` folds it (usually by delegating to the child state's own `Apply`), and `LoadFromHistory` and `IStateOwner.Restore` rebuild children with no extra machinery.
+- **Every entity has a state.** There is no state-less entity base: a child's data lives in the aggregate's state graph, a value without identity is a value object, and a child without behaviour needs no hull at all — only its record. `Entity<TKey, TState>` and `AggregateRoot<TKey, TState>` are the only two children of `EntityBase<TKey>`.
+
+> A child entity never registers an event itself — it raises through the root.
+
 ## Aggregates and domain events
 
 ### One authoring model, two bases
@@ -202,7 +264,7 @@ Every aggregate derives (directly or indirectly) from the single base `Aggregate
 
 ```csharp
 public abstract class AggregateRoot<TKey, TState>
-    : EntityBase<TKey>, IAggregateRoot<TKey>, IDomainEventOwner, IStateOwner
+    : EntityBase<TKey>, IAggregateRoot<TKey>, IDomainEventOwner, IDomainEventRaiser, IStateOwner
     where TKey : struct, IEntityKey
     where TState : AggregateState<TState, TKey>
 ```
@@ -246,6 +308,8 @@ IHasDomainEvents          → IReadOnlyCollection<IDomainEvent> DomainEvents   (
         ▲
         │
 IDomainEventOwner      → void ClearDomainEvents()                          (infrastructure only)
+
+IDomainEventRaiser     → void Raise(IDomainEvent e)                        (child entities only)
 ```
 
 - `IAggregateRoot<TKey>` inherits **only** `IHasDomainEvents`. Application code holding an aggregate therefore sees `DomainEvents` and **cannot** see `ClearDomainEvents()`.
@@ -255,7 +319,7 @@ IDomainEventOwner      → void ClearDomainEvents()                          (in
 void IDomainEventOwner.ClearDomainEvents() => _domainEvents.Clear();
 ```
 
-- Raising (`RaiseEvent`) is `protected`, so only the aggregate itself can add events.
+- Raising (`RaiseEvent`) is `protected`, so only the aggregate itself can add events. A child entity inside the aggregate reaches it through `IDomainEventRaiser`, which the root implements **explicitly** and hands to its own children only ([ADR-0032](./decisions/0032-child-entities-raise-via-root.md)).
 
 The same explicit-implementation technique hides the event-sourcing capability on the ES base:
 

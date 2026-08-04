@@ -38,4 +38,27 @@ public sealed class Gadget : EventSourcedAggregateRoot<GadgetId, GadgetState>
 
         RaiseEvent(new GadgetRetired(Id, reason));
     }
+
+    public IReadOnlyCollection<GadgetComponent> Components =>
+        State.Components.Select(component => new GadgetComponent(this, component.Id)).ToList();
+
+    public GadgetComponentId AddComponent(string label)
+    {
+        RuleChecker.Check(new GadgetComponentLabelMustNotBeEmpty(label));
+        RuleChecker.Check(new RetiredGadgetMustNotChange(IsRetired));
+
+        var componentId = GadgetComponentId.New();
+        RaiseEvent(new GadgetComponentAdded(Id, componentId, label));
+        return componentId;
+    }
+
+    public GadgetComponent Component(GadgetComponentId componentId)
+    {
+        RuleChecker.Check(new GadgetComponentMustExist(State.Components, componentId));
+
+        return new GadgetComponent(this, componentId);
+    }
+
+    internal GadgetComponentState? FindComponent(GadgetComponentId componentId) =>
+        State.Components.FirstOrDefault(component => component.Id == componentId);
 }

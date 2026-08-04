@@ -79,6 +79,7 @@ eine Entscheidung, keinen Code.
 | TODO-44 | Bewusste Ausnahmen dokumentieren                               | **P4** | wird nicht gelöst | IMP-35, IMP-46                        |
 | TODO-45 | Api-Readiness prüft nicht mehr existierende Connection-Namen   | **P1** | gelöst            | AppHost `e44ae9b`                     |
 | TODO-46 | Die MigrationService-Worker sind leere Hüllen                  | **P2** | offen             | AppHost `e44ae9b`                     |
+| TODO-47 | Kind-Entitäten haben kein Verhalten                            | **P2** | gelöst            | ADR-0031 Folgearbeit                  |
 
 ---
 
@@ -1604,6 +1605,64 @@ unbelegt und gehört hier vermerkt statt im AppHost still vorausgesetzt.
 
 ---
 
+# TODO-47, Kind-Entitäten haben kein Verhalten
+
+**P2 · gelöst · Folgearbeit zu ADR-0031**
+
+## Ursprünglicher Befund
+
+ADR-0031 gab einem Aggregat eine Kindkollektion, die den Commit überlebt — aber das Kind blieb ein
+nackter Record. `WidgetPart` hatte kein Verhalten, und jede Regel über ein Part lag auf `Widget`.
+Für ein Feld reicht das; für einen echten Kontext nicht: ein Kind mit eigenen Invarianten schiebt
+seine Regeln in den Root, wo sie sich mit Regeln vermischen, die nichts mit ihm zu tun haben.
+
+Offen war nicht das Verhalten, sondern die **Uncommitted Events** eines solchen Kindes. Die
+naheliegende Variante — eigene Eventliste am Kind oder Registrierung im State während `Apply` —
+scheitert an drei Eigenschaften, auf denen die Architektur bereits steht: Reihenfolge (ADR-0006,
+eine Liste; ein Merge-Schlüssel existiert vor dem Commit gar nicht, ADR-0029), Record-Gleichheit
+(ein pendendes Event im State macht zwei gleiche States ungleich) und Snapshot-Sicherheit
+(`IStateOwner.State` wird persistiert, ADR-0025).
+
+## Gelöst — das Kind raist über den Root (ADR-0032, 2026-08-04)
+
+- `EntityState<TSelf, TKey>` ist das Kind-Gegenstück zu `AggregateState` — Identität und reines
+  `Apply`, **ohne** `Version`: die Version gehört dem Aggregat (ADR-0030).
+- `Entity<TKey, TState>` erbt direkt von `EntityBase<TKey>` und ist die **einzige** Basis für
+  Nicht-Aggregat-Entitäten: Identität im Konstruktor, Leer-Guard, Entitätsgleichheit (ADR-0008)
+  unverändert. Neu sind `GetCurrentState()` — liest **durch den
+  Root**, statt zu kopieren — und ein `protected RaiseEvent`, das den Root über
+  `IDomainEventRaiser` erreicht (explizit implementiert, wie `IDomainEventOwner`/`IStateOwner`).
+- Das zustandslose `Entity<TKey>` ist **gelöscht**. Jede Entität hat einen State: die Daten eines
+  Kindes liegen ohnehin im State-Graphen des Aggregats (ADR-0031), etwas ohne Identität ist ein
+  Value Object, und ein Kind ohne Verhalten braucht gar keine Hülle. `EntityBase<TKey>` hat damit
+  genau zwei Kinder — das ist die vollständige abstrakte Entitätshierarchie. Amendments an ADR-0008
+  und ADR-0025, die den zustandslosen Typ namentlich führten.
+- Der Kind-State liegt im Root-State (ADR-0031), also faltet ihn `State.Apply` ohnehin mit, meist
+  durch Delegation an das `Apply` des Kind-States. **Kein zweites Routing, keine zweite Eventliste,
+  kein `ApplyAndRecord`.**
+- `GetCurrentState()` ist eine Methode, keine Property: sie wirft, wenn das Kind im selben Command
+  entfernt wurde — und eine werfende Property verbietet CA1065. Das Werfen ist der Punkt; die
+  Alternative wäre eine Hülle, die still veraltete Daten liest.
+
+**Belegt durch:**
+
+- `BuildingBlocks.Domain.Tests` (94 Tests, davon neu: `EntityStateTests` sowie Erweiterungen in
+  `EntityTests`, `AggregateRootTests`, `AggregateVersionTests`, `ReconstitutableTests`,
+  `EventSourcedAggregateRootTests`): Kind-Event landet in der Root-Liste, Reihenfolge Root ↔ Kind,
+  Hülle liest live statt kopiert, Hülle eines entfernten Kindes wirft, Guards gegen fehlenden
+  Kanal/Lookup und leere Id, Kind-Änderung erhöht die Root-Version, Kind hat keine eigene Version,
+  `ClearDomainEvents` löscht auch Kind-Events, `Restore` und `LoadFromHistory` bauen Kinder mit auf,
+  Replay-Guard greift nach einem Kind-Event.
+- `EfCoreChildCollectionTests.ChildRaisedChange_RoundTripsThroughTheOwnedGraph` (Testcontainers/
+  PostgreSQL): eine über die Kind-Hülle ausgelöste Änderung geht durch denselben Owned-Graph-
+  Abgleich und dieselbe Zeile wie zuvor.
+- Beide Samples: `WidgetPart` ist jetzt eine Hülle über `WidgetPartState` — **ohne Schemaänderung
+  und ohne Migration** (`dotnet ef migrations has-pending-model-changes`: keine Änderungen), weil
+  das Owned Mapping schon auf genau diesen Record zeigte. `Gadget` hat mit `GadgetComponent` das
+  erste Kind im event-sourced Sample, inklusive Command- und Replay-Pfad.
+
+---
+
 ## Empfohlene Reihenfolge
 
 1. **TODO-09** (CI) zuerst — klein und sichert alles Weitere ab. (**TODO-06** stand hier
@@ -1618,7 +1677,8 @@ unbelegt und gehört hier vermerkt statt im AppHost still vorausgesetzt.
    eine Datenmigration, also **vor** dem ersten echten Service.
 4. **TODO-01** ist erledigt: Kinder eines Aggregats mappen als Owned Types, der Commit kopiert
    auch die Navigationen, und das Sample hat mit `widget_parts` das erste nicht-flache Aggregat
-   (ADR-0031).
+   (ADR-0031). **TODO-47** schließt daran an und ist ebenfalls erledigt: das Kind trägt jetzt
+   Verhalten und raist über den Root (ADR-0032).
 5. **TODO-07** und **TODO-08** schließen die stillen Lücken im Messaging.
 6. **TODO-45** ist erledigt; **TODO-46** kommt erst mit dem ersten Aggregat des jeweiligen
    Kontexts — vorher ist nicht entschieden, wie dort gespeichert wird, und ein Migrations-Worker

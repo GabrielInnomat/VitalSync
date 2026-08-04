@@ -129,4 +129,41 @@ public sealed class AggregateRootTests
         Assert.False(null == a);
         Assert.True(a != null);
     }
+
+    [Fact]
+    public void Raiser_IsImplementedExplicitlySoDomainCodeCannotSeeIt()
+    {
+        var aggregate = ParentAggregate.Create(new TestId(1));
+
+        Assert.Null(aggregate.GetType().GetMethod("Raise"));
+
+        ((IDomainEventRaiser)aggregate).Raise(new ChildAdded(new TestId(2), 3));
+
+        Assert.Single(aggregate.Children);
+    }
+
+    [Fact]
+    public void ClearDomainEvents_AlsoDropsEventsRaisedByAChild()
+    {
+        var aggregate = ParentAggregate.Create(new TestId(1));
+        aggregate.AddChild(new TestId(2), 3);
+        aggregate.Child(new TestId(2)).ChangeValue(9);
+
+        ((IDomainEventOwner)aggregate).ClearDomainEvents();
+
+        Assert.Empty(aggregate.DomainEvents);
+        Assert.Equal(9, aggregate.Child(new TestId(2)).Value);
+    }
+
+    [Fact]
+    public void ChildEvents_AreFoldedByTheRootStateWithoutExtraRouting()
+    {
+        var aggregate = ParentAggregate.Create(new TestId(1));
+        aggregate.AddChild(new TestId(2), 3);
+        aggregate.AddChild(new TestId(3), 4);
+
+        aggregate.Child(new TestId(3)).ChangeValue(11);
+
+        Assert.Equal([3, 11], aggregate.Children.Select(child => child.Value));
+    }
 }

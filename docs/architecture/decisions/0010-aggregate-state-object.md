@@ -47,3 +47,7 @@ public interface IState<TSelf, out TKey>
 - **Apply-on-the-aggregate** (mutating methods directly on the aggregate): simplest, but produces the "two methods per event" growth and interleaves concerns in large aggregates.
 - **Injected `IEventApplier<TState>`** (apply logic in a separate injected service): adds constructor ceremony to every aggregate and splits a state and its evolution across two types; rejected in favor of apply-on-the-state.
 - **Non-self-referencing `IState<TKey>` returning `IState<TKey>`:** required an unchecked cast back to the concrete state in the aggregate; replaced by the self-referencing form.
+
+## Amendment, 2026-08-04: the pattern extends to child entities
+
+[ADR-0032](./0032-child-entities-raise-via-root.md) introduces `EntityState<TSelf, TKey>` — the same self-referencing, immutable, pure-`Apply` shape for a child entity inside an aggregate, minus the version, which stays on the aggregate ([ADR-0030](./0030-persisted-names-and-aggregate-version.md)). The root state folds its children (usually by delegating to their `Apply`), so there is still exactly **one** fold path and `Apply` remains free of side effects: a state never records an event, not even for a child.

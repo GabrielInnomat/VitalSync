@@ -4,6 +4,7 @@
 - **Date:** 2026-06-24
 - **Amended:** 2026-06-25 (aggregate identity now sourced from the state — see [ADR-0010](./0010-aggregate-state-object.md))
 - **Amended:** 2026-07-22 (keys split into `IEntityKey` marker + `IEntityKey<TValue>`; identity validation is type-agnostic via `IsEmpty`; aggregate roots split into two bases — see the note below and [ADR-0012](./0012-optional-event-sourcing-aggregate.md))
+- **Amended:** 2026-08-04 (the state-less `Entity<TKey>` is removed; the non-aggregate entity base is `Entity<TKey, TState>` — see the second note below and [ADR-0032](./0032-child-entities-raise-via-root.md))
 
 ## Context
 
@@ -30,6 +31,8 @@ A complication arises from the decision to hold an aggregate's state in a dedica
 > - **All aggregates derive identity from state.** `AggregateRoot<TKey, TState>` derives `Id` from its **state** (`Id => State.Id`); a new aggregate starts with a default `Id`, the first applied event sets it, and the `IsEmpty` check runs at every transition. `Entity<TKey>` still assigns `Id` in the **constructor**, with the `IsEmpty` guard there.
 >
 > The equality rule (same concrete type + equal ids, `sealed` `Equals`/`GetHashCode`) is unchanged; it is implemented **once**, in the shared `EntityBase<TKey>` base of `Entity<TKey>` and `AggregateRoot<TKey, TState>`.
+
+> **Implementation note (amendment 2026-08-04):** The state-less `Entity<TKey>` no longer exists. [ADR-0032](./0032-child-entities-raise-via-root.md) gave non-aggregate entities a state and a raise channel, and the state-less base was left with no production deriver — every entity inside an aggregate has a state, because its data lives in the aggregate's state graph ([ADR-0031](./0031-aggregate-child-collections-as-owned-types.md)). Read every `Entity<TKey>` above as **`Entity<TKey, TState>`**: it still assigns `Id` in the **constructor**, get-only, with the `IsEmpty` guard there, and it still derives from `EntityBase<TKey>`, which remains the single home of the equality rule. `EntityBase<TKey>` now has exactly two direct children — `Entity<TKey, TState>` and `AggregateRoot<TKey, TState>` — which is also the whole abstract entity hierarchy.
 
 ## Consequences
 

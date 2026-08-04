@@ -5,7 +5,7 @@ namespace VitalSync.Sample.StateStored.Domain;
 public sealed record WidgetState(WidgetId Id, string Name, int RenameCount)
     : AggregateState<WidgetState, WidgetId>
 {
-    public IReadOnlyCollection<WidgetPart> Parts { get; init; } = new List<WidgetPart>();
+    public IReadOnlyCollection<WidgetPartState> Parts { get; init; } = new List<WidgetPartState>();
 
     public static WidgetState Empty => new(default, string.Empty, 0);
 
@@ -15,12 +15,12 @@ public sealed record WidgetState(WidgetId Id, string Name, int RenameCount)
         WidgetRenamed renamed => this with { Name = renamed.Name, RenameCount = renamed.RenameCount },
         WidgetPartAdded added => this with
         {
-            Parts = Parts.Append(new WidgetPart(added.PartId, added.Label, added.Quantity)).ToList(),
+            Parts = Parts.Append(new WidgetPartState(added.PartId, added.Label, added.Quantity)).ToList(),
         },
         WidgetPartQuantityChanged changed => this with
         {
             Parts = Parts
-                .Select(part => part.Id == changed.PartId ? part with { Quantity = changed.Quantity } : part)
+                .Select(part => part.Id == changed.PartId ? part.Apply(changed) : part)
                 .ToList(),
         },
         WidgetPartRemoved removed => this with

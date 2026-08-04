@@ -181,8 +181,32 @@ boundary, which carries that identity on the event itself.
 
 An object with an **identity** that persists over time. Equality is based on
 identity — two entities are equal when they are the **same concrete type** and
-have the **same id** (not on their attribute values). See
-[ADR-0008](./architecture/decisions/0008-entity-identity-and-equality.md).
+have the **same id** (not on their attribute values). Every entity has a
+[state](#entity-state-entitystatetself-tkey): the two bases are
+`Entity<TKey, TState>` for a [child entity](#child-entity-entitytkey-tstate) and
+`AggregateRoot<TKey, TState>` for an [aggregate root](#aggregate-root), and both
+derive from `EntityBase<TKey>`, which holds the one equality implementation. See
+[ADR-0008](./architecture/decisions/0008-entity-identity-and-equality.md) and
+[ADR-0032](./architecture/decisions/0032-child-entities-raise-via-root.md).
+
+### Child Entity (`Entity<TKey, TState>`)
+
+An [entity](#entity) that lives **inside** an aggregate and carries its own
+invariants. Its data is an [entity state](#entity-state-entitystatetself-tkey)
+held in the root's state; the class itself is a thin hull the root builds on
+demand, which reads its state **through the root** (`GetCurrentState()`, a method
+because it throws once the child is gone) and raises events through the root's
+`IDomainEventRaiser` channel. It has **no** event list and **no** version of its
+own — one list and one version, both on the root. See
+[ADR-0032](./architecture/decisions/0032-child-entities-raise-via-root.md).
+
+### Entity State (`EntityState<TSelf, TKey>`)
+
+The child counterpart of the [state object](#state-object-aggregatestatetself-tkey):
+an immutable record with an identity and a pure `Apply`, but **without** a
+version. The root's state folds its children, usually by delegating to their
+`Apply`. Persisted as an **owned type**
+([ADR-0031](./architecture/decisions/0031-aggregate-child-collections-as-owned-types.md)).
 
 ### State object (`AggregateState<TSelf, TKey>`)
 
@@ -390,7 +414,9 @@ version, and records it; `LoadFromHistory(history)` **replays** a persisted stre
 to rebuild state ([rehydration](#rehydration), recording nothing) into the hull
 supplied by [reconstitution](#reconstitution). A
 **replay-misuse guard** prevents `LoadFromHistory` from running after uncommitted
-events exist.
+events exist. A [child entity](#child-entity-entitytkey-tstate) reaches the same
+`RaiseEvent` through the root's channel, so both paths behave identically for
+child-raised events.
 
 ### Reconstitution
 
@@ -415,7 +441,9 @@ Rebuilding an aggregate's current state inside its repository: replaying the eve
 stream via [`LoadFromHistory`](#raiseevent--loadfromhistory) for an event-sourced
 aggregate, or restoring the persisted state via `IStateOwner.Restore` for a
 state-stored one. Both start from the empty hull supplied by
-[reconstitution](#reconstitution).
+[reconstitution](#reconstitution), and both bring the aggregate's
+[child entities](#child-entity-entitytkey-tstate) back with it, because the
+children are part of the state that is replayed or restored.
 
 ### Snapshotting
 

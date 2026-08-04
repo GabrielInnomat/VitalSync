@@ -189,6 +189,21 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   as `[EventName]`/`[AggregateName]`, ADR-0030). Both persistence paths are identical.
   New aggregate? Private parameterless ctor, or the samples' `AggregateConventionTests`
   scan and host startup fail.
+- **A child entity raises through its root** (ADR-0032): a child with invariants of its own is
+  `Entity<TKey, TState>` over an `EntityState<TSelf, TKey>` — the child counterpart of
+  `AggregateState`, **without** a version. The child's state lives in the root's state (ADR-0031),
+  so `State.Apply` folds it, usually by delegating to the child state's own `Apply`; there is no
+  second routing step. The hull reads its state **through the root** via `GetCurrentState()` (a
+  method, not a property, because it throws once the child was removed) and calls
+  `RaiseEvent`, which the root receives through the explicitly implemented `IDomainEventRaiser`.
+  So: **one event list, one order, one version — all on the root**, and a child-only change still
+  advances that version. Never give a child its own event list and never record events in a state
+  (`Apply` stays pure): record equality, append ordering and snapshot safety all depend on it.
+  A root exposes children as hulls it builds on demand (`widget.Part(id)`) with an `internal`
+  constructor; it keeps the state lookup (`FindPart`) to itself. **Every entity has a state**, so
+  `Entity<TKey, TState>` is the only non-aggregate entity base — the state-less `Entity<TKey>` is
+  gone (ADR-0008/0025 amendments) and `EntityBase<TKey>` has exactly two children, this one and
+  `AggregateRoot<TKey, TState>`.
 - **One repository contract**: `IRepository<TAggregate, TKey>` with `GetByIdAsync`
   and `AddAsync` only (ADR-0026) — no `Remove` (removal is a soft-delete state
   change), no `Save`/`Update` (retrieved aggregates are tracked; changes flow

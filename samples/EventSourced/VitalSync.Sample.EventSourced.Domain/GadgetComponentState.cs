@@ -1,0 +1,13 @@
+using BuildingBlocks.Domain;
+
+namespace VitalSync.Sample.EventSourced.Domain;
+
+public sealed record GadgetComponentState(GadgetComponentId Id, string Label)
+    : EntityState<GadgetComponentState, GadgetComponentId>
+{
+    public override GadgetComponentState Apply(IDomainEvent domainEvent) => domainEvent switch
+    {
+        GadgetComponentRelabelled relabelled => this with { Label = relabelled.Label },
+        _ => this,
+    };
+}

@@ -13,7 +13,8 @@ public sealed class Widget : AggregateRoot<WidgetId, WidgetState>
 
     public int RenameCount => State.RenameCount;
 
-    public IReadOnlyCollection<WidgetPart> Parts => State.Parts;
+    public IReadOnlyCollection<WidgetPart> Parts =>
+        State.Parts.Select(part => new WidgetPart(this, part.Id)).ToList();
 
     public static Widget Create(WidgetId id, string name)
     {
@@ -43,18 +44,28 @@ public sealed class Widget : AggregateRoot<WidgetId, WidgetState>
 
     public void ChangePartQuantity(WidgetPartId partId, int quantity)
     {
-        RuleChecker.Check(new WidgetPartQuantityMustBePositive(quantity));
-        RuleChecker.Check(new WidgetPartMustExist(Parts, partId));
+        RuleChecker.Check(new WidgetPartMustExist(State.Parts, partId));
 
-        RaiseEvent(new WidgetPartQuantityChanged(Id, partId, quantity, PartOrThrow(partId).Quantity));
+        Part(partId).ChangeQuantity(quantity);
     }
 
     public void RemovePart(WidgetPartId partId)
     {
-        RuleChecker.Check(new WidgetPartMustExist(Parts, partId));
+        RuleChecker.Check(new WidgetPartMustExist(State.Parts, partId));
 
-        RaiseEvent(new WidgetPartRemoved(Id, partId, PartOrThrow(partId).Quantity));
+        RaiseEvent(new WidgetPartRemoved(Id, partId, PartStateOrThrow(partId).Quantity));
     }
 
-    private WidgetPart PartOrThrow(WidgetPartId partId) => Parts.First(part => part.Id == partId);
+    public WidgetPart Part(WidgetPartId partId)
+    {
+        RuleChecker.Check(new WidgetPartMustExist(State.Parts, partId));
+
+        return new WidgetPart(this, partId);
+    }
+
+    internal WidgetPartState? FindPart(WidgetPartId partId) =>
+        State.Parts.FirstOrDefault(part => part.Id == partId);
+
+    private WidgetPartState PartStateOrThrow(WidgetPartId partId) =>
+        State.Parts.First(part => part.Id == partId);
 }

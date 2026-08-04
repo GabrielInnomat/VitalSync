@@ -1,6 +1,6 @@
 namespace BuildingBlocks.Domain;
 
-public abstract class AggregateRoot<TKey, TState> : EntityBase<TKey>, IAggregateRoot<TKey>, IDomainEventOwner, IStateOwner
+public abstract class AggregateRoot<TKey, TState> : EntityBase<TKey>, IAggregateRoot<TKey>, IDomainEventOwner, IDomainEventRaiser, IStateOwner
     where TKey : struct, IEntityKey
     where TState : AggregateState<TState, TKey>
 {
@@ -39,6 +39,11 @@ public abstract class AggregateRoot<TKey, TState> : EntityBase<TKey>, IAggregate
     void IDomainEventOwner.ClearDomainEvents()
     {
         _domainEvents.Clear();
+    }
+
+    void IDomainEventRaiser.Raise(IDomainEvent domainEvent)
+    {
+        RaiseEvent(domainEvent);
     }
 
     Type IStateOwner.StateType => typeof(TState);

@@ -112,7 +112,57 @@ public sealed class WidgetTests
         var widget = Widget.Create(WidgetId.New(), "first");
         widget.AddPart("bolt", 3);
 
-        Assert.False(Assert.IsAssignableFrom<ICollection<WidgetPart>>(widget.Parts).IsReadOnly);
+        var state = Assert.IsType<WidgetState>(((IStateOwner)widget).State);
+
+        Assert.False(Assert.IsAssignableFrom<ICollection<WidgetPartState>>(state.Parts).IsReadOnly);
+    }
+
+    [Fact]
+    public void Part_ChangesItsOwnQuantityAndTheEventLandsOnTheRoot()
+    {
+        var widget = Widget.Create(WidgetId.New(), "first");
+        var partId = widget.AddPart("bolt", 3);
+
+        widget.Part(partId).ChangeQuantity(7);
+
+        Assert.Equal(7, widget.Part(partId).Quantity);
+        var raised = Assert.IsType<WidgetPartQuantityChanged>(widget.DomainEvents.Last());
+        Assert.Equal(widget.Id, raised.WidgetId);
+        Assert.Equal(partId, raised.PartId);
+        Assert.Equal(3, raised.PreviousQuantity);
+        Assert.Equal(3, widget.DomainEvents.Count);
+    }
+
+    [Fact]
+    public void Part_WithANonPositiveQuantity_ThrowsAndRaisesNothing()
+    {
+        var widget = Widget.Create(WidgetId.New(), "first");
+        var partId = widget.AddPart("bolt", 3);
+
+        Assert.Throws<DomainValidationException>(() => widget.Part(partId).ChangeQuantity(0));
+
+        Assert.Equal(3, widget.Part(partId).Quantity);
+        Assert.Equal(2, widget.DomainEvents.Count);
+    }
+
+    [Fact]
+    public void Part_ThatDoesNotExist_BreaksABusinessRule()
+    {
+        var widget = Widget.Create(WidgetId.New(), "first");
+
+        Assert.Throws<BusinessRuleViolationException>(() => widget.Part(WidgetPartId.New()));
+    }
+
+    [Fact]
+    public void Part_ThatWasRemoved_NoLongerReadsItsState()
+    {
+        var widget = Widget.Create(WidgetId.New(), "first");
+        var partId = widget.AddPart("bolt", 3);
+        var part = widget.Part(partId);
+
+        widget.RemovePart(partId);
+
+        Assert.Throws<DomainValidationException>(() => part.Quantity);
     }
 
     [Theory]

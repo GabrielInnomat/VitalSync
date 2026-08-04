@@ -14,7 +14,29 @@ public readonly record struct BasketLineId(Guid Value) : IEntityKey<Guid>
     public bool IsEmpty => Value == Guid.Empty;
 }
 
-public sealed record BasketLine(BasketLineId Id, string Label, int Quantity);
+public sealed record BasketLine(BasketLineId Id, string Label, int Quantity)
+    : EntityState<BasketLine, BasketLineId>
+{
+    public override BasketLine Apply(IDomainEvent domainEvent) => domainEvent switch
+    {
+        BasketLineQuantityChanged changed => this with { Quantity = changed.Quantity },
+        _ => this,
+    };
+}
+
+public sealed class BasketLineEntity : Entity<BasketLineId, BasketLine>
+{
+    internal BasketLineEntity(Basket basket, BasketLineId id)
+        : base(basket, id, basket.FindLine)
+    {
+    }
+
+    public string Label => GetCurrentState().Label;
+
+    public int Quantity => GetCurrentState().Quantity;
+
+    public void ChangeQuantity(int quantity) => RaiseEvent(new BasketLineQuantityChanged(Id, quantity));
+}
 
 [EventName("basket-opened-v1")]
 public sealed record BasketOpened(BasketId BasketId, BasketLineId LineId, string Label) : DomainEvent;
@@ -51,7 +73,7 @@ public sealed record BasketState(BasketId Id) : AggregateState<BasketState, Bask
         BasketLineQuantityChanged changed => this with
         {
             Lines = Lines
-                .Select(line => line.Id == changed.LineId ? line with { Quantity = changed.Quantity } : line)
+                .Select(line => line.Id == changed.LineId ? line.Apply(changed) : line)
                 .ToList(),
         },
         BasketLineRemoved removed => this with
@@ -89,6 +111,11 @@ public sealed class Basket : AggregateRoot<BasketId, BasketState>
         RaiseEvent(new BasketLineQuantityChanged(lineId, quantity));
 
     public void RemoveLine(BasketLineId lineId) => RaiseEvent(new BasketLineRemoved(lineId));
+
+    public BasketLineEntity Line(BasketLineId lineId) => new(this, lineId);
+
+    internal BasketLine? FindLine(BasketLineId lineId) =>
+        State.Lines.FirstOrDefault(line => line.Id == lineId);
 }
 
 public sealed record ArrayBasketState(BasketId Id) : AggregateState<ArrayBasketState, BasketId>

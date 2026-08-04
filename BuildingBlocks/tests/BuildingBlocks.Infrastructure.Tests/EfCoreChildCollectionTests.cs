@@ -56,6 +56,29 @@ public sealed class EfCoreChildCollectionTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task ChildRaisedChange_RoundTripsThroughTheOwnedGraph()
+    {        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
+        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
+
+        using var host = await StartHostAsync();
+        var id = new BasketId(Guid.NewGuid());
+
+        await MutateAsync(host, id, basket => basket.AddLine("salt", 1), create: true);
+
+        var lineId = (await LoadAsync(host, id)).Lines.Single(line => line.Label == "salt").Id;
+
+        await MutateAsync(host, id, basket => basket.Line(lineId).ChangeQuantity(42));
+
+        var reloaded = await LoadAsync(host, id);
+
+        Assert.Equal(42, reloaded.Line(lineId).Quantity);
+        Assert.Equal("salt", reloaded.Line(lineId).Label);
+        Assert.Equal(2, await CountRowsAsync(host, id));
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
     public async Task RemovedChild_IsDeletedFromTheDatabase()
     {
         Assert.SkipUnless(fixture.Available, fixture.SkipReason);
@@ -68,7 +91,6 @@ public sealed class EfCoreChildCollectionTests(PostgreSqlFixture fixture)
         var lineId = (await LoadAsync(host, id)).Lines.Single(line => line.Label == "salt").Id;
 
         await MutateAsync(host, id, basket => basket.RemoveLine(lineId));
-
         var reloaded = await LoadAsync(host, id);
 
         Assert.Equal(["bread"], reloaded.Lines.Select(line => line.Label));

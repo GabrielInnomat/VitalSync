@@ -133,4 +133,34 @@ public sealed class EventSourcedAggregateRootTests
 
         Assert.True(a == b);
     }
+
+    [Fact]
+    public void LoadFromHistory_RebuildsChildrenWithoutRecordingEvents()
+    {
+        var aggregate = (EventSourcedParent)Activator.CreateInstance(
+            typeof(EventSourcedParent), nonPublic: true)!;
+
+        ((IEventSourcedAggregateRoot<TestId>)aggregate).LoadFromHistory(
+        [
+            new ParentCreated(new TestId(1)),
+            new ChildAdded(new TestId(2), 3),
+            new ChildValueChanged(new TestId(2), 9),
+        ]);
+
+        Assert.Equal(9, aggregate.Child(new TestId(2)).Value);
+        Assert.Equal(3, ((IEventSourcedAggregateRoot<TestId>)aggregate).Version);
+        Assert.Empty(aggregate.DomainEvents);
+    }
+
+    [Fact]
+    public void LoadFromHistory_AfterAChildRaisedAnEvent_IsRejected()
+    {
+        var aggregate = EventSourcedParent.Create(new TestId(1));
+        aggregate.AddChild(new TestId(2), 3);
+        aggregate.Child(new TestId(2)).ChangeValue(9);
+
+        Assert.Throws<InvalidOperationException>(
+            () => ((IEventSourcedAggregateRoot<TestId>)aggregate)
+                .LoadFromHistory([new ParentCreated(new TestId(1))]));
+    }
 }

@@ -56,4 +56,25 @@ public sealed class AggregateVersionTests
         Assert.Equal(5, aggregate.CurrentState.Value);
         Assert.Equal(2, ((IStateOwner)aggregate).Version);
     }
+
+    [Fact]
+    public void AnEventRaisedByAChild_AdvancesTheRootVersion()
+    {
+        var aggregate = ParentAggregate.Create(new TestId(1));
+        aggregate.AddChild(new TestId(2), 3);
+        var before = ((IStateOwner)aggregate).Version;
+
+        aggregate.Child(new TestId(2)).ChangeValue(9);
+
+        Assert.Equal(before + 1, ((IStateOwner)aggregate).Version);
+    }
+
+    [Fact]
+    public void AChild_CarriesNoVersionOfItsOwn()
+    {
+        var aggregate = ParentAggregate.Create(new TestId(1));
+        aggregate.AddChild(new TestId(2), 3);
+
+        Assert.Null(aggregate.Child(new TestId(2)).GetType().GetProperty("Version"));
+    }
 }

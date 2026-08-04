@@ -6,6 +6,7 @@
 - **Amended:** 2026-08-02 (EF Core maps the state as an entity type, not the aggregate — see the note below)
 - **Amended:** 2026-08-03 (reconstitution is a domain contract, not a constructor requirement — see the note below)
 - **Amended:** 2026-08-04 (reconstitution by convention: `IReconstitutable` deleted, startup validation instead — see the note below)
+- **Amended:** 2026-08-04 (the state-less `Entity<TKey>` is removed; `EntityBase<TKey>` now has exactly two children — see the note below and [ADR-0032](./0032-child-entities-raise-via-root.md))
 
 ## Context
 
@@ -44,6 +45,15 @@ not a class-hierarchy decision. The state fold is used by **all** aggregates:
   ([ADR-0008](./0008-entity-identity-and-equality.md)); `Entity<TKey>` (eager, constructor-validated identity) and
   `AggregateRoot<TKey, TState>` (state-derived, per-transition-validated identity) both derive from it. Its
   constructor is `private protected`, so domain code derives from those two, never from it directly.
+
+> **Implementation note (amendment 2026-08-04):** The state-less `Entity<TKey>` named above no longer exists. Once
+> [ADR-0032](./0032-child-entities-raise-via-root.md) gave a non-aggregate entity a state and a raise channel, it had
+> no production deriver left: every entity inside an aggregate has a state, because its data lives in the aggregate's
+> state graph ([ADR-0031](./0031-aggregate-child-collections-as-owned-types.md)). Its two responsibilities — the
+> constructor-assigned `Id` and the `IsEmpty` guard — moved down into `Entity<TKey, TState>`, which now derives from
+> `EntityBase<TKey>` directly. Read the bullet above as: `EntityBase<TKey>` has exactly **two** children,
+> `Entity<TKey, TState>` and `AggregateRoot<TKey, TState>`, and that is the entire abstract entity hierarchy. The
+> `private protected` constructor is unchanged, so the two remain the only entry points.
 
 Switching an aggregate between the state-stored and event-sourced worlds is now **additive**: change the base class
 (the business code, state type, and tests stay untouched) and change the repository registration in the composition
@@ -196,3 +206,11 @@ _The named mapping mechanism is superseded by the state-mapping amendment below;
   are expected in the health/fitness domain, so the migration path carries real value.
 - **Return to the single base with ES members on every aggregate (ADR-0011):** rejected — it leaks
   `Version`/`LoadFromHistory` onto aggregates that never replay; the derived-class split keeps ES strictly additive.
+
+## Amendment, 2026-08-04: the fold covers child entities
+
+[ADR-0032](./0032-child-entities-raise-via-root.md) lets a child entity inside an aggregate carry behaviour. It changes
+nothing here: the child's state is part of the root state, so `RaiseEvent` → `State.Apply` → version bump is still the
+single mutation path, `LoadFromHistory` rebuilds children by replaying the same events, and `IStateOwner` is untouched —
+one state document still carries the whole aggregate. `AggregateRoot` gained one explicitly implemented interface
+(`IDomainEventRaiser`) and no new behaviour.

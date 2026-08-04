@@ -202,6 +202,11 @@ Umgesetzt:
   Ebene weit trägt —, und Kinder eines Aggregats mappen verbindlich als **Owned Types**.
   Das Sample ist dafür nicht mehr flach: `Widget` hat jetzt `Parts` (`widget_parts`),
   inkl. Domänen-, Modell-, Projektions- und Smoke-Tests.
+- **Nachtrag (2026-08-04, ADR-0032):** Das Kind trägt inzwischen auch Verhalten.
+  `WidgetPart` ist eine Hülle über `WidgetPartState` und löst seine Events über den Root
+  aus (`IDomainEventRaiser`) — ohne Schemaänderung und ohne Migration, weil das Owned
+  Mapping schon auf genau diesen Record zeigte. Im event-sourced Sample zeigt
+  `GadgetComponent` denselben Pfad über Command und Replay.
 
 Ergebnis im Schema: **eine Tabelle, eine Id-Spalte**, kein Shadow Key, keine
 Duplikation. Das Sample-Mapping ist 12 Zeilen.

@@ -68,14 +68,32 @@ public sealed class AggregateConventionTests
         }
     }
 
-    private static List<Type> Aggregates() =>
-        [.. typeof(Widget).Assembly.GetTypes().Where(type => !type.IsAbstract && DerivesFromAggregateRoot(type))];
+    [Fact]
+    public void NoChildEntity_IsConstructableFromOutsideItsAggregate()
+    {
+        var children = ChildEntities();
 
-    private static bool DerivesFromAggregateRoot(Type type)
+        Assert.NotEmpty(children);
+        foreach (var child in children)
+        {
+            Assert.True(
+                child.GetConstructors().Length == 0,
+                $"'{child}' exposes a public constructor, so a child hull can be built without its root and would "
+                + "have no channel to raise through (ADR-0032). Keep the constructor internal.");
+        }
+    }
+
+    private static List<Type> Aggregates() =>
+        [.. typeof(Widget).Assembly.GetTypes().Where(type => !type.IsAbstract && DerivesFrom(type, typeof(AggregateRoot<,>)))];
+
+    private static List<Type> ChildEntities() =>
+        [.. typeof(Widget).Assembly.GetTypes().Where(type => !type.IsAbstract && DerivesFrom(type, typeof(Entity<,>)))];
+
+    private static bool DerivesFrom(Type type, Type openGeneric)
     {
         for (var current = type.BaseType; current is not null; current = current.BaseType)
         {
-            if (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(AggregateRoot<,>))
+            if (current.IsGenericType && current.GetGenericTypeDefinition() == openGeneric)
             {
                 return true;
             }

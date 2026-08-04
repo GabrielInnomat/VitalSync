@@ -16,7 +16,7 @@ public sealed class WidgetPartQuantityMustBePositive(int quantity) : IDomainVali
     public bool IsInvalid() => quantity <= 0;
 }
 
-public sealed class WidgetPartMustExist(IReadOnlyCollection<WidgetPart> parts, WidgetPartId partId) : IBusinessRule
+public sealed class WidgetPartMustExist(IReadOnlyCollection<WidgetPartState> parts, WidgetPartId partId) : IBusinessRule
 {
     public string Message => $"The widget has no part with id '{partId.Value}'.";
 
