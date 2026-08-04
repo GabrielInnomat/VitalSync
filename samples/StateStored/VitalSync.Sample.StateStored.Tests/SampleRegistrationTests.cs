@@ -21,6 +21,15 @@ public sealed class SampleRegistrationTests
         Assert.IsType<Infrastructure.Read.WidgetRenamedProjection>(
             scope.ServiceProvider.GetRequiredService<IProjectionHandler<WidgetRenamed>>());
 
+        Assert.IsType<Infrastructure.Read.WidgetPartAddedProjection>(
+            scope.ServiceProvider.GetRequiredService<IProjectionHandler<WidgetPartAdded>>());
+
+        Assert.IsType<Infrastructure.Read.WidgetPartQuantityChangedProjection>(
+            scope.ServiceProvider.GetRequiredService<IProjectionHandler<WidgetPartQuantityChanged>>());
+
+        Assert.IsType<Infrastructure.Read.WidgetPartRemovedProjection>(
+            scope.ServiceProvider.GetRequiredService<IProjectionHandler<WidgetPartRemoved>>());
+
         var mapper = Assert.Single(scope.ServiceProvider.GetServices<IIntegrationEventMapper>());
         Assert.IsType<Infrastructure.Integration.WidgetIntegrationEventMapper>(mapper);
     }
@@ -33,6 +42,9 @@ public sealed class SampleRegistrationTests
 
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<ICommandHandler<CreateWidget, WidgetId>>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<ICommandHandler<RenameWidget>>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ICommandHandler<AddWidgetPart, WidgetPartId>>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ICommandHandler<ChangeWidgetPartQuantity>>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ICommandHandler<RemoveWidgetPart, string>>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IQueryHandler<GetWidget, WidgetView>>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IWidgetReadStore>());
     }

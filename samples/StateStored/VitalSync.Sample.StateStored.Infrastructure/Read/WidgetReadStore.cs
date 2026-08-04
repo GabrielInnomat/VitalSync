@@ -10,6 +10,11 @@ public sealed class WidgetReadStore(WidgetReadDbContext context) : IWidgetReadSt
         context.Widgets
             .AsNoTracking()
             .Where(widget => widget.Id == id)
-            .Select(widget => new WidgetView(widget.Id.Value, widget.Name, widget.RenameCount))
+            .Select(widget => new WidgetView(
+                widget.Id.Value,
+                widget.Name,
+                widget.RenameCount,
+                widget.PartCount,
+                widget.TotalQuantity))
             .FirstOrDefaultAsync(cancellationToken);
 }

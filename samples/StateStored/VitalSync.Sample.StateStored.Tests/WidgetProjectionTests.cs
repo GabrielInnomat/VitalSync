@@ -57,6 +57,49 @@ public sealed class WidgetProjectionTests
         Assert.Equal(3, row.Version);
     }
 
+    [Fact]
+    public async Task PartEvents_MaintainTheCountersOnTheReadModel()
+    {
+        await using var context = NewContext();
+        var id = WidgetId.New();
+        var first = WidgetPartId.New();
+        var second = WidgetPartId.New();
+        var token = TestContext.Current.CancellationToken;
+
+        await new WidgetCreatedProjection(context).Handle(new WidgetCreated(id, "first"), MetadataFor(id, 1), token);
+        await new WidgetPartAddedProjection(context)
+            .Handle(new WidgetPartAdded(id, first, "bolt", 3), MetadataFor(id, 2), token);
+        await new WidgetPartAddedProjection(context)
+            .Handle(new WidgetPartAdded(id, second, "nut", 1), MetadataFor(id, 3), token);
+        await new WidgetPartQuantityChangedProjection(context)
+            .Handle(new WidgetPartQuantityChanged(id, first, 7, 3), MetadataFor(id, 4), token);
+        await new WidgetPartRemovedProjection(context)
+            .Handle(new WidgetPartRemoved(id, second, 1), MetadataFor(id, 5), token);
+
+        var row = await context.Widgets.SingleAsync(token);
+        Assert.Equal(1, row.PartCount);
+        Assert.Equal(7, row.TotalQuantity);
+        Assert.Equal(5, row.Version);
+    }
+
+    [Fact]
+    public async Task RedeliveredPartEvent_IsIgnoredByTheWatermark()
+    {
+        await using var context = NewContext();
+        var id = WidgetId.New();
+        var partId = WidgetPartId.New();
+        var token = TestContext.Current.CancellationToken;
+        var added = new WidgetPartAdded(id, partId, "bolt", 3);
+
+        await new WidgetCreatedProjection(context).Handle(new WidgetCreated(id, "first"), MetadataFor(id, 1), token);
+        await new WidgetPartAddedProjection(context).Handle(added, MetadataFor(id, 2), token);
+        await new WidgetPartAddedProjection(context).Handle(added, MetadataFor(id, 2), token);
+
+        var row = await context.Widgets.SingleAsync(token);
+        Assert.Equal(1, row.PartCount);
+        Assert.Equal(3, row.TotalQuantity);
+    }
+
     private static DomainEventMetadata MetadataFor(WidgetId id, long version) =>
         new(Guid.NewGuid(), "widget", id.Value.ToString(), version, DateTimeOffset.UnixEpoch);
 

@@ -27,7 +27,7 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-12 | `IIntegrationEventMapper` ist untypisiert                                | offen             |
 | IMP-13 | Messaging-Konfiguration ohne Guard-Rails                                 | teilweise         |
 | IMP-14 | Constraint-Mismatch zwischen Repository-Vertrag und Implementierung      | gelöst            |
-| IMP-15 | Repository lädt Aggregate unvollständig                                  | offen             |
+| IMP-15 | Repository lädt Aggregate unvollständig                                  | gelöst            |
 | IMP-16 | Kein Validierungs-Behavior, Mehrfachfehler nicht erzeugbar               | teilweise         |
 | IMP-17 | `Failure` ohne Zielfeld und ohne fachliche Fehlercodes                   | offen             |
 | IMP-18 | `FailureCategory` fehlen Autorisierung und Unerwartet                    | offen             |
@@ -386,7 +386,23 @@ Aggregats — und ADR-0025/0026 sagen ausdrücklich, dass diese Wahl dort und nu
 
 # IMP-15, Repository lädt Aggregate unvollständig
 
-**Offen — Ursache verändert, Symptom identisch.** `EfCoreRepository` lädt nicht mehr das Aggregat,
+**Gelöst (2026-08-04) — die Annahme war falsch, das Symptom trotzdem echt.** Gemessen statt vermutet
+(`EfCoreChildCollectionTests`, Testcontainers/PostgreSQL): `FindAsync(stateType, [id])` lädt
+**Owned Dependents sehr wohl** mit ihrem Owner — auch in der nicht-generischen Überladung, ohne
+`Include`, ohne `AutoInclude`. Die hier vorgeschlagene `IAggregateGraph`-Abstraktion wäre also
+Code ohne Wirkung gewesen. Der Ladepfad blieb unverändert.
+
+Echt war die Lücke auf der **Schreibseite** ([hacky.md Nr. 6](hacky.md)) — und die ist gefixt:
+`EfCoreUnitOfWork` kopiert jetzt auch die Navigationen. Damit Ladepfad und Schreibpfad diese
+Zusage überhaupt halten können, schreibt
+[ADR-0031](docs/architecture/decisions/0031-aggregate-child-collections-as-owned-types.md)
+Kinder als **Owned Types** fest; eine Navigation eines States auf einen unabhängigen Entity-Typ
+lehnt `AggregateStateModelStartupValidator` beim Hoststart ab. Das Sample belegt es end-to-end
+(`widget_parts`, Smoke-Tests).
+
+Der ursprüngliche Befund und der damalige Vorschlag stehen unten unverändert.
+
+**Ursprünglicher Befund.** `EfCoreRepository` lädt nicht mehr das Aggregat,
 sondern dessen State via `FindAsync(stateType, [id])`
 ([EfCoreRepository.cs:40-42](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreRepository.cs:40)).
 `FindAsync` lädt weiterhin **keine Navigationseigenschaften**: ein `RecipeState` mit

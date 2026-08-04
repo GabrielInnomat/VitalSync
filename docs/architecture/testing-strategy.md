@@ -20,7 +20,7 @@ Automated tests are implemented for **both the Building Blocks and the individua
 | **xUnit**            | Test framework and assertions (`Assert.*`; see ADR-0014) |
 | **NSubstitute**      | Mocking/substitutes                                      |
 | **EF Core InMemory** | Fast persistence-layer tests                             |
-| **Testcontainers (PostgreSQL)** | Integration tests against a real PostgreSQL for Marten optimistic concurrency, strongly-typed key persistence, and outbox flush-on-commit; skipped automatically when Docker is unavailable |
+| **Testcontainers (PostgreSQL)** | Integration tests against a real PostgreSQL for Marten optimistic concurrency, strongly-typed key persistence, aggregate child collections (owned types), and outbox flush-on-commit; skipped automatically when Docker is unavailable |
 | **Testcontainers (RabbitMQ)** | Integration tests for integration-event routing to the platform topic exchange; skipped automatically when Docker is unavailable |
 | **Smoke tests over gRPC**     | End-to-end checks against a running system (Aspire host, real broker, real databases); skipped unless the service's `SAMPLE_*_API_URL` is set |
 
@@ -99,7 +99,7 @@ reconstitution startup-validation tests).
 
 - **Domain**: strongly typed id equality and compile-time distinctness, aggregate event raising/clearing, read-only exposure of domain events, entity identity equality, value object structural equality.
 - **Application**: dispatcher routing to the correct handler, pipeline behavior ordering and execution, exception-to-`Result` translation (business-rule / domain-validation), `Result` / `Result<T>` success/failure semantics.
-- **Infrastructure**: the real `Sender` with a DI container (failure translation, unit-of-work commit/suppression and concurrency-conflict mapping, dispatcher and handler registration, `FailureResults` runtime types), serialization/mapping (`DomainEventEnvelopeSerializer` round-trip with typed ids, `EntityKeyFormatter`, entity-key converter registration), persistence against a real PostgreSQL via Testcontainers (`MartenEventSourcedRepository` version arithmetic / optimistic concurrency and strongly-typed key persistence — skipped when Docker is unavailable), and architecture tests enforcing the layer-dependency rules.
+- **Infrastructure**: the real `Sender` with a DI container (failure translation, unit-of-work commit/suppression and concurrency-conflict mapping, dispatcher and handler registration, `FailureResults` runtime types), serialization/mapping (`DomainEventEnvelopeSerializer` round-trip with typed ids, `EntityKeyFormatter`, entity-key converter registration), persistence against a real PostgreSQL via Testcontainers (`MartenEventSourcedRepository` version arithmetic / optimistic concurrency, strongly-typed key persistence, and `EfCoreChildCollectionTests` for aggregate child collections — insert, key-stable update, delete, version advance on a child-only change, a two-level owned graph whose grandchildren are inserted, updated and deleted, an `OwnsOne` child cleared by `null`, a `ToJson()` collection, and the startup rejection of a state navigating to an independent entity type; skipped when Docker is unavailable), and architecture tests enforcing the layer-dependency rules.
 
 ## Related
 

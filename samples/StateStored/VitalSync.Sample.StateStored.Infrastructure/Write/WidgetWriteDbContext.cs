@@ -20,6 +20,16 @@ public sealed class WidgetWriteDbContext(DbContextOptions<WidgetWriteDbContext> 
             entity.Property(state => state.Name).HasColumnName("name").IsRequired().HasMaxLength(200);
             entity.Property(state => state.RenameCount).HasColumnName("rename_count");
             entity.Property(state => state.Version).HasColumnName("version").IsConcurrencyToken();
+
+            entity.OwnsMany(state => state.Parts, parts =>
+            {
+                parts.ToTable("widget_parts");
+                parts.WithOwner().HasForeignKey("widget_id");
+                parts.HasKey(part => part.Id);
+                parts.Property(part => part.Id).HasColumnName("id");
+                parts.Property(part => part.Label).HasColumnName("label").IsRequired().HasMaxLength(200);
+                parts.Property(part => part.Quantity).HasColumnName("quantity");
+            });
         });
 
         modelBuilder.ApplyEntityKeyConversions();

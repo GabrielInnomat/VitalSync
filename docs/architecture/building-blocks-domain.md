@@ -159,6 +159,41 @@ public sealed record RecipeState(RecipeId Id, string Name)
 
 The state writes nothing about the version: the base carries it, and `AggregateRoot` advances it on every folded event — including an event this `Apply` ignores.
 
+### Child collections
+
+A state may own children. Three rules apply, and two of them are enforced at runtime ([ADR-0031](./decisions/0031-aggregate-child-collections-as-owned-types.md)):
+
+```csharp
+public sealed record RecipeState(RecipeId Id, string Name)
+    : AggregateState<RecipeState, RecipeId>
+{
+    public IReadOnlyCollection<Ingredient> Ingredients { get; init; } = new List<Ingredient>();
+
+    public static RecipeState Empty => new(default, string.Empty);
+
+    public override RecipeState Apply(IDomainEvent e) => e switch
+    {
+        IngredientAdded added => this with
+        {
+            Ingredients = Ingredients.Append(new Ingredient(added.IngredientId, added.Name)).ToList(),
+        },
+        IngredientRemoved removed => this with
+        {
+            Ingredients = Ingredients.Where(i => i.Id != removed.IngredientId).ToList(),
+        },
+        _ => this
+    };
+}
+```
+
+1. The collection is a `{ get; init; }` **property**, never a positional record parameter — EF Core would find "no suitable constructor".
+2. It is built with `ToList()`, and never left `null`. A collection expression (`[]`, `[.. xs, x]`) assigned to `IReadOnlyCollection<T>` compiles to a read-only array, and EF Core adds and removes children through the collection instance itself; the runtime rejects a read-only, fixed-size or `null` value with a `NotSupportedException`.
+3. The child is **owned** by the aggregate: it maps with `OwnsMany`, has its own strongly typed id declared as the key, and is reachable only through its parent. A navigation to an independent entity type, and an owned collection without a declared key, are both rejected at host startup.
+
+The children may themselves own children — the commit reconciles the whole owned graph by key, at any depth. A single owned child (`OwnsOne`) works the same way; assigning `null` to it deletes it. An identity-less value collection may be mapped with `ToJson()` instead, in which case it is stored and replaced as one column.
+
+A child is not a reference to another aggregate. To point at one, hold its typed id as a scalar ([ADR-0005](./decisions/0005-strongly-typed-aggregate-identifiers.md)).
+
 ## Aggregates and domain events
 
 ### One authoring model, two bases

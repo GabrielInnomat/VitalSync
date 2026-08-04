@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VitalSync.Sample.StateStored.Infrastructure.Write;
@@ -11,9 +12,11 @@ using VitalSync.Sample.StateStored.Infrastructure.Write;
 namespace VitalSync.Sample.StateStored.Infrastructure.Migrations.Write
 {
     [DbContext(typeof(WidgetWriteDbContext))]
-    partial class WidgetWriteDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260804081846_AddWidgetParts")]
+    partial class AddWidgetParts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

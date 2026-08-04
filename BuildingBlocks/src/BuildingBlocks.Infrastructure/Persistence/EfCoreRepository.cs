@@ -35,6 +35,7 @@ public sealed class EfCoreRepository<TAggregate, TKey>(DbContext context, EfCore
         var stateOwner = AsStateOwner(aggregate);
         var state = stateOwner.State;
 
+        AggregateStateGraph.EnsureTrackableCollections(context, state);
         context.Add(state);
         Track(aggregate, stateOwner, state);
         return Task.CompletedTask;

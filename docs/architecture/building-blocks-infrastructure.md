@@ -171,11 +171,38 @@ public interface IRepository<TAggregate, in TKey>
   aggregate it hands out, together with the `IStateOwner` view it already
   resolved and the state instance EF Core tracks.
 - **Load:** `FindAsync(stateType, [id])` → empty hull via the private
-  parameterless constructor → `IStateOwner.Restore(state)`, then track.
-- **Commit (unit of work):** copies each entry's current state onto its tracked
+  parameterless constructor → `IStateOwner.Restore(state)`, then track. Owned
+  children arrive with their owner — EF Core loads owned dependents eagerly, so
+  no `Include`, no `AutoInclude` and no recursive `LoadAsync` is involved
+  ([ADR-0031](./decisions/0031-aggregate-child-collections-as-owned-types.md)).
+- **Commit (unit of work):** hands each entry's current state to
+  `AggregateStateGraph.Reconcile`, which copies the scalars onto the tracked
   entity via `CurrentValues.SetValues` — load-bearing, not defensive: states are
   immutable, so every applied event left the tracked instance stale and without
-  the copy a rename would be silently lost.
+  the copy a rename would be silently lost — and then reconciles the **owned
+  graph**: a child that still exists has its scalars copied onto the tracked child
+  and is recursed into, a new child is added to the tracked collection, a
+  vanished one is removed from it — matched by **key**, at any depth. EF Core
+  turns that into `UPDATE` / `INSERT` / `DELETE` with stable row identity
+  (ADR-0031). Merely assigning a replacement collection would work only one level
+  deep; the grandchildren it carries collide with the ones EF Core already tracks
+  under the same key. A `ToJson()` collection is the exception and stays on the
+  assignment path, since it is a single column whose dependents carry a
+  synthesized shadow key.
+- **Child collections are owned types, and that is enforced.** A navigation from
+  an `AggregateState` to an **independent** entity type is rejected at host
+  startup by `AggregateStateModelStartupValidator`, naming the state and the
+  navigation — such a model would be loaded by nothing and saved by nothing. The
+  same validator rejects an owned collection that is not mapped to JSON and does
+  not declare a single, non-shadow key: without that key the commit cannot match
+  a replaced child against the tracked one. A child collection whose runtime
+  value is read-only, fixed-size or `null` is rejected with a
+  `NotSupportedException` at any depth of the graph, because EF Core adds and
+  removes dependents through the collection instance itself. Authoring rules for
+  a state with children: the collection is a `{ get; init; }` property (a
+  positional record parameter makes the state unconstructible for EF Core) and is
+  built with `ToList()` — a collection expression assigned to
+  `IReadOnlyCollection<T>` compiles to a read-only array, never to a `List<T>`.
 
 ### Marten event-sourced repository (ADR-0019)
 

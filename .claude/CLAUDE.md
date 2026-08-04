@@ -259,6 +259,25 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   `EfCoreUnitOfWork` copies the current state onto the tracked entry with
   `CurrentValues.SetValues` before saving — states are immutable, so without that copy
   EF Core finds nothing to save and the change is silently lost.
+- **A child of an aggregate maps as an owned type** (ADR-0031): `OwnsMany(...)` with its own
+  table and its own strongly typed key via `HasKey`; `ToJson()` only for identity-less values.
+  `CurrentValues` covers scalars, so `EfCoreUnitOfWork` hands the state to
+  `AggregateStateGraph.Reconcile`, which copies the scalars **and** reconciles the **owned graph**:
+  matched children get `CurrentValues.SetValues` and are
+  recursed into, new ones are added to the tracked collection, vanished ones removed — matched by
+  **key**, at any depth, yielding `UPDATE`/`INSERT`/`DELETE` with stable row identity. `FindAsync`
+  loads owned children with their owner (no `Include` needed). Do **not** "simplify" this to
+  assigning the collection to the navigation: that works one level deep and then throws, because the
+  grandchildren carried along collide with the tracked ones under the same key. A `ToJson()`
+  collection deliberately stays on the assignment path (one column, shadow key). Three guards make
+  the rule non-optional: a navigation from an `AggregateState` to an **independent** entity type is
+  rejected at host startup, an owned non-JSON collection without a single non-shadow key is rejected
+  at host startup, and a read-only, fixed-size or `null` collection throws a
+  `NotSupportedException`. Authoring a state with children: the collection is a `{ get; init; }`
+  property, **never** a positional record parameter (EF Core then finds no suitable constructor),
+  and it is built with `ToList()` — a collection expression assigned to `IReadOnlyCollection<T>`
+  compiles to a read-only array, not a `List<T>`. Referencing another aggregate from a state is
+  impossible by design; hold its typed id as a scalar instead.
 - The **event store is Marten on PostgreSQL** (ADR-0019), used as a **raw event store**:
   the event-sourced repository in `BuildingBlocks.Infrastructure` tracks aggregates
   (loaded and added) and the Marten unit of work appends their uncommitted domain

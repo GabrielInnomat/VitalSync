@@ -33,7 +33,7 @@ eine Entscheidung, keinen Code.
 
 | Nr.     | Titel                                                          | Prio   | Status            | Quellen                               |
 | ------- | -------------------------------------------------------------- | ------ | ----------------- | ------------------------------------- |
-| TODO-01 | Aggregate mit Kindkollektionen brechen still                   | **P1** | offen             | hacky-6, IMP-15                       |
+| TODO-01 | Aggregate mit Kindkollektionen brechen still                   | **P1** | gelöst            | hacky-6, IMP-15                       |
 | TODO-02 | Aggregat-Version und Envelope-Metadaten                        | **P1** | gelöst            | WS-01, WS-03, IMP-24, IMP-41, hacky-7 |
 | TODO-03 | `AssemblyQualifiedName` als Persistenz-Contract                | **P1** | gelöst            | hacky-1, IMP-22                       |
 | TODO-04 | Stream-Key hängt am CLR-Klassennamen                           | **P1** | gelöst            | hacky-2, IMP-23                       |
@@ -84,7 +84,73 @@ eine Entscheidung, keinen Code.
 
 # TODO-01, Aggregate mit Kindkollektionen brechen still
 
-**P1 · offen · hacky-6 + IMP-15**
+**P1 · gelöst · hacky-6 + IMP-15**
+
+## Gelöst — Kinder sind Owned Types, und der Commit kopiert den Graphen (ADR-0031, 2026-08-04)
+
+Vor der Umsetzung wurde gemessen statt vermutet, und **eine der beiden Hälften stimmte nicht**:
+
+- **Lesen war nie kaputt.** `FindAsync(stateType, [id])` lädt Owned Dependents sehr wohl mit
+  ihrem Owner — auch in der nicht-generischen Überladung. Kein `Include`, kein `AutoInclude`,
+  kein rekursives `LoadAsync`. Der geplante Ladepfad-Fix und die `IAggregateGraph`-Abstraktion
+  aus IMP-15 entfielen ersatzlos.
+- **Schreiben war kaputt, wie beschrieben.** `CurrentValues.SetValues` kopiert nur Skalare, das
+  `UPDATE` enthielt die Kinder gar nicht: hinzugefügte fehlten, entfernte blieben, geänderte
+  wurden verworfen. Ohne Fehler, ohne Log.
+
+Der Fix ist ein schlüsselbasierter Abgleich plus drei Wächter:
+
+- `EfCoreUnitOfWork` ruft `AggregateStateGraph.Reconcile`. Das gleicht Skalare **und** den
+  **Owned-Graphen** gegen den getrackten Eintrag ab, über den **Schlüssel** und in **jeder
+  Tiefe**: ein noch vorhandenes Kind bekommt `CurrentValues.SetValues` und wird weiterverfolgt, ein
+  neues wandert in die getrackte Kollektion, ein verschwundenes heraus. EF Core macht daraus
+  `UPDATE` (behalten), `DELETE` (entfernt), `INSERT` (neu), bei **stabiler Zeilenidentität**.
+  Das blosse Zuweisen der Kollektion an die Navigation — der erste Wurf — trägt nur eine Ebene weit:
+  die Enkel kollidieren mit den bereits getrackten unter demselben Schlüssel, EF Core wirft. Eine
+  `ToJson()`-Kollektion bleibt bewusst beim Zuweisen. Der im Vorschlag angedachte generische
+  Graph-Diff (150-250 Zeilen Reflection über zusammengesetzte Schlüssel, Shadow-FKs, Zyklen, Orphan
+  Removal) wurde trotzdem nicht gebaut: der Abgleich läuft über EF-Core-Metadaten, nur über Owned
+  Types, und die erzwungenen Konventionen machen genau jene Sonderfälle unerreichbar.
+- `AggregateStateModelStartupValidator` lehnt beim **Hoststart** jede Navigation eines States auf
+  einen **unabhängigen** Entity-Typ ab und nennt State und Navigation. Ein Modell, das Daten
+  verlieren würde, läuft gar nicht erst an.
+- Derselbe Validator lehnt eine Owned-Kollektion ohne deklarierten, nicht-schattigen Schlüssel ab —
+  ohne ihn hat der Commit nichts, woran er ein ersetztes Kind wiedererkennt.
+- Eine read-only, fixed-size oder `null` gesetzte Kindkollektion fliegt sofort mit
+  `NotSupportedException` auf, in jeder Tiefe des Graphen. Das ist nicht theoretisch: ein Collection
+  Expression an `IReadOnlyCollection<T>` kompiliert zu `Array.Empty<T>()` bzw. zu einem
+  compilergenerierten read-only Array — nie zu einer `List<T>`, und EF Core fügt Dependents über die
+  Kollektionsinstanz selbst ein und entfernt sie darüber.
+
+Zwei Autorenregeln, die aus C# folgen und dokumentiert statt erzwungen sind: die Kollektion ist
+eine `{ get; init; }`-Property (als positional Record-Parameter findet EF Core „no suitable
+constructor"), und sie wird mit `ToList()` gebaut.
+Der ursprünglich vorgeschlagene Guard („ehrlich abriegeln") war nur der erste Schritt, nicht das
+Ziel — geliefert ist der eigentliche Fix. ADR-0025/0026 blieben unangetastet; die Entscheidung
+steht in der eigenständigen
+[ADR-0031](docs/architecture/decisions/0031-aggregate-child-collections-as-owned-types.md).
+
+**Belegt durch:**
+
+- `EfCoreChildCollectionTests` (Testcontainers/PostgreSQL, 12 Tests): Anlegen mit Kind, Neuladen,
+  Hinzufügen, Ändern bei gleichbleibender Zeile, Entfernen, Version-Fortschritt bei reiner
+  Kindänderung, Nebenläufigkeitskonflikt, Ablehnung eines Modells mit freier Navigation beim
+  Hoststart, Ablehnung read-only und `null` gesetzter Kollektionen — und, seit dem Nachtrag vom
+  2026-08-04, ein **zweistufiger** Owned-Graph (`Cart → CartLine → CartTag`) mit Einfügen, Ändern
+  und Löschen auf der Enkelebene, ein `OwnsOne`-Kind inklusive Löschen durch `null`, eine
+  `ToJson()`-Kollektion und die Ablehnung einer read-only Kollektion **innerhalb** eines Kindes.
+- **Negativkontrolle:** ohne den Navigations-Abgleich fallen 3 dieser Tests, mit ihm keiner. Der
+  zweistufige Fall lieferte seine eigene Negativkontrolle: gegen die erste Fassung, die die
+  Kollektion nur zuwies, schlug er mit EFs `cannot be tracked because another instance with the same
+  key value is already being tracked` fehl.
+- Das Sample ist nicht mehr flach: `Widget` hat `Parts` (`OwnsMany` → Tabelle `widget_parts`,
+  eigener typisierter Schlüssel), mit Domänen-, Modell- und Projektionstests sowie zwei
+  Smoke-Tests über gRPC gegen echtes Postgres/RabbitMQ — hinzufügen, Menge ändern, entfernen,
+  und ein doppeltes Entfernen wird als `FailedPrecondition` abgelehnt.
+
+Der ursprüngliche Befund steht unverändert unten.
+
+## Ursprünglicher Befund
 
 Die beiden Quellbefunde sind die zwei Hälften desselben Problems und gehören zusammen:
 
@@ -1550,7 +1616,9 @@ unbelegt und gehört hier vermerkt statt im AppHost still vorausgesetzt.
    TODO-05 nur noch die Restlücke schloss statt eine offene Tür.)
 3. **TODO-02 → TODO-03 → TODO-04** als ein Persistenzformat-Paket. Danach ist jede Änderung daran
    eine Datenmigration, also **vor** dem ersten echten Service.
-4. **TODO-01** vor dem ersten Aggregat mit Kindkollektion.
+4. **TODO-01** ist erledigt: Kinder eines Aggregats mappen als Owned Types, der Commit kopiert
+   auch die Navigationen, und das Sample hat mit `widget_parts` das erste nicht-flache Aggregat
+   (ADR-0031).
 5. **TODO-07** und **TODO-08** schließen die stillen Lücken im Messaging.
 6. **TODO-45** ist erledigt; **TODO-46** kommt erst mit dem ersten Aggregat des jeweiligen
    Kontexts — vorher ist nicht entschieden, wie dort gespeichert wird, und ein Migrations-Worker

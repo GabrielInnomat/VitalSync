@@ -9,7 +9,7 @@
 | 3   | `FailureResults` sucht statische Methode per Name              | offen  |
 | 4   | `ApplyEntityKeyConversions` scannt CLR- statt Model-Properties | offen  |
 | 5   | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | gelöst    |
-| 6   | `CurrentValues.SetValues` kopiert nur Skalare                  | offen  |
+| 6   | `CurrentValues.SetValues` kopiert nur Skalare                  | gelöst |
 | 7   | `DomainEventStamper` erkennt „unstamped" über Sentinel         | gelöst |
 | 8   | Connection String zweimal, ohne Abgleich                       | gelöst |
 | 9   | `AddBuildingBlocks` ist nicht idempotent                       | offen  |
@@ -153,6 +153,13 @@ foreach (var property in candidates)
 Zusätzlich ein Test, der eine `Ignore()`-te Key-Property im Modell nachweislich ignoriert
 lässt.
 
+**Nachtrag (2026-08-04, ADR-0031):** Die Fundstelle ist inzwischen umgebaut, aber nur zur Hälfte.
+`modelBuilder.Entity(clrType).Property(...)` musste der Metadaten-API weichen
+(`entityType.FindProperty`/`AddProperty`/`SetValueConverter`), weil Owned Types Shared-Type-Entitäten
+sind und die Builder-API für sie wirft. Der **CLR-Scan bleibt** und mit ihm der hier beschriebene
+Nebeneffekt: `AddProperty` legt eine unbekannte Property weiterhin still im Modell an. Navigationen
+werden immerhin explizit übersprungen. Der Punkt bleibt offen.
+
 ---
 
 # 5, Kein `Id.IsEmpty`-Guard in `AddAsync`
@@ -212,7 +219,32 @@ generischer Code) ist damit ebenfalls weg; der Guard bleibt. Siehe ADR-0025-Amen
 
 ---
 
-# 6, `CurrentValues.SetValues` kopiert nur Skalare
+# 6, `CurrentValues.SetValues` kopiert nur Skalare — **gelöst (2026-08-04)**
+
+> Gelöst per [ADR-0031](docs/architecture/decisions/0031-aggregate-child-collections-as-owned-types.md)
+> (TODO-01), aber anders als hier vorgeschlagen. Der Guard war nur der erste Schritt; geliefert
+> wurde der eigentliche Fix. `EfCoreUnitOfWork` gleicht jetzt zusätzlich zu den Skalaren den
+> **Owned-Graphen** gegen den getrackten ab (`AggregateStateGraph.Reconcile`) — der
+> „State-Graph ersetzen statt patchen"-Gedanke, nur ohne Detach/Attach: abgeglichen wird über den
+> **Schlüssel**, nicht über Objektidentität, und zwar in **jeder Tiefe**. Ein noch vorhandenes Kind
+> bekommt `CurrentValues.SetValues` und wird weiterverfolgt, ein neues wandert in die getrackte
+> Kollektion, ein verschwundenes heraus; daraus macht EF Core `UPDATE`/`INSERT`/`DELETE` mit
+> stabiler Zeilenidentität.
+>
+> Zwischenzeitlich stand hier, das blosse Zuweisen der Kollektion an die Navigation genüge. Das
+> stimmt nur eine Ebene tief: die Enkel, die die zugewiesenen Kinder mitbringen, kollidieren mit den
+> bereits getrackten unter demselben Schlüssel, und EF Core wirft. Gemessen an
+> `Cart → CartLine → CartTag`. Eine `ToJson()`-Kollektion bleibt bewusst beim Zuweisen — eine Spalte,
+> synthetischer Schlüssel.
+>
+> Der Ladepfad brauchte gar keinen Fix: Owned Dependents kommen auch über das nicht-generische
+> `FindAsync(stateType, [id])` mit ihrem Owner mit — gemessen, nicht vermutet.
+>
+> Abgesichert ist beides dreifach: `AggregateStateModelStartupValidator` lehnt beim Hoststart jede
+> Navigation eines States auf einen **unabhängigen** Entity-Typ ab sowie jede Owned-Kollektion ohne
+> deklarierten Schlüssel, und eine read-only, fixed-size oder `null`-Kindkollektion fliegt sofort mit
+> `NotSupportedException` auf. Beweis: `EfCoreChildCollectionTests` (Testcontainers/PostgreSQL, inkl.
+> Negativkontrolle) und das `Widget`-Sample mit `widget_parts` bis in die Smoke-Tests.
 
 `SetValues` traversiert keine Navigationen und keine Owned Types. Sobald ein State-Record eine
 Kindkollektion bekommt (Recipe mit Ingredients — also das erste echte Aggregat), verschwinden

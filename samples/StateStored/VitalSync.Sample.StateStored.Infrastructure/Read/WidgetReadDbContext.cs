@@ -19,6 +19,8 @@ public sealed class WidgetReadDbContext(DbContextOptions<WidgetReadDbContext> op
             entity.Property(widget => widget.Id).HasColumnName("id");
             entity.Property(widget => widget.Name).HasColumnName("name").IsRequired().HasMaxLength(200);
             entity.Property(widget => widget.RenameCount).HasColumnName("rename_count");
+            entity.Property(widget => widget.PartCount).HasColumnName("part_count");
+            entity.Property(widget => widget.TotalQuantity).HasColumnName("total_quantity");
             entity.Property(widget => widget.Version).HasColumnName("version");
         });
 
@@ -33,6 +35,10 @@ public sealed class WidgetReadModel
     public string Name { get; set; } = string.Empty;
 
     public int RenameCount { get; set; }
+
+    public int PartCount { get; set; }
+
+    public int TotalQuantity { get; set; }
 
     public long Version { get; set; }
 }

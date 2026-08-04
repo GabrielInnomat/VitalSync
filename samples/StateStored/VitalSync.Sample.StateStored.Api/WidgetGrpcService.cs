@@ -44,8 +44,63 @@ internal sealed class WidgetGrpcService(ISender sender) : IWidgetService
         }
 
         var view = result.Value;
-        return new WidgetReply { WidgetId = view.Id.ToString(), Name = view.Name, RenameCount = view.RenameCount };
+        return new WidgetReply
+        {
+            WidgetId = view.Id.ToString(),
+            Name = view.Name,
+            RenameCount = view.RenameCount,
+            PartCount = view.PartCount,
+            TotalQuantity = view.TotalQuantity,
+        };
     }
+
+    public async ValueTask<AddWidgetPartReply> AddPartAsync(
+        AddWidgetPartRequest request,
+        CallContext context = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var command = new AddWidgetPart(ParseId(request.WidgetId), request.Label, request.Quantity);
+        var result = await sender.Send(command, context.CancellationToken).ConfigureAwait(false);
+
+        return result.IsSuccess
+            ? new AddWidgetPartReply { PartId = result.Value.Value.ToString() }
+            : throw ToRpcException(result);
+    }
+
+    public async ValueTask<ChangeWidgetPartQuantityReply> ChangePartQuantityAsync(
+        ChangeWidgetPartQuantityRequest request,
+        CallContext context = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var command = new ChangeWidgetPartQuantity(
+            ParseId(request.WidgetId),
+            ParsePartId(request.PartId),
+            request.Quantity);
+        var result = await sender.Send(command, context.CancellationToken).ConfigureAwait(false);
+
+        return result.IsSuccess ? new ChangeWidgetPartQuantityReply() : throw ToRpcException(result);
+    }
+
+    public async ValueTask<RemoveWidgetPartReply> RemovePartAsync(
+        RemoveWidgetPartRequest request,
+        CallContext context = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var command = new RemoveWidgetPart(ParseId(request.WidgetId), ParsePartId(request.PartId));
+        var result = await sender.Send(command, context.CancellationToken).ConfigureAwait(false);
+
+        return result.IsSuccess
+            ? new RemoveWidgetPartReply { Label = result.Value }
+            : throw ToRpcException(result);
+    }
+
+    private static WidgetPartId ParsePartId(string value) =>
+        Guid.TryParse(value, out var id)
+            ? new WidgetPartId(id)
+            : throw new RpcException(new Status(StatusCode.InvalidArgument, $"'{value}' is not a valid part id."));
 
     private static WidgetId ParseId(string value) =>
         Guid.TryParse(value, out var id)

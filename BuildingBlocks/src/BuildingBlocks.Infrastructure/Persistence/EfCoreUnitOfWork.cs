@@ -19,7 +19,9 @@ public sealed class EfCoreUnitOfWork<TContext>(
 
         foreach (var entry in entries)
         {
-            outbox.DbContext.Entry(entry.PersistedState).CurrentValues.SetValues(entry.StateOwner.State);
+            var tracked = outbox.DbContext.Entry(entry.PersistedState);
+
+            AggregateStateGraph.Reconcile(tracked, entry.StateOwner.State);
         }
 
         var occurredAt = clock.Now;

@@ -61,19 +61,28 @@ public static class EntityKeyModelBuilderExtensions
                     continue;
                 }
 
-                var propertyBuilder = modelBuilder.Entity(clrType).Property(propertyInfo.Name);
-                if (propertyBuilder.Metadata.GetValueConverter() is not null)
+                var property = entityType.FindProperty(propertyInfo.Name);
+
+                if (property is null)
+                {
+                    if (entityType.FindNavigation(propertyInfo.Name) is not null)
+                    {
+                        continue;
+                    }
+
+                    property = entityType.AddProperty(propertyInfo);
+                }
+
+                if (property.GetValueConverter() is not null)
                 {
                     continue;
                 }
 
-                var converter = Converters.GetOrAdd(
+                property.SetValueConverter(Converters.GetOrAdd(
                     propertyInfo.PropertyType,
                     static (keyType, valueType) => (ValueConverter)Activator.CreateInstance(
                         typeof(EntityKeyValueConverter<,>).MakeGenericType(keyType, valueType))!,
-                    keyInterface.GetGenericArguments()[0]);
-
-                propertyBuilder.HasConversion(converter);
+                    keyInterface.GetGenericArguments()[0]));
             }
         }
 

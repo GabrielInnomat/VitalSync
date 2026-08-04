@@ -196,6 +196,12 @@ Umgesetzt:
 - **`EfCoreUnitOfWork`** — kopiert vor dem Speichern per `CurrentValues.SetValues` den
   aktuellen State auf den getrackten Eintrag. **Das ist der Kern:** States sind
   unveränderlich, jedes Event ersetzt die Instanz, EF sähe sonst nichts zu speichern.
+- **Nachtrag (2026-08-04, ADR-0031):** `SetValues` deckt nur Skalare ab. Seit
+  `AggregateStateGraph.Reconcile` wird zusätzlich der **Owned-Graph** über den
+  Schlüssel abgeglichen — in jeder Tiefe, weil blosses Zuweisen der Kollektion nur eine
+  Ebene weit trägt —, und Kinder eines Aggregats mappen verbindlich als **Owned Types**.
+  Das Sample ist dafür nicht mehr flach: `Widget` hat jetzt `Parts` (`widget_parts`),
+  inkl. Domänen-, Modell-, Projektions- und Smoke-Tests.
 
 Ergebnis im Schema: **eine Tabelle, eine Id-Spalte**, kein Shadow Key, keine
 Duplikation. Das Sample-Mapping ist 12 Zeilen.

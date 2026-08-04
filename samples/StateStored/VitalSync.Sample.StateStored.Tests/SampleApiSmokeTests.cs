@@ -43,6 +43,68 @@ public sealed class SampleApiSmokeTests
     }
 
     [Fact]
+    public async Task Parts_SurviveTheRoundTripThroughTheWriteDatabase()
+    {
+        var client = CreateClient(out var skipReason);
+        Assert.SkipWhen(client is null, skipReason);
+
+        var created = await client!.CreateAsync(new CreateWidgetRequest { Name = "with-parts" });
+        await WaitForProjectionAsync(client, created.WidgetId);
+
+        var bolt = await client.AddPartAsync(
+            new AddWidgetPartRequest { WidgetId = created.WidgetId, Label = "bolt", Quantity = 3 });
+        var nut = await client.AddPartAsync(
+            new AddWidgetPartRequest { WidgetId = created.WidgetId, Label = "nut", Quantity = 1 });
+
+        var afterAdd = await WaitForProjectionAsync(client, created.WidgetId, view => view.PartCount == 2);
+        Assert.Equal(4, afterAdd.TotalQuantity);
+
+        await client.ChangePartQuantityAsync(new ChangeWidgetPartQuantityRequest
+        {
+            WidgetId = created.WidgetId,
+            PartId = bolt.PartId,
+            Quantity = 7,
+        });
+
+        var afterChange = await WaitForProjectionAsync(client, created.WidgetId, view => view.TotalQuantity == 8);
+        Assert.Equal(2, afterChange.PartCount);
+
+        var removed = await client.RemovePartAsync(
+            new RemoveWidgetPartRequest { WidgetId = created.WidgetId, PartId = nut.PartId });
+
+        Assert.Equal("nut", removed.Label);
+
+        var afterRemove = await WaitForProjectionAsync(client, created.WidgetId, view => view.PartCount == 1);
+        Assert.Equal(7, afterRemove.TotalQuantity);
+    }
+
+    [Fact]
+    public async Task RemovingAPartTwice_IsRejectedAsAFailedPrecondition()
+    {
+        var client = CreateClient(out var skipReason);
+        Assert.SkipWhen(client is null, skipReason);
+
+        var created = await client!.CreateAsync(new CreateWidgetRequest { Name = "double-remove" });
+        var part = await client.AddPartAsync(
+            new AddWidgetPartRequest { WidgetId = created.WidgetId, Label = "washer", Quantity = 2 });
+
+        await client.RemovePartAsync(new RemoveWidgetPartRequest
+        {
+            WidgetId = created.WidgetId,
+            PartId = part.PartId,
+        });
+
+        var thrown = await Assert.ThrowsAsync<RpcException>(
+            () => client.RemovePartAsync(new RemoveWidgetPartRequest
+            {
+                WidgetId = created.WidgetId,
+                PartId = part.PartId,
+            }).AsTask());
+
+        Assert.Equal(StatusCode.FailedPrecondition, thrown.StatusCode);
+    }
+
+    [Fact]
     public async Task BlankName_IsRejectedAsInvalidArgument()
     {
         var client = CreateClient(out var skipReason);

@@ -211,6 +211,7 @@ public sealed class BuildingBlocksOptions
         _services.TryAddScoped<EfCoreAggregateTracker>();
         _services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork<TContext>>();
         _services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
+        _services.AddHostedService(static provider => new AggregateStateModelStartupValidator<TContext>(provider));
 
         WolverineWiring.ApplyDomainEventRouting = true;
         WolverineWiring.EfCoreMessageStoreConnectionString = connectionString;

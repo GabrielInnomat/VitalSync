@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VitalSync.Sample.StateStored.Infrastructure.Read;
@@ -11,9 +12,11 @@ using VitalSync.Sample.StateStored.Infrastructure.Read;
 namespace VitalSync.Sample.StateStored.Infrastructure.Migrations.Read
 {
     [DbContext(typeof(WidgetReadDbContext))]
-    partial class WidgetReadDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260804081854_AddWidgetPartCounters")]
+    partial class AddWidgetPartCounters
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
