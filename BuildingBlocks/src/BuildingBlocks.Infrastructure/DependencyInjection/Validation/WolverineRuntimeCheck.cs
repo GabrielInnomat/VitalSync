@@ -1,21 +1,22 @@
+using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Wolverine.Runtime;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
-internal sealed class WolverineWiringStartupValidator(IServiceProvider serviceProvider) : IHostedService
+internal sealed class WolverineRuntimeCheck(
+    IServiceProvider serviceProvider,
+    WolverineWiringSettings settings) : IStartupCheck
 {
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        Validate();
-        return Task.CompletedTask;
-    }
+    public StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    private void Validate()
+    public void Run()
     {
+        if (!settings.RequiresWolverine)
+        {
+            return;
+        }
+
         if (serviceProvider.GetService<IWolverineRuntime>() is null)
         {
             throw new InvalidOperationException(

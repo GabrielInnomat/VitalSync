@@ -1,4 +1,4 @@
-# Claude instructions
+# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -295,9 +295,19 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 - **The composition root is phased.** `ServiceCollectionExtensions` is a facade; the
   internal `BuildingBlocksComposition` runs `Configure` → `Validate` → `RegisterCore` →
   `RegisterStartupChecks`. The order is load-bearing: `Validate` materialises the
-  `DomainEventTypeRegistry` and thereby freezes `AddDomainEventsFrom`, and the order of
-  `AddHostedService` calls **is** the order the start-up checks run in. Add new
+  `DomainEventTypeRegistry` and thereby freezes `AddDomainEventsFrom`. Add new
   registration work inside the matching phase, not at the end of the method.
+- **A start-up check is an `IStartupCheck`, never its own hosted service.** One
+  `StartupCheckRunner` drives them all: `BeforeHostedServicesStart` checks run in its
+  `StartAsync`, `AfterHostedServicesStarted` checks in its `StartedAsync`. Only the
+  **phase** matters — the checks are pure readers, so their relative order decides only
+  which message a broken host sees first, and the .NET host's three-pass start
+  guarantees every `StartAsync` finishes before any `StartedAsync` begins. That is why
+  `IntegrationEventSubscriptionCheck` can read Wolverine's handler graph without
+  depending on a registration index. A check **registers unconditionally and guards
+  itself** (early return when its capability was not selected) rather than being
+  registered conditionally, and it probes the **built container**
+  (`IServiceProviderIsService`), not the `IServiceCollection`.
 
 ## Persistence & event sourcing (from accepted ADRs)
 

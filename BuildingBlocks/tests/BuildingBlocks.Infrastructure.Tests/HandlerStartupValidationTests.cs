@@ -2,7 +2,6 @@ using AmbiguousRequestsFixture;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using OrphanRequestsFixture;
 using ValidHandlersFixture;
 
@@ -11,41 +10,33 @@ namespace BuildingBlocks.Infrastructure.Tests;
 public sealed class HandlerStartupValidationTests
 {
     [Fact]
-    public async Task StartupValidation_AllHandlersRegistered_Passes()
+    public void StartupValidation_AllHandlersRegistered_Passes()
     {
         using var provider = BuildProvider(options =>
             options.AddHandlersFrom(typeof(RegistrationCommand).Assembly));
 
-        var validator = GetValidator(provider);
-
-        await validator.StartAsync(CancellationToken.None);
+        GetValidator(provider).Run();
     }
 
     [Fact]
-    public async Task StartupValidation_CommandAndQueryWithoutHandlers_FailsNamingEveryRequestType()
+    public void StartupValidation_CommandAndQueryWithoutHandlers_FailsNamingEveryRequestType()
     {
         using var provider = BuildProvider(options =>
             options.AddHandlersFrom(typeof(OrphanCommand).Assembly));
 
-        var validator = GetValidator(provider);
-
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => validator.StartAsync(CancellationToken.None));
+        var exception = Assert.Throws<InvalidOperationException>(() => GetValidator(provider).Run());
 
         Assert.Contains(nameof(OrphanCommand), exception.Message, StringComparison.Ordinal);
         Assert.Contains(nameof(OrphanQuery), exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task StartupValidation_RequestTypeWithMultipleResultContracts_FailsNamingTypeAndContracts()
+    public void StartupValidation_RequestTypeWithMultipleResultContracts_FailsNamingTypeAndContracts()
     {
         using var provider = BuildProvider(options =>
             options.AddHandlersFrom(typeof(AmbiguousQuery).Assembly));
 
-        var validator = GetValidator(provider);
-
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => validator.StartAsync(CancellationToken.None));
+        var exception = Assert.Throws<InvalidOperationException>(() => GetValidator(provider).Run());
 
         Assert.Contains(nameof(AmbiguousQuery), exception.Message, StringComparison.Ordinal);
         Assert.Contains("IQuery<Int32>", exception.Message, StringComparison.Ordinal);
@@ -57,9 +48,7 @@ public sealed class HandlerStartupValidationTests
     {
         using var provider = BuildProvider(_ => { });
 
-        Assert.Single(
-            provider.GetServices<IHostedService>(),
-            service => service is HandlerRegistrationStartupValidator);
+        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is HandlerRegistrationCheck);
     }
 
     [Fact]
@@ -81,8 +70,6 @@ public sealed class HandlerStartupValidationTests
         return services.BuildServiceProvider();
     }
 
-    private static IHostedService GetValidator(ServiceProvider provider) =>
-        Assert.Single(
-            provider.GetServices<IHostedService>(),
-            service => service is HandlerRegistrationStartupValidator);
+    private static IStartupCheck GetValidator(ServiceProvider provider) =>
+        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is HandlerRegistrationCheck);
 }

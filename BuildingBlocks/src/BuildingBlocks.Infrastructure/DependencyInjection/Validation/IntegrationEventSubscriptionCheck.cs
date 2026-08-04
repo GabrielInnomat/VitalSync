@@ -3,32 +3,17 @@ using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 using BuildingBlocks.Infrastructure.Messaging;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Wolverine.Runtime;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
-internal sealed class IntegrationEventSubscriptionStartupValidator(
+internal sealed class IntegrationEventSubscriptionCheck(
     IServiceProvider serviceProvider,
-    WolverineWiringSettings settings) : IHostedLifecycleService
+    WolverineWiringSettings settings) : IStartupCheck
 {
-    public Task StartedAsync(CancellationToken cancellationToken)
-    {
-        Validate();
-        return Task.CompletedTask;
-    }
+    public StartupPhase Phase => StartupPhase.AfterHostedServicesStarted;
 
-    public Task StartingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    public Task StoppingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    private void Validate()
+    public void Run()
     {
         if (settings.Messaging is not { } messaging || settings.Subscription is not { } subscription)
         {

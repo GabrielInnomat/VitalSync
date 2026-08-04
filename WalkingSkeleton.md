@@ -819,7 +819,7 @@ Startfehler abgefangen wird.
 
 #### Lösungsvorschlag
 
-Ein Validator analog zum bestehenden `HandlerRegistrationStartupValidator`, gespeist aus
+Ein Validator analog zum bestehenden `HandlerRegistrationCheck`, gespeist aus
 denselben gescannten Assemblies:
 
 ```csharp

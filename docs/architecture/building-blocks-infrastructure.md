@@ -256,7 +256,7 @@ public interface IRepository<TAggregate, in TKey>
   synthesized shadow key.
 - **Child collections are owned types, and that is enforced.** A navigation from
   an `AggregateState` to an **independent** entity type is rejected at host
-  startup by `AggregateStateModelStartupValidator`, naming the state and the
+  startup by `AggregateStateModelCheck`, naming the state and the
   navigation — such a model would be loaded by nothing and saved by nothing. The
   same validator rejects an owned collection that is not mapped to JSON and does
   not declare a single, non-shadow key: without that key the commit cannot match
@@ -574,9 +574,58 @@ named phases in a fixed order:
 The order is load-bearing rather than cosmetic. `Validate` materialises the
 `DomainEventTypeRegistry`, which is what makes `AddDomainEventsFrom` a
 composition-time decision instead of a mutable setting — every later phase reads a
-frozen set. `RegisterStartupChecks` runs last because the order of
-`AddHostedService` calls **is** the order the checks execute in, and the
-missing-unit-of-work log must see the finished registrations.
+frozen set. `RegisterStartupChecks` runs last because it registers the runner that
+drives the checks, and the runner must be in the container after everything it
+inspects.
+
+### Start-up checks: one contract, two phases
+
+Every start-up check implements the internal `IStartupCheck`:
+
+```csharp
+internal interface IStartupCheck
+{
+    StartupPhase Phase { get; }
+
+    void Run();
+}
+```
+
+A single `StartupCheckRunner` — the only `IHostedLifecycleService` Building Blocks
+registers — resolves `IEnumerable<IStartupCheck>` and runs the
+`BeforeHostedServicesStart` checks in `StartAsync` and the
+`AfterHostedServicesStarted` checks in `StartedAsync`.
+
+| Check                              | Phase    | Fails when                                                     |
+| ---------------------------------- | -------- | -------------------------------------------------------------- |
+| `HandlerRegistrationCheck`         | before   | a scanned command/query has no handler, or two result contracts |
+| `WolverineRuntimeCheck`            | before   | a capability needs Wolverine and no runtime is registered       |
+| `AggregateStateModelCheck<T>`      | before   | an aggregate state maps a forbidden navigation or key           |
+| `UnitOfWorkPresenceCheck`          | before   | never — it logs an informational notice                         |
+| `IntegrationEventSubscriptionCheck`| after    | a handled integration event matches no bound pattern, or is own |
+
+**Only the phase is load-bearing, not the registration order.** The checks are pure
+readers — none mutates state another one reads — so their relative sequence decides
+only which message a broken host sees first. What *is* guaranteed, and what
+`IntegrationEventSubscriptionCheck` depends on, is the .NET host's three-pass start:
+every `StartAsync` completes before any `StartedAsync` begins. Wolverine compiles its
+handler graph in its own `StartAsync`, so an `AfterHostedServicesStarted` check sees
+it regardless of who was registered first. `StartupCheckRunnerTests` nails that
+guarantee down with a real host and a hosted service registered *after* the runner.
+
+Two consequences for authoring:
+
+- **A check registers unconditionally and guards itself.** `WolverineRuntimeCheck` and
+  `IntegrationEventSubscriptionCheck` take `WolverineWiringSettings` and return early
+  when the capability was not selected. Conditional registration would make "is this
+  check even present?" a second thing to reason about.
+- **`UnitOfWorkPresenceCheck` probes the built container**, via
+  `IServiceProviderIsService`, not the `IServiceCollection` at composition time. A host
+  that registers `IUnitOfWork` *after* `AddBuildingBlocks` used to get the notice
+  wrongly; now it does not.
+
+A new check is a new `IStartupCheck` plus one `TryAddEnumerable` line — never another
+hosted service.
 
 ### A note on folder names
 

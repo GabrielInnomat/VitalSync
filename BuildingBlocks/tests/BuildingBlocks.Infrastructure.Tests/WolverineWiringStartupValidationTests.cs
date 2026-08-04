@@ -2,7 +2,6 @@ using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using NSubstitute;
 using Wolverine.Runtime;
 
@@ -10,53 +9,43 @@ namespace BuildingBlocks.Infrastructure.Tests;
 
 public sealed class WolverineWiringStartupValidationTests
 {
-    private const string ConnectionString = "Host=localhost;Database=test;Username=test;Password=test";
+    private const string ConnectionString = "Host=localhost;Database=test;Username=test;******";
 
     [Fact]
-    public async Task PersistenceSelected_WithoutWolverine_FailsAtStartupNamingUseWolverine()
+    public void PersistenceSelected_WithoutWolverine_FailsAtStartupNamingUseWolverine()
     {
         using var provider = BuildProvider(options =>
             options.UseEfCorePersistence<TestDbContext>(ConnectionString));
 
-        var validator = GetValidator(provider);
-
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => validator.StartAsync(CancellationToken.None));
+        var exception = Assert.Throws<InvalidOperationException>(() => GetValidator(provider).Run());
 
         Assert.Contains("UseWolverine", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task PersistenceSelected_WithWolverineRuntime_Starts()
+    public void PersistenceSelected_WithWolverineRuntime_Passes()
     {
         using var provider = BuildProvider(
             options => options.UseEfCorePersistence<TestDbContext>(ConnectionString),
             services => services.AddSingleton(Substitute.For<IWolverineRuntime>()));
 
-        var validator = GetValidator(provider);
-
-        await validator.StartAsync(CancellationToken.None);
+        GetValidator(provider).Run();
     }
 
     [Fact]
-    public void NoWolverineCapabilitySelected_ValidatorIsNotRegistered()
+    public void NoWolverineCapabilitySelected_TheCheckPassesWithoutARuntime()
     {
         using var provider = BuildProvider(_ => { });
 
-        Assert.DoesNotContain(
-            provider.GetServices<IHostedService>(),
-            service => service is WolverineWiringStartupValidator);
+        GetValidator(provider).Run();
     }
 
     [Fact]
-    public void WolverineCapabilitySelected_ValidatorAlwaysRuns()
+    public void TheCheckIsRegisteredEvenWhenNoCapabilityNeedsIt()
     {
-        using var provider = BuildProvider(options =>
-            options.UseEfCorePersistence<TestDbContext>(ConnectionString));
+        using var provider = BuildProvider(_ => { });
 
-        Assert.Contains(
-            provider.GetServices<IHostedService>(),
-            service => service is WolverineWiringStartupValidator);
+        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is WolverineRuntimeCheck);
     }
 
     private static ServiceProvider BuildProvider(
@@ -74,11 +63,8 @@ public sealed class WolverineWiringStartupValidationTests
         return services.BuildServiceProvider();
     }
 
-    private static IHostedService GetValidator(ServiceProvider provider) =>
-        Assert.Single(
-            provider.GetServices<IHostedService>(),
-            service => service is WolverineWiringStartupValidator);
+    private static IStartupCheck GetValidator(ServiceProvider provider) =>
+        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is WolverineRuntimeCheck);
 
     private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options);
 }
-

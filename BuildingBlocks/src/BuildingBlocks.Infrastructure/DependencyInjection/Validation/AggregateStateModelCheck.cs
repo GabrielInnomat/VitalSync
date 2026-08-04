@@ -4,22 +4,15 @@ using BuildingBlocks.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
-internal sealed class AggregateStateModelStartupValidator<TContext>(IServiceProvider serviceProvider) : IHostedService
+internal sealed class AggregateStateModelCheck<TContext>(IServiceProvider serviceProvider) : IStartupCheck
     where TContext : DbContext
 {
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        Validate();
-        return Task.CompletedTask;
-    }
+    public StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    private void Validate()
+    public void Run()
     {
         using var scope = serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<TContext>();

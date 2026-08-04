@@ -114,7 +114,7 @@ Der Fix ist ein schlüsselbasierter Abgleich plus drei Wächter:
   Graph-Diff (150-250 Zeilen Reflection über zusammengesetzte Schlüssel, Shadow-FKs, Zyklen, Orphan
   Removal) wurde trotzdem nicht gebaut: der Abgleich läuft über EF-Core-Metadaten, nur über Owned
   Types, und die erzwungenen Konventionen machen genau jene Sonderfälle unerreichbar.
-- `AggregateStateModelStartupValidator` lehnt beim **Hoststart** jede Navigation eines States auf
+- `AggregateStateModelCheck` lehnt beim **Hoststart** jede Navigation eines States auf
   einen **unabhängigen** Entity-Typ ab und nennt State und Navigation. Ein Modell, das Daten
   verlieren würde, läuft gar nicht erst an.
 - Derselbe Validator lehnt eine Owned-Kollektion ohne deklarierten, nicht-schattigen Schlüssel ab —
@@ -572,7 +572,7 @@ Exchange-Name an der falschen Stelle ist.
 - **Abschaltbare Checks entfallen:** `ValidateHandlersOnStart` und `ValidateWolverineOnStart`
   sind gestrichen. Ein Opt-out für eine Prüfung, die eine sonst stille Fehlerlage abfängt,
   stellt genau diese stille Fehlerlage wieder her. Querbezug: TODO-11 entscheidet weiterhin
-  eigenständig über `MissingUnitOfWorkStartupLogger`.
+  eigenständig über `UnitOfWorkPresenceCheck`.
 - **Folge für die Samples:** Beide Durchstiche publizierten unter dem Präfix `sample.` — zwei
   Kontexte mit einer Kennung. Sie heißen jetzt `sample-state-stored` und `sample-event-sourced`.
 

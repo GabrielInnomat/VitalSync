@@ -1,16 +1,15 @@
 using System.Reflection;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
-internal sealed class HandlerRegistrationStartupValidator : IHostedService
+internal sealed class HandlerRegistrationCheck : IStartupCheck
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IReadOnlyCollection<Assembly> _scannedAssemblies;
 
-    public HandlerRegistrationStartupValidator(
+    public HandlerRegistrationCheck(
         IServiceProvider serviceProvider,
         IReadOnlyCollection<Assembly> scannedAssemblies)
     {
@@ -18,15 +17,9 @@ internal sealed class HandlerRegistrationStartupValidator : IHostedService
         _scannedAssemblies = scannedAssemblies;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        Validate();
-        return Task.CompletedTask;
-    }
+    public StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    private void Validate()
+    public void Run()
     {
         var missing = new List<string>();
         var ambiguous = new List<string>();

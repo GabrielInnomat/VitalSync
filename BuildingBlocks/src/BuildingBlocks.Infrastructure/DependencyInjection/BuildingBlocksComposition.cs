@@ -99,25 +99,12 @@ internal static class BuildingBlocksComposition
 
     private static void RegisterStartupChecks(IServiceCollection services, BuildingBlocksOptions options)
     {
-        var wiring = options.WolverineWiring;
+        services.AddHostedService<StartupCheckRunner>();
 
-        services.AddHostedService(provider =>
-            new HandlerRegistrationStartupValidator(provider, options.ScannedAssemblies));
-
-        if (wiring.RequiresWolverine)
-        {
-            services.AddHostedService<WolverineWiringStartupValidator>();
-        }
-
-        if (wiring.Subscription is not null)
-        {
-            services.AddHostedService(provider =>
-                new IntegrationEventSubscriptionStartupValidator(provider, wiring));
-        }
-
-        if (!services.Any(descriptor => descriptor.ServiceType == typeof(IUnitOfWork)))
-        {
-            services.AddHostedService<MissingUnitOfWorkStartupLogger>();
-        }
+        services.AddSingleton<IStartupCheck>(provider =>
+            new HandlerRegistrationCheck(provider, options.ScannedAssemblies));
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, WolverineRuntimeCheck>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, IntegrationEventSubscriptionCheck>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, UnitOfWorkPresenceCheck>());
     }
 }

@@ -31,7 +31,8 @@ internal sealed class PersistenceRegistrar(IServiceCollection services, Wolverin
         services.TryAddScoped<EfCoreAggregateTracker>();
         services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork<TContext>>();
         services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
-        services.AddHostedService(static provider => new AggregateStateModelStartupValidator<TContext>(provider));
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IStartupCheck, AggregateStateModelCheck<TContext>>());
     }
 
     public void UseMarten(string connectionString)
