@@ -35,11 +35,15 @@ internal static class WolverineOptionsExtensions
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(rabbitMqUri);
 
-        options.UseRabbitMq(rabbitMqUri).AutoProvision();
+        options.UseRabbitMq(rabbitMqUri)
+            .AutoProvision()
+            .UseQuorumQueues()
+            .DeclareExchange(IntegrationEventExchangeName, exchange => exchange.IsDurable = true);
 
         options.PublishMessagesToRabbitMqExchange<IIntegrationEvent>(
-            IntegrationEventExchangeName,
-            integrationEvent => IntegrationEventTopic.For(integrationEvent.GetType()));
+                IntegrationEventExchangeName,
+                integrationEvent => IntegrationEventTopic.For(integrationEvent.GetType()))
+            .UseDurableOutbox();
 
         options.Policies.OnException<Exception>()
             .RetryWithCooldown(
@@ -60,7 +64,7 @@ internal static class WolverineOptionsExtensions
 
         options.Discovery.IncludeAssembly(subscription.ConsumerAssembly);
 
-        options.ListenToRabbitQueue(subscription.QueueName).UseDurableInbox();
+        options.ListenToRabbitQueue(subscription.QueueName, queue => queue.IsDurable = true).UseDurableInbox();
 
         var exchange = options.UseRabbitMq().BindExchange(IntegrationEventExchangeName);
         foreach (var topicPattern in subscription.TopicPatterns)

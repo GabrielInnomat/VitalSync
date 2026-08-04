@@ -351,6 +351,20 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   published events. A consumer that keeps throwing is retried three times and the message
   then goes to Wolverine's `wolverine-dead-letter-queue` **on the broker** — not to the
   `wolverine_dead_letters` table in the write database, which stays empty (`DeadLetterTests`).
+- **Integration-event delivery is durable** (ADR-0023 amendment 2026-08-04): the publish
+  rule adds `UseDurableOutbox()`, so the sending endpoint is `EndpointMode.Durable`. That
+  one setting decides two things at once — the AMQP persistence flag (`delivery_mode: 2`)
+  **and** whether an outgoing envelope is written to `wolverine_outgoing_envelopes` — so
+  neither a broker restart nor a process crash between commit and acknowledgement loses an
+  event. The exchange and the subscriber queue are declared `IsDurable`, and
+  `UseQuorumQueues()` is configured **on the transport**, not per queue, so it also covers
+  the `wolverine-dead-letter-queue`. Because a durable sending endpoint needs a message
+  store, `UseWolverineMessaging` **without** `UseEfCorePersistence` or
+  `UseMartenEventSourcing` throws in `AddBuildingBlocks`; the check runs after the whole
+  options lambda, so the call order does not matter. Pinned by
+  `IntegrationEventDurabilityTests` (real broker) and `WolverineExtensionTests` (no Docker).
+  Consequence to know: a queue's type is fixed at declaration, so a broker still holding a
+  classic queue of the same name makes `AutoProvision` fail and the queue must be deleted.
 - **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
   and the event schema is unchanged, so snapshots can be added per context later with
   **no event migration**.

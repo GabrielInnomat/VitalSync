@@ -6,9 +6,14 @@ internal sealed class WolverineWiringSettings
 
     public string? EfCoreMessageStoreConnectionString { get; set; }
 
+    public bool MartenMessageStoreSelected { get; set; }
+
     public Uri? RabbitMqUri { get; set; }
 
     public IntegrationEventSubscription? Subscription { get; set; }
+
+    public bool HasMessageStore =>
+        EfCoreMessageStoreConnectionString is not null || MartenMessageStoreSelected;
 
     public bool RequiresWolverine =>
         ApplyDomainEventRouting

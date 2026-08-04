@@ -631,7 +631,7 @@ verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Impro
 | WS-05 | Vergessenes `[Topic]` fällt nicht auf                          | Etappe 1     | gelöst    |
 | WS-06 | Fehlkonfiguration ist ungleich abgedeckt                       | Etappe 1     | teilweise |
 | WS-07 | Der gRPC-Vertrag liegt noch beim Service                       | Etappe 1     | offen     |
-| WS-08 | Integration Events sind nicht persistent                       | Etappe 2     | offen     |
+| WS-08 | Integration Events sind nicht persistent                       | Etappe 2     | gelöst    |
 | WS-09 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | Etappe 2     | offen     |
 | WS-10 | Marten-Nebenläufigkeit verdrahtet, aber im Sample unbelegt     | Etappe 2     | offen     |
 | WS-11 | Der Migrations-Worker ist asymmetrisch                         | Etappe 2     | offen     |
@@ -893,7 +893,18 @@ Bibliothekswahl `protobuf-net.Grpc`, siehe §2).
 
 ---
 
-### WS-08, Integration Events sind nicht persistent
+### WS-08, Integration Events sind nicht persistent — **gelöst (2026-08-04)**
+
+Siehe [TODO-07](todo.md). Die Publishing-Regel bekommt `UseDurableOutbox()`, der Transport
+`UseQuorumQueues()`, Exchange und Subscriber-Queue werden ausdrücklich als `IsDurable`
+deklariert. Der Befund war zudem größer als beschrieben: ein gepufferter Sending-Endpoint
+schreibt **auch keine** Zeile nach `wolverine_outgoing_envelopes`, ein Prozessabsturz zwischen
+Commit und Broker-Bestätigung verlor die Nachricht also ebenfalls. Beides hängt an derselben
+Einstellung. Weil ein durabler Endpoint einen Message Store braucht, wirft
+`UseWolverineMessaging` ohne Persistenzwahl jetzt zur Kompositionszeit, statt still auf einen
+scheinbar durablen Host zu degradieren. Festgenagelt durch `IntegrationEventDurabilityTests`
+gegen einen echten Broker; Details im ADR-0023-Amendment 2026-08-04. Offen bleibt allein die
+Frage nach Publisher Confirms, als eigener Eintrag TODO-48.
 
 Verifiziert: nirgends in `BuildingBlocks/src` wird persistente Zustellung konfiguriert, die
 Nachrichten gehen mit `delivery_mode: 1` raus. Die Outbox schützt bis zur Übergabe an den

@@ -117,7 +117,12 @@ event-sourced and state-stored contexts:
    on RabbitMQ/Wolverine ([ADR-0023](./decisions/0023-wolverine-messaging-transport.md), which supersedes [ADR-0004](./decisions/0004-asynchronous-messaging-between-services.md)).
    The same outbox already required for integration events is reused.
 4. An outbox entry is marked processed **only after** its handlers succeed, giving
-   **at-least-once** delivery.
+   **at-least-once** delivery. On the integration-event path the promise extends past
+   the handover to the broker: the sending endpoint is **durable**, so the event is
+   recorded in `wolverine_outgoing_envelopes` before it is sent and reaches RabbitMQ
+   as a **persistent** message on a **durable, quorum** topology — neither a broker
+   restart nor a process crash between commit and acknowledgement loses it
+   ([ADR-0023 amendment](./decisions/0023-wolverine-messaging-transport.md)).
 
 Because delivery is at-least-once and the two databases are separate, read-model
 updates are **eventually consistent** with writes, and projection handlers **must

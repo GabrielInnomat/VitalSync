@@ -11,8 +11,8 @@ using BuildingBlockDefaults = BuildingBlocks.Infrastructure.Messaging.WolverineO
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
-[Collection(RabbitMqCollection.Name)]
-public sealed class IntegrationEventRoutingTests(RabbitMqFixture fixture)
+[Collection(BrokerAndDatabaseCollection.Name)]
+public sealed class IntegrationEventRoutingTests(PostgreSqlFixture postgres, RabbitMqFixture rabbit)
 {
     private const string ProbeQueueName = "integration-event-routing-probe";
     private static readonly TimeSpan DeliveryTimeout = TimeSpan.FromSeconds(30);
@@ -20,7 +20,8 @@ public sealed class IntegrationEventRoutingTests(RabbitMqFixture fixture)
     [Fact]
     public async Task PublishedIntegrationEvent_ReachesQueueBoundToThePlatformExchange()
     {
-        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
+        Assert.SkipUnless(postgres.Available, postgres.SkipReason);
+        Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         using var host = await StartHostAsync();
         var name = Guid.NewGuid().ToString();
@@ -40,7 +41,8 @@ public sealed class IntegrationEventRoutingTests(RabbitMqFixture fixture)
     [Fact]
     public async Task DomainEventEnvelope_IsNotRoutedToThePlatformExchange()
     {
-        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
+        Assert.SkipUnless(postgres.Available, postgres.SkipReason);
+        Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         using var host = await StartHostAsync();
         var runtime = host.Services.GetRequiredService<IWolverineRuntime>();
@@ -57,7 +59,8 @@ public sealed class IntegrationEventRoutingTests(RabbitMqFixture fixture)
     [Fact]
     public async Task PublishingAnIntegrationEventWithoutATopic_FailsFastInsteadOfSilentlyDisappearing()
     {
-        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
+        Assert.SkipUnless(postgres.Available, postgres.SkipReason);
+        Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         using var host = await StartHostAsync();
 
@@ -73,7 +76,12 @@ public sealed class IntegrationEventRoutingTests(RabbitMqFixture fixture)
         => await Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
             {
-                services.AddBuildingBlocks(options => options.UseWolverineMessaging(fixture.ConnectionUri));
+                services.AddBuildingBlocks(options =>
+                {
+                    options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
+                    options.UseMartenEventSourcing(postgres.ConnectionString);
+                    options.UseWolverineMessaging(rabbit.ConnectionUri);
+                });
                 services.AddSingleton<RoutingProbeSignal>();
             })
             .UseWolverine(options =>

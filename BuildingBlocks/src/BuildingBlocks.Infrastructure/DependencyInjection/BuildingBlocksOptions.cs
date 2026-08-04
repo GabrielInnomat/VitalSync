@@ -246,6 +246,7 @@ public sealed class BuildingBlocksOptions
         _services.TryAddScoped(typeof(IRepository<,>), typeof(MartenEventSourcedRepository<,>));
 
         WolverineWiring.ApplyDomainEventRouting = true;
+        WolverineWiring.MartenMessageStoreSelected = true;
         return this;
     }
 

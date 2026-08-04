@@ -403,8 +403,13 @@ The `BuildingBlocks.Infrastructure` component that, **after** the write commits,
 each domain event to (a) **in-context [projection handlers](#projection-handler)**
 that update the read database and (b) the **integration-event path** to
 RabbitMQ/Wolverine. Delivery is **at-least-once**: an outbox entry is marked
-processed only after its handlers succeed, otherwise it is retried. See
-[ADR-0022](./architecture/decisions/0022-event-driven-read-models.md).
+processed only after its handlers succeed, otherwise it is retried. On the
+integration-event path the RabbitMQ sending endpoint is **durable**, so the event is
+persisted as an outgoing envelope before it is sent and arrives at the broker as a
+**persistent** message on a **durable, quorum** topology. See
+[ADR-0022](./architecture/decisions/0022-event-driven-read-models.md) and the
+persistent-delivery amendment to
+[ADR-0023](./architecture/decisions/0023-wolverine-messaging-transport.md).
 
 ### RaiseEvent / LoadFromHistory
 
@@ -550,7 +555,10 @@ The **MIT-licensed** abstraction over RabbitMQ, providing publish/subscribe, the
 **transactional outbox**, retries, and dead-lettering. It replaced **MassTransit**
 (which moved to a commercial license) and runs **side-by-side with**
 [Marten](#marten), enqueuing integration events to its outbox **inside the write
-transaction** and delivering them after commit. Wolverine is used **only** as the
+transaction** and delivering them after commit. The transport is configured for
+**durable delivery**: durable exchange, quorum queues, and a durable sending
+endpoint, so an integration event survives both a broker restart and a process
+crash. Wolverine is used **only** as the
 messaging transport — **not** as the in-process CQRS
 [dispatcher](#dispatcher-isender--hand-rolled-mediator), which stays hand-rolled
 (ADR-0015). See

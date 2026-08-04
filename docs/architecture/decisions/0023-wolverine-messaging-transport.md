@@ -6,6 +6,7 @@
 - **Amended:** 2026-07-31 (broker topology for integration events — see the note below)
 - **Amended:** 2026-08-01 (subscribing half — see the note below)
 - **Amended:** 2026-08-03 (topic attribute owned by Building Blocks — see the note below)
+- **Amended:** 2026-08-04 (persistent delivery — see the note below)
 
 ## Context
 
@@ -157,6 +158,46 @@ everything else from ADR-0004 intact.
 > `WolverineFx.RuntimeCompilation`, which self-activates, so hosts still configure
 > nothing (ADR-0027). Pre-generating code (`TypeLoadMode.Static`) to drop Roslyn
 > from production images is an additive optimisation for a later ADR.
+
+> **Persistent delivery (amendment 2026-08-04).** The topology above was correct but
+> **not durable**: everything it declared survived only as long as the broker process
+> and the sending process did. Three defaults were left at their Wolverine values, and
+> each of them loses messages on its own.
+>
+> - **The sending endpoint is durable** (`UseDurableOutbox()` on the publish rule).
+>   Without it the endpoint stays at Wolverine's default `BufferedInMemory`, and that
+>   single fact costs twice. Wolverine's RabbitMQ sender derives the AMQP flag from the
+>   endpoint mode, so a buffered endpoint publishes with `delivery_mode: 1` and a broker
+>   restart drops the message; and buffered means the envelope is **never written to
+>   `wolverine_outgoing_envelopes`**, so a process crash between the commit and the
+>   broker's acknowledgement drops it too. The outbox promise of
+>   [ADR-0022](./0022-event-driven-read-models.md) therefore held only up to the moment
+>   of handover — precisely the gap it was introduced to close.
+> - **The exchange and the subscriber queue are declared durable.** Both were durable by
+>   default already; declaring them explicitly makes the guarantee part of the topology
+>   rather than a value someone may change.
+> - **Queues are quorum queues, transport-wide** (`UseQuorumQueues()`), not per queue.
+>   Classic queues are unreplicated. Configuring the setting on the transport rather
+>   than on each declaration is what also covers the queues Building Blocks never names
+>   itself — above all Wolverine's `wolverine-dead-letter-queue`, which the subscribing
+>   amendment calls "operationally the one place to look" and which would otherwise be
+>   the least durable queue in the system. Wolverine's own system queues stay classic,
+>   which is required and correct.
+> - **Messaging without a persistence strategy throws at composition time.** A durable
+>   sending endpoint needs a message store, and `UseWolverineMessaging` alone does not
+>   provide one. Wolverine's behaviour in that situation is to degrade quietly, which
+>   would reproduce this amendment's own bug in a new place: a host that looks durable
+>   and is not. `AddBuildingBlocks` therefore fails when a broker URI was given without
+>   `UseEfCorePersistence` or `UseMartenEventSourcing`. The check runs after the whole
+>   options lambda, so the order of the two calls does not matter.
+> - **Consequence to know:** the queue type is part of the declaration and cannot be
+>   changed on an existing queue. A broker that still carries a classic queue of the
+>   same name from an earlier run makes `AutoProvision` fail; the queue has to be
+>   deleted. No environment is affected today, but a long-lived broker will be.
+> - **Pinned by** `IntegrationEventDurabilityTests` (a published event arrives at a real
+>   broker with `Persistent == true`; the compiled endpoint is `Durable`; the subscriber
+>   queue and the dead-letter queue are quorum and durable) and, without Docker, by
+>   `WolverineExtensionTests`.
 
 > **Scope note — Wolverine is the transport, not the mediator.** Wolverine is
 > adopted **only** as the inter-service messaging transport. It is **not** used

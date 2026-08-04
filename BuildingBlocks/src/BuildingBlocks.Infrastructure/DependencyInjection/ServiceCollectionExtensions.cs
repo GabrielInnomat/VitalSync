@@ -39,6 +39,16 @@ public static class ServiceCollectionExtensions
                 "configured as well (ADR-0023).");
         }
 
+        if (options.WolverineWiring.RabbitMqUri is not null && !options.WolverineWiring.HasMessageStore)
+        {
+            throw new InvalidOperationException(
+                "UseWolverineMessaging was selected without a persistence strategy. Integration events are sent " +
+                "through a durable endpoint so that they survive a broker restart and a crash between commit and " +
+                "broker acknowledgement (ADR-0022/0023), and a durable endpoint needs Wolverine's message store. " +
+                "Without one the host would look durable and silently not be. Select UseEfCorePersistence<TContext>" +
+                "(writeConnectionString) or UseMartenEventSourcing(writeConnectionString) as well.");
+        }
+
         var domainEventTypeRegistry = options.DomainEventTypeRegistry;
 
         if (options.WolverineWiring.ApplyDomainEventRouting && domainEventTypeRegistry.NamesByType.Count == 0)

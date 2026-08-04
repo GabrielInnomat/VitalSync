@@ -10,7 +10,8 @@ Zusammenführung der drei Befunddokumente, Stand 2026-08-02:
 | **Summe roh**                                 | **78**   | **64**      |
 | **nach Zusammenführung von Überschneidungen** |          | **43**      |
 | Nachtrag AppHost `e44ae9b` (TODO-45, TODO-46) | 2        | 2           |
-| **Summe geführt**                             |          | **45**      |
+| Nachtrag WS-08 (TODO-48)                      | 1        | 1           |
+| **Summe geführt**                             |          | **46**      |
 
 Die 14 in `Improvements.md` als gelöst verifizierten Punkte wurden nicht übernomen.
 
@@ -39,7 +40,7 @@ eine Entscheidung, keinen Code.
 | TODO-04 | Stream-Key hängt am CLR-Klassennamen                           | **P1** | gelöst            | hacky-2, IMP-23                       |
 | TODO-05 | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | **P1** | gelöst            | hacky-5                               |
 | TODO-06 | Connection String zweimal, ohne Abgleich                       | **P1** | gelöst            | hacky-8, IMP-13                       |
-| TODO-07 | Integration Events sind nicht persistent                       | **P1** | offen             | WS-08                                 |
+| TODO-07 | Integration Events sind nicht persistent                       | **P1** | gelöst            | WS-08                                 |
 | TODO-08 | Topic-Validierung und Kontextkennung                           | **P1** | teilweise gelöst  | WS-05, WS-13, WS-14                   |
 | TODO-09 | Keine CI-Pipeline                                              | **P1** | gelöst            | WS-16                                 |
 | TODO-10 | Rehydrierung: `new()` oder `Activator`?                        | **P1** | gelöst            | hacky-5, IMP-14, WS-02                |
@@ -80,6 +81,7 @@ eine Entscheidung, keinen Code.
 | TODO-45 | Api-Readiness prüft nicht mehr existierende Connection-Namen   | **P1** | gelöst            | AppHost `e44ae9b`                     |
 | TODO-46 | Die MigrationService-Worker sind leere Hüllen                  | **P2** | offen             | AppHost `e44ae9b`                     |
 | TODO-47 | Kind-Entitäten haben kein Verhalten                            | **P2** | gelöst            | ADR-0031 Folgearbeit                  |
+| TODO-48 | Publisher Confirms sind unbelegt                               | **P2** | offen             | WS-08 Nachtrag                        |
 
 ---
 
@@ -466,7 +468,47 @@ die die ADR-0022-Atomarität belegen, gehen jetzt denselben Weg wie echte Hosts.
 
 # TODO-07, Integration Events sind nicht persistent
 
-**P1 · offen · WS-08**
+**P1 · gelöst · WS-08**
+
+## Gelöst — durabler Sending-Endpoint, durable Topologie, Quorum-Queues (ADR-0023-Amendment, 2026-08-04)
+
+Der Befund stimmte, war aber **kleiner beschrieben als er war**. Gemessen statt vermutet:
+
+- **Ein Schalter, zwei Verluste.** `delivery_mode: 1` ist nur die sichtbare Hälfte. Wolverines
+  RabbitMQ-Sender leitet das AMQP-Persistenzflag aus dem Endpoint-Modus ab, und derselbe Modus
+  entscheidet, ob überhaupt eine Zeile nach `wolverine_outgoing_envelopes` geschrieben wird. Der
+  geerbte Default `BufferedInMemory` verlor die Nachricht also **auch** bei einem
+  Prozessabsturz zwischen Commit und Broker-Bestätigung — ohne Broker-Neustart. Die
+  Outbox-Zusage aus ADR-0022 endete faktisch am Übergabepunkt.
+- **Der Rückgabewert war schon da.** `PublishMessagesToRabbitMqExchange<IIntegrationEvent>(…)`
+  liefert eine `RabbitMqExchangeConfiguration`, die der Code verwarf. `UseDurableOutbox()`
+  darauf schließt beide Lücken auf einmal.
+- **Quorum am Transport, nicht an der Queue.** `UseRabbitMq(uri).UseQuorumQueues()` erfasst auch
+  die Queues, die Building Blocks nie selbst benennt — allen voran die
+  `wolverine-dead-letter-queue`, laut ADR-0023 „operationally the one place to look" und sonst
+  die am wenigsten haltbare Queue im System. Verifiziert: die Policy greift nur für
+  `EndpointRole.Application`, Wolverines eigene System-Queues bleiben korrekterweise klassisch.
+- **Fail fast statt scheinbar durabel.** Ein durabler Sending-Endpoint braucht einen Message
+  Store; `UseWolverineMessaging` allein liefert keinen. Wolverine degradiert in dieser Lage
+  still — also genau der Fehlertyp, gegen den dieser Eintrag angetreten ist. `AddBuildingBlocks`
+  wirft jetzt, wenn eine Broker-URI ohne `UseEfCorePersistence`/`UseMartenEventSourcing` gesetzt
+  wurde. Die Prüfung läuft **nach** dem gesamten Options-Lambda, die Reihenfolge der Aufrufe ist
+  damit egal.
+
+Belegt durch `IntegrationEventDurabilityTests` gegen einen echten Broker (Nachricht kommt mit
+`Persistent == true` an, kompilierter Endpoint ist `Durable`, Subscriber- und Dead-Letter-Queue
+sind Quorum und durabel) und ohne Docker durch `WolverineExtensionTests`. Gegenprobe gemacht:
+ohne den Fix fallen alle vier Fakten, ohne `UseQuorumQueues()` genau die zwei Quorum-Fakten.
+
+**Konsequenz zu kennen:** der Queue-Typ gehört zur Deklaration und lässt sich an einer
+bestehenden Queue nicht ändern. Ein Broker, der aus einem früheren Lauf noch eine klassische
+Queue gleichen Namens trägt, lässt `AutoProvision` scheitern; die Queue muss gelöscht werden.
+Heute betrifft das keine Umgebung — der produktive AppHost lief noch nie, und der
+Samples-AppHost bekam sein `WithDataVolume()` erst mit dieser Änderung.
+
+**Nicht enthalten:** Publisher Confirms, siehe TODO-48.
+
+## Ursprünglicher Befund
 
 Verifiziert: nirgends in `BuildingBlocks/src` wird persistente Zustellung konfiguriert, die
 Nachrichten gehen mit `delivery_mode: 1` raus. Die Outbox schützt bis zur Übergabe an den Broker;
@@ -1663,6 +1705,37 @@ eine Liste; ein Merge-Schlüssel existiert vor dem Commit gar nicht, ADR-0029), 
 
 ---
 
+# TODO-48, Publisher Confirms sind unbelegt
+
+**P2 · offen · WS-08 Nachtrag**
+
+Mit TODO-07 ist die Kette bis in den Broker hinein durabel: durabler Sending-Endpoint,
+persistente Nachricht, durable Quorum-Queues. Was **nicht** belegt ist: ob der Publisher auf die
+Bestätigung des Brokers wartet. Ohne Publisher Confirms gilt eine Nachricht als gesendet, sobald
+sie im Socket steht — ein Broker, der sie danach verwirft (etwa bei vollem Speicher), meldet das
+niemandem, und die Outbox-Zeile wird trotzdem als erledigt markiert. Das ist derselbe Fehlertyp
+wie TODO-07, nur eine Ebene tiefer.
+
+## Zuerst messen, dann entscheiden
+
+Offen ist die Vorfrage: `RabbitMQ.Client` 7 hat sein Verhalten gegenüber Version 6 geändert, und
+es ist ungeklärt, ob Wolverine Confirms bereits per Default aktiviert. Erst danach steht fest, ob
+es überhaupt eine Änderung braucht. Stellschraube wäre
+
+```csharp
+options.UseRabbitMq(uri).ConfigureChannelCreation(channel =>
+{
+    channel.PublisherConfirmationsEnabled = true;
+    channel.PublisherConfirmationTrackingEnabled = true;
+});
+```
+
+Ein Test, der das belegt, ist teuer: ein verworfener Publish lässt sich ohne Broker-Manipulation
+kaum herbeiführen. Realistisch ist die Prüfung der Konfiguration am gestarteten Host plus eine
+Messung des Durchsatzpreises — Confirms serialisieren den Sendepfad spürbar.
+
+---
+
 ## Empfohlene Reihenfolge
 
 1. **TODO-09** (CI) zuerst — klein und sichert alles Weitere ab. (**TODO-06** stand hier
@@ -1679,7 +1752,10 @@ eine Liste; ein Merge-Schlüssel existiert vor dem Commit gar nicht, ADR-0029), 
    auch die Navigationen, und das Sample hat mit `widget_parts` das erste nicht-flache Aggregat
    (ADR-0031). **TODO-47** schließt daran an und ist ebenfalls erledigt: das Kind trägt jetzt
    Verhalten und raist über den Root (ADR-0032).
-5. **TODO-07** und **TODO-08** schließen die stillen Lücken im Messaging.
+5. **TODO-07** ist erledigt: die Zustellung ist bis in den Broker hinein durabel, und Messaging
+   ohne Persistenzwahl wirft, statt still zu degradieren (ADR-0023-Amendment). **TODO-08**
+   schließt die verbliebene stille Lücke im Messaging; **TODO-48** trägt die Vorfrage der
+   Publisher Confirms nach.
 6. **TODO-45** ist erledigt; **TODO-46** kommt erst mit dem ersten Aggregat des jeweiligen
    Kontexts — vorher ist nicht entschieden, wie dort gespeichert wird, und ein Migrations-Worker
    ohne `DbContext` wäre geraten.

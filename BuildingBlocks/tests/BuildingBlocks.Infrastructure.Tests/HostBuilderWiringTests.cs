@@ -49,7 +49,9 @@ public sealed class HostBuilderWiringTests
     [Fact]
     public void MessagingSelection_ConfiguresWolverine()
     {
-        var builder = BuildHost(options => options.UseWolverineMessaging(RabbitMqUri));
+        var builder = BuildHost(options => options
+            .UseMartenEventSourcing(WriteConnectionString)
+            .UseWolverineMessaging(RabbitMqUri));
 
         Assert.Contains(builder.Services, descriptor => descriptor.ServiceType == typeof(IWolverineRuntime));
     }

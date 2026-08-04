@@ -80,6 +80,13 @@ uniformly for event-sourced and state-stored contexts.
 > Wolverine's PostgreSQL-backed durable message store on the write database at
 > composition time, which the EF outbox requires.
 
+> **Delivery does not end at the handover (2026-08-04).** The outbox guarantee above
+> covers the write transaction and the flush; it originally stopped there, because the
+> RabbitMQ sending endpoint was buffered — no persisted outgoing envelope, and a
+> non-persistent AMQP message. Both are fixed in the persistent-delivery amendment to
+> [ADR-0023](./0023-wolverine-messaging-transport.md), which is what makes the
+> at-least-once promise hold across a broker or process restart.
+
 **Consequences of at-least-once — mandatory handler rules:**
 
 - **Idempotent projection handlers.** Applying the same event twice must produce the

@@ -1,6 +1,7 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 var messaging = builder.AddRabbitMQ("messaging")
+    .WithDataVolume()
     .WithManagementPlugin();
 
 var postgres = builder.AddPostgres("postgres")

@@ -43,7 +43,7 @@ public sealed class EfCoreOutboxAtomicityTests(PostgreSqlFixture fixture)
         using (var scope = host.Services.CreateScope())
         {
             await scope.ServiceProvider.GetRequiredService<FlushProbeContext>().Database.ExecuteSqlRawAsync(
-                "create table if not exists flush_probe_rows (id uuid primary key, name text not null)",
+                "create table if not exists flush_probe_rows (id uuid primary key, name text not null, version bigint not null)",
                 TestContext.Current.CancellationToken);
         }
 

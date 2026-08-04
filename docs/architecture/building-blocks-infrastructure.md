@@ -320,8 +320,22 @@ A small cluster of classes, using Marten as a **raw stream store**:
   `BuildingBlocks.Application` — resolved by the routing rule's topic source, so
   publishing an event without it throws instead of silently using a CLR-derived
   key (ADR-0023 amendment 2026-08-03).
-- **Consumer side not included.** Queue declaration, binding, and listening are
-  owned by the subscribing service; this package wires the publishing half only.
+- **Durability.** The topology is declared durable end to end (ADR-0023 amendment
+  2026-08-04). The exchange and the subscriber queue are declared `IsDurable`, and
+  queues are **quorum** queues configured on the transport rather than per
+  declaration, which also covers the queues Building Blocks never names itself —
+  above all Wolverine's `wolverine-dead-letter-queue`. The publish rule adds
+  `UseDurableOutbox()`, which puts the sending endpoint into `EndpointMode.Durable`;
+  that one setting decides two things at once, because Wolverine's RabbitMQ sender
+  derives the AMQP persistence flag from the endpoint mode **and** only a durable
+  endpoint writes an outgoing envelope to `wolverine_outgoing_envelopes`. Buffered —
+  the framework default this package used to inherit — meant a broker restart lost
+  the message and so did a process crash between commit and acknowledgement. Pinned
+  by `IntegrationEventDurabilityTests` against a real broker and by
+  `WolverineExtensionTests` without Docker.
+- **Consumer side included.** Queue declaration, binding, listening, and consumer
+  discovery are wired by `SubscribeToIntegrationEvents` (ADR-0023 amendment
+  2026-08-01); the subscribing host adds nothing of its own.
 
 ### Runtime code generation
 
@@ -368,7 +382,12 @@ services.AddBuildingBlocks(options =>
   the session with Wolverine so it can be enrolled in the transactional outbox.
 - `UseWolverineMessaging(rabbitMqUri)` takes the broker URI (typically the
   Aspire-provided connection string) so the RabbitMQ defaults can be applied
-  automatically (ADR-0027).
+  automatically (ADR-0027). It **requires a persistence selection**:
+  `AddBuildingBlocks` throws when a broker URI was given without
+  `UseEfCorePersistence` or `UseMartenEventSourcing`, because the durable sending
+  endpoint has no message store to write to and Wolverine would degrade quietly to
+  a host that only looks durable (ADR-0023 amendment 2026-08-04). The check runs
+  after the whole options lambda, so either call order is accepted.
 - Connection strings follow the write/read pair naming of ADR-0021 — the **Aspire
   resource name in kebab-case**, e.g. `nutrition-write` / `nutrition-read`. The
   service host uses the same names for its readiness checks, so a rename in the
