@@ -324,6 +324,12 @@ geschrieben wird. Damit ist auch die letzte Tür bewacht — die per `IReconstit
 noch erreichbare leere Hülle landet nicht mehr in der Datenbank. Abgesichert durch
 `RepositoryEmptyIdentityGuardTests` (leer → wirft, mit Identität → passiert) für beide Pfade.
 
+**Nachtrag (2026-08-04):** Mit dem Rückbau von `IReconstitutable` (siehe TODO-10) ist die oben
+beschriebene Restlücke — eine selbstgeschriebene generische Methode mit
+`IReconstitutable`-Constraint — mitsamt dem Interface verschwunden; an eine leere Hülle kommt
+Anwendungscode jetzt nur noch per Reflection. Der Guard bleibt unverändert nötig und unverändert
+bestehen: er bewacht die Tür unabhängig davon, wie jemand an die Hülle kam.
+
 ## Ursprünglicher Lösungsvorschlag
 
 ```csharp
@@ -570,6 +576,19 @@ Abgesichert durch `ReconstitutableTests` (beide Persistenzformen) und je einen
 `AggregateConventionTests`-Scan pro Sample, der bei fehlendem Interface oder öffentlichem
 parameterlosem Konstruktor fehlschlägt. ADR-0025 und ADR-0026 sind um je ein Amendment ergänzt
 (2026-08-03).
+
+**Nachtrag (2026-08-04): das Interface ist wieder weg — Konvention statt Vertrag.**
+`IReconstitutable<TSelf>` kaufte seinen Compile-Zeit-Beweis mit sichtbarer Zeremonie an jedem
+Aggregat (Interface in der Basisliste plus explizites `CreateEmpty`), und die Alternativen, die
+den Beweis behalten (CRTP-`TSelf` an der Basis, Source Generator), verschieben die Kosten nur.
+Gelöscht. Rekonstitution ist jetzt eine **Konvention** — privater parameterloser Konstruktor,
+sonst nichts — die eine interne, pro Typ gecachte `AggregateFactory` in der Infrastruktur bedient
+und die `AddBuildingBlocks` **beim Startup** validiert (Scan der `AddDomainEventsFrom`-Assemblies;
+fehlt der Konstruktor, scheitert die Registrierung mit dem Namen des Aggregats). Die Richtung von
+hacky-5/IMP-14 (Reflection überall) hatte also doch recht, nur gecacht und mit Fail-Fast statt
+Laufzeitüberraschung; der oben für „überflüssig" erklärte Startup-Check ist genau so gekommen.
+Abgesichert durch `AggregateFactoryTests` (inkl. Negativprobe via `HullFixture`-Assembly) und die
+verschärften `AggregateConventionTests`. ADR-0025-Amendment vom 2026-08-04.
 
 ---
 

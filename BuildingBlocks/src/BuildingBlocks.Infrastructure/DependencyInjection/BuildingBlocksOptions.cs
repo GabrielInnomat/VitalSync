@@ -55,6 +55,8 @@ public sealed class BuildingBlocksOptions
 
     internal IReadOnlyCollection<Assembly> ScannedAssemblies => _scannedAssemblies;
 
+    internal IReadOnlyCollection<Assembly> DomainEventAssemblies => _domainEventAssemblies;
+
     internal DomainEventTypeRegistry DomainEventTypeRegistry =>
         _domainEventTypeRegistry ??= new DomainEventTypeRegistry(_domainEventAssemblies);
 

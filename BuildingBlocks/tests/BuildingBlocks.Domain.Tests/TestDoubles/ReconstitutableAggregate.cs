@@ -1,15 +1,13 @@
 namespace BuildingBlocks.Domain.Tests.TestDoubles;
 
 internal sealed class ReconstitutableAggregate
-    : AggregateRoot<TestId, TestState>, IReconstitutable<ReconstitutableAggregate>
+    : AggregateRoot<TestId, TestState>
 {
     private ReconstitutableAggregate() : base(TestState.Empty)
     {
     }
 
     public TestState CurrentState => State;
-
-    static ReconstitutableAggregate IReconstitutable<ReconstitutableAggregate>.CreateEmpty() => new();
 
     public static ReconstitutableAggregate Create(int value)
     {
@@ -20,14 +18,11 @@ internal sealed class ReconstitutableAggregate
 }
 
 internal sealed class ReconstitutableEventSourcedAggregate
-    : EventSourcedAggregateRoot<TestId, TestState>, IReconstitutable<ReconstitutableEventSourcedAggregate>
+    : EventSourcedAggregateRoot<TestId, TestState>
 {
     private ReconstitutableEventSourcedAggregate() : base(TestState.Empty)
     {
     }
-
-    static ReconstitutableEventSourcedAggregate IReconstitutable<ReconstitutableEventSourcedAggregate>.CreateEmpty() =>
-        new();
 
     public static ReconstitutableEventSourcedAggregate Create(int value)
     {

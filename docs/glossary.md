@@ -388,26 +388,25 @@ The two ways an event-sourced aggregate's state changes: `RaiseEvent(e)`
 applies the event to the state, validates identity, advances the
 version, and records it; `LoadFromHistory(history)` **replays** a persisted stream
 to rebuild state ([rehydration](#rehydration), recording nothing) into the hull
-supplied by [reconstitution](#reconstitution-ireconstitutabletself). A
+supplied by [reconstitution](#reconstitution). A
 **replay-misuse guard** prevents `LoadFromHistory` from running after uncommitted
 events exist.
 
-### Reconstitution (`IReconstitutable<TSelf>`)
+### Reconstitution
 
 Rebuilding an aggregate that **already exists**, as opposed to creating a new one.
 A repository does not author aggregates — it restores a persisted state or replays
 an event history — and both need an instance to fold into first. That instance
-comes from `static abstract TSelf CreateEmpty()`, which every aggregate implements
-**explicitly** while keeping its parameterless constructor **private**. Because a
-static abstract member is reachable only through a type parameter constrained to
-the interface, neither `new Widget()` nor `Widget.CreateEmpty()` compiles: the
-aggregate's own named factory stays the only public way into existence, and the
-domain never sees an unidentified hull. The constraint sits on
-[`IRepository`](#repository-irepositorytaggregate-tkey), so an aggregate that
-cannot be reconstituted is a **compile error at the injection site** rather than a
-container failure on first load. It replaced the earlier split of
-`Activator.CreateInstance` (EF Core) and a `new()` constraint (Marten) — see the
-reconstitution amendment of
+comes from the aggregate's **private parameterless constructor**, invoked through
+an internal, per-type-cached factory in `Infrastructure`. The private constructor
+keeps `new Widget()` a compile error, so the aggregate's own named factory stays
+the only public way into existence, and the domain never sees an unidentified
+hull. The convention is validated at **host startup**: `AddBuildingBlocks` scans
+the `AddDomainEventsFrom` assemblies and fails registration, naming the aggregate,
+if the constructor is missing. An earlier design expressed this as an explicit
+`IReconstitutable<TSelf>` implementation (`static abstract CreateEmpty`) on every
+aggregate; it was retired because the per-aggregate ceremony outweighed the
+compile-time proof — see the reconstitution amendments of
 [ADR-0025](./architecture/decisions/0025-unified-state-fold-aggregate-model.md).
 
 ### Rehydration
@@ -416,7 +415,7 @@ Rebuilding an aggregate's current state inside its repository: replaying the eve
 stream via [`LoadFromHistory`](#raiseevent--loadfromhistory) for an event-sourced
 aggregate, or restoring the persisted state via `IStateOwner.Restore` for a
 state-stored one. Both start from the empty hull supplied by
-[reconstitution](#reconstitution-ireconstitutabletself).
+[reconstitution](#reconstitution).
 
 ### Snapshotting
 
@@ -583,8 +582,8 @@ soft-delete state change, so there is no `Remove`, `Update`, or `Save`
 Marten-based event store (see
 [ADR-0019](./architecture/decisions/0019-event-store-technology-marten.md)). Both
 rebuild a stored aggregate through
-[reconstitution](#reconstitution-ireconstitutabletself), which the contract
-requires of `TAggregate`.
+[reconstitution](#reconstitution) via the aggregate's private parameterless
+constructor.
 
 ---
 

@@ -3,7 +3,7 @@ using BuildingBlocks.Domain;
 namespace VitalSync.Sample.EventSourced.Domain;
 
 [AggregateName("gadget")]
-public sealed class Gadget : EventSourcedAggregateRoot<GadgetId, GadgetState>, IReconstitutable<Gadget>
+public sealed class Gadget : EventSourcedAggregateRoot<GadgetId, GadgetState>
 {
     private Gadget() : base(GadgetState.Empty)
     {
@@ -14,8 +14,6 @@ public sealed class Gadget : EventSourcedAggregateRoot<GadgetId, GadgetState>, I
     public int RenameCount => State.RenameCount;
 
     public bool IsRetired => State.IsRetired;
-
-    static Gadget IReconstitutable<Gadget>.CreateEmpty() => new();
 
     public static Gadget Create(GadgetId id, string name)
     {

@@ -177,18 +177,18 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   ordinary **entity type** — one table, one id column, no shadow key. Infrastructure
   reaches it through `IStateOwner`, implemented **explicitly** on `AggregateRoot` so
   domain code never sees it and cannot bypass the event fold.
-- **Reconstitution, not construction** (ADR-0025 amendment 2026-08-03): every aggregate
-  implements **`IReconstitutable<TSelf>`** (`static abstract TSelf CreateEmpty()`)
-  **explicitly** and keeps its parameterless constructor **private**. A static abstract
-  member is reachable only through a constrained type parameter, so `new Widget()`
-  (`CS1729`), `Widget.CreateEmpty()` (`CS0117`) and the interface-instance route
-  (`CS0176`) are all compile errors — the aggregate's named factory stays the only
-  public way in. The constraint sits on `IRepository`, so a non-conforming aggregate
-  fails to compile **where the repository is injected**. There is no `Activator` and no
-  `new()` constraint any more, and both persistence paths are identical. Cost: one line
-  of boilerplate per aggregate (the base cannot supply it — knowing `TSelf` there would
-  need `new()` again). New aggregate? Private ctor + explicit `CreateEmpty`, or the
-  `AggregateConventionTests` scan fails.
+- **Reconstitution, not construction** (ADR-0025 amendments 2026-08-03/2026-08-04): every
+  aggregate keeps its parameterless constructor **private** — the aggregate's named
+  factory stays the only public way in (`new Widget()` is `CS1729`). Repositories obtain
+  the empty hull through the internal, per-type-cached `AggregateFactory` in
+  `Infrastructure`; the former `IReconstitutable<TSelf>` interface with its explicit
+  `CreateEmpty` per aggregate is **deleted** — the per-aggregate ceremony outweighed the
+  compile-time proof. Instead the convention is validated **at host startup**:
+  `AddBuildingBlocks` scans the `AddDomainEventsFrom` assemblies and fails registration,
+  naming the aggregate, when a parameterless constructor is missing (same fail-fast bar
+  as `[EventName]`/`[AggregateName]`, ADR-0030). Both persistence paths are identical.
+  New aggregate? Private parameterless ctor, or the samples' `AggregateConventionTests`
+  scan and host startup fail.
 - **One repository contract**: `IRepository<TAggregate, TKey>` with `GetByIdAsync`
   and `AddAsync` only (ADR-0026) — no `Remove` (removal is a soft-delete state
   change), no `Save`/`Update` (retrieved aggregates are tracked; changes flow

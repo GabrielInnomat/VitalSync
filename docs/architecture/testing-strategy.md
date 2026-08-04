@@ -91,7 +91,9 @@ the results. For these cases:
 Existing examples: `ValidHandlersFixture`, `ConflictingHandlersFixture`,
 `OrphanRequestsFixture`, `AmbiguousRequestsFixture` (used by
 `BuildingBlocks.Infrastructure.Tests` for handler registration and
-startup-validation tests).
+startup-validation tests), `DeadLetterFixture` (messaging dead-letter tests), and
+`HullFixture` (an aggregate without a parameterless constructor, for the
+reconstitution startup-validation tests).
 
 ## What the current Building Blocks tests cover
 

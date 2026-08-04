@@ -31,7 +31,6 @@ The block provides a **single aggregate authoring model**: every aggregate deriv
 | `IHasDomainEvents`                        | interface       | Read-only access to an aggregate's domain events.                                    |
 | `IDomainEventOwner`                       | interface       | Privileged contract that can **clear** events (infrastructure-only, explicit).       |
 | `IStateOwner`                             | interface       | Privileged access to the aggregate's state object (infrastructure-only, explicit).   |
-| `IReconstitutable<TSelf>`                 | interface       | Supplies the empty hull a repository rehydrates into (`static abstract CreateEmpty`). |
 | `IDomainEvent`                            | interface       | Pure business event marker — no identity fields (ADR-0029).                          |
 | `DomainEvent`                             | abstract record | Convenience base; identity travels on the envelope, not the event.                   |
 | `IClock`                                  | interface       | Abstraction over "now" for deterministic time.                                       |
@@ -235,32 +234,18 @@ Both `ClearDomainEvents` and the ES members are reachable **only** by code that 
 
 `IDomainEventOwner` and `IStateOwner` are the same shape: the aggregate **owns** something (its events, its state), and infrastructure needs privileged access to it, so the contract is implemented **explicitly** and is invisible to domain code. The suffix is the signal — see one, expect the other three properties.
 
-`IReconstitutable<TSelf>` applies the same idea to **construction**, which cannot be an instance member:
+**Reconstitution** — the repository rebuilding a stored aggregate — needs an empty hull to fill via `IStateOwner.Restore` or `LoadFromHistory`. The hull comes from a **convention**, not a contract: every aggregate keeps a **private parameterless constructor**, and nothing else:
 
 ```csharp
-public interface IReconstitutable<TSelf>
-    where TSelf : IReconstitutable<TSelf>
-{
-    static abstract TSelf CreateEmpty();
-}
-```
-
-Every aggregate implements it explicitly and keeps its parameterless constructor **private**:
-
-```csharp
-public sealed class Widget : AggregateRoot<WidgetId, WidgetState>, IReconstitutable<Widget>
+public sealed class Widget : AggregateRoot<WidgetId, WidgetState>
 {
     private Widget() : base(WidgetState.Empty) { }
-
-    static Widget IReconstitutable<Widget>.CreateEmpty() => new();
 
     public static Widget Create(WidgetId id, string name) { … }
 }
 ```
 
-A static abstract member is callable **only through a type parameter** constrained to the interface, so an explicit implementation closes every public route: `new Widget()` is `CS1729`, `Widget.CreateEmpty()` is `CS0117`, and reaching it through an interface-typed instance is `CS0176`. Only a repository — generic over `TAggregate : IReconstitutable<TAggregate>` — can obtain the hull, which it immediately fills via `IStateOwner.Restore` or `LoadFromHistory`. The constraint lives on `IRepository`, so a non-conforming aggregate fails to compile where the repository is injected ([ADR-0025](./decisions/0025-unified-state-fold-aggregate-model.md) reconstitution amendment). It replaced an `Activator.CreateInstance` call on the EF Core path and a `new()` constraint on the Marten path — the latter would have forced a **public** constructor onto every aggregate.
-
-One line of boilerplate per aggregate is the price; the base class cannot supply it, because knowing `TSelf` there would require a `new()` constraint again.
+The private constructor keeps `new Widget()` a compile error everywhere, so the aggregate's named factory stays the only public way in. Infrastructure reaches the constructor through an internal, per-type-cached factory, and `AddBuildingBlocks` validates the convention **at host startup**: every aggregate in the assemblies named via `AddDomainEventsFrom` must have a parameterless constructor, or the host fails to start with a message naming the aggregate and the fix ([ADR-0025](./decisions/0025-unified-state-fold-aggregate-model.md) reconstitution amendment 2026-08-04). An earlier design expressed the same guarantee as an explicit `IReconstitutable<TSelf>` implementation on every aggregate; it was retired because the per-aggregate ceremony outweighed the compile-time proof — the amendment records the trade-off.
 
 ### Access matrix (event-sourced base)
 

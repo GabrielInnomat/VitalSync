@@ -204,6 +204,12 @@ vorgeschlagen: nicht `Activator` überall, sondern `IReconstitutable<TSelf>` mit
 Anforderung ist zur Compile-Zeit ausdrückbar. Siehe **TODO-10** und das
 Rekonstitutions-Amendment von ADR-0025.
 
+**Nachtrag (2026-08-04):** Kehrtwende — dieser Punkt hatte doch recht. `IReconstitutable` ist
+gelöscht; die Hülle kommt jetzt aus einer internen, pro Typ gecachten `AggregateFactory`
+(Reflection auf den privaten parameterlosen Konstruktor), validiert beim Startup über die
+`AddDomainEventsFrom`-Assemblies. Die hier beschriebene „Restlücke" (constraint-gebundener
+generischer Code) ist damit ebenfalls weg; der Guard bleibt. Siehe ADR-0025-Amendment 2026-08-04.
+
 ---
 
 # 6, `CurrentValues.SetValues` kopiert nur Skalare

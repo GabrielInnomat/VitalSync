@@ -6,7 +6,7 @@ namespace BuildingBlocks.Infrastructure.Persistence;
 
 public sealed class MartenEventSourcedRepository<TAggregate, TKey>(IDocumentSession session, MartenAggregateTracker tracker)
     : IRepository<TAggregate, TKey>
-    where TAggregate : class, IEventSourcedAggregateRoot<TKey>, IReconstitutable<TAggregate>
+    where TAggregate : class, IEventSourcedAggregateRoot<TKey>
     where TKey : struct, IEntityKey
 {
     public async Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken cancellationToken)
@@ -20,7 +20,7 @@ public sealed class MartenEventSourcedRepository<TAggregate, TKey>(IDocumentSess
             return null;
         }
 
-        var aggregate = TAggregate.CreateEmpty();
+        var aggregate = AggregateFactory.CreateEmpty<TAggregate>();
         ((IEventSourcedAggregateRoot<TKey>)aggregate).LoadFromHistory(stream.Select(@event => (IDomainEvent)@event.Data));
         Track(aggregate, aggregateName);
         return aggregate;

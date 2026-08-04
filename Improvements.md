@@ -369,6 +369,13 @@ Der `new()`-Teil ist ersatzlos weg: beide Implementierungen verlangen jetzt
 geworden, weil der Compiler die Prüfung übernimmt. Details in **TODO-10** und im
 Rekonstitutions-Amendment von ADR-0025.
 
+**Nachtrag (2026-08-04):** Der Absatz oben ist überholt — `IReconstitutable` ist wieder gelöscht
+(die Zeremonie pro Aggregat wog schwerer als der Compile-Zeit-Beweis), und der hier ursprünglich
+vorgeschlagene **Startup-Check ist doch gekommen**: `AddBuildingBlocks` scannt die
+`AddDomainEventsFrom`-Assemblies und scheitert bei fehlendem parameterlosem Konstruktor mit dem
+Namen des Aggregats. Die Hülle liefert eine interne, pro Typ gecachte `AggregateFactory`. Siehe
+TODO-10-Nachtrag und ADR-0025-Amendment 2026-08-04.
+
 Was **nicht** von der Constraint erfasst wird: `MartenEventSourcedRepository` verlangt weiterhin
 `IEventSourcedAggregateRoot<TKey>`, `EfCoreRepository` nicht. Ein event-sourced Aggregat, das gegen
 eine EF-Registrierung aufgelöst wird (oder umgekehrt), fällt also nach wie vor erst im Container

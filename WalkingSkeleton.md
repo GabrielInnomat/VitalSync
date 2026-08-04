@@ -407,7 +407,8 @@ Eine Nebenwirkung, die man kennen muss: weil `MartenEventSourcedRepository` die
 Rehydrierung als „leeres Aggregat + Stream falten" umsetzt, ist der parameterlose
 Konstruktor **Pflicht**, nicht Kosmetik. Er war dafür ursprünglich per `new()`-Constraint
 öffentlich erzwungen — seit WS-02 gelöst ist, ist er privat und die Hülle kommt über
-`IReconstitutable<Gadget>.CreateEmpty()`.
+`IReconstitutable<Gadget>.CreateEmpty()` (seit 2026-08-04: über die interne `AggregateFactory`,
+siehe Nachtrag bei WS-02).
 
 ### Abnahmekriterien Etappe 2
 
@@ -718,6 +719,14 @@ Startup-Check ist damit hinfällig. `Activator` und `new()` sind beide weg, beid
 identisch, und ADR-0025 stimmt wieder — Amendment vom 2026-08-03, zusammen mit ADR-0026.
 
 Siehe **TODO-10** (gelöst).
+
+**Nachtrag (2026-08-04):** Die dritte Antwort hat nicht gehalten — nicht fachlich, sondern
+ergonomisch: Interface in der Basisliste plus explizites `CreateEmpty` an **jedem** Aggregat war
+Zeremonie an genau dem Typ, den Domänenautoren am häufigsten anfassen. `IReconstitutable` ist
+gelöscht; die Hülle liefert eine interne, pro Typ gecachte `AggregateFactory` über den privaten
+parameterlosen Konstruktor, und der oben für hinfällig erklärte **Startup-Check existiert jetzt
+doch**: `AddBuildingBlocks` validiert die Konvention beim Registrieren über die
+`AddDomainEventsFrom`-Assemblies. Siehe ADR-0025-Amendment 2026-08-04.
 
 ---
 

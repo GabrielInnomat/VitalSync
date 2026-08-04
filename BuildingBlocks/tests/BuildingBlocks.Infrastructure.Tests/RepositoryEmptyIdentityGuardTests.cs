@@ -57,8 +57,8 @@ public sealed class RepositoryEmptyIdentityGuardTests
     }
 
     private static TAggregate CreateEmptyHull<TAggregate>()
-        where TAggregate : IReconstitutable<TAggregate> =>
-        TAggregate.CreateEmpty();
+        where TAggregate : class =>
+        AggregateFactory.CreateEmpty<TAggregate>();
 
     private sealed class GuardProbeContext(DbContextOptions<GuardProbeContext> options) : DbContext(options)
     {

@@ -130,7 +130,7 @@ Both persistence styles implement the **same** `IRepository<,>` contract from
 
 ```csharp
 public interface IRepository<TAggregate, in TKey>
-    where TAggregate : class, IAggregateRoot<TKey>, IReconstitutable<TAggregate>
+    where TAggregate : class, IAggregateRoot<TKey>
 {
     Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken ct);
     Task AddAsync(TAggregate aggregate, CancellationToken ct);
@@ -145,11 +145,15 @@ public interface IRepository<TAggregate, in TKey>
 - **No query methods beyond `GetByIdAsync`.** Queries never go through
   repositories: the read side reads its own read database directly
   (ADR-0021/0022).
-- Both implementations obtain the empty hull they rehydrate into through
-  `TAggregate.CreateEmpty()` — no `Activator`, no `new()` constraint, no public
-  constructor required, and no asymmetry between the two paths
+- Both implementations obtain the empty hull they rehydrate into through the
+  internal `AggregateFactory`, which resolves and caches each aggregate's
+  **private parameterless constructor** — no `new()` constraint, no public
+  constructor required, and no asymmetry between the two paths. The convention
+  is validated at host startup: `AddBuildingBlocks` checks every aggregate in
+  the `AddDomainEventsFrom` assemblies and fails registration with the
+  aggregate's name if the constructor is missing
   ([ADR-0025](./decisions/0025-unified-state-fold-aggregate-model.md)
-  reconstitution amendment).
+  reconstitution amendment 2026-08-04).
 - Both `AddAsync` implementations **reject aggregates with an empty identity**
   (`Id.IsEmpty`) with an `InvalidOperationException`: an aggregate gains its
   identity through its first event, and an empty hull exists only for
@@ -166,8 +170,8 @@ public interface IRepository<TAggregate, in TKey>
   `MartenAggregateTracker` — answers it instead: the repository registers every
   aggregate it hands out, together with the `IStateOwner` view it already
   resolved and the state instance EF Core tracks.
-- **Load:** `FindAsync(stateType, [id])` → `TAggregate.CreateEmpty()` →
-  `IStateOwner.Restore(state)`, then track.
+- **Load:** `FindAsync(stateType, [id])` → empty hull via the private
+  parameterless constructor → `IStateOwner.Restore(state)`, then track.
 - **Commit (unit of work):** copies each entry's current state onto its tracked
   entity via `CurrentValues.SetValues` — load-bearing, not defensive: states are
   immutable, so every applied event left the tracked instance stale and without

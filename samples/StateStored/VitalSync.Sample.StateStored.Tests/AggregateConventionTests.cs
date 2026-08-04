@@ -7,7 +7,7 @@ namespace VitalSync.Sample.StateStored.Tests;
 public sealed class AggregateConventionTests
 {
     [Fact]
-    public void EveryAggregate_ImplementsReconstitutable()
+    public void EveryAggregate_HasAParameterlessConstructorForRehydration()
     {
         var aggregates = Aggregates();
 
@@ -15,8 +15,11 @@ public sealed class AggregateConventionTests
         foreach (var aggregate in aggregates)
         {
             Assert.True(
-                typeof(IReconstitutable<>).MakeGenericType(aggregate).IsAssignableFrom(aggregate),
-                $"'{aggregate}' must implement IReconstitutable<{aggregate.Name}> so a repository can rehydrate it.");
+                aggregate.GetConstructor(
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                    Type.EmptyTypes) is not null,
+                $"'{aggregate}' has no parameterless constructor, so no repository can reconstitute it. "
+                + "Building Blocks verifies this at host startup; this test catches it earlier.");
         }
     }
 
@@ -31,7 +34,7 @@ public sealed class AggregateConventionTests
             Assert.True(
                 aggregate.GetConstructor(Type.EmptyTypes) is null,
                 $"'{aggregate}' exposes a public parameterless constructor, so it can be created without going "
-                + "through its factory. Make it private and implement IReconstitutable explicitly.");
+                + "through its factory. Keep the parameterless constructor private.");
         }
     }
 

@@ -59,5 +59,6 @@ public sealed class ReconstitutableTests
     }
 
     private static TAggregate Reconstitute<TAggregate>()
-        where TAggregate : IReconstitutable<TAggregate> => TAggregate.CreateEmpty();
+        where TAggregate : class =>
+        (TAggregate)Activator.CreateInstance(typeof(TAggregate), nonPublic: true)!;
 }

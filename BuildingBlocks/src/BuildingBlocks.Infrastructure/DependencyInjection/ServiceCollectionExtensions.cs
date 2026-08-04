@@ -3,6 +3,7 @@ using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.Dispatching;
 using BuildingBlocks.Infrastructure.Events;
 using BuildingBlocks.Infrastructure.Messaging;
+using BuildingBlocks.Infrastructure.Persistence;
 using BuildingBlocks.Infrastructure.Time;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -46,6 +47,11 @@ public static class ServiceCollectionExtensions
                 "A persistence strategy was configured but no domain event assembly was registered. Every domain " +
                 "event is written to the outbox under the name from its [EventName], so the names must be known " +
                 "before the first commit: call options.AddDomainEventsFrom(typeof(SomeDomainEvent).Assembly).");
+        }
+
+        if (options.WolverineWiring.ApplyDomainEventRouting)
+        {
+            AggregateFactory.EnsureAggregatesAreReconstitutable(options.DomainEventAssemblies);
         }
 
         services.TryAddSingleton(domainEventTypeRegistry);

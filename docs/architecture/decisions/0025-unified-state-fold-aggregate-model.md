@@ -5,6 +5,7 @@
 - **Supersedes:** [ADR-0012](./0012-optional-event-sourcing-aggregate.md)
 - **Amended:** 2026-08-02 (EF Core maps the state as an entity type, not the aggregate — see the note below)
 - **Amended:** 2026-08-03 (reconstitution is a domain contract, not a constructor requirement — see the note below)
+- **Amended:** 2026-08-04 (reconstitution by convention: `IReconstitutable` deleted, startup validation instead — see the note below)
 
 ## Context
 
@@ -138,6 +139,40 @@ _The named mapping mechanism is superseded by the state-mapping amendment below;
 > Pinned by `ReconstitutableTests` (both persistence shapes) and by an `AggregateConventionTests` scan in each sample
 > that fails on an aggregate missing the interface or exposing a public parameterless constructor.
 
+> **Reconstitution by convention (amendment 2026-08-04, revises the 2026-08-03 note).** The explicit
+> `IReconstitutable` implementation bought its compile-time proof at a price the note above undersold: every
+> aggregate carried the interface in its base list plus an explicit `static … CreateEmpty() => new();` — visible
+> ceremony on the one type domain authors touch most, for a member no domain code may ever call. The alternatives
+> that keep the compile-time proof make it worse, not better: inheriting the member from the base requires a CRTP
+> `TSelf` type parameter on `AggregateRoot`, which moves the boilerplate into every inheritance line, and a source
+> generator is heavy machinery for one line.
+>
+> The interface is therefore **deleted**, and reconstitution becomes a **convention with startup validation**:
+>
+> - **The convention:** every aggregate keeps a **private parameterless constructor**. That constructor alone
+>   provides what both repositories need — an empty hull to fill via `IStateOwner.Restore` or `LoadFromHistory` —
+>   and it alone keeps `new Widget()` a compile error everywhere. The public surface is unchanged: the aggregate's
+>   named factory stays the only way in.
+> - **The mechanism:** an internal `AggregateFactory` in `BuildingBlocks.Infrastructure` resolves the constructor
+>   once per aggregate type, caches it, and invokes it on every load. Reflection returns, but deliberately: cached,
+>   infrastructure-only, and never on a hot path a domain author can misuse.
+> - **The fail-fast:** `AddBuildingBlocks` validates the convention **at registration** whenever a persistence
+>   strategy is configured — every aggregate type in the assemblies named via `AddDomainEventsFrom` must have a
+>   parameterless constructor, or the host fails to start with a message naming the aggregate and the fix. A
+>   violation therefore surfaces at startup (and in the samples' `AggregateConventionTests`, which run earlier),
+>   never on the first load.
+> - **`IRepository<TAggregate, TKey>` loses the extra constraint** and both repository implementations stay
+>   identical, as the 2026-08-03 note demanded.
+>
+> **What is knowingly traded away:** the 2026-08-03 note's compile-time failure ("a non-conforming aggregate fails
+> to compile where the repository is injected") becomes a startup failure. That is the same trade ADR-0030 already
+> made for `[EventName]`/`[AggregateName]` — a persistence-facing convention enforced loudly at host start — and it
+> follows the same reasoning: the bar is "cannot happen by accident and cannot reach production", not "cannot
+> compile". In exchange, an aggregate declares nothing about persistence at all, and the residual hole of the
+> earlier note (application code declaring its own `IReconstitutable`-constrained method) disappears with the
+> interface. Pinned by `AggregateFactoryTests` (hull creation, missing-constructor failure at registration, via the
+> `HullFixture` external assembly) and the tightened `AggregateConventionTests` in each sample.
+
 ## Consequences
 
 - One programming model to learn, review, and tool; the "which base class?" question is now purely "does the event
@@ -150,9 +185,8 @@ _The named mapping mechanism is superseded by the state-mapping amendment below;
 - State-stored aggregates gain the immutable state fold: better testability, no mutation outside events.
 - EF Core mapping targets the state record, which costs more configuration than mapping free properties.
 - `AddDomainEvent` no longer exists; `RaiseEvent` is the single raising API.
-- Every aggregate carries one line of reconstitution boilerplate (a private constructor plus an explicit
-  `CreateEmpty`). It cannot be inherited from the base, which would need a `TSelf` type parameter and therefore a
-  `new()` constraint again — the very thing being removed. A source generator could emit it later; that is additive.
+- Every aggregate carries one line of reconstitution boilerplate (a private parameterless constructor); the former
+  second line (an explicit `CreateEmpty`) is gone with the 2026-08-04 amendment, replaced by startup validation.
 
 ## Alternatives considered
 

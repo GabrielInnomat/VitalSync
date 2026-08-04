@@ -6,7 +6,7 @@ namespace BuildingBlocks.Infrastructure.Persistence;
 
 public sealed class EfCoreRepository<TAggregate, TKey>(DbContext context, EfCoreAggregateTracker tracker)
     : IRepository<TAggregate, TKey>
-    where TAggregate : class, IAggregateRoot<TKey>, IReconstitutable<TAggregate>
+    where TAggregate : class, IAggregateRoot<TKey>
     where TKey : struct, IEntityKey
 {
     public async Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken cancellationToken)
@@ -59,7 +59,7 @@ public sealed class EfCoreRepository<TAggregate, TKey>(DbContext context, EfCore
 
     private static TAggregate CreateEmpty(out IStateOwner stateOwner)
     {
-        var aggregate = TAggregate.CreateEmpty();
+        var aggregate = AggregateFactory.CreateEmpty<TAggregate>();
 
         stateOwner = AsStateOwner(aggregate);
         return aggregate;

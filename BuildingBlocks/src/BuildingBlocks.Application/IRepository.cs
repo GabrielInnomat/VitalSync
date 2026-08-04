@@ -3,7 +3,7 @@
 namespace BuildingBlocks.Application;
 
 public interface IRepository<TAggregate, in TKey>
-    where TAggregate : class, IAggregateRoot<TKey>, IReconstitutable<TAggregate>
+    where TAggregate : class, IAggregateRoot<TKey>
     where TKey : struct, IEntityKey
 {
     Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken cancellationToken);

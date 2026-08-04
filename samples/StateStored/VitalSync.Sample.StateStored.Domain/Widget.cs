@@ -3,7 +3,7 @@ using BuildingBlocks.Domain;
 namespace VitalSync.Sample.StateStored.Domain;
 
 [AggregateName("widget")]
-public sealed class Widget : AggregateRoot<WidgetId, WidgetState>, IReconstitutable<Widget>
+public sealed class Widget : AggregateRoot<WidgetId, WidgetState>
 {
     private Widget() : base(WidgetState.Empty)
     {
@@ -12,8 +12,6 @@ public sealed class Widget : AggregateRoot<WidgetId, WidgetState>, IReconstituta
     public string Name => State.Name;
 
     public int RenameCount => State.RenameCount;
-
-    static Widget IReconstitutable<Widget>.CreateEmpty() => new();
 
     public static Widget Create(WidgetId id, string name)
     {
