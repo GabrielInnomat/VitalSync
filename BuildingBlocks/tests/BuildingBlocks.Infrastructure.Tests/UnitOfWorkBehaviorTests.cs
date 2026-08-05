@@ -94,7 +94,7 @@ public sealed class UnitOfWorkBehaviorTests
 
         var result = await behavior.HandleAsync(
             new ProbeCommand(),
-            _ => Task.FromResult(Result.Success()),
+            new RequestPipeline<Result>(_ => Task.FromResult(Result.Success()), Result.Failed),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -123,7 +123,7 @@ public sealed class UnitOfWorkBehaviorTests
     private sealed class FailingCommandHandler : ICommandHandler<ProbeCommand>
     {
         public Task<Result> HandleAsync(ProbeCommand command, CancellationToken cancellationToken) =>
-            Task.FromResult(Result.Failure(Failure.NotFound("probe.not_found", "Nothing here.")));
+            Task.FromResult(Result.Failed(Failure.NotFound("probe.not_found", "Nothing here.")));
     }
 
     private sealed class ProbeQueryHandler : IQueryHandler<ProbeQuery, int>

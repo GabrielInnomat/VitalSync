@@ -36,17 +36,17 @@ public class Result
 
     public static Result<TResult> Success<TResult>(TResult value) => Result<TResult>.Success(value);
 
-    public static Result Failure(Failure failure)
+    public static Result Failed(Failure failure)
     {
         ArgumentNullException.ThrowIfNull(failure);
         return new Result(false, [failure]);
     }
 
-    public static Result Failure(IReadOnlyList<Failure> failures)
+    public static Result Failed(IReadOnlyList<Failure> failures)
     {
         ArgumentNullException.ThrowIfNull(failures);
         return new Result(false, failures);
     }
 
-    public static implicit operator Result(Failure failure) => Failure(failure);
+    public static implicit operator Result(Failure failure) => Failed(failure);
 }

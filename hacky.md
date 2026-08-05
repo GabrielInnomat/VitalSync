@@ -6,7 +6,7 @@
 | --- | -------------------------------------------------------------- | ------ |
 | 1   | AssemblyQualifiedName als Persistenz-Contract                  | gelöst |
 | 2   | CLR-Typname im Event-Stream-Key                                | gelöst |
-| 3   | `FailureResults` sucht statische Methode per Name              | offen  |
+| 3   | `FailureResults` sucht statische Methode per Name              | gelöst |
 | 4   | `ApplyEntityKeyConversions` scannt CLR- statt Model-Properties | offen  |
 | 5   | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | gelöst    |
 | 6   | `CurrentValues.SetValues` kopiert nur Skalare                  | gelöst |
@@ -90,7 +90,14 @@ Contract soll bewusst gesetzt werden, nicht aus dem Refactoring-Zufall entstehen
 
 ---
 
-# 3, `FailureResults` sucht statische Methode per Name
+# 3, `FailureResults` sucht statische Methode per Name — **gelöst (2026-08-05)**
+
+> Gelöst per [ADR-0015-Amendment](docs/architecture/decisions/0015-hand-rolled-cqrs-mediator.md),
+> allerdings **anders als unten vorgeschlagen**. Nicht der Typparameter wird nachträglich per
+> `static abstract` repariert, sondern die Ursache beseitigt: der Dispatcher kannte den konkreten
+> Ergebnistyp und warf ihn beim Aufruf von `BuildPipeline` weg. Er reicht die Factory jetzt im neuen
+> `RequestPipeline<TResponse>` mit (`NextAsync` + `Failed`). `FailureResults` ist samt Reflection,
+> Cache und Expression-Tree **gelöscht**; kein Constraint nötig. Siehe [todo.md](todo.md) TODO-12.
 
 `responseType.GetMethod("Failure", [typeof(Failure)])` plus Expression-Compile und Cache,
 abgesichert durch eine Runtime-`InvalidOperationException`. Reiner Workaround dafür, dass

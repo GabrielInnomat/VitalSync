@@ -28,13 +28,13 @@ public sealed class Result<TResult> : Result
         return new Result<TResult>(value);
     }
 
-    public static new Result<TResult> Failure(Failure failure)
+    public static new Result<TResult> Failed(Failure failure)
     {
         ArgumentNullException.ThrowIfNull(failure);
         return new Result<TResult>([failure]);
     }
 
-    public static new Result<TResult> Failure(IReadOnlyList<Failure> failures)
+    public static new Result<TResult> Failed(IReadOnlyList<Failure> failures)
     {
         ArgumentNullException.ThrowIfNull(failures);
         return new Result<TResult>(failures);
@@ -42,5 +42,5 @@ public sealed class Result<TResult> : Result
 
     public static implicit operator Result<TResult>(TResult value) => Success(value);
 
-    public static implicit operator Result<TResult>(Failure failure) => Failure(failure);
+    public static implicit operator Result<TResult>(Failure failure) => Failed(failure);
 }

@@ -15,6 +15,7 @@ public sealed class PublicSurfaceTests
         "BuildingBlocks.Application.Cqrs.IQuery`1",
         "BuildingBlocks.Application.Cqrs.IQueryHandler`2",
         "BuildingBlocks.Application.Cqrs.ISender",
+        "BuildingBlocks.Application.Cqrs.RequestPipeline`1",
         "BuildingBlocks.Application.Cqrs.RequestPipelineContinuation`1",
         "BuildingBlocks.Application.DomainEvents.DomainEventMetadata",
         "BuildingBlocks.Application.DomainEvents.IDomainEventPublisher",

@@ -126,7 +126,13 @@ Implements the `ISender` contract from `BuildingBlocks.Application`
 
 - Resolves the single matching `ICommandHandler<...>` / `IQueryHandler<...>`
   from the DI container.
-- Wraps the handler in the registered `IPipelineBehavior<,>` chain.
+- Wraps the handler in the registered `IPipelineBehavior<,>` chain, handing each
+  behavior a `RequestPipeline<TResponse>` rather than a bare continuation. The
+  sender builds that object where the response type is still concrete (`Result` for
+  a void command, `Result<TResult>` for a query or value-returning command) and
+  passes the matching `Failed` factory into it, so a short-circuiting behavior can
+  produce a typed failure without reflection or a generic constraint
+  (ADR-0015 amendment 2026-08-05).
 - **Behavior ordering is an explicit numeric order** — each behavior is registered
   with an `order`, and the sender wraps them by ascending order (lower orders wrap
   further out and execute earlier); no attribute- or convention-based ordering, and
@@ -145,7 +151,7 @@ Implements the `ISender` contract from `BuildingBlocks.Application`
 | Behavior                    | Order | Responsibility |
 | --------------------------- | ----- | -------------- |
 | `LoggingBehavior`           | `0` (outermost) | Structured logging of request name, outcome (success/failure categories), and duration. Never logs payload contents by default. Being outermost, translated failures (expected domain errors, concurrency conflicts) are logged at `Warning`, while only genuinely unexpected exceptions are logged at `Error` (faulted) and rethrown. |
-| `ExceptionToResultBehavior` | `100` | Translates `DomainValidationException` / `BusinessRuleViolationException` into `Result.Failure` (ADR-0017), before logging sees the outcome and before any transaction is opened. Unexpected exceptions pass through untouched. |
+| `ExceptionToResultBehavior` | `100` | Translates `DomainValidationException` / `BusinessRuleViolationException` into `Result.Failed` (ADR-0017), before logging sees the outcome and before any transaction is opened. Unexpected exceptions pass through untouched. |
 | `UnitOfWorkBehavior`        | `300` (innermost) | Commits the unit of work when a **command** completes successfully — including the atomic outbox write (see §2/§4). Queries and failed results are unaffected: nothing is committed, and query-only hosts need no `IUnitOfWork` registration. The dependency is **non-optional**: Building Blocks registers a `NullUnitOfWork` fallback so the pipeline always resolves, and `UnitOfWorkPresenceCheck` fails the host at start when that fallback would silently swallow real commands (see §Composition root). A host that deliberately commits nothing says so with `UseNoPersistence()`. Translates the store's optimistic-concurrency exceptions raised on commit (Marten's `ConcurrencyException`, EF Core's `DbUpdateConcurrencyException`) into a `Failure` with category `Conflict`. |
 
 The canonical execution order is therefore:

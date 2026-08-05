@@ -45,7 +45,7 @@ eine Entscheidung, keinen Code.
 | TODO-09 | Keine CI-Pipeline                                              | **P1** | gelöst            | WS-16                                 |
 | TODO-10 | Rehydrierung: `new()` oder `Activator`?                        | **P1** | gelöst            | hacky-5, IMP-14, WS-02                |
 | TODO-11 | Optionalität von `IUnitOfWork`                                 | **P2** | gelöst            | IMP-07, hacky-11, IMP-46              |
-| TODO-12 | Name der `Result`-Fehlerfactory                                | **P2** | **Konflikt**      | hacky-3, IMP-27, IMP-39               |
+| TODO-12 | Name der `Result`-Fehlerfactory                                | **P2** | gelöst            | hacky-3, IMP-27, IMP-39               |
 | TODO-13 | Wo lebt die Event-Identität?                                   | **P2** | gelöst            | IMP-41, IMP-11                        |
 | TODO-14 | Idempotenz-Bookkeeping über die Kontextgrenze                  | **P2** | offen             | IMP-11, WS-12                         |
 | TODO-15 | Mehrfachfehler und Feldvalidierung end-to-end                  | **P2** | offen             | IMP-16, IMP-17, hacky-12              |
@@ -797,7 +797,7 @@ aus hacky-11 ist nur noch erreichbar, wenn ihn jemand hinschreibt. Getestet in
 
 # TODO-12, Name der `Result`-Fehlerfactory
 
-**P2 · KONFLIKT · hacky-3 + IMP-27 vs. IMP-39**
+**P2 · gelöst · hacky-3 + IMP-27 vs. IMP-39**
 
 | Quelle          | Vorschlag                                                                          |
 | --------------- | ---------------------------------------------------------------------------------- |
@@ -809,7 +809,52 @@ Der gemeinsame Nenner: `FailureResults` sucht die statische Methode per Reflecti
 weil `Result` und `Result<T>` keine gemeinsame Abstraktion haben. Beide Vorschläge beseitigen die
 Reflection — aber die Codeskizzen widersprechen sich im Namen.
 
-## Lösungsvorschlag
+## Gelöst — der Dispatcher reicht die Factory mit (Variante H)
+
+Umgesetzt am 2026-08-05
+([ADR-0015-Amendment](docs/architecture/decisions/0015-hand-rolled-cqrs-mediator.md)),
+in zwei Schritten.
+
+**Schritt 1 — Umbenennung (IMP-39).** `Result.Failure(...)` heißt jetzt `Result.Failed(...)`,
+ebenso in `Result<T>` ([ADR-0017-Amendment](docs/architecture/decisions/0017-application-error-handling-and-result.md)).
+`Failure` ist der Name des Fehler**werts**; `Failures`/`IsFailure` belegen das Substantiv bereits.
+
+**Schritt 2 — die Reflection ist weg (hacky-3, IMP-27).** Statt der vorgeschlagenen
+`IFailureResult<TSelf>`-Abstraktion wurde die Ursache beseitigt: der Dispatcher **kannte** den
+konkreten Ergebnistyp und warf die Information beim Aufruf von `BuildPipeline<TRequest, TResponse>`
+weg — genau die Information, die `FailureResults` per Expression-Tree wiederherstellte. Jetzt
+bekommt ein Behavior statt eines nackten Delegates ein `RequestPipeline<TResponse>`:
+
+```csharp
+public interface IPipelineBehavior<in TRequest, TResponse>
+{
+    Task<TResponse> HandleAsync(TRequest request, RequestPipeline<TResponse> pipeline, CancellationToken cancellationToken);
+}
+
+public sealed class RequestPipeline<TResponse>
+{
+    public Task<TResponse> NextAsync(CancellationToken cancellationToken);
+    public TResponse Failed(Failure failure);
+}
+```
+
+Der Sender konstruiert es dort, wo der Typ konkret ist (`Result.Failed` bzw.
+`Result<TResult>.Failed`). Ergebnis: `FailureResults` **ersatzlos gelöscht** — samt Reflection,
+`ConcurrentDictionary` und `Expression.Compile` —, kein Generic Constraint, kein `static abstract`,
+und ein kurzschließendes Behavior ist per Konstruktion compile-sicher. `RequestPipelineContinuation`
+bleibt als Konstruktorparameter erhalten (kleinerer Breaking Change als ursprünglich skizziert).
+
+**Verworfen:** Variante A (`IFailureResult<TSelf>` + `where TResponse : Result,
+IFailureResult<TResponse>`) — prototypisch verifiziert, funktioniert, repariert den Typparameter
+aber nachträglich und zwingt jedem künftigen service-eigenen Behavior den Constraint auf.
+Ebenfalls verworfen: `Result` als `Result<Unit>` — das hätte die Kosten in jeden void-Command-Handler
+jedes Service verlagert, um einen Infrastrukturtyp zu sparen.
+
+**Breaking Change:** Hosts mit eigenen Behaviors nehmen `RequestPipeline<TResponse> pipeline` und
+rufen `pipeline.NextAsync(ct)`. Tests: `RequestPipelineTests` (6 neu) und der `Result<T>`-Pfad in
+`FailureTranslationTests`; 455 Tests grün.
+
+## Ursprünglicher Lösungsvorschlag
 
 **Empfehlung: beides, in dieser Reihenfolge** — der Konflikt ist scheinbar. Erst umbenennen, dann
 abstrahieren, weil das `new`-Hiding in `Result<T>` sonst bestehen bleibt:
@@ -1764,8 +1809,9 @@ vereinheitlichen (`ApplyBuildingBlocksDomainEventRouting` usw.) — kein Breakin
 
 Zwei Muster, die wie Nachlässigkeit aussehen, aber richtig sind:
 
-- **Fünf prozessglobale statische Caches** (`RequestSender` 3×, `ProjectionRunner`, `FailureResults`,
-  `EntityKeyFormatter`, `EntityKeyModelBuilderExtensions`). Alle ausschließlich `Type`-gekeyed mit
+- **Vier prozessglobale statische Caches** (`RequestSender` 3×, `ProjectionRunner`,
+  `EntityKeyFormatter`, `EntityKeyModelBuilderExtensions`; `FailureResults` war der fünfte und ist
+  mit TODO-12 entfallen). Alle ausschließlich `Type`-gekeyed mit
   unveränderlichen, rein typabgeleiteten Werten. Die einzige reale Fehlwirkung war der
   unvollständige Schlüssel in `RequestSender` — behoben. Testisolation ist nicht betroffen.
 - **`IServiceProvider` in `RequestSender` und `ProjectionRunner`**: der aufzulösende Handler-Typ ergibt

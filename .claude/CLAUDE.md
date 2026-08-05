@@ -281,7 +281,7 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 - **Commands** return `Result` or `Result<T>` (a **create** returns the new typed id,
   e.g. `Result<RecipeId>`; **delete/void** returns `Result`). **Queries** return `Result<T>`.
 - Expected domain errors (`BusinessRuleViolationException`, `DomainValidationException`)
-  are **translated to `Result.Failure`** by an Application pipeline behavior; unexpected
+  are **translated to `Result.Failed`** by an Application pipeline behavior; unexpected
   errors bubble to a thin global handler (ADR-0017). `FailureCategory` is one of
   `Validation`, `BusinessRule`, `NotFound`, `Conflict` — transport status mapping is
   owned by the BFF/service host, never by `Application`.
@@ -293,6 +293,14 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   behavior: one registered directly on the `IServiceCollection` has no order and fails
   `AddBuildingBlocks` (ADR-0027 amendment 2026-08-05) — an unordered behavior would run at
   order 0, silently sharing the logging behavior's slot.
+- **A behavior gets a `RequestPipeline<TResponse>`, not a bare continuation** (ADR-0015 amendment
+  2026-08-05). `pipeline.NextAsync(ct)` runs the rest of the chain; `pipeline.Failed(failure)`
+  builds a failed response **of the behavior's own `TResponse`** from a factory the dispatcher
+  supplied, because only the dispatcher still knows whether that is `Result` or `Result<T>`. This
+  is why a short-circuiting behavior needs neither a generic constraint nor reflection — the
+  reflection-based `FailureResults` is deleted. The factory is `Result.Failed(...)` /
+  `Result<T>.Failed(...)`: `Failure` names the error **value**, never the factory
+  (ADR-0017 amendment 2026-08-05).
 - **`AddBuildingBlocks` is called exactly once per host** and a second call **throws**
   (ADR-0027 amendment 2026-08-05). The `PipelineBehaviorRegistry`, the
   `WolverineWiringSettings` and the `DomainEventTypeRegistry` are one shared instance each;

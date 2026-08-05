@@ -90,10 +90,10 @@ public sealed class PipelineOrderingTests
         : IPipelineBehavior<TRequest, TResponse>
         where TResponse : Result
     {
-        public Task<TResponse> HandleAsync(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken cancellationToken)
+        public Task<TResponse> HandleAsync(TRequest request, RequestPipeline<TResponse> pipeline, CancellationToken cancellationToken)
         {
             recorder.Entries.Add(name);
-            return continuation(cancellationToken);
+            return pipeline.NextAsync(cancellationToken);
         }
     }
 

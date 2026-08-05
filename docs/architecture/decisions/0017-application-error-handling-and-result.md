@@ -83,3 +83,13 @@ and gRPC map the same semantic categories independently.
   BFF/service host.
 - **Include an `Unexpected` category** â€” rejected: it would invite wrapping bugs in
   `Result.Failure`; unexpected errors must remain exceptions handled globally.
+
+> **Amendment (2026-08-05) — the failure factory is named `Failed`.**
+> The factory that builds a failed result was called `Failure`, which collided with
+> everything around it: the type `Failure`, the property `Failures`, and the property
+> `IsFailure` all live in the same namespace, so `static Result Failure(Failure failure)`
+> read as a tautology and `Result<T>` had to hide it with `static new`. It is now
+> `Result.Failed(...)` / `Result<T>.Failed(...)`; `Failure` remains the name of the error
+> **value**, `Failed` is what you **do** with it. Nothing else about this ADR changes —
+> the two channels, the four categories and the pipeline translation are untouched.
+> The rename is purely mechanical and the compiler finds every call site.

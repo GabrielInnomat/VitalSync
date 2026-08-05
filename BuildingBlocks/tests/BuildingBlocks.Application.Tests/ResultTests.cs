@@ -19,7 +19,7 @@ public sealed class ResultTests
     {
         var failure = Failure.NotFound("recipe.not_found", "The recipe was not found.");
 
-        var result = Result.Failure(failure);
+        var result = Result.Failed(failure);
 
         Assert.True(result.IsFailure);
         Assert.False(result.IsSuccess);
@@ -35,7 +35,7 @@ public sealed class ResultTests
             Failure.Validation("recipe.name_too_long", "The recipe name is too long."),
         };
 
-        var result = Result.Failure(failures);
+        var result = Result.Failed(failures);
 
         Assert.True(result.IsFailure);
         Assert.Equal(2, result.Failures.Count);
@@ -44,13 +44,13 @@ public sealed class ResultTests
     [Fact]
     public void Failure_WithNullDescription_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => Result.Failure((Failure)null!));
+        Assert.Throws<ArgumentNullException>(() => Result.Failed((Failure)null!));
     }
 
     [Fact]
     public void Failure_WithEmptyFailures_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() => Result.Failure([]));
+        Assert.Throws<ArgumentException>(() => Result.Failed([]));
     }
 
     [Fact]

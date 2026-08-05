@@ -18,7 +18,7 @@ Every microservice implements **Command Query Responsibility Segregation (CQRS)*
 └────────────────────────┘         └───────────────────────┘
 ```
 
-The Application building block provides the `ICommand`, `IQuery`, and corresponding handler abstractions, a hand-rolled dispatcher, and the `Result` / `Failure` model. Domain exceptions (`BusinessRuleViolationException`, `DomainValidationException`) are translated to `Result.Failure` by an Application pipeline behavior.
+The Application building block provides the `ICommand`, `IQuery`, and corresponding handler abstractions, a hand-rolled dispatcher, and the `Result` / `Failure` model. Domain exceptions (`BusinessRuleViolationException`, `DomainValidationException`) are translated to `Result.Failed` by an Application pipeline behavior.
 
 ## Persistence strategy
 

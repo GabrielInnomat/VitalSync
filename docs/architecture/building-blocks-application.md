@@ -27,7 +27,7 @@ is independent of VitalSync.
 ```
 BuildingBlocks.Application/
 ├── Cqrs/               ICommand, IQuery, ICommandHandler, IQueryHandler, ISender,
-│                       IPipelineBehavior, RequestPipelineContinuation
+│                       IPipelineBehavior, RequestPipeline, RequestPipelineContinuation
 ├── Results/            Result, Result<T>, Failure, FailureCategory
 ├── Persistence/        IRepository, IUnitOfWork
 ├── DomainEvents/       DomainEventMetadata, IProjectionHandler, IDomainEventPublisher
@@ -110,12 +110,26 @@ pipeline behaviors from the container.
 ```csharp
 public interface IPipelineBehavior<TRequest, TResponse>
 {
-    Task<TResponse> HandleAsync(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken ct);
+    Task<TResponse> HandleAsync(TRequest request, RequestPipeline<TResponse> pipeline, CancellationToken ct);
+}
+
+public sealed class RequestPipeline<TResponse>
+{
+    public Task<TResponse> NextAsync(CancellationToken ct);
+    public TResponse Failed(Failure failure);
 }
 ```
 
 - Behaviors wrap handler execution to apply cross-cutting concerns (exception
   translation, logging, unit-of-work, etc.).
+- **`RequestPipeline<TResponse>` is what a behavior gets instead of a bare
+  continuation.** `NextAsync` runs the rest of the pipeline; `Failed` builds a
+  failed response **of the behavior's own `TResponse`**. The failure factory is
+  supplied by the dispatcher, which knows the concrete result type (`Result` for a
+  void command, `Result<T>` for a query or a value-returning command) — so a
+  behavior that must short-circuit needs neither a generic constraint nor
+  reflection. Without it, `TResponse` is an opaque type parameter and there is no
+  way to name `Result<T>.Failed` (ADR-0015 amendment 2026-08-05).
 - **Ordering is an explicit numeric `order`** (ADR-0015): each behavior is
   registered with an order and the pipeline wraps them by ascending order (lower
   wraps further out). Registration and the ordering live in `Infrastructure`;
@@ -245,8 +259,8 @@ Per [ADR-0017](./decisions/0017-application-error-handling-and-result.md):
 
 - The Domain **throws** `BusinessRuleViolationException` / `DomainValidationException`
   (ADR-0009). An **`ExceptionToResultBehavior`** (inside logging, outside the unit
-  of work) translates these into `Result.Failure`.
-- Handlers may also return `Result.Failure` directly for expected outcomes such as
+  of work) translates these into `Result.Failed`.
+- Handlers may also return `Result.Failed` directly for expected outcomes such as
   _not found_ or _conflict_.
 - **Unexpected** exceptions are **not** turned into `Result`; they bubble to a thin
   global handler in the service host.
@@ -255,6 +269,10 @@ Per [ADR-0017](./decisions/0017-application-error-handling-and-result.md):
 
 - `Result` — success, or failure carrying **one or more** `Failure`s.
 - `Result<T>` — success carrying a value of `T`, or failure carrying `Failure`s.
+- Both are built through `Success(...)` and **`Failed(...)`**. The factory is
+  deliberately *not* called `Failure`: that name belongs to the error **value**, and
+  the surrounding members `Failures` / `IsFailure` already use the noun. `Failed` is
+  the verb — what you do with a `Failure` (ADR-0017 amendment 2026-08-05).
 
 ### `Failure`
 

@@ -267,7 +267,7 @@ Wolverine stays transport-only to keep the framework-agnostic core decoupled. Se
 ### Exception-to-Result translation
 
 The rule that expected **domain exceptions** (`BusinessRuleViolationException`,
-`DomainValidationException`) are translated into `Result.Failure` by an
+`DomainValidationException`) are translated into `Result.Failed` by an
 `ExceptionToResultBehavior` at the application boundary, while unexpected
 exceptions bubble up. See
 [ADR-0017](./architecture/decisions/0017-application-error-handling-and-result.md).
@@ -295,7 +295,10 @@ fixed slots and hosts add their own via `AddPipelineBehavior(type, order)`, whic
 the only supported registration path — a behavior added directly to the
 `IServiceCollection` has no order and fails `AddBuildingBlocks`. Only
 the `IPipelineBehavior<TRequest, TResponse>` contract lives in `Application`, the
-concrete behaviors live in `Infrastructure`.
+concrete behaviors live in `Infrastructure`. A behavior receives a
+`RequestPipeline<TResponse>` — `NextAsync` runs the rest of the chain, `Failed`
+builds a failed response of the behavior's own response type using a factory the
+dispatcher supplied.
 
 ### Query
 

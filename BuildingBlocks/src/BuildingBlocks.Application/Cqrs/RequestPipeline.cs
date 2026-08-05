@@ -1,0 +1,26 @@
+using BuildingBlocks.Application.Results;
+
+namespace BuildingBlocks.Application.Cqrs;
+
+public sealed class RequestPipeline<TResponse>
+{
+    private readonly RequestPipelineContinuation<TResponse> _continuation;
+    private readonly Func<Failure, TResponse> _failed;
+
+    public RequestPipeline(RequestPipelineContinuation<TResponse> continuation, Func<Failure, TResponse> failed)
+    {
+        ArgumentNullException.ThrowIfNull(continuation);
+        ArgumentNullException.ThrowIfNull(failed);
+
+        _continuation = continuation;
+        _failed = failed;
+    }
+
+    public Task<TResponse> NextAsync(CancellationToken cancellationToken) => _continuation(cancellationToken);
+
+    public TResponse Failed(Failure failure)
+    {
+        ArgumentNullException.ThrowIfNull(failure);
+        return _failed(failure);
+    }
+}

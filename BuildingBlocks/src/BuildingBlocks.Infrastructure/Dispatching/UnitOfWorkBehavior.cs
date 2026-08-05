@@ -18,11 +18,11 @@ internal sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork unitOf
             typeof(TRequest).GetInterfaces(),
             static @interface => @interface.IsGenericType && @interface.GetGenericTypeDefinition() == typeof(ICommand<>));
 
-    public async Task<TResponse> HandleAsync(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken cancellationToken)
+    public async Task<TResponse> HandleAsync(TRequest request, RequestPipeline<TResponse> pipeline, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(continuation);
+        ArgumentNullException.ThrowIfNull(pipeline);
 
-        var response = await continuation(cancellationToken).ConfigureAwait(false);
+        var response = await pipeline.NextAsync(cancellationToken).ConfigureAwait(false);
 
         if (!IsCommand || response.IsFailure)
         {
@@ -35,11 +35,11 @@ internal sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork unitOf
         }
         catch (ConcurrencyException exception)
         {
-            return FailureResults.Create<TResponse>(Failure.Conflict(ConcurrencyConflictCode, exception.Message));
+            return pipeline.Failed(Failure.Conflict(ConcurrencyConflictCode, exception.Message));
         }
         catch (DbUpdateConcurrencyException exception)
         {
-            return FailureResults.Create<TResponse>(Failure.Conflict(ConcurrencyConflictCode, exception.Message));
+            return pipeline.Failed(Failure.Conflict(ConcurrencyConflictCode, exception.Message));
         }
 
         return response;

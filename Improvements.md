@@ -39,7 +39,7 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-24 | `DomainEventEnvelope` trägt zu wenig Metadaten                           | gelöst            |
 | IMP-25 | `Sequential()` auf einer einzigen Queue für alle Domain Events           | offen             |
 | IMP-26 | `DomainEventPublisher` koppelt Projektion und Integration-Event-Publikation         | offen             |
-| IMP-27 | `FailureResults`-Reflection ist vermeidbar                               | offen             |
+| IMP-27 | `FailureResults`-Reflection ist vermeidbar                               | gelöst            |
 | IMP-28 | Kein `IClock` im Container                                               | gelöst            |
 | IMP-29 | Unique-Constraint-Verletzungen werden nicht übersetzt                    | offen             |
 | IMP-30 | Keine Tracing-Instrumentierung der CQRS-Pipeline                         | offen             |
@@ -51,7 +51,7 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-36 | `RuleChecker` schluckt `null` still                                      | **gelöst**    |
 | IMP-37 | Async-Suffix ist inkonsistent                                            | **gelöst**    |
 | IMP-38 | Sichtbarkeits-Disziplin ist uneinheitlich                                | gelöst            |
-| IMP-39 | `Result`-API: Namenskollision und implizite Konvertierungen              | offen             |
+| IMP-39 | `Result`-API: Namenskollision und implizite Konvertierungen              | teilweise gelöst  |
 | IMP-40 | `State` ist `public` und bricht die Kapselung                            | gelöst            |
 | IMP-41 | `DomainEvent` als `record` mit garantiert ungleicher Wertgleichheit      | gelöst            |
 | IMP-42 | `IRepository`-API ist asymmetrisch und irreführend benannt               | gelöst            |
@@ -745,9 +745,13 @@ Integration Events messbar unterschiedliche Fehlerraten haben.
 
 ---
 
-# IMP-27, `FailureResults`-Reflection ist vermeidbar
+# IMP-27, `FailureResults`-Reflection ist vermeidbar — **gelöst (2026-08-05)**
 
-Unverändert offen — identisch mit [hacky.md Nr. 3](hacky.md).
+> Gelöst per [ADR-0015-Amendment](docs/architecture/decisions/0015-hand-rolled-cqrs-mediator.md) —
+> der Dispatcher reicht die Failure-Factory im neuen `RequestPipeline<TResponse>` mit,
+> `FailureResults` ist gelöscht. Siehe [todo.md](todo.md) TODO-12 und [hacky.md](hacky.md) Nr. 3.
+
+Ursprünglicher Befund — identisch mit [hacky.md Nr. 3](hacky.md).
 
 `responseType.GetMethod("Failure", [typeof(Failure)])` plus Expression-Compile, abgesichert durch eine
 Runtime-`InvalidOperationException`
@@ -947,10 +951,10 @@ gRPC-Adapter. Als Extensions in `BuildingBlocks.Application`, damit `Result` sel
 
 # IMP-35, Statische Caches über Container-Grenzen hinweg
 
-Fünf prozessglobale Caches: `RequestSender` (3×), `ProjectionRunner`, `FailureResults`, `EntityKeyFormatter`,
-`EntityKeyModelBuilderExtensions`.
+Vier prozessglobale Caches: `RequestSender` (3×), `ProjectionRunner`, `EntityKeyFormatter`,
+`EntityKeyModelBuilderExtensions`. (`FailureResults` war der fünfte und ist mit TODO-12 entfallen.)
 
-**Status: wird nicht gelöst.** Alle fünf sind ausschließlich `Type`-gekeyed und speichern
+**Status: wird nicht gelöst.** Alle sind ausschließlich `Type`-gekeyed und speichern
 unveränderliche, rein typabgeleitete Werte (Dispatcher, kompilierte Accessors, Konverter). Für einen
 gegebenen Typ ist das Ergebnis über die Prozesslebensdauer konstant, unabhängig vom Container. Die
 einzige reale Fehlwirkung war der unvollständige Schlüssel in `RequestSender` — das war IMP-06 und ist behoben.
@@ -1052,7 +1056,14 @@ public:   AddBuildingBlocks (beide Überladungen), BuildingBlocksOptions,
 
 # IMP-39, `Result`-API: Namenskollision und implizite Konvertierungen
 
-Drei Punkte, alle unverändert:
+> **Punkt 1 gelöst (2026-08-05)** — die Factory heißt `Failed(...)`
+> ([ADR-0017-Amendment](docs/architecture/decisions/0017-application-error-handling-and-result.md)),
+> und `FailureResults` ist mit ihr entfallen
+> ([ADR-0015-Amendment](docs/architecture/decisions/0015-hand-rolled-cqrs-mediator.md)).
+> Das `static new` in `ResultOfT` bleibt bestehen, ist jetzt aber folgenlos: niemand muss es mehr
+> per Reflection auflösen. Punkte 2 und 3 sind unverändert offen.
+
+Drei Punkte:
 
 1. **Namenskollision:** `IsFailure` (Property), `Failures` (Property) und `Failure(…)` (statische
    Methode) stehen nebeneinander, dazu heißt der Typ des Elements ebenfalls `Failure`. In `ResultOfT`

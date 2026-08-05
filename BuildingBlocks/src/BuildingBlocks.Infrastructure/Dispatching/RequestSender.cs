@@ -52,6 +52,7 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
     private static RequestPipelineContinuation<TResponse> BuildPipeline<TRequest, TResponse>(
         TRequest request,
         RequestPipelineContinuation<TResponse> handler,
+        Func<Failure, TResponse> failed,
         IServiceProvider services)
     {
         var registry = services.GetService<PipelineBehaviorRegistry>();
@@ -63,9 +64,9 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
         var pipeline = handler;
         foreach (var behavior in ordered)
         {
-            var next = pipeline;
             var current = behavior;
-            pipeline = cancellationToken => current.HandleAsync(request, next, cancellationToken);
+            var stage = new RequestPipeline<TResponse>(pipeline, failed);
+            pipeline = cancellationToken => current.HandleAsync(request, stage, cancellationToken);
         }
 
         return pipeline;
@@ -86,6 +87,7 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
             var pipeline = BuildPipeline<TCommand, Result>(
                 typedCommand,
                 ct => handler.HandleAsync(typedCommand, ct),
+                Result.Failed,
                 services);
             return pipeline(cancellationToken);
         }
@@ -106,6 +108,7 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
             var pipeline = BuildPipeline<TCommand, Result<TResult>>(
                 typedCommand,
                 ct => handler.HandleAsync(typedCommand, ct),
+                Result<TResult>.Failed,
                 services);
             return pipeline(cancellationToken);
         }
@@ -126,6 +129,7 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
             var pipeline = BuildPipeline<TQuery, Result<TResult>>(
                 typedQuery,
                 ct => handler.HandleAsync(typedQuery, ct),
+                Result<TResult>.Failed,
                 services);
             return pipeline(cancellationToken);
         }

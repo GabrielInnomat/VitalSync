@@ -9,9 +9,9 @@ internal sealed class LoggingBehavior<TRequest, TResponse>(ILogger<LoggingBehavi
     : IPipelineBehavior<TRequest, TResponse>
     where TResponse : Result
 {
-    public async Task<TResponse> HandleAsync(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken cancellationToken)
+    public async Task<TResponse> HandleAsync(TRequest request, RequestPipeline<TResponse> pipeline, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(continuation);
+        ArgumentNullException.ThrowIfNull(pipeline);
 
         var requestName = typeof(TRequest).Name;
         Log.RequestStarted(logger, requestName);
@@ -19,7 +19,7 @@ internal sealed class LoggingBehavior<TRequest, TResponse>(ILogger<LoggingBehavi
 
         try
         {
-            var response = await continuation(cancellationToken).ConfigureAwait(false);
+            var response = await pipeline.NextAsync(cancellationToken).ConfigureAwait(false);
             var elapsed = Stopwatch.GetElapsedTime(startedAt);
 
             if (response.IsSuccess)

@@ -42,7 +42,7 @@ public sealed class ResultOfTTests
     [Fact]
     public void Failure_WithNullFailureList_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => Result<int>.Failure((IReadOnlyList<Failure>)null!));
+        Assert.Throws<ArgumentNullException>(() => Result<int>.Failed((IReadOnlyList<Failure>)null!));
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public sealed class ResultOfTTests
     {
         var failure = Failure.NotFound("recipe.not_found", "The recipe was not found.");
 
-        var result = Result<int>.Failure(failure);
+        var result = Result<int>.Failed(failure);
 
         Assert.True(result.IsFailure);
         Assert.Equal(failure, Assert.Single(result.Failures));
@@ -59,7 +59,7 @@ public sealed class ResultOfTTests
     [Fact]
     public void Value_OnFailedResult_ThrowsInvalidOperationException()
     {
-        var result = Result<int>.Failure(Failure.NotFound("code", "message"));
+        var result = Result<int>.Failed(Failure.NotFound("code", "message"));
 
         Assert.Throws<InvalidOperationException>(() => result.Value);
     }
@@ -85,6 +85,6 @@ public sealed class ResultOfTTests
     [Fact]
     public void Failure_WithNullDescription_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => Result<int>.Failure((Failure)null!));
+        Assert.Throws<ArgumentNullException>(() => Result<int>.Failed((Failure)null!));
     }
 }

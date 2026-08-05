@@ -11,21 +11,21 @@ internal sealed class ExceptionToResultBehavior<TRequest, TResponse> : IPipeline
 
     public const string BusinessRuleFailureCode = "domain.business_rule";
 
-    public async Task<TResponse> HandleAsync(TRequest request, RequestPipelineContinuation<TResponse> continuation, CancellationToken cancellationToken)
+    public async Task<TResponse> HandleAsync(TRequest request, RequestPipeline<TResponse> pipeline, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(continuation);
+        ArgumentNullException.ThrowIfNull(pipeline);
 
         try
         {
-            return await continuation(cancellationToken).ConfigureAwait(false);
+            return await pipeline.NextAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (DomainValidationException exception)
         {
-            return FailureResults.Create<TResponse>(Failure.Validation(ValidationFailureCode, exception.Message));
+            return pipeline.Failed(Failure.Validation(ValidationFailureCode, exception.Message));
         }
         catch (BusinessRuleViolationException exception)
         {
-            return FailureResults.Create<TResponse>(Failure.BusinessRule(BusinessRuleFailureCode, exception.Message));
+            return pipeline.Failed(Failure.BusinessRule(BusinessRuleFailureCode, exception.Message));
         }
     }
 }

@@ -95,7 +95,7 @@ public sealed class CompositionSingleCallTests
     {
         public Task<TResponse> HandleAsync(
             TRequest request,
-            RequestPipelineContinuation<TResponse> continuation,
-            CancellationToken cancellationToken) => continuation(cancellationToken);
+            RequestPipeline<TResponse> pipeline,
+            CancellationToken cancellationToken) => pipeline.NextAsync(cancellationToken);
     }
 }
