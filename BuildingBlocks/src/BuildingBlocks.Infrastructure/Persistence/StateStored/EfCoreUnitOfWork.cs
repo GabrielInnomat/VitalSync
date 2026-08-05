@@ -1,7 +1,4 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
-using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
-using BuildingBlocks.Infrastructure.Messaging;
+using BuildingBlocks.Application.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Wolverine.EntityFrameworkCore;
 

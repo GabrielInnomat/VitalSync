@@ -1,5 +1,3 @@
-using BuildingBlocks.Domain;
-
 namespace VitalSync.Sample.EventSourced.Domain;
 
 public readonly record struct GadgetId(Guid Value) : IEntityKey<Guid>

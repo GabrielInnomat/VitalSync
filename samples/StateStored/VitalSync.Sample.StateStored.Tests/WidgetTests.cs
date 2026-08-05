@@ -1,4 +1,5 @@
-using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Aggregates;
+using BuildingBlocks.Domain.Rules;
 using VitalSync.Sample.StateStored.Domain;
 
 namespace VitalSync.Sample.StateStored.Tests;

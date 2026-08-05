@@ -1,3 +1,5 @@
+using BuildingBlocks.Domain.Aggregates;
+
 namespace BuildingBlocks.Domain.Tests.TestDoubles;
 
 internal sealed class ReconstitutedAggregate

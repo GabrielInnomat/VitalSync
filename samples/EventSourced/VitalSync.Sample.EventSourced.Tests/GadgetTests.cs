@@ -1,4 +1,6 @@
-using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Aggregates;
+using BuildingBlocks.Domain.Events;
+using BuildingBlocks.Domain.Rules;
 using VitalSync.Sample.EventSourced.Domain;
 
 namespace VitalSync.Sample.EventSourced.Tests;

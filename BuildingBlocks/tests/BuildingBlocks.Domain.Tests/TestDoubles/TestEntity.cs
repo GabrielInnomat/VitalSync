@@ -1,3 +1,6 @@
+using BuildingBlocks.Domain.Entities;
+using BuildingBlocks.Domain.Events;
+
 namespace BuildingBlocks.Domain.Tests.TestDoubles;
 
 internal sealed class NoOpRaiser : IDomainEventRaiser

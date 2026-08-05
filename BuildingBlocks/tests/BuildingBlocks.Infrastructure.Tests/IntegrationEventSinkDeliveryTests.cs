@@ -1,15 +1,16 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
-using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
+using BuildingBlocks.Application.DomainEvents;
+using BuildingBlocks.Application.IntegrationEvents;
+using BuildingBlocks.Domain.Events;
+using BuildingBlocks.Domain.Naming;
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
-using BuildingBlocks.Infrastructure.Messaging;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using Wolverine.Tracking;
 using Wolverine;
+using Wolverine.Tracking;
 using BuildingBlockDefaults = BuildingBlocks.Infrastructure.DependencyInjection.Wiring.WolverineOptionsExtensions;
 
 namespace BuildingBlocks.Infrastructure.Tests;

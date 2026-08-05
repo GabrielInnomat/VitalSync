@@ -1,4 +1,4 @@
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.Results;
 using BuildingBlocks.Infrastructure.Dispatching;
 
 namespace BuildingBlocks.Infrastructure.Tests;

@@ -1,4 +1,3 @@
-using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,7 +5,6 @@ using Microsoft.Extensions.Hosting;
 using VitalSync.Sample.Contracts;
 using VitalSync.Sample.StateStored.Application;
 using VitalSync.Sample.StateStored.Domain;
-using VitalSync.Sample.StateStored.Infrastructure.Integration;
 using VitalSync.Sample.StateStored.Infrastructure.Read;
 using VitalSync.Sample.StateStored.Infrastructure.Write;
 

@@ -1,3 +1,5 @@
+using BuildingBlocks.Domain.Naming;
+
 namespace BuildingBlocks.Domain.Tests;
 
 public sealed class ContractNameTests

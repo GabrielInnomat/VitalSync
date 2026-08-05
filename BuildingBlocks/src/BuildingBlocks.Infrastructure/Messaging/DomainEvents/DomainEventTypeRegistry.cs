@@ -1,5 +1,6 @@
 using System.Reflection;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Events;
+using BuildingBlocks.Domain.Naming;
 
 namespace BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 

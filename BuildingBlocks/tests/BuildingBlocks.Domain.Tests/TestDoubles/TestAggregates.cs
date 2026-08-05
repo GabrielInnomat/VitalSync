@@ -1,4 +1,7 @@
-﻿namespace BuildingBlocks.Domain.Tests.TestDoubles;
+using BuildingBlocks.Domain.Aggregates;
+using BuildingBlocks.Domain.Events;
+
+namespace BuildingBlocks.Domain.Tests.TestDoubles;
 
 internal sealed class TestEventSourcedAggregate()
     : EventSourcedAggregateRoot<TestId, TestState>(TestState.Empty)

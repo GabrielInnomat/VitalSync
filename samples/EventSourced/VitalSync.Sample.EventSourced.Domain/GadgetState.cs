@@ -1,5 +1,3 @@
-using BuildingBlocks.Domain;
-
 namespace VitalSync.Sample.EventSourced.Domain;
 
 public sealed record GadgetState(GadgetId Id, string Name, int RenameCount, bool IsRetired)

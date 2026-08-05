@@ -1,5 +1,7 @@
 using System.Reflection;
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.DomainEvents;
+using BuildingBlocks.Application.IntegrationEvents;
 using BuildingBlocks.Infrastructure.Dispatching;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;

@@ -1,4 +1,6 @@
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.Persistence;
+using BuildingBlocks.Application.Results;
 using JasperFx;
 using Microsoft.EntityFrameworkCore;
 

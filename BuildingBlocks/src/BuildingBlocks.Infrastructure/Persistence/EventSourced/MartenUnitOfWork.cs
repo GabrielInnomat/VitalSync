@@ -1,8 +1,4 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
-using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
-using BuildingBlocks.Infrastructure.Messaging;
-using BuildingBlocks.Infrastructure.Persistence;
+using BuildingBlocks.Application.Persistence;
 using Marten;
 using Wolverine.Marten;
 

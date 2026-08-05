@@ -1,6 +1,5 @@
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Wolverine.EntityFrameworkCore;
 using Wolverine.RDBMS;

@@ -1,11 +1,10 @@
 using System.Collections.Concurrent;
 using System.Data.Common;
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
-using BuildingBlocks.Infrastructure.Messaging;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Wolverine;

@@ -75,7 +75,7 @@ eine Entscheidung, keinen Code.
 | TODO-39 | Keine Saga- oder Process-Manager-Abstraktion                   | **P3** | offen             | IMP-33                                |
 | TODO-40 | Sichtbarkeits-Disziplin ist uneinheitlich                      | **P4** | teilweise         | IMP-38                                |
 | TODO-41 | Wirkungslose Varianz-Modifikatoren                             | **P4** | offen             | IMP-43                                |
-| TODO-42 | Uneinheitliche Projektstruktur                                 | **P4** | offen             | IMP-44                                |
+| TODO-42 | Uneinheitliche Projektstruktur                                 | **P4** | gelöst            | IMP-44                                |
 | TODO-43 | Irreführende Test- und Methodennamen                           | **P4** | offen             | IMP-45, IMP-48                        |
 | TODO-44 | Bewusste Ausnahmen dokumentieren                               | **P4** | wird nicht gelöst | IMP-35, IMP-46                        |
 | TODO-45 | Api-Readiness prüft nicht mehr existierende Connection-Namen   | **P1** | gelöst            | AppHost `e44ae9b`                     |
@@ -1584,7 +1584,7 @@ Compiler akzeptiert exakt dieselben Verwendungen.
 
 # TODO-42, Uneinheitliche Projektstruktur
 
-**P4 · offen · IMP-44**
+**P4 · gelöst · IMP-44**
 
 `BuildingBlocks.Domain` (20 Dateien) und `BuildingBlocks.Application` (18 Dateien) sind flach,
 `BuildingBlocks.Infrastructure` hat fünf Ordner. In `Application` stehen CQRS-Verträge,
@@ -1612,6 +1612,41 @@ jedes Services drei bis vier usings — dauerhaft, in genau dem Code, der am hä
 wird. Dem steht ein geringerer Nutzen gegenüber als bei `Infrastructure`: dort lagen wirklich
 verschiedene Anliegen nebeneinander (Persistenz, Messaging, DI, Prüfungen), hier sind es 30
 winzige Dateien mit einem einzigen Anliegen — dem Domänenmodell.
+
+## Gelöst: Ordner **samt** Namespaces, entlastet durch Global Usings (2026-08-06)
+
+Von den drei Optionen ist die erste gewählt worden. Der Kostenpunkt oben bleibt richtig, aber er
+ist bezahlbar: ein Service trägt die vier bis fünf `using`-Zeilen **einmal** als
+`<Using Include="…" />` in sein `.csproj` ein, und jede Aggregat-Datei kommt danach mit **null**
+usings aus. Vorgeführt in allen vier Sample-Domain-/Application-Projekten; `Widget.cs` hat
+seither keine einzige using-Zeile mehr.
+
+Die Struktur ist damit:
+
+```
+BuildingBlocks.Domain/            BuildingBlocks.Application/
+├── Aggregates/                   ├── Cqrs/
+├── Entities/                     ├── Results/
+├── Events/                       ├── Persistence/
+├── Naming/                       ├── DomainEvents/
+├── Rules/                        └── IntegrationEvents/
+└── IClock.cs (Wurzel)
+```
+
+Zwei Abweichungen vom Vorschlag, beide bewusst: `Model/`+`Identity/` sind zu `Aggregates/`+
+`Entities/` geworden, weil das die tatsächliche Achse ist (Wurzel gegen Kind, nicht Modell gegen
+Identität), und `Application/Events/` ist in `DomainEvents/` und `IntegrationEvents/` geteilt —
+die Trennung ist genau die Grenze des Bounded Context und verdient einen eigenen Ordner.
+
+Was sich dadurch ändert und vorher gratis war: **die Namespaces sind jetzt Vertrag.** Ein
+Dateiverschub ändert den `FullName` jedes exportierten Typs und bricht jeden Konsumenten. Deshalb
+nageln `PublicSurfaceTests` in `BuildingBlocks.Domain.Tests` und `BuildingBlocks.Application.Tests`
+— nach dem Vorbild der Infrastructure — die vollständige Liste der exportierten Typnamen fest.
+Derselbe Test erschlägt die Sichtbarkeitsfrage mit: ein versehentlich `public` gewordener Typ
+fällt sofort auf. Das Sichtbarkeitsaudit selbst ergab **nichts zu verstecken** — alle 19
+Application-Typen haben externe Nutzer; in `Domain` haben `EntityBase`, `IEntity` und
+`IHasDomainEvents` zwar keine, müssen aber public bleiben (public Klassen erben von `EntityBase`,
+und `IAggregateRoot` leitet von den beiden anderen ab → sonst CS0061).
 
 ---
 

@@ -1,6 +1,6 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
-using BuildingBlocks.Infrastructure.Messaging;
+using BuildingBlocks.Application.DomainEvents;
+using BuildingBlocks.Application.IntegrationEvents;
+using BuildingBlocks.Domain.Events;
 
 namespace BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 

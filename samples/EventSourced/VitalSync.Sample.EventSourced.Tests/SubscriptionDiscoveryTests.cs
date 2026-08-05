@@ -1,4 +1,5 @@
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.Results;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NSubstitute;

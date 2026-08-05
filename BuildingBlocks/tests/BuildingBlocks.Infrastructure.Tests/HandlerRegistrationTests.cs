@@ -1,4 +1,6 @@
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.DomainEvents;
+using BuildingBlocks.Application.IntegrationEvents;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using ConflictingHandlersFixture;
 using Microsoft.Extensions.DependencyInjection;

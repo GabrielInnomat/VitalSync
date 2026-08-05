@@ -1,5 +1,3 @@
-using BuildingBlocks.Domain;
-
 namespace VitalSync.Sample.StateStored.Domain;
 
 public sealed record WidgetPartState(WidgetPartId Id, string Label, int Quantity)

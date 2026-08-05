@@ -56,7 +56,7 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-41 | `DomainEvent` als `record` mit garantiert ungleicher Wertgleichheit      | gelöst            |
 | IMP-42 | `IRepository`-API ist asymmetrisch und irreführend benannt               | gelöst            |
 | IMP-43 | Wirkungslose Varianz-Modifikatoren                                       | offen             |
-| IMP-44 | Uneinheitliche Projektstruktur                                           | offen (blockiert) |
+| IMP-44 | Uneinheitliche Projektstruktur                                           | gelöst            |
 | IMP-45 | `SenderContractTests` testet NSubstitute statt Produktionscode           | offen             |
 | IMP-46 | Behaviors nutzen Service Locator statt optionaler Abhängigkeiten         | teilweise         |
 | IMP-47 | Keine zentrale Paketverwaltung                                           | offen             |
@@ -1190,6 +1190,15 @@ damit **IDE0130 als Fehler**. „Ordner ja, Namespaces nein" gibt es hier also n
 die drei verbleibenden Optionen und die Kostenabwägung (in `Infrastructure` ist fast alles `internal`
 und die Namespaces sind unsichtbar; in `Domain`/`Application` ist alles public, und aus einem `using`
 würden drei bis vier in jeder Aggregat-Datei jedes Services).
+
+## Gelöst: Ordner samt Namespaces (2026-08-06)
+
+Umgesetzt wie in TODO-42 beschrieben: `Domain` bekam `Aggregates/`, `Entities/`, `Events/`,
+`Naming/`, `Rules/` (`IClock` bleibt in der Wurzel), `Application` bekam `Cqrs/`, `Results/`,
+`Persistence/`, `DomainEvents/`, `IntegrationEvents/`. Die Namespaces ziehen mit; die
+zusätzlichen usings trägt ein Service **einmal** als `<Using Include="…" />` in sein `.csproj`,
+statt sie in jeder Datei zu wiederholen. Neue `PublicSurfaceTests` in beiden Testprojekten nageln
+die exportierte Typliste — und damit Namespace-Layout und Sichtbarkeit — fest.
 
 ---
 

@@ -1,3 +1,4 @@
+using BuildingBlocks.Domain.Rules;
 using BuildingBlocks.Domain.Tests.TestDoubles;
 
 namespace BuildingBlocks.Domain.Tests;

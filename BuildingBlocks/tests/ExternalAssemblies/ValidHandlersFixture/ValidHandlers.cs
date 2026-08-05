@@ -1,5 +1,9 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.DomainEvents;
+using BuildingBlocks.Application.IntegrationEvents;
+using BuildingBlocks.Application.Results;
+using BuildingBlocks.Domain.Events;
+using BuildingBlocks.Domain.Naming;
 
 namespace ValidHandlersFixture;
 

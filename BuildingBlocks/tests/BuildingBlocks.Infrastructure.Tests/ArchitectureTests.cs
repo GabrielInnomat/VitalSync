@@ -1,6 +1,6 @@
 using System.Reflection;
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Application.Results;
+using BuildingBlocks.Domain.Events;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.Tests;

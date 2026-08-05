@@ -1,4 +1,4 @@
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.DomainEvents;
 using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 using Wolverine;
 

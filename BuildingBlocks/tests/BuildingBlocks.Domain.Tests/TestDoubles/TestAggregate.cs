@@ -1,4 +1,7 @@
-﻿namespace BuildingBlocks.Domain.Tests.TestDoubles;
+using BuildingBlocks.Domain.Aggregates;
+using BuildingBlocks.Domain.Events;
+
+namespace BuildingBlocks.Domain.Tests.TestDoubles;
 
 internal sealed class TestAggregate(TestId id) : AggregateRoot<TestId, TestState>(new TestState(id, 0))
 {

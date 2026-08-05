@@ -1,8 +1,7 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
+using BuildingBlocks.Application.IntegrationEvents;
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
-using BuildingBlocks.Infrastructure.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.Tests;

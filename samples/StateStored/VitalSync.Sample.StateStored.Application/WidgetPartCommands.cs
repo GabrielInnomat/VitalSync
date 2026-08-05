@@ -1,4 +1,3 @@
-using BuildingBlocks.Application;
 using VitalSync.Sample.StateStored.Domain;
 
 namespace VitalSync.Sample.StateStored.Application;

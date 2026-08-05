@@ -1,5 +1,6 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Application.DomainEvents;
+using BuildingBlocks.Application.IntegrationEvents;
+using BuildingBlocks.Domain.Events;
 using VitalSync.Sample.EventSourced.Domain;
 
 namespace VitalSync.Sample.EventSourced.Infrastructure.Integration;

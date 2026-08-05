@@ -1,6 +1,5 @@
 using System.Reflection;
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Naming;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 using Microsoft.Extensions.DependencyInjection;

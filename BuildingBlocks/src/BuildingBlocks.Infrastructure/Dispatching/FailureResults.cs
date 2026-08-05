@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.Results;
 
 namespace BuildingBlocks.Infrastructure.Dispatching;
 

@@ -1,4 +1,6 @@
-﻿using BuildingBlocks.Domain.Tests.TestDoubles;
+using BuildingBlocks.Domain.Events;
+using BuildingBlocks.Domain.Rules;
+using BuildingBlocks.Domain.Tests.TestDoubles;
 
 namespace BuildingBlocks.Domain.Tests;
 

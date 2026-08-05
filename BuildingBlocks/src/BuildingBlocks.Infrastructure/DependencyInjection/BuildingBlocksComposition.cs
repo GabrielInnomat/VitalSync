@@ -1,4 +1,5 @@
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.DomainEvents;
 using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;

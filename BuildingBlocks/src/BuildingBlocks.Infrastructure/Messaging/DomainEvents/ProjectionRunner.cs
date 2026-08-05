@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Application.DomainEvents;
+using BuildingBlocks.Domain.Events;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.Messaging.DomainEvents;

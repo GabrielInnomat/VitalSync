@@ -1,5 +1,6 @@
 using System.Globalization;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Entities;
+using BuildingBlocks.Domain.Naming;
 using BuildingBlocks.Infrastructure.Persistence;
 
 namespace BuildingBlocks.Infrastructure.Tests;

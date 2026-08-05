@@ -1,3 +1,5 @@
+using BuildingBlocks.Domain.Entities;
+
 namespace BuildingBlocks.Domain.Tests.TestDoubles;
 
 internal readonly record struct TestId(int Value) : IEntityKey<int>

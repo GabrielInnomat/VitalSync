@@ -1,5 +1,7 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.Persistence;
+using BuildingBlocks.Application.Results;
+using BuildingBlocks.Domain.Rules;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Dispatching;
 using Microsoft.Extensions.DependencyInjection;

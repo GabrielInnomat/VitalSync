@@ -1,9 +1,11 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.Persistence;
+using BuildingBlocks.Application.Results;
+using BuildingBlocks.Domain.Rules;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 

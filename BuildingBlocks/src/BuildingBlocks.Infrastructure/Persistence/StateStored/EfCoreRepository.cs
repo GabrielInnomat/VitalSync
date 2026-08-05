@@ -1,6 +1,7 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
-using BuildingBlocks.Infrastructure.Persistence;
+using BuildingBlocks.Application.Persistence;
+using BuildingBlocks.Domain.Aggregates;
+using BuildingBlocks.Domain.Entities;
+using BuildingBlocks.Domain.Events;
 using Microsoft.EntityFrameworkCore;
 
 namespace BuildingBlocks.Infrastructure.Persistence.StateStored;

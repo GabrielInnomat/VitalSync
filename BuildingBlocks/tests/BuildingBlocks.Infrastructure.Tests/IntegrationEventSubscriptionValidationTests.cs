@@ -1,12 +1,11 @@
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
-using BuildingBlocks.Infrastructure.Messaging;
 using DeadLetterFixture;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RabbitMQ.Client;
-using Wolverine.RabbitMQ;
 using Wolverine;
+using Wolverine.RabbitMQ;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 

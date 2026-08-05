@@ -1,3 +1,5 @@
+using BuildingBlocks.Domain.Rules;
+
 namespace BuildingBlocks.Domain.Tests.TestDoubles;
 
 internal sealed class FakeBusinessRule(bool isBroken, string message = "business rule broken")

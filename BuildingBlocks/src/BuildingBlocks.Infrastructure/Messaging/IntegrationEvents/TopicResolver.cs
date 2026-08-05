@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.IntegrationEvents;
 
 namespace BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 

@@ -151,7 +151,7 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   the declaring assembly via `options.AddDomainEventsFrom(assembly)` — configuring persistence
   without it throws at startup, and a missing or duplicated `[EventName]` throws at
   registration. `Type.GetType` over stored data is gone; the readable type set is closed.
-  There is **one** kebab-case validator, `BuildingBlocks.Domain.KebabCase`, used by both the
+  There is **one** kebab-case validator, `BuildingBlocks.Domain.Naming.KebabCase`, used by both the
   persisted-name attributes and `[IntegrationEventTopic]`. It is public purely because
   `Infrastructure` needs it; never write a second copy of the character loop.
 - **The state is an abstract record, not an interface** (ADR-0030, amending ADR-0010): a state
@@ -224,6 +224,18 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   through `IRepository`** — an entity written straight into the `DbContext` produces
   none.
 
+- **Folder = namespace in `Domain` and `Application`, and the namespaces are contract.**
+  `Domain` is cut into `Aggregates/`, `Entities/`, `Events/`, `Naming/`, `Rules/` (`IClock`
+  stays in the root); `Application` into `Cqrs/`, `Results/`, `Persistence/`, `DomainEvents/`,
+  `IntegrationEvents/` (root empty). Domain and integration events are **deliberately not**
+  one `Events/` folder — that line is the bounded-context boundary. Unlike `Infrastructure`,
+  where nearly everything is `internal` and the namespaces are invisible, every type here is
+  `public`: moving a file changes each exported type's `FullName` and breaks every consumer,
+  so `PublicSurfaceTests` in both test projects pins the complete exported-type list. Add,
+  move or rename a public type and that test fails until the list is updated — deliberately.
+  A service does **not** repeat the usings per file: it declares them once as
+  `<Using Include="BuildingBlocks.Domain.Aggregates" />` etc. in its `.csproj`, the way all
+  four sample Domain/Application projects do (`Widget.cs` has no using directive at all).
 ## Application / CQRS conventions (from accepted ADRs)
 
 - CQRS abstractions and the `Result` / `Failure` model live in

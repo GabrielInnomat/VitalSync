@@ -1,4 +1,7 @@
-using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Aggregates;
+using BuildingBlocks.Domain.Entities;
+using BuildingBlocks.Domain.Events;
+using BuildingBlocks.Domain.Naming;
 using BuildingBlocks.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 

@@ -1,3 +1,5 @@
+using BuildingBlocks.Domain.Aggregates;
+using BuildingBlocks.Domain.Events;
 using BuildingBlocks.Domain.Tests.TestDoubles;
 
 namespace BuildingBlocks.Domain.Tests;

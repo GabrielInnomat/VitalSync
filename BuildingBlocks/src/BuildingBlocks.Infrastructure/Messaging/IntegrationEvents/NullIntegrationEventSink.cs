@@ -1,4 +1,4 @@
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.IntegrationEvents;
 using Microsoft.Extensions.Logging;
 using Wolverine;
 

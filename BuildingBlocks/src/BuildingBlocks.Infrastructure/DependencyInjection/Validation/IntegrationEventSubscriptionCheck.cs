@@ -1,7 +1,6 @@
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.IntegrationEvents;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
-using BuildingBlocks.Infrastructure.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine.Runtime;
 

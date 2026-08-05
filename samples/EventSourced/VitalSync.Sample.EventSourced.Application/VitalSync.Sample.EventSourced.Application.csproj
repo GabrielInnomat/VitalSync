@@ -9,4 +9,10 @@
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Domain\VitalSync.Sample.EventSourced.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="BuildingBlocks.Application.Cqrs" />
+    <Using Include="BuildingBlocks.Application.Persistence" />
+    <Using Include="BuildingBlocks.Application.Results" />
+  </ItemGroup>
+
 </Project>

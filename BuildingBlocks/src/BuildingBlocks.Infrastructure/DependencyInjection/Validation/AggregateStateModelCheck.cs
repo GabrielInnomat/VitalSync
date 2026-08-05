@@ -1,8 +1,7 @@
-using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Aggregates;
 using BuildingBlocks.Infrastructure.Persistence.StateStored;
-using BuildingBlocks.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;

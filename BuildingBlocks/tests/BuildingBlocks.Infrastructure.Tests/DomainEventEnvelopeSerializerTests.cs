@@ -1,6 +1,7 @@
-using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Entities;
+using BuildingBlocks.Domain.Events;
+using BuildingBlocks.Domain.Naming;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
-using BuildingBlocks.Infrastructure.Messaging;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 

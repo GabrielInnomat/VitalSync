@@ -1,3 +1,5 @@
+using BuildingBlocks.Domain.Events;
+
 namespace BuildingBlocks.Domain.Tests.TestDoubles;
 
 internal sealed record TestDomainEvent(int NewValue) : DomainEvent;

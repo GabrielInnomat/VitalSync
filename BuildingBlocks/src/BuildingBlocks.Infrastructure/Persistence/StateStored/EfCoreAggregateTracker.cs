@@ -1,5 +1,5 @@
-using BuildingBlocks.Domain;
-using BuildingBlocks.Infrastructure.Persistence;
+using BuildingBlocks.Domain.Aggregates;
+using BuildingBlocks.Domain.Events;
 
 namespace BuildingBlocks.Infrastructure.Persistence.StateStored;
 

@@ -1,4 +1,4 @@
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.IntegrationEvents;
 
 namespace DeadLetterFixture;
 

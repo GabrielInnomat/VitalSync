@@ -22,6 +22,37 @@ is independent of VitalSync.
 - **Contracts here, DI wiring elsewhere.** The dispatcher and behavior _contracts_
   live here; their DI-based _implementations_ live in `BuildingBlocks.Infrastructure`.
 
+## Folder layout — folder is namespace, and it is a contract
+
+```
+BuildingBlocks.Application/
+├── Cqrs/               ICommand, IQuery, ICommandHandler, IQueryHandler, ISender,
+│                       IPipelineBehavior, RequestPipelineContinuation
+├── Results/            Result, Result<T>, Failure, FailureCategory
+├── Persistence/        IRepository, IUnitOfWork
+├── DomainEvents/       DomainEventMetadata, IProjectionHandler, IDomainEventPublisher
+└── IntegrationEvents/  IIntegrationEvent, IIntegrationEventMapper, IIntegrationEventSink,
+                        IntegrationEventTopicAttribute
+```
+
+The root namespace is **empty on purpose**. Domain events and integration events are split into
+two folders rather than one `Events/`, because the line between them is the bounded-context
+boundary — the single most important distinction this block makes.
+
+Every type here is `public`, so **the namespaces are part of the published API**: moving a file
+changes each exported type's `FullName` and breaks every consumer. `PublicSurfaceTests` pins the
+full list of exported type names, so a move fails a test instead of a downstream build.
+
+A service pays for this once, in its `.csproj`, not per file:
+
+```xml
+<ItemGroup>
+  <Using Include="BuildingBlocks.Application.Cqrs" />
+  <Using Include="BuildingBlocks.Application.Persistence" />
+  <Using Include="BuildingBlocks.Application.Results" />
+</ItemGroup>
+```
+
 ## CQRS contracts
 
 | Concept              | Marker              | Handler                              | Returns                 |

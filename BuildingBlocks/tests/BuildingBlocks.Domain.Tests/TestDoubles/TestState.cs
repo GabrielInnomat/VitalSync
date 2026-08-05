@@ -1,3 +1,6 @@
+using BuildingBlocks.Domain.Aggregates;
+using BuildingBlocks.Domain.Events;
+
 namespace BuildingBlocks.Domain.Tests.TestDoubles;
 
 internal sealed record TestState(TestId Id, int Value) : AggregateState<TestState, TestId>

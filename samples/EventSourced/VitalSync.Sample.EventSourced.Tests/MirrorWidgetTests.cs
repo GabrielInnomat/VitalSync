@@ -1,4 +1,6 @@
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.Persistence;
+using BuildingBlocks.Application.Results;
 using NSubstitute;
 using VitalSync.Sample.Contracts;
 using VitalSync.Sample.EventSourced.Application;

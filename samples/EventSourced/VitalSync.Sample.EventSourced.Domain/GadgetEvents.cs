@@ -1,5 +1,3 @@
-using BuildingBlocks.Domain;
-
 namespace VitalSync.Sample.EventSourced.Domain;
 
 [EventName("gadget-created-v1")]

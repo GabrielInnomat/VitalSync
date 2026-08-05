@@ -1,5 +1,5 @@
 using System.Linq.Expressions;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Entities;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace BuildingBlocks.Infrastructure.Persistence;

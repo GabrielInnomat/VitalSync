@@ -1,8 +1,13 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.DomainEvents;
+using BuildingBlocks.Application.Persistence;
+using BuildingBlocks.Application.Results;
+using BuildingBlocks.Domain.Aggregates;
+using BuildingBlocks.Domain.Entities;
+using BuildingBlocks.Domain.Events;
+using BuildingBlocks.Domain.Naming;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
-using BuildingBlocks.Infrastructure.Messaging;
 using BuildingBlocks.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

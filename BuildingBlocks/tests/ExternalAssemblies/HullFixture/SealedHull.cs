@@ -1,4 +1,7 @@
-using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Aggregates;
+using BuildingBlocks.Domain.Entities;
+using BuildingBlocks.Domain.Events;
+using BuildingBlocks.Domain.Naming;
 
 namespace HullFixture;
 

@@ -1,5 +1,6 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.Results;
+using BuildingBlocks.Domain.Rules;
 
 namespace BuildingBlocks.Infrastructure.Dispatching;
 

@@ -1,5 +1,6 @@
 using System.Diagnostics;
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.Results;
 using Microsoft.Extensions.Logging;
 
 namespace BuildingBlocks.Infrastructure.Dispatching;

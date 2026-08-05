@@ -1,3 +1,7 @@
+using BuildingBlocks.Domain.Aggregates;
+using BuildingBlocks.Domain.Entities;
+using BuildingBlocks.Domain.Events;
+
 namespace BuildingBlocks.Domain.Tests.TestDoubles;
 
 internal sealed record ParentCreated(TestId ParentId) : DomainEvent;

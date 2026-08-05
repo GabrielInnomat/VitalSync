@@ -1,5 +1,5 @@
 using System.Text.Json;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Events;
 
 namespace BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 

@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Aggregates;
 
 namespace BuildingBlocks.Infrastructure.Persistence;
 

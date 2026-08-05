@@ -43,6 +43,41 @@ The block provides a **single aggregate authoring model**: every aggregate deriv
 | `BusinessRuleViolationException`          | exception       | Raised when a business rule is broken.                                               |
 | `DomainValidationException`               | exception       | Raised when a domain validation rule is invalid.                                     |
 
+## Folder layout — folder is namespace, and it is a contract
+
+```
+BuildingBlocks.Domain/
+├── Aggregates/   AggregateRoot, AggregateState, EventSourcedAggregateRoot, IAggregateRoot,
+│                 IEventSourcedAggregateRoot, IStateOwner
+├── Entities/     IEntityKey, IEntity, EntityBase, Entity, EntityState
+├── Events/       IDomainEvent, DomainEvent, IHasDomainEvents, IDomainEventOwner, IDomainEventRaiser
+├── Naming/       EventNameAttribute, AggregateNameAttribute, KebabCase, ContractName (internal)
+├── Rules/        IBusinessRule, IDomainValidationRule, RuleChecker, both exceptions
+└── IClock.cs     stays in the root — it belongs to no group and serves all of them
+```
+
+The cut follows the aggregate boundary, not an abstract taxonomy: `Aggregates/` holds what a root
+is, `Entities/` what a root and a child share, and `Events/` the channel between them. The root
+namespace `BuildingBlocks.Domain` is deliberately almost empty.
+
+Because every type here is `public`, **the namespaces are part of the published API**: moving a
+file changes each exported type's `FullName` and breaks every consumer. `PublicSurfaceTests` pins
+the full list of exported type names, so a move fails a test instead of a downstream build.
+
+A service does **not** pay for this per file. The four to five usings go into the `.csproj` once:
+
+```xml
+<ItemGroup>
+  <Using Include="BuildingBlocks.Domain.Aggregates" />
+  <Using Include="BuildingBlocks.Domain.Entities" />
+  <Using Include="BuildingBlocks.Domain.Events" />
+  <Using Include="BuildingBlocks.Domain.Naming" />
+  <Using Include="BuildingBlocks.Domain.Rules" />
+</ItemGroup>
+```
+
+Both sample domain projects do exactly this; `Widget.cs` carries no using directive at all.
+
 ## Identity and keys
 
 ### Strongly typed keys

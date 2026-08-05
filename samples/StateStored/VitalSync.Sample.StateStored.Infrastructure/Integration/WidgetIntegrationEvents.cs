@@ -1,5 +1,6 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Application.DomainEvents;
+using BuildingBlocks.Application.IntegrationEvents;
+using BuildingBlocks.Domain.Events;
 using VitalSync.Sample.Contracts;
 using VitalSync.Sample.StateStored.Domain;
 

@@ -1,9 +1,11 @@
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.DomainEvents;
+using BuildingBlocks.Application.IntegrationEvents;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
+using Wolverine;
 using Wolverine.ErrorHandling;
 using Wolverine.RabbitMQ;
-using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 

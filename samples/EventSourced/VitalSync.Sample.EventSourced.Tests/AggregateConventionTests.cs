@@ -1,5 +1,8 @@
 using System.Reflection;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Aggregates;
+using BuildingBlocks.Domain.Entities;
+using BuildingBlocks.Domain.Events;
+using BuildingBlocks.Domain.Naming;
 using VitalSync.Sample.EventSourced.Domain;
 
 namespace VitalSync.Sample.EventSourced.Tests;

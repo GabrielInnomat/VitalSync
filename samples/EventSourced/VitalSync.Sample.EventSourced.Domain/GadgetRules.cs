@@ -1,5 +1,3 @@
-using BuildingBlocks.Domain;
-
 namespace VitalSync.Sample.EventSourced.Domain;
 
 public sealed class GadgetNameMustNotBeEmpty(string? name) : IDomainValidationRule

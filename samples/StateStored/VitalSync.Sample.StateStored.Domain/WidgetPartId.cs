@@ -1,5 +1,3 @@
-using BuildingBlocks.Domain;
-
 namespace VitalSync.Sample.StateStored.Domain;
 
 public readonly record struct WidgetPartId(Guid Value) : IEntityKey<Guid>

@@ -8,4 +8,12 @@
     <ProjectReference Include="..\..\..\BuildingBlocks\src\BuildingBlocks.Domain\BuildingBlocks.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="BuildingBlocks.Domain.Aggregates" />
+    <Using Include="BuildingBlocks.Domain.Entities" />
+    <Using Include="BuildingBlocks.Domain.Events" />
+    <Using Include="BuildingBlocks.Domain.Naming" />
+    <Using Include="BuildingBlocks.Domain.Rules" />
+  </ItemGroup>
+
 </Project>

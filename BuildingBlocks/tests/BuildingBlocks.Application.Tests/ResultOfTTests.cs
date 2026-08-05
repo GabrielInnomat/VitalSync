@@ -1,3 +1,5 @@
+using BuildingBlocks.Application.Results;
+
 namespace BuildingBlocks.Application.Tests;
 
 public sealed class ResultOfTTests

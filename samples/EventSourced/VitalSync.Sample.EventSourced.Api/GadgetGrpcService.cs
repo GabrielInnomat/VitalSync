@@ -1,4 +1,5 @@
-using BuildingBlocks.Application;
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.Results;
 using Grpc.Core;
 using ProtoBuf.Grpc;
 using VitalSync.Sample.EventSourced.Application;

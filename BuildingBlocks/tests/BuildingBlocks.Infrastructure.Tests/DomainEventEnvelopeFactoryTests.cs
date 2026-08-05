@@ -1,4 +1,5 @@
 using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Events;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using BuildingBlocks.Infrastructure.Persistence;
 

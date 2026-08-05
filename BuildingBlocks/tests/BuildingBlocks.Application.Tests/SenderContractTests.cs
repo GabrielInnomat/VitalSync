@@ -1,3 +1,5 @@
+using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.Results;
 using NSubstitute;
 
 namespace BuildingBlocks.Application.Tests;

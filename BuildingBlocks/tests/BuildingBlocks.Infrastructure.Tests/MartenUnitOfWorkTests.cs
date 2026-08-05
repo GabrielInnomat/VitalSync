@@ -1,9 +1,8 @@
-using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Aggregates;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
-using BuildingBlocks.Infrastructure.Messaging;
-using BuildingBlocks.Infrastructure.Persistence.EventSourced;
 using BuildingBlocks.Infrastructure.Persistence;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
 using Marten;
 using NSubstitute;
 using Wolverine.Marten;

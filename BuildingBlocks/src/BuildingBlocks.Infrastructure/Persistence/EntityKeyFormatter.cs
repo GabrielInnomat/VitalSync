@@ -2,7 +2,8 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Domain.Entities;
+using BuildingBlocks.Domain.Naming;
 
 namespace BuildingBlocks.Infrastructure.Persistence;
 

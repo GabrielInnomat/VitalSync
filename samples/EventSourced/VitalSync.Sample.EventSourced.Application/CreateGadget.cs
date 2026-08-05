@@ -1,4 +1,3 @@
-using BuildingBlocks.Application;
 using VitalSync.Sample.EventSourced.Domain;
 
 namespace VitalSync.Sample.EventSourced.Application;

@@ -1,15 +1,11 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
+using BuildingBlocks.Application.IntegrationEvents;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
-using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
-using BuildingBlocks.Infrastructure.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Wolverine;
 using Wolverine.RabbitMQ;
 using Wolverine.Runtime;
-using Wolverine;
-using BuildingBlockDefaults = BuildingBlocks.Infrastructure.DependencyInjection.Wiring.WolverineOptionsExtensions;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
