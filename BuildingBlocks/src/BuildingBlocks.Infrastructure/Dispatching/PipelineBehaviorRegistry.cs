@@ -8,12 +8,17 @@ internal sealed class PipelineBehaviorRegistry
 
     public void Register(Type openGenericBehavior, int order) => _orders[openGenericBehavior] = order;
 
-    public int GetOrder(Type closedBehaviorType)
-    {
-        var definition = closedBehaviorType.IsGenericType
-            ? closedBehaviorType.GetGenericTypeDefinition()
-            : closedBehaviorType;
+    public bool TryGetOrder(Type behaviorType, out int order) =>
+        _orders.TryGetValue(Definition(behaviorType), out order);
 
-        return _orders.TryGetValue(definition, out var order) ? order : 0;
-    }
+    public int GetOrder(Type closedBehaviorType) =>
+        TryGetOrder(closedBehaviorType, out var order)
+            ? order
+            : throw new InvalidOperationException(
+                $"The pipeline behavior '{closedBehaviorType}' has no registered order. Register it with " +
+                "options.AddPipelineBehavior(typeof(MyBehavior<,>), order) instead of adding it to the service " +
+                "collection directly.");
+
+    private static Type Definition(Type behaviorType) =>
+        behaviorType.IsGenericType ? behaviorType.GetGenericTypeDefinition() : behaviorType;
 }

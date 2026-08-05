@@ -289,7 +289,16 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   expected domain errors are logged as `Warning` (not `Error`), then exception-to-`Result`
   translation, then the unit of work closest to the handler. Built-ins occupy fixed
   slots; services add their own via `BuildingBlocksOptions.AddPipelineBehavior(type, order)`
-  (negative runs before built-ins, higher runs after).
+  (negative runs before built-ins, higher runs after). That is the **only** way to add a
+  behavior: one registered directly on the `IServiceCollection` has no order and fails
+  `AddBuildingBlocks` (ADR-0027 amendment 2026-08-05) — an unordered behavior would run at
+  order 0, silently sharing the logging behavior's slot.
+- **`AddBuildingBlocks` is called exactly once per host** and a second call **throws**
+  (ADR-0027 amendment 2026-08-05). The `PipelineBehaviorRegistry`, the
+  `WolverineWiringSettings` and the `DomainEventTypeRegistry` are one shared instance each;
+  a second call used to fill fresh ones nobody resolves, so its behaviors ran at order 0,
+  its persistence/messaging selection was ignored and its `[EventName]` names were missing
+  at the first commit. Every selection goes into the same options callback.
 
 ## Infrastructure package layout
 

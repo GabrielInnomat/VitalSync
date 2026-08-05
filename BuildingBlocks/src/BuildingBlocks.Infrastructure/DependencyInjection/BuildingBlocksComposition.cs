@@ -18,19 +18,41 @@ internal static class BuildingBlocksComposition
 {
     public static WolverineWiringSettings Compose(IServiceCollection services, Action<BuildingBlocksOptions> configure)
     {
-        var options = Configure(services, configure);
+        EnsureSingleCall(services);
+
+        var behaviorRegistry = new PipelineBehaviorRegistry();
+        var options = Configure(services, behaviorRegistry, configure);
 
         Validate(options);
         RegisterCore(services, options);
+        ValidateBehaviorOrders(services, behaviorRegistry);
         RegisterStartupChecks(services, options);
 
         return options.WolverineWiring;
     }
 
-    private static BuildingBlocksOptions Configure(IServiceCollection services, Action<BuildingBlocksOptions> configure)
+    private static void EnsureSingleCall(IServiceCollection services)
     {
-        var behaviorRegistry = new PipelineBehaviorRegistry();
-        services.TryAddSingleton(behaviorRegistry);
+        if (services.Any(descriptor => descriptor.ServiceType == typeof(BuildingBlocksRegistrationMarker)))
+        {
+            throw new InvalidOperationException(
+                "AddBuildingBlocks was called more than once on the same service collection. The behavior " +
+                "registry, the Wolverine wiring settings and the domain event names are one shared object each, " +
+                "registered by the first call; a second call would fill fresh instances that are never resolved, " +
+                "so its behaviors would run at order 0, its persistence and messaging selection would be ignored " +
+                "and its [EventName] names would be missing at the first commit. Make every selection in a single " +
+                "AddBuildingBlocks callback.");
+        }
+
+        services.AddSingleton(new BuildingBlocksRegistrationMarker());
+    }
+
+    private static BuildingBlocksOptions Configure(
+        IServiceCollection services,
+        PipelineBehaviorRegistry behaviorRegistry,
+        Action<BuildingBlocksOptions> configure)
+    {
+        services.AddSingleton(behaviorRegistry);
         services.TryAddSingleton<IIntegrationEventSinkFactory, NullIntegrationEventSinkFactory>();
 
         var options = new BuildingBlocksOptions(services, behaviorRegistry);
@@ -76,12 +98,38 @@ internal static class BuildingBlocksComposition
         AggregateFactory.EnsureAggregatesAreReconstitutable(options.DomainEventAssemblies);
     }
 
+    private static void ValidateBehaviorOrders(IServiceCollection services, PipelineBehaviorRegistry behaviorRegistry)
+    {
+        foreach (var descriptor in services)
+        {
+            var serviceType = descriptor.ServiceType;
+            if (!serviceType.IsGenericType || serviceType.GetGenericTypeDefinition() != typeof(IPipelineBehavior<,>))
+            {
+                continue;
+            }
+
+            var implementationType = descriptor.ImplementationType ?? descriptor.ImplementationInstance?.GetType();
+            if (implementationType is not null && behaviorRegistry.TryGetOrder(implementationType, out _))
+            {
+                continue;
+            }
+
+            var name = implementationType?.ToString() ?? $"a factory-registered behavior for '{serviceType}'";
+
+            throw new InvalidOperationException(
+                $"The pipeline behavior {name} was added to the service collection directly and therefore has no " +
+                "order. An unordered behavior would run at order 0, which is the order of the logging behavior, so " +
+                "it would silently collide with it. Register it with " +
+                "options.AddPipelineBehavior(typeof(MyBehavior<,>), order) instead.");
+        }
+    }
+
     private static void RegisterCore(IServiceCollection services, BuildingBlocksOptions options)
     {
-        services.TryAddSingleton(options.DomainEventTypeRegistry);
+        services.AddSingleton(options.DomainEventTypeRegistry);
         services.TryAddSingleton<DomainEventEnvelopeSerializer>();
 
-        services.TryAddSingleton(options.WolverineWiring);
+        services.AddSingleton(options.WolverineWiring);
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IWolverineExtension, BuildingBlocksWolverineExtension>());
 

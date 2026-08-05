@@ -291,7 +291,9 @@ they return a `Task<…>` and accept a `CancellationToken`.
 A wrapper around handler execution that applies **cross-cutting concerns**
 (exception translation, logging, unit-of-work, validation). Behaviors run in an
 **explicit numeric order** (lower orders wrap further out); the built-ins occupy
-fixed slots and hosts add their own via `AddPipelineBehavior(type, order)`. Only
+fixed slots and hosts add their own via `AddPipelineBehavior(type, order)`, which is
+the only supported registration path — a behavior added directly to the
+`IServiceCollection` has no order and fails `AddBuildingBlocks`. Only
 the `IPipelineBehavior<TRequest, TResponse>` contract lives in `Application`, the
 concrete behaviors live in `Infrastructure`.
 

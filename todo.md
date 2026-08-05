@@ -51,7 +51,7 @@ eine Entscheidung, keinen Code.
 | TODO-15 | Mehrfachfehler und Feldvalidierung end-to-end                  | **P2** | offen             | IMP-16, IMP-17, hacky-12              |
 | TODO-16 | `FailureCategory` fehlen Autorisierung und Unerwartet          | **P2** | offen             | IMP-18                                |
 | TODO-17 | `RuleChecker` schluckt `null`                                  | **P2** | gelöst            | hacky-10, IMP-36                      |
-| TODO-18 | `AddBuildingBlocks` ist nicht idempotent                       | **P2** | offen             | hacky-9                               |
+| TODO-18 | `AddBuildingBlocks` ist nicht idempotent                       | **P2** | gelöst            | hacky-9                               |
 | TODO-19 | `ApplyEntityKeyConversions` scannt und mappt zu viel           | **P2** | offen             | hacky-4, WS-15                        |
 | TODO-20 | Global sequentielle Domain-Event-Queue                         | **P2** | offen             | hacky-13, IMP-25                      |
 | TODO-21 | Read-Modelle im state-stored Pfad nicht wiederaufbaubar        | **P2** | offen             | IMP-31                                |
@@ -972,7 +972,7 @@ nachfolgenden Regeln gar nicht erst auswertet.
 
 # TODO-18, `AddBuildingBlocks` ist nicht idempotent
 
-**P2 · offen · hacky-9**
+**P2 · gelöst · hacky-9**
 
 `services.TryAddSingleton(behaviorRegistry)` behält beim zweiten Aufruf die **erste** Registry,
 `options` bekommt aber die **zweite**
@@ -985,7 +985,7 @@ Dazu passt: `GetOrder` liefert für Unbekanntes `0`
 exakt `LoggingBehaviorOrder`. Ein direkt auf der `IServiceCollection` registriertes Behavior
 kollidiert also lautlos mit dem Logging und untergräbt die in IMP-03 hart erkämpfte Reihenfolge.
 
-## Lösungsvorschlag
+## Ursprünglicher Lösungsvorschlag
 
 ```csharp
 var behaviorRegistry = (PipelineBehaviorRegistry?)services
@@ -999,6 +999,32 @@ public int GetOrder(Type closed) =>
 ```
 
 Dazu ein Test, der `AddBuildingBlocks` zweimal aufruft und die Order des zweiten Behaviors prüft.
+
+## Gelöst — ein Aufruf, und eine Order ist Pflicht (ADR-0027-Amendment, 2026-08-05)
+
+Der Befund war beim Umsetzen **breiter** als beschrieben: nicht nur die `PipelineBehaviorRegistry`,
+sondern **drei** geteilte Objekte wurden per `TryAddSingleton` registriert und beim zweiten Aufruf
+verworfen — `WolverineWiringSettings` (Persistenz-/Messaging-Selektion) und `DomainEventTypeRegistry`
+(`[EventName]`-Namen) ebenso. Ein zweiter Aufruf hat also drei stille Fehler auf einmal erzeugt.
+
+Statt den Zustand über Aufrufe hinweg zu teilen (Vorschlag oben), ist der **zweite Aufruf jetzt ein
+Fehler**. Das kostet nichts, was ein Host legitim will: ein Bounded Context hat eine Write-Datenbank
+(ADR-0021), Wolverine erlaubt ein `UseWolverine`, und `AddDomainEventsFrom` friert die `Validate`-Phase
+ohnehin ein.
+
+- `BuildingBlocksComposition.EnsureSingleCall` setzt einen Marker-Descriptor und wirft, wenn er schon
+  da ist; beide öffentlichen Overloads laufen durch `AddBuildingBlocksCore`, also genau eine Stelle.
+- Die drei geteilten Objekte werden danach mit `AddSingleton` statt `TryAddSingleton` registriert —
+  eine Fremdregistrierung soll knallen, nicht gewinnen.
+- `PipelineBehaviorRegistry.GetOrder` wirft für Unbekanntes statt `0` zurückzugeben; `TryGetOrder`
+  ist die stille Variante für die Validierung.
+- Neue Phase `ValidateBehaviorOrders` **nach** `RegisterCore` scannt die `IServiceCollection` nach
+  `IPipelineBehavior<,>`-Descriptors und wirft, wenn der Implementierungstyp der Registry unbekannt
+  ist — inklusive Factory-Registrierungen, deren Typ gar nicht inspizierbar ist. Damit wird aus einem
+  Laufzeit- ein Startfehler, und `options.AddPipelineBehavior(type, order)` ist der einzige Weg.
+
+Getestet in `CompositionSingleCallTests` (zweiter Aufruf auf `IServiceCollection` und auf dem
+Host-Builder, direkt registriertes Behavior, Factory-Registrierung, unbekannte Order, gültiger Pfad).
 
 ---
 

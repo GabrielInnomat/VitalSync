@@ -12,7 +12,7 @@
 | 6   | `CurrentValues.SetValues` kopiert nur Skalare                  | gelöst |
 | 7   | `DomainEventStamper` erkennt „unstamped" über Sentinel         | gelöst |
 | 8   | Connection String zweimal, ohne Abgleich                       | gelöst |
-| 9   | `AddBuildingBlocks` ist nicht idempotent                       | offen  |
+| 9   | `AddBuildingBlocks` ist nicht idempotent                       | gelöst |
 | 10  | `RuleChecker` schluckt `null`                                  | gelöst |
 | 11  | Optionale Constructor-Injection für `IUnitOfWork`              | offen  |
 | 12  | Nur `Failures[0]` erreicht den Client                          | offen  |
@@ -347,7 +347,14 @@ fälschlich anschlagen.
 
 ---
 
-# 9, `AddBuildingBlocks` ist nicht idempotent
+# 9, `AddBuildingBlocks` ist nicht idempotent — **gelöst (2026-08-05)**
+
+> Gelöst per [ADR-0027-Amendment](docs/architecture/decisions/0027-building-blocks-own-wolverine-wiring.md),
+> anders als unten vorgeschlagen: der zweite Aufruf teilt den Zustand nicht, er **wirft**. Betroffen
+> waren drei geteilte Objekte, nicht nur die Registry — `WolverineWiringSettings` und
+> `DomainEventTypeRegistry` ebenso. `GetOrder` wirft jetzt für Unbekanntes, und eine neue
+> `ValidateBehaviorOrders`-Phase macht daraus einen Start- statt eines Laufzeitfehlers.
+> Siehe [todo.md](todo.md) TODO-18.
 
 `services.TryAddSingleton(behaviorRegistry)` behält beim zweiten Aufruf die _erste_ Registry —
 `options` bekommt aber die _zweite_. Host-eigene Behaviors aus dem zweiten Aufruf schreiben ihre

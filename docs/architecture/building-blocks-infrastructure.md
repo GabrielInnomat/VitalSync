@@ -131,7 +131,9 @@ Implements the `ISender` contract from `BuildingBlocks.Application`
   with an `order`, and the sender wraps them by ascending order (lower orders wrap
   further out and execute earlier); no attribute- or convention-based ordering, and
   no reliance on registration call order. Hosts add their own behaviors at a chosen
-  position via `BuildingBlocksOptions.AddPipelineBehavior(type, order)`.
+  position via `BuildingBlocksOptions.AddPipelineBehavior(type, order)` — that is the
+  **only** supported way; a behavior registered directly on the `IServiceCollection`
+  has no order and fails `AddBuildingBlocks` (see §Composition root).
 - No reflection-heavy scanning at dispatch time; the closed-generic dispatcher is
   cached **per request/result type pair** after first use (the result type is part
   of the cache key, so a request type exposing two result contracts still resolves
@@ -570,22 +572,58 @@ can be changed in. The public API is unchanged — the fluent chain still reads
 `options.AddHandlersFrom(...).UseEfCorePersistence<T>(...)`, and each method still
 returns `this`.
 
-The work itself lives in the internal `BuildingBlocksComposition`, which runs four
+The work itself lives in the internal `BuildingBlocksComposition`, which runs six
 named phases in a fixed order:
 
-| Phase                   | Does                                                                    |
-| ----------------------- | ----------------------------------------------------------------------- |
-| `Configure`             | runs the caller's options lambda                                        |
-| `Validate`              | rejects contradictory selections and **freezes** the domain-event registry |
-| `RegisterCore`          | dispatcher, behaviors, persistence, publisher, messaging, clock          |
-| `RegisterStartupChecks` | the hosted services from `DependencyInjection/Validation/`               |
+| Phase                    | Does                                                                    |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `EnsureSingleCall`       | rejects a second `AddBuildingBlocks` on the same service collection      |
+| `Configure`              | runs the caller's options lambda                                        |
+| `Validate`               | rejects contradictory selections and **freezes** the domain-event registry |
+| `RegisterCore`           | dispatcher, behaviors, persistence, publisher, messaging, clock          |
+| `ValidateBehaviorOrders` | rejects an `IPipelineBehavior<,>` that was registered without an order   |
+| `RegisterStartupChecks`  | the hosted services from `DependencyInjection/Validation/`               |
 
 The order is load-bearing rather than cosmetic. `Validate` materialises the
 `DomainEventTypeRegistry`, which is what makes `AddDomainEventsFrom` a
 composition-time decision instead of a mutable setting — every later phase reads a
-frozen set. `RegisterStartupChecks` runs last because it registers the runner that
-drives the checks, and the runner must be in the container after everything it
-inspects.
+frozen set. `ValidateBehaviorOrders` runs after `RegisterCore` because that is where
+the built-in behaviors enter the registry. `RegisterStartupChecks` runs last because
+it registers the runner that drives the checks, and the runner must be in the
+container after everything it inspects.
+
+### `AddBuildingBlocks` is called exactly once
+
+A host has one composition root, and three of the objects registered here are a
+**single shared instance** that the options lambda writes into: the
+`PipelineBehaviorRegistry`, the `WolverineWiringSettings`, and the
+`DomainEventTypeRegistry`. They used to be registered with `TryAddSingleton`, which
+made a second call the worst kind of bug — it succeeded. The first instance stayed in
+the container, the second call filled a fresh one nobody resolves, and the result was
+three silent failures at once: its behaviors ran at order `0`, its persistence and
+messaging selection was ignored, and its `[EventName]` names were missing at the first
+commit.
+
+`EnsureSingleCall` therefore drops a marker descriptor into the service collection and
+throws when it is already there; both public entry points funnel through
+`AddBuildingBlocksCore`, so there is one place to guard. The three shared objects are
+registered with plain `AddSingleton` afterwards — a foreign registration of the same
+type should collide loudly, not win quietly. Nothing is lost by the restriction: a
+bounded context has one write database (ADR-0021), Wolverine permits one
+`UseWolverine`, and `AddDomainEventsFrom` is frozen by `Validate` anyway. Every
+selection belongs in the same callback.
+
+### A behavior without an order is a registration error
+
+`PipelineBehaviorRegistry.GetOrder` used to return `0` for an unknown behavior — which
+is exactly `LoggingBehaviorOrder`, so a behavior added straight to the
+`IServiceCollection` silently shared a slot with the logging behavior and the
+canonical order became unpredictable. It now throws, and `ValidateBehaviorOrders`
+moves that failure from the first dispatched request to host start: it scans the
+service collection for `IPipelineBehavior<,>` descriptors and rejects any whose
+implementation type the registry does not know — including a factory-registered one,
+whose implementation type is not inspectable at all. The fix is always the same, and
+the message says so: register it with `options.AddPipelineBehavior(typeof(X<,>), order)`.
 
 ### Start-up checks: one contract, two phases
 

@@ -147,14 +147,14 @@ The complete host contract shrinks to: `AddBuildingBlocks(options => â€¦)` plus 
 > a default-on flag that nobody sets is configuration surface without a purpose. The
 > accepted cost: a host that registers handlers outside the scanned assemblies now fails
 > at start instead of at the first request. No such host exists. Should a legitimate one
-> appear, optionality can come back deliberately — narrower than a global on/off switch.
+> appear, optionality can come back deliberately ï¿½ narrower than a global on/off switch.
 
-> **Amendment (2026-08-06) — one contract for every start-up check.**
+> **Amendment (2026-08-06) ï¿½ one contract for every start-up check.**
 > The checks introduced here and by ADR-0023/0030/0031 had each grown into its own
 > `IHostedService`, some registered conditionally, one of them reading the
 > `IServiceCollection` at composition time. They now share the internal
 > `IStartupCheck` contract (`StartupPhase Phase` + `void Run()`), and a single
-> `StartupCheckRunner` — the only hosted service Building Blocks registers — drives
+> `StartupCheckRunner` ï¿½ the only hosted service Building Blocks registers ï¿½ drives
 > them: `BeforeHostedServicesStart` checks in its `StartAsync`,
 > `AfterHostedServicesStarted` checks in its `StartedAsync`. The types are renamed
 > accordingly (`WolverineWiringStartupValidator` ? `WolverineRuntimeCheck`,
@@ -175,8 +175,38 @@ The complete host contract shrinks to: `AddBuildingBlocks(options => â€¦)` plus 
 >
 > **Only the phase is load-bearing, not the registration order.** Every check is a pure
 > reader; none mutates state another one reads, so their relative sequence decides only
-> which message a broken host sees first. The one real ordering requirement —
-> `IntegrationEventSubscriptionCheck` must see Wolverine's compiled handler graph — is
+> which message a broken host sees first. The one real ordering requirement ï¿½
+> `IntegrationEventSubscriptionCheck` must see Wolverine's compiled handler graph ï¿½ is
 > satisfied by the .NET host's three-pass start (all `StartAsync` complete before any
 > `StartedAsync` begins), not by a registration index. `StartupCheckRunnerTests` pins
 > that guarantee with a real host and a hosted service registered after the runner.
+
+> **Amendment (2026-08-05) â€” `AddBuildingBlocks` is called exactly once, and a behavior
+> without an order is a registration error.**
+> Three of the objects the composition root registers are a single shared instance that
+> the options lambda writes into: the `PipelineBehaviorRegistry`, the
+> `WolverineWiringSettings`, and the `DomainEventTypeRegistry`. All three were registered
+> with `TryAddSingleton`, so a second `AddBuildingBlocks` call on the same service
+> collection *succeeded* â€” and lost everything that second call configured: its behaviors
+> ran at order `0`, its persistence and messaging selection was ignored, and its
+> `[EventName]` names were absent at the first commit. Three silent failures from one
+> harmless-looking line.
+>
+> A second call now throws. The restriction costs nothing a host may legitimately want:
+> a bounded context has one write database (ADR-0021), Wolverine permits one
+> `UseWolverine`, and `AddDomainEventsFrom` is frozen by the `Validate` phase anyway.
+> Sharing the state across calls instead (the originally proposed fix) would have been
+> more code to enable a composition nobody needs. The three shared objects are registered
+> with plain `AddSingleton` afterwards, so a foreign registration of the same type
+> collides loudly instead of winning quietly.
+>
+> The second half of the same failure: `PipelineBehaviorRegistry.GetOrder` returned `0`
+> for an unknown behavior, which is exactly `LoggingBehaviorOrder` â€” a behavior added
+> straight to the `IServiceCollection` therefore shared a slot with the logging behavior
+> and made the canonical order (ADR-0015) unpredictable, with no error anywhere. It now
+> throws, and the new `ValidateBehaviorOrders` phase moves that failure from the first
+> dispatched request to host start by scanning the service collection for
+> `IPipelineBehavior<,>` descriptors whose implementation type the registry does not know
+> (a factory-registered behavior is rejected too, its implementation type cannot be
+> inspected). `options.AddPipelineBehavior(type, order)` is the only supported way to add
+> a behavior, and the message says so. `CompositionSingleCallTests` pins both rules.
