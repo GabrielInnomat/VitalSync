@@ -801,7 +801,7 @@ Der Nutzer bekommt einen 500er statt eines 409ers, und die Error-Metrik zählt e
 catch (DbUpdateException exception) when (exception.InnerException is PostgresException
     { SqlState: PostgresErrorCodes.UniqueViolation } pg)
 {
-    return FailureResults.Create<TResponse>(
+    return pipeline.Failed(
         Failure.Conflict("persistence.unique_violation", $"'{pg.ConstraintName}' verletzt."));
 }
 ```

@@ -1198,7 +1198,7 @@ Systemfehler.
 catch (DbUpdateException exception) when (exception.InnerException is PostgresException
     { SqlState: PostgresErrorCodes.UniqueViolation } pg)
 {
-    return FailureResults.Create<TResponse>(
+    return pipeline.Failed(
         Failure.Conflict("persistence.unique_violation", $"'{pg.ConstraintName}' verletzt."));
 }
 ```
