@@ -1,4 +1,3 @@
-
 namespace BuildingBlocks.Domain.Aggregates;
 
 public interface IStateOwner

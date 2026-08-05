@@ -1,4 +1,3 @@
-
 namespace BuildingBlocks.Domain.Naming;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]

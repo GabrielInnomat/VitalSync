@@ -1,4 +1,3 @@
-
 namespace BuildingBlocks.Domain.Rules;
 
 public sealed class DomainValidationException : Exception

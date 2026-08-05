@@ -1,4 +1,3 @@
-
 namespace BuildingBlocks.Domain.Events;
 
 public interface IDomainEventRaiser

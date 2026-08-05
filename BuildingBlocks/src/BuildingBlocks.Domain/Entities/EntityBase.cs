@@ -1,4 +1,3 @@
-
 namespace BuildingBlocks.Domain.Entities;
 
 public abstract class EntityBase<TKey> : IEntity<TKey>, IEquatable<EntityBase<TKey>>

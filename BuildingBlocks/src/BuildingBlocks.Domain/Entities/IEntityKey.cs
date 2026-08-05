@@ -1,4 +1,3 @@
-
 namespace BuildingBlocks.Domain.Entities;
 
 public interface IEntityKey

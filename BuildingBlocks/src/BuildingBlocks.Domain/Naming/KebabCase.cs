@@ -1,4 +1,3 @@
-
 namespace BuildingBlocks.Domain.Naming;
 
 public static class KebabCase

@@ -1,4 +1,3 @@
-
 namespace BuildingBlocks.Domain.Naming;
 
 internal static class ContractName
