@@ -705,9 +705,9 @@ Gemeinsam mit WS-03 und IMP-24 entscheiden — es ist dieselbe Zahl für drei Zw
 ### WS-02, `Activator.CreateInstance(…, nonPublic: true)` als Vertrag
 
 Der EF-Pfad rehydriert über `Activator.CreateInstance(typeof(TAggregate), nonPublic: true)`
-([EfCoreRepository.cs:71](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreRepository.cs:71)),
+([EfCoreRepository.cs:71](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/StateStored/EfCoreRepository.cs:71)),
 der Marten-Pfad über eine `new()`-Constraint
-([MartenEventSourcedRepository.cs:27](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenEventSourcedRepository.cs:27)).
+([MartenEventSourcedRepository.cs:27](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EventSourced/MartenEventSourcedRepository.cs:27)).
 Zwei Wege für dieselbe Sache, und der zweite erzwingt einen **öffentlichen** parameterlosen
 Konstruktor am Aggregat — die Infrastruktur diktiert damit in die Domäne hinein, entgegen
 ADR-0025 („darf non-public sein").
@@ -965,7 +965,7 @@ produktiven Streams existieren. Danach ist es eine Event-Migration.
 ### WS-10, Marten-Nebenläufigkeit verdrahtet, aber im Sample unbelegt
 
 Der Repository-Pfad hängt mit erwarteter Version an
-([MartenUnitOfWork.cs:54](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenUnitOfWork.cs:54)),
+([MartenUnitOfWork.cs:54](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EventSourced/MartenUnitOfWork.cs:54)),
 und ein BuildingBlocks-Integrationstest deckt die Versionsarithmetik ab. Dass ein echter
 Konflikt als `FailureCategory.Conflict` beim **Aufrufer** ankommt, prüft aber kein
 Sample-Szenario: `MirrorWidgetTests` arbeitet mit einem gemockten `Failure.Conflict`

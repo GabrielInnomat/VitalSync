@@ -50,7 +50,7 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-35 | Statische Caches über Container-Grenzen hinweg                           | wird nicht gelöst |
 | IMP-36 | `RuleChecker` schluckt `null` still                                      | **gelöst**    |
 | IMP-37 | Async-Suffix ist inkonsistent                                            | **gelöst**    |
-| IMP-38 | Sichtbarkeits-Disziplin ist uneinheitlich                                | teilweise         |
+| IMP-38 | Sichtbarkeits-Disziplin ist uneinheitlich                                | gelöst            |
 | IMP-39 | `Result`-API: Namenskollision und implizite Konvertierungen              | offen             |
 | IMP-40 | `State` ist `public` und bricht die Kapselung                            | gelöst            |
 | IMP-41 | `DomainEvent` als `record` mit garantiert ungleicher Wertgleichheit      | gelöst            |
@@ -71,8 +71,8 @@ Pfad stempelte. Read-Modelle hätten „Jahr 1" gezeigt.
 
 **Verifiziert gelöst.** `DomainEventStamper` existiert und wird in beiden Unit-of-Work-Implementierungen
 mit einem einzigen `clock.Now`-Wert pro Transaktion aufgerufen
-([EfCoreUnitOfWork.cs:50-58](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreUnitOfWork.cs:50),
-[MartenUnitOfWork.cs:39-58](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenUnitOfWork.cs:39)).
+([EfCoreUnitOfWork.cs:50-58](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/StateStored/EfCoreUnitOfWork.cs:50),
+[MartenUnitOfWork.cs:39-58](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EventSourced/MartenUnitOfWork.cs:39)).
 Der Marten-Pfad hängt die **gestempelten** Events an den Stream, der Replay rehydriert echte
 Zeitstempel. `RaiseEvent` nimmt keinen `IClock` mehr.
 
@@ -125,7 +125,7 @@ Der per DI injizierte `IMessageBus` war nicht in die Transaktion der verarbeitet
 eingeschrieben: Correlation ging verloren, Integration Events gingen vor dem Retry raus.
 
 **Verifiziert gelöst.** `DomainEventEnvelopeHandler` nimmt `IMessageContext` als Handler-Parameter
-([DomainEventEnvelopeHandler.cs:33](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEventEnvelopeHandler.cs:33)),
+([DomainEventEnvelopeHandler.cs:33](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/DomainEventEnvelopeHandler.cs:33)),
 `IIntegrationEventSink` macht die Senke in der Signatur von `IDomainEventPublisher.PublishAsync`
 sichtbar, `WolverineIntegrationEventSink` kapselt den Kontext. `IIntegrationEventTransport` existiert
 nicht mehr.
@@ -170,7 +170,7 @@ Ein Typ mit zwei Ergebnisverträgen holte den falschen Dispatcher aus dem Cache 
 **Verifiziert gelöst.** `private readonly record struct DispatcherKey(Type Request, Type Result)`
 ([RequestSender.cs:23-27](BuildingBlocks/src/BuildingBlocks.Infrastructure/Dispatching/RequestSender.cs:23)).
 Zusätzlich lehnt der Startup-Validator mehrdeutige Request-Typen ab
-([HandlerRegistrationStartupValidator.cs:77-84](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/HandlerRegistrationStartupValidator.cs:77)).
+([HandlerRegistrationStartupValidator.cs:77-84](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/Validation/HandlerRegistrationCheck.cs:77)).
 
 ## Lösungsvorschlag
 
@@ -202,7 +202,7 @@ Der Befund war bereits bei der ursprünglichen Analyse falsch hergeleitet.
 `FlushOutgoingMessagesAsync()`; `Enroll(session)` registriert den Session-Listener, der nach jedem
 erfolgreichen `SaveChangesAsync` selbst flusht. `MartenUnitOfWork.CommitAsync` ruft `Enroll` als
 ersten Schritt auf, **vor** dem Save
-([MartenUnitOfWork.cs:37](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenUnitOfWork.cs:37)) —
+([MartenUnitOfWork.cs:37](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EventSourced/MartenUnitOfWork.cs:37)) —
 genau die Reihenfolge, auf die es ankommt. End-to-end gepinnt durch `OutboxFlushOnCommitTests`.
 
 ## Lösungsvorschlag
@@ -234,7 +234,7 @@ nichts — zwei Autorenmodelle, zwei Repository-Verträge.
 
 **Verifiziert gelöst.** `AggregateRoot<TKey, TState>` ist die einzige Basis, `EventSourcedAggregateRoot`
 erbt davon und fügt ausschließlich `Version` und `LoadFromHistory` hinzu
-([EventSourcedAggregateRoot.cs:17-49](BuildingBlocks/src/BuildingBlocks.Domain/EventSourcedAggregateRoot.cs:17)).
+([EventSourcedAggregateRoot.cs:17-49](BuildingBlocks/src/BuildingBlocks.Domain/Aggregates/EventSourcedAggregateRoot.cs:17)).
 Ein Repository-Vertrag für beide Welten.
 
 ## Lösungsvorschlag
@@ -256,7 +256,7 @@ die Deduplizierung brechen.
 beides trägt. Der Konsument kann eine redelivered Nachricht nicht als Duplikat erkennen, obwohl die
 Zustellung ausdrücklich at-least-once ist.
 
-[IIntegrationEvent.cs](BuildingBlocks/src/BuildingBlocks.Application/IIntegrationEvent.cs) —
+[IIntegrationEvent.cs](BuildingBlocks/src/BuildingBlocks.Application/IntegrationEvents/IIntegrationEvent.cs) —
 unverändert leer.
 
 ## Lösungsvorschlag
@@ -296,8 +296,8 @@ Jeder Mapper wird für **jedes** Domain Event aufgerufen und muss selbst per `sw
 das benachbarte `IProjectionHandler<in TDomainEvent>` typisiert ist und vom `ProjectionRunner` gezielt
 aufgelöst wird. Zwei funktional analoge Konzepte, gegensätzlich entworfen.
 
-[IIntegrationEventMapper.cs](BuildingBlocks/src/BuildingBlocks.Application/IIntegrationEventMapper.cs),
-Aufruf in [DomainEventPublisher.cs:34-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Events/DomainEventPublisher.cs:34).
+[IIntegrationEventMapper.cs](BuildingBlocks/src/BuildingBlocks.Application/IntegrationEvents/IIntegrationEventMapper.cs),
+Aufruf in [DomainEventPublisher.cs:34-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/DomainEventPublisher.cs:34).
 
 ## Lösungsvorschlag
 
@@ -325,7 +325,7 @@ Sechs voneinander unabhängige Aufrufe über zwei Oberflächen, jede Auslassung 
 **Teilweise gelöst.** Schritt 1 ist umgesetzt und strenger als vorgeschlagen:
 `BuildingBlocksWolverineExtension` wendet beim `UseWolverine()` automatisch die passende Kombination
 an, die `Apply*`-Methoden sind `internal`
-([BuildingBlocksWolverineExtension.cs](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/BuildingBlocksWolverineExtension.cs)),
+([BuildingBlocksWolverineExtension.cs](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/Wiring/BuildingBlocksWolverineExtension.cs)),
 und der `WolverineWiringStartupValidator` prüft beim Start, ob `UseWolverine` überhaupt aufgerufen
 wurde. `AddBuildingBlocks` lehnt außerdem eine Subscription ohne Transport ab
 ([ServiceCollectionExtensions.cs:63-69](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs:63)).
@@ -404,7 +404,7 @@ Der ursprüngliche Befund und der damalige Vorschlag stehen unten unverändert.
 
 **Ursprünglicher Befund.** `EfCoreRepository` lädt nicht mehr das Aggregat,
 sondern dessen State via `FindAsync(stateType, [id])`
-([EfCoreRepository.cs:40-42](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreRepository.cs:40)).
+([EfCoreRepository.cs:40-42](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/StateStored/EfCoreRepository.cs:40)).
 `FindAsync` lädt weiterhin **keine Navigationseigenschaften**: ein `RecipeState` mit
 `IReadOnlyCollection<IngredientState>` käme mit leerer Liste aus dem Repository. Die Klasse ist
 weiterhin `sealed`, ein Service kann das Laden also nicht überschreiben.
@@ -468,7 +468,7 @@ Frontend unbrauchbar. Beide gemeinsam umsetzen.
 # IMP-17, `Failure` ohne Zielfeld und ohne fachliche Fehlercodes
 
 `Failure` trägt `Code`, `Message`, `Category` — kein `Target`/`PropertyName`, keine Metadaten
-([Failure.cs:40-50](BuildingBlocks/src/BuildingBlocks.Application/Failure.cs:40)). Ein BFF kann daraus
+([Failure.cs:40-50](BuildingBlocks/src/BuildingBlocks.Application/Results/Failure.cs:40)). Ein BFF kann daraus
 keine `ProblemDetails` mit `errors`-Objekt bauen. Zudem setzt `ExceptionToResultBehavior` für **alle**
 Domänenfehler denselben Code (`domain.validation` / `domain.business_rule`) — der Code ist technisch,
 nicht fachlich, und damit für Internationalisierung und clientseitige Fallunterscheidung wertlos.
@@ -492,7 +492,7 @@ durch, statt eine Konstante zu setzen — die Exception muss den Code dafür mit
 # IMP-18, `FailureCategory` fehlen Autorisierung und Unerwartet
 
 Vier Werte: `Validation`, `BusinessRule`, `NotFound`, `Conflict`
-([FailureCategory.cs](BuildingBlocks/src/BuildingBlocks.Application/FailureCategory.cs)). Ein
+([FailureCategory.cs](BuildingBlocks/src/BuildingBlocks.Application/Results/FailureCategory.cs)). Ein
 Autorisierungsfehler (403) hat keine Kategorie und landet im gRPC-Adapter im
 `_ => StatusCode.Unknown`-Arm; dasselbe gilt für einen bewusst zu einem `Result` degradierten
 Infrastrukturfehler.
@@ -578,7 +578,7 @@ public interface IWriteDbContext;
 # IMP-21, `IRepository` koppelt an die konkrete Domain-Basisklasse
 
 **Verifiziert gelöst.** Der Vertrag lautet heute `where TAggregate : class, IAggregateRoot<TKey>`
-([IRepository.cs:20-22](BuildingBlocks/src/BuildingBlocks.Application/IRepository.cs:20)) — ein
+([IRepository.cs:20-22](BuildingBlocks/src/BuildingBlocks.Application/Persistence/IRepository.cs:20)) — ein
 Interface statt der konkreten Klasse `AggregateRoot<TKey>`. Application-Code kann Aggregate damit
 gegen die Abstraktion testen, ohne die Domain-Basisklasse zu erben.
 
@@ -597,7 +597,7 @@ Unverändert offen — identisch mit [hacky.md Nr. 1](hacky.md).
 
 Die Outbox speichert `"…, MyAsm, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"` und liest sie
 mit `Type.GetType(..., throwOnError: true)` zurück
-([DomainEventEnvelopeSerializer.cs:23,33](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEventEnvelopeSerializer.cs:23)).
+([DomainEventEnvelopeSerializer.cs:23,33](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/DomainEventEnvelopeSerializer.cs:23)).
 Version-Bump, Assembly-Umbenennung oder Typ-Umzug macht jede unzugestellte Nachricht unlesbar — und
 das ist Crash-Recovery-Datenbestand. Zusätzlich ist `Type.GetType` auf persistierten Daten eine
 unbegrenzte Typ-Aktivierungsfläche.
@@ -655,7 +655,7 @@ Siehe [TODO-02](todo.md) und [ADR-0030](docs/architecture/decisions/0030-persist
 public sealed record DomainEventEnvelope(string EventTypeName, string Payload);
 ```
 
-([DomainEventEnvelope.cs:17](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEventEnvelope.cs:17))
+([DomainEventEnvelope.cs:17](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/DomainEventEnvelope.cs:17))
 
 Es fehlen `EventId`, `AggregateId`, `AggregateType`, `Version`, `OccurredAt`. Damit ist der übliche
 Idempotenz-Ansatz („speichere pro Aggregat die zuletzt verarbeitete Version") von der Infrastruktur
@@ -697,7 +697,7 @@ options.PublishMessage<DomainEventEnvelope>()
     .ToLocalQueue(DomainEventLocalQueueName).Sequential().UseDurableInbox();
 ```
 
-([WolverineOptionsExtensions.cs:77-80](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/WolverineOptionsExtensions.cs:77))
+([WolverineOptionsExtensions.cs:77-80](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/Wiring/WolverineOptionsExtensions.cs:77))
 
 Sämtliche Domain Events eines Service laufen durch eine strikt sequentielle Queue, um eine
 **pro-Aggregat**-Ordnungsgarantie zu erkaufen. Global serialisieren für eine lokale Zusage: der
@@ -720,7 +720,7 @@ await projectionRunner.RunAsync(domainEvent, cancellationToken);
 foreach (var mapper in _mappers) { foreach (...) await sink.PublishAsync(...); }
 ```
 
-([DomainEventPublisher.cs:32-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Events/DomainEventPublisher.cs:32))
+([DomainEventPublisher.cs:32-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/DomainEventPublisher.cs:32))
 
 Zwei Belange in einer Methode, ohne Fehlerisolierung: wirft eine Projektion, wird kein einziges
 Integration Event publiziert; wirft ein Mapper, laufen bei der Redelivery alle Projektionen erneut.
@@ -969,7 +969,7 @@ Verschlechterung ohne Gegenwert. Das ist derselbe Punkt wie IMP-46 Schritt 2.
 Unverändert offen — identisch mit [hacky.md Nr. 10](hacky.md).
 
 `rule?.IsBroken() == true` und `foreach (var rule in rules ?? [])`
-([RuleChecker.cs:18-63](BuildingBlocks/src/BuildingBlocks.Domain/RuleChecker.cs:18)). Eine Factory, die
+([RuleChecker.cs:18-63](BuildingBlocks/src/BuildingBlocks.Domain/Rules/RuleChecker.cs:18)). Eine Factory, die
 versehentlich `null` liefert, bedeutet „Regel bestanden" — die Validierung schweigt genau im Fehlerfall.
 
 ## Lösungsvorschlag
@@ -1015,16 +1015,22 @@ die `.editorconfig`-Konventionen bzw. eine kurze ADR.
 
 # IMP-38, Sichtbarkeits-Disziplin ist uneinheitlich
 
-**Teilweise gelöst.** Das ursprünglich beanstandete Transport-Trio existiert nicht mehr; die
+**Gelöst (2026-08-06).** Das ursprünglich beanstandete Transport-Trio existiert nicht mehr; die
 Messaging-Typen sind heute konsequent `internal` (`DomainEventPublisher`, `WolverineIntegrationEventSink`,
 `NullIntegrationEventSink`, `BuildingBlocksWolverineExtension`, `WolverineOptionsExtensions`, beide
-Startup-Validatoren, `DomainEventEnvelopeSerializer`, `DomainEventStamper`, `PipelineBehaviorRegistry`,
-`EntityKeyFormatter`).
+Startup-Validatoren, `DomainEventStamper`, `PipelineBehaviorRegistry`, `EntityKeyFormatter`).
 
-**Offen bleibt eine Inkonsistenz:** `ProjectionRunner` ist `public`, obwohl er ausschließlich vom
-`internal` `DomainEventPublisher` genutzt wird. Ebenso sind `EfCoreUnitOfWork`, `MartenUnitOfWork`,
-`EfCoreRepository`, `MartenEventSourcedRepository` und beide Tracker `public`, obwohl sie ausnahmslos
-über `BuildingBlocksOptions` registriert und nie direkt referenziert werden.
+**Auch der Rest ist erledigt:** `ProjectionRunner`, `EfCoreUnitOfWork`, `MartenUnitOfWork`,
+`EfCoreRepository`, `MartenEventSourcedRepository` und beide Tracker sind allesamt `internal sealed`.
+
+Entscheidend ist aber nicht die Liste, sondern dass die Regel jetzt getestet ist:
+`PublicSurfaceTests` existiert in allen drei Testprojekten. In `BuildingBlocks.Infrastructure.Tests`
+pinnt er die Oberfläche auf **exakt** vier beabsichtigte Typen plus sieben, die nur deshalb `public`
+sind, weil Wolverine C# in eine andere Assembly generiert und sie dort benennt
+(`DomainEventEnvelope`, `DomainEventEnvelopeHandler`, `DomainEventEnvelopeSerializer`,
+`DomainEventTypeRegistry`, `IIntegrationEventSinkFactory`, `IntegrationEventSourceContext`,
+`OwnContextIntegrationEventFilter`); ein weiterer Test verbietet Implementierungs-Namespaces an der
+Oberfläche überhaupt. Ein neuer `public` Typ wird damit rot, bis ihn jemand mit Begründung einträgt.
 
 ## Lösungsvorschlag
 
@@ -1057,8 +1063,8 @@ Drei Punkte, alle unverändert:
 3. **`Value` wirft** bei einem fehlgeschlagenen Result, statt den Fehler im Typsystem sichtbar zu
    machen.
 
-[Result.cs](BuildingBlocks/src/BuildingBlocks.Application/Result.cs),
-[ResultOfT.cs](BuildingBlocks/src/BuildingBlocks.Application/ResultOfT.cs)
+[Result.cs](BuildingBlocks/src/BuildingBlocks.Application/Results/Result.cs),
+[ResultOfT.cs](BuildingBlocks/src/BuildingBlocks.Application/Results/ResultOfT.cs)
 
 ## Lösungsvorschlag
 
@@ -1078,7 +1084,7 @@ Punkt 3 durch `Match` (IMP-34) entschärfen, ohne `Value` zu entfernen.
 # IMP-40, `State` ist `public` und bricht die Kapselung
 
 **Verifiziert gelöst.** `protected TState State { get; private set; }`
-([AggregateRoot.cs:47](BuildingBlocks/src/BuildingBlocks.Domain/AggregateRoot.cs:47)). Der Innenzustand
+([AggregateRoot.cs:47](BuildingBlocks/src/BuildingBlocks.Domain/Aggregates/AggregateRoot.cs:47)). Der Innenzustand
 ist von außen nicht mehr lesbar; die Persistenz erreicht ihn ausschließlich über das explizit
 implementierte `IStateOwner`.
 
@@ -1100,7 +1106,7 @@ miterledigt.
 protected DomainEvent() => EventId = Guid.NewGuid();
 ```
 
-([DomainEvent.cs:21-24](BuildingBlocks/src/BuildingBlocks.Domain/DomainEvent.cs:21))
+([DomainEvent.cs:21-24](BuildingBlocks/src/BuildingBlocks.Domain/Events/DomainEvent.cs:21))
 
 `record` verspricht Wertgleichheit, die generierte `Equals` bezieht `EventId` mit ein, und die ist pro
 Instanz neu. Zwei inhaltlich identische Events sind damit **nie** gleich. Das ist genau die
@@ -1122,7 +1128,7 @@ Gleichheit ist korrekt, und der Punkt löst sich ohne Sonderlogik auf.
 # IMP-42, `IRepository`-API ist asymmetrisch und irreführend benannt
 
 **Verifiziert gelöst.** Der Vertrag hat heute exakt zwei Methoden, `GetByIdAsync` und `AddAsync`
-([IRepository.cs:34,46](BuildingBlocks/src/BuildingBlocks.Application/IRepository.cs:34)). Das
+([IRepository.cs:34,46](BuildingBlocks/src/BuildingBlocks.Application/Persistence/IRepository.cs:34)). Das
 beanstandete synchrone `Remove` existiert nicht mehr: Entfernen ist per ADR-0026 eine
 Soft-Delete-Zustandsänderung in der Domäne, Änderungen fließen über die Unit of Work.
 
@@ -1231,7 +1237,7 @@ Test hat seine Lücke also nicht mehr zu füllen — nur seinen Namen zu korrigi
 
 **Offen:** `RequestSender` und `ProjectionRunner` nehmen weiterhin einen `IServiceProvider`
 ([RequestSender.cs:19](BuildingBlocks/src/BuildingBlocks.Infrastructure/Dispatching/RequestSender.cs:19),
-[ProjectionRunner.cs:20](BuildingBlocks/src/BuildingBlocks.Infrastructure/Events/ProjectionRunner.cs:20)).
+[ProjectionRunner.cs:20](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/ProjectionRunner.cs:20)).
 Das ist dort **richtig** — beide lösen zur Laufzeit typabhängig auf, was per Konstruktor nicht geht —
 aber nirgends begründet. Ohne diese Begründung ist der Service-Locator-Zugriff ein Muster, das kopiert
 wird.
@@ -1279,7 +1285,7 @@ aktuell 34 Projekten schon spürbar. Guter Kandidat für den nächsten Aufräum-
 **Teilweise überholt.** Das ursprünglich beanstandete `ApplyBuildingBlockEfCoreOutbox` existiert nicht
 mehr. Verblieben sind drei `internal` Methoden — `ApplyBuildingBlockDomainEventRouting`,
 `ApplyBuildingBlockMessagingDefaults`, `ApplyBuildingBlockSubscription`
-([WolverineOptionsExtensions.cs](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/WolverineOptionsExtensions.cs)).
+([WolverineOptionsExtensions.cs](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/Wiring/WolverineOptionsExtensions.cs)).
 
 **Gelöst (2026-08-03).** Die `public` Gegenspielerin `UseBuildingBlocksEfCorePersistence` ist mit
 `WolverineHostExtensions` gelöscht (siehe [todo.md](todo.md), TODO-06); übrig sind die drei internen

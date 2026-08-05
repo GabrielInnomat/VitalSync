@@ -50,7 +50,7 @@ eine Entscheidung, keinen Code.
 | TODO-14 | Idempotenz-Bookkeeping über die Kontextgrenze                  | **P2** | offen             | IMP-11, WS-12                         |
 | TODO-15 | Mehrfachfehler und Feldvalidierung end-to-end                  | **P2** | offen             | IMP-16, IMP-17, hacky-12              |
 | TODO-16 | `FailureCategory` fehlen Autorisierung und Unerwartet          | **P2** | offen             | IMP-18                                |
-| TODO-17 | `RuleChecker` schluckt `null`                                  | **P2** | **gelöst**        | hacky-10, IMP-36                      |
+| TODO-17 | `RuleChecker` schluckt `null`                                  | **P2** | gelöst            | hacky-10, IMP-36                      |
 | TODO-18 | `AddBuildingBlocks` ist nicht idempotent                       | **P2** | offen             | hacky-9                               |
 | TODO-19 | `ApplyEntityKeyConversions` scannt und mappt zu viel           | **P2** | offen             | hacky-4, WS-15                        |
 | TODO-20 | Global sequentielle Domain-Event-Queue                         | **P2** | offen             | hacky-13, IMP-25                      |
@@ -65,7 +65,7 @@ eine Entscheidung, keinen Code.
 | TODO-29 | `DomainEventPublisher` koppelt Projektion und Integration-Publikation     | **P3** | offen             | IMP-26                                |
 | TODO-30 | `IIntegrationEventMapper` ist untypisiert                      | **P3** | offen             | IMP-12                                |
 | TODO-31 | `Result` hat keine Kombinatoren                                | **P3** | offen             | IMP-34                                |
-| TODO-32 | Async-Suffix ist inkonsistent                                  | **P3** | **gelöst**        | IMP-37                                |
+| TODO-32 | Async-Suffix ist inkonsistent                                  | **P3** | gelöst            | IMP-37                                |
 | TODO-33 | Ein Assembly für alle Persistenz-Pakete                        | **P3** | offen             | IMP-19                                |
 | TODO-34 | Keine zentrale Paketverwaltung                                 | **P3** | offen             | IMP-47                                |
 | TODO-35 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`     | **P3** | offen             | WS-04                                 |
@@ -73,7 +73,7 @@ eine Entscheidung, keinen Code.
 | TODO-37 | Zeitbasierte Assertionen in Tests                              | **P3** | teilweise         | WS-17                                 |
 | TODO-38 | Keine Batch- oder Bulk-Fähigkeit                               | **P3** | offen             | IMP-32                                |
 | TODO-39 | Keine Saga- oder Process-Manager-Abstraktion                   | **P3** | offen             | IMP-33                                |
-| TODO-40 | Sichtbarkeits-Disziplin ist uneinheitlich                      | **P4** | teilweise         | IMP-38                                |
+| TODO-40 | Sichtbarkeits-Disziplin ist uneinheitlich                      | **P4** | gelöst            | IMP-38                                |
 | TODO-41 | Wirkungslose Varianz-Modifikatoren                             | **P4** | offen             | IMP-43                                |
 | TODO-42 | Uneinheitliche Projektstruktur                                 | **P4** | gelöst            | IMP-44                                |
 | TODO-43 | Irreführende Test- und Methodennamen                           | **P4** | offen             | IMP-45, IMP-48                        |
@@ -158,10 +158,10 @@ Der ursprüngliche Befund steht unverändert unten.
 Die beiden Quellbefunde sind die zwei Hälften desselben Problems und gehören zusammen:
 
 - **Lesen:** `EfCoreRepository` holt den State per `FindAsync(stateType, [id])`
-  ([EfCoreRepository.cs:40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreRepository.cs:40)) —
+  ([EfCoreRepository.cs:40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/StateStored/EfCoreRepository.cs:40)) —
   das lädt keine Navigationen.
 - **Schreiben:** `EfCoreUnitOfWork` kopiert per `CurrentValues.SetValues`
-  ([EfCoreUnitOfWork.cs:47](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreUnitOfWork.cs:47)) —
+  ([EfCoreUnitOfWork.cs:47](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/StateStored/EfCoreUnitOfWork.cs:47)) —
   das kopiert nur Skalare.
 
 Ein `RecipeState` mit `IReadOnlyCollection<IngredientState>` käme also mit leerer Zutatenliste
@@ -301,7 +301,7 @@ Idempotenz beim Doppelscan) und `DomainEventEnvelopeSerializerTests.StoredPayloa
 
 In jeder Outbox-Zeile steht `"Foo.WidgetCreated, MyAsm, Version=1.0.0.0, Culture=neutral,
 PublicKeyToken=null"`, zurückgeholt mit `Type.GetType(..., throwOnError: true)`
-([DomainEventEnvelopeSerializer.cs:23,33](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEventEnvelopeSerializer.cs:23)).
+([DomainEventEnvelopeSerializer.cs:23,33](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/DomainEventEnvelopeSerializer.cs:23)).
 
 Version-Bump, Assembly-Umbenennung oder Typ-Umzug macht jede noch nicht zugestellte Nachricht
 unlesbar — und das ist Crash-Recovery-Datenbestand, also genau der Fall, in dem man es am
@@ -376,8 +376,8 @@ Refactoring-Zufall entstehen.
 Die Domäne bewacht Leer-Identität an zwei Stellen (`RaiseEvent`, `IStateOwner.Restore`) — das
 Repository ist die einzige Tür ohne Schloss. Ein Aggregat mit leerer Identität schreibt eine
 Zeile mit `Guid.Empty` bzw. öffnet Stream `Gadget/00000000-…`
-([EfCoreRepository.cs:55](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EfCoreRepository.cs:55),
-[MartenEventSourcedRepository.cs:48](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenEventSourcedRepository.cs:48)).
+([EfCoreRepository.cs:55](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/StateStored/EfCoreRepository.cs:55),
+[MartenEventSourcedRepository.cs:48](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EventSourced/MartenEventSourcedRepository.cs:48)).
 
 **Der bequeme Weg dorthin ist mit TODO-10 zu.** `repository.AddAsync(new Widget())` kompiliert
 nicht mehr: der Konstruktor ist privat, `CreateEmpty` explizit implementiert. Erreichbar bleibt
@@ -856,7 +856,7 @@ Für ein Spiegelbild angemessen, aber kein allgemeines Verfahren: ein Kontext, d
 fremden Ereignis ein **eigenes** Aggregat mit eigener Identität ableitet, braucht echtes
 Bookkeeping über verarbeitete `EventId`s. Das gibt es nicht — aber seit TODO-13 (ADR-0029) trägt
 `IIntegrationEvent` `EventId`/`OccurredAt`
-([IIntegrationEvent.cs](BuildingBlocks/src/BuildingBlocks.Application/IIntegrationEvent.cs)), es
+([IIntegrationEvent.cs](BuildingBlocks/src/BuildingBlocks.Application/IntegrationEvents/IIntegrationEvent.cs)), es
 gibt also inzwischen eine Id, über die man Buch führen kann.
 
 ## Lösungsvorschlag
@@ -878,7 +878,7 @@ Drei Befunde auf derselben Kette, die nur gemeinsam Sinn ergeben:
 - **Erzeugen** (IMP-16): `Result` trägt eine `IReadOnlyList<Failure>`, aber der einzige Produzent
   ist `ExceptionToResultBehavior` und erzeugt genau einen Fehler aus einer Exception.
 - **Beschreiben** (IMP-17): `Failure` hat kein `Target`/`PropertyName`
-  ([Failure.cs:40-50](BuildingBlocks/src/BuildingBlocks.Application/Failure.cs:40)), und alle
+  ([Failure.cs:40-50](BuildingBlocks/src/BuildingBlocks.Application/Results/Failure.cs:40)), und alle
   Domänenfehler tragen denselben technischen Code.
 - **Transportieren** (hacky-12): der gRPC-Adapter nimmt nur `result.Failures[0]`
   ([WidgetGrpcService.cs:62](samples/StateStored/VitalSync.Sample.StateStored.Api/WidgetGrpcService.cs:62)).
@@ -912,7 +912,7 @@ aus einer Konstante im Behavior. Alternative, falls das zu viel ist: Mehrfach-Fa
 **P2 · offen · IMP-18**
 
 Vier Werte: `Validation`, `BusinessRule`, `NotFound`, `Conflict`
-([FailureCategory.cs](BuildingBlocks/src/BuildingBlocks.Application/FailureCategory.cs)). Ein
+([FailureCategory.cs](BuildingBlocks/src/BuildingBlocks.Application/Results/FailureCategory.cs)). Ein
 Autorisierungsfehler (403) hat keine Kategorie und landet im `_ => StatusCode.Unknown`-Arm des
 gRPC-Adapters; dasselbe gilt für einen bewusst zu einem `Result` degradierten Infrastrukturfehler.
 
@@ -938,7 +938,7 @@ compile-time-vollständigkeitsgeprüft.
 **P2 · gelöst (2026-08-05) · hacky-10 + IMP-36**
 
 `rule?.IsBroken() == true` und `foreach (var rule in rules ?? [])`
-([RuleChecker.cs:18-63](BuildingBlocks/src/BuildingBlocks.Domain/RuleChecker.cs:18)). Eine
+([RuleChecker.cs:18-63](BuildingBlocks/src/BuildingBlocks.Domain/Rules/RuleChecker.cs:18)). Eine
 Factory, die versehentlich `null` liefert, bedeutet „Regel bestanden" — die Validierung schweigt
 genau im Fehlerfall. Begründet ist das mit „damit Guard-Klauseln knapp bleiben".
 
@@ -1046,7 +1046,7 @@ options.PublishMessage<DomainEventEnvelope>()
     .ToLocalQueue(DomainEventLocalQueueName).Sequential().UseDurableInbox();
 ```
 
-([WolverineOptionsExtensions.cs:77-80](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/WolverineOptionsExtensions.cs:77))
+([WolverineOptionsExtensions.cs:77-80](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/Wiring/WolverineOptionsExtensions.cs:77))
 
 Sämtliche Domain Events eines Service laufen durch eine strikt sequentielle Queue, um eine
 **pro-Aggregat**-Ordnungsgarantie zu erkaufen. Global serialisieren für eine lokale Zusage: der
@@ -1179,7 +1179,7 @@ Factory-Registrierung.
 **P2 · offen · WS-10**
 
 Der Repository-Pfad hängt mit erwarteter Version an
-([MartenUnitOfWork.cs:54](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/MartenUnitOfWork.cs:54)),
+([MartenUnitOfWork.cs:54](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EventSourced/MartenUnitOfWork.cs:54)),
 und ein BuildingBlocks-Integrationstest deckt die Versionsarithmetik ab. Dass ein echter Konflikt
 als `FailureCategory.Conflict` beim **Aufrufer** ankommt, prüft kein Szenario:
 `MirrorWidgetTests` arbeitet mit einem gemockten `Failure.Conflict`
@@ -1276,7 +1276,7 @@ die Asymmetrie nicht später als Lücke missverstanden wird.
 **P3 · offen · IMP-26**
 
 Zwei Belange in einer Methode ohne Fehlerisolierung
-([DomainEventPublisher.cs:32-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Events/DomainEventPublisher.cs:32)):
+([DomainEventPublisher.cs:32-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/DomainEventPublisher.cs:32)):
 wirft eine Projektion, wird kein Integration Event publiziert; wirft ein Mapper, laufen bei der
 Redelivery alle Projektionen erneut. Bei at-least-once heißt das, dass ein Fehler auf der einen
 Seite die andere wiederholt ausführt — tragfähig nur, solange beide idempotent sind.
@@ -1543,7 +1543,7 @@ zum Prozess-Host aufgewertet wird. Das ist eine bewusste Aufweichung der bisheri
 
 # TODO-40, Sichtbarkeits-Disziplin ist uneinheitlich
 
-**P4 · teilweise · IMP-38**
+**P4 · gelöst · IMP-38**
 
 Die Messaging-Typen sind inzwischen konsequent `internal`. Offen bleibt: `ProjectionRunner` ist
 `public`, obwohl er nur vom `internal` `DomainEventPublisher` genutzt wird; ebenso `EfCoreUnitOfWork`,
@@ -1558,6 +1558,43 @@ Typen auf `internal`, `InternalsVisibleTo` für das Testprojekt. `public` bleibe
 Service benutzt), `DomainEventEnvelope` samt Handler (Wolverine muss sie sehen) und die Behaviors als
 Vorlage. (`WolverineHostExtensions` stand hier ebenfalls und ist mit TODO-06 entfallen — genau nach
 dieser Regel: kein Host benennt es mehr.)
+
+## Gelöst: alle sieben Typen sind `internal`, und die Regel ist getestet (2026-08-06)
+
+Der Befund ist vollständig abgearbeitet — nachgeprüft am Code:
+
+| Typ                            | heute                |
+| ------------------------------ | -------------------- |
+| `ProjectionRunner`             | `internal sealed`    |
+| `EfCoreUnitOfWork<TContext>`   | `internal sealed`    |
+| `MartenUnitOfWork`             | `internal sealed`    |
+| `EfCoreRepository`             | `internal sealed`    |
+| `MartenEventSourcedRepository` | `internal sealed`    |
+| `EfCoreAggregateTracker`       | `internal sealed`    |
+| `MartenAggregateTracker`       | `internal sealed`    |
+
+Wichtiger als die sieben Einzelfälle ist, dass die geforderte **Regel** jetzt nicht mehr nur
+aufgeschrieben, sondern festgenagelt ist. `PublicSurfaceTests` existiert in **allen drei**
+Testprojekten und pinnt die vollständige exportierte Typliste der jeweiligen Assembly:
+
+- `BuildingBlocks.Infrastructure.Tests` — die Oberfläche ist **exakt** vier beabsichtigte Typen
+  (`ServiceCollectionExtensions`, `HostApplicationBuilderExtensions`, `BuildingBlocksOptions`,
+  `EntityKeyModelBuilderExtensions`) plus sieben, die nur deshalb `public` sind, weil Wolverine
+  C# in eine andere Assembly generiert und sie dort benennt. Ein zweiter Test verlangt, dass jeder
+  dieser sieben Ausnahmen tatsächlich noch generierter Code gegenübersteht; ein dritter verbietet
+  Implementierungs-Namespaces (`Persistence`, `Wiring`, `Registration`, `Validation`, …) an der
+  Oberfläche überhaupt.
+- `BuildingBlocks.Domain.Tests` / `BuildingBlocks.Application.Tests` — dort pinnt derselbe Test die
+  gegenteilige Eigenschaft: hier ist alles `public`, und ein Verschieben oder Umbenennen ändert den
+  `FullName` eines exportierten Typs und bricht jeden Konsumenten. Die Liste ist deshalb Vertrag.
+
+Damit kann ein neuer `public` Typ in Infrastructure nicht mehr unbemerkt entstehen: der Test wird
+rot, bis jemand ihn mit einer Begründung in die Liste einträgt. Die Anmerkung aus dem
+Lösungsvorschlag, `InternalsVisibleTo` fürs Testprojekt zu setzen, war bereits vorher erfüllt.
+
+Nicht übernommen wurde ein Detail des Vorschlags: die Behaviors sind **nicht** „als Vorlage"
+`public` geblieben, sondern ebenfalls `internal` — ein Service, der ein eigenes Behavior schreibt,
+braucht dafür nur `IPipelineBehavior` aus `Application`, nicht unsere Implementierung.
 
 ---
 
