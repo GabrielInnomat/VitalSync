@@ -17,6 +17,8 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection.Registration;
 
 internal sealed class PersistenceRegistrar(IServiceCollection services, WolverineWiringSettings wiring)
 {
+    public void UseNone() => wiring.SelectPersistence(PersistenceChoice.NoPersistence);
+
     public void UseEfCore<TContext>(string connectionString, Action<DbContextOptionsBuilder>? configureContext)
         where TContext : DbContext
     {

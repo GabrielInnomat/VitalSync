@@ -170,7 +170,7 @@ The complete host contract shrinks to: `AddBuildingBlocks(options => …)` plus 
 >    early when their capability was not selected. Whether a check runs is now a property
 >    of the check, not of the composition root.
 > 2. **A check probes the built container, never the service collection.**
->    `UnitOfWorkPresenceCheck` asks `IServiceProviderIsService`, so a host that registers
+>    `UnitOfWorkPresenceCheck` asks the built provider, so a host that registers
 >    `IUnitOfWork` *after* `AddBuildingBlocks` no longer gets the notice wrongly.
 >
 > **Only the phase is load-bearing, not the registration order.** Every check is a pure
@@ -210,3 +210,33 @@ The complete host contract shrinks to: `AddBuildingBlocks(options => …)` plus 
 > (a factory-registered behavior is rejected too, its implementation type cannot be
 > inspected). `options.AddPipelineBehavior(type, order)` is the only supported way to add
 > a behavior, and the message says so. `CompositionSingleCallTests` pins both rules.
+
+> **Amendment (2026-08-05) — committing nothing is a choice, not a default.**
+> `UnitOfWorkBehavior` took `IUnitOfWork? unitOfWork = null` and skipped the commit when
+> no unit of work was registered. That removed the original crash, but left the worst
+> possible failure shape in its place: **the command reports success and the data is
+> gone.** The only evidence was one `Information` log at start, which nobody reads in
+> production.
+>
+> The dependency is now non-optional. A `NullUnitOfWork` fallback is registered in
+> `RegisterCore` with `TryAddScoped`, so a real unit of work — from a persistence
+> selection or from the host — always wins, and the pipeline always resolves.
+> `UnitOfWorkPresenceCheck` turns from a logger into a hard check: it passes when a
+> persistence strategy was selected, when the host registered its own `IUnitOfWork`, or
+> when the scanned assemblies contain no commands at all, and it **throws**, naming the
+> affected commands, when commands would be dispatched into the fallback.
+>
+> A host that genuinely commits nothing — a gateway, a facade, a host with its own
+> persistence — states that with the new `UseNoPersistence()`. That is a **positive
+> selection** on `PersistenceChoice`, not an opt-out flag in the sense of the 2026-08-05
+> amendment above: it disables no check, it is mutually exclusive with
+> `UseEfCorePersistence`/`UseMartenEventSourcing` (combining them throws), and the check
+> still runs and logs the deliberate choice. `PersistenceChoice` gains a fourth case for
+> it, which is why the choice now distinguishes `IsChosen` (something was said) from
+> `IsSelected` (a real store exists, the fact that drives outbox, domain-event routing
+> and Wolverine).
+>
+> This resolves the standing conflict between IMP-07 (which called the nullable
+> parameter the fix) and hacky-11 (which called it the bug): both are satisfied, because
+> the crash stays fixed *and* the silent path can only be reached by writing it down.
+> `UnitOfWorkPresenceCheckTests` and `PersistenceChoiceTests` pin the rule.

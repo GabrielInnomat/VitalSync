@@ -14,7 +14,7 @@
 | 8   | Connection String zweimal, ohne Abgleich                       | gelöst |
 | 9   | `AddBuildingBlocks` ist nicht idempotent                       | gelöst |
 | 10  | `RuleChecker` schluckt `null`                                  | gelöst |
-| 11  | Optionale Constructor-Injection für `IUnitOfWork`              | offen  |
+| 11  | Optionale Constructor-Injection für `IUnitOfWork`              | gelöst |
 | 12  | Nur `Failures[0]` erreicht den Client                          | offen  |
 | 13  | Global sequentielle Domain-Event-Queue                         | offen  |
 
@@ -427,7 +427,13 @@ mitziehen.
 
 ---
 
-# 11, Optionale Constructor-Injection für `IUnitOfWork`
+# 11, Optionale Constructor-Injection für `IUnitOfWork` — **gelöst (2026-08-05)**
+
+> Gelöst per [ADR-0027-Amendment](docs/architecture/decisions/0027-building-blocks-own-wolverine-wiring.md).
+> `NullUnitOfWork` als Fallback, `IUnitOfWork` ohne `?` im Behavior — und, über den Vorschlag unten
+> hinaus, ein **harter Startfehler**, wenn Commands gescannt wurden, keine Persistenz gewählt ist
+> und der Host kein eigenes `IUnitOfWork` registriert hat. Wer bewusst nichts committet, sagt
+> `UseNoPersistence()`. Siehe [todo.md](todo.md) TODO-11.
 
 `UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork? unitOfWork = null)` — funktioniert mit
 MS.DI, aber „kein UoW registriert ⇒ Command committet still nicht" ist nur durch ein

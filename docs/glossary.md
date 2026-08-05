@@ -474,6 +474,11 @@ dispatcher/outbox, and clears them **only after** the save succeeds. Integration
 events are enqueued to the [Wolverine](#wolverine) outbox **within this same
 transaction**, so they commit atomically with the state change and are delivered
 after commit ([ADR-0023](./architecture/decisions/0023-wolverine-messaging-transport.md)).
+The dependency is **not optional**: Building Blocks registers a `NullUnitOfWork`
+fallback so the pipeline always resolves, and fails the host at start when scanned
+commands would run into that fallback. A host that deliberately commits nothing
+selects `UseNoPersistence()`
+([ADR-0027](./architecture/decisions/0027-building-blocks-own-wolverine-wiring.md)).
 
 ### Version (stream position)
 

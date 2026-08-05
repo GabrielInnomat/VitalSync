@@ -1,5 +1,6 @@
 using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Application.DomainEvents;
+using BuildingBlocks.Application.Persistence;
 using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
@@ -10,6 +11,7 @@ using BuildingBlocks.Infrastructure.Persistence;
 using BuildingBlocks.Infrastructure.Time;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection;
@@ -143,6 +145,7 @@ internal static class BuildingBlocksComposition
 
         services.TryAddScoped<ProjectionRunner>();
         services.TryAddScoped<IDomainEventPublisher, DomainEventPublisher>();
+        services.TryAddScoped<IUnitOfWork, NullUnitOfWork>();
     }
 
     private static void RegisterStartupChecks(IServiceCollection services, BuildingBlocksOptions options)
@@ -153,6 +156,10 @@ internal static class BuildingBlocksComposition
             new HandlerRegistrationCheck(provider, options.ScannedAssemblies));
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, WolverineRuntimeCheck>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, IntegrationEventSubscriptionCheck>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, UnitOfWorkPresenceCheck>());
+        services.AddSingleton<IStartupCheck>(provider => new UnitOfWorkPresenceCheck(
+            provider,
+            options.WolverineWiring,
+            options.ScannedAssemblies,
+            provider.GetRequiredService<ILogger<UnitOfWorkPresenceCheck>>()));
     }
 }

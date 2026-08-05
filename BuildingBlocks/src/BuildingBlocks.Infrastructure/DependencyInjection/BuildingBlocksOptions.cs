@@ -60,6 +60,12 @@ public sealed class BuildingBlocksOptions
         return this;
     }
 
+    public BuildingBlocksOptions UseNoPersistence()
+    {
+        _persistence.UseNone();
+        return this;
+    }
+
     public BuildingBlocksOptions UseEfCorePersistence<TContext>(
         string connectionString,
         Action<DbContextOptionsBuilder>? configureContext = null)

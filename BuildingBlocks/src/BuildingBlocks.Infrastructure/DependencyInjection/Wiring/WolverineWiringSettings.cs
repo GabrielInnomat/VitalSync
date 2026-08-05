@@ -15,10 +15,18 @@ internal sealed class WolverineWiringSettings
     {
         ArgumentNullException.ThrowIfNull(choice);
 
-        if (!Persistence.IsSelected || Persistence == choice)
+        if (!Persistence.IsChosen || Persistence == choice)
         {
             Persistence = choice;
             return;
+        }
+
+        if (Persistence.IsDeliberatelyWithoutPersistence || choice.IsDeliberatelyWithoutPersistence)
+        {
+            throw new InvalidOperationException(
+                $"UseNoPersistence was combined with {(choice.IsDeliberatelyWithoutPersistence ? Persistence : choice).Description}. " +
+                "UseNoPersistence states that this host deliberately commits nothing, so it cannot be combined " +
+                "with a persistence strategy. Keep exactly one of the two.");
         }
 
         throw new InvalidOperationException(

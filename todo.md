@@ -44,7 +44,7 @@ eine Entscheidung, keinen Code.
 | TODO-08 | Topic-Validierung und Kontextkennung                           | **P1** | gelöst            | WS-05, WS-13, WS-14                   |
 | TODO-09 | Keine CI-Pipeline                                              | **P1** | gelöst            | WS-16                                 |
 | TODO-10 | Rehydrierung: `new()` oder `Activator`?                        | **P1** | gelöst            | hacky-5, IMP-14, WS-02                |
-| TODO-11 | Optionalität von `IUnitOfWork`                                 | **P2** | **Konflikt**      | IMP-07, hacky-11, IMP-46              |
+| TODO-11 | Optionalität von `IUnitOfWork`                                 | **P2** | gelöst            | IMP-07, hacky-11, IMP-46              |
 | TODO-12 | Name der `Result`-Fehlerfactory                                | **P2** | **Konflikt**      | hacky-3, IMP-27, IMP-39               |
 | TODO-13 | Wo lebt die Event-Identität?                                   | **P2** | gelöst            | IMP-41, IMP-11                        |
 | TODO-14 | Idempotenz-Bookkeeping über die Kontextgrenze                  | **P2** | offen             | IMP-11, WS-12                         |
@@ -734,7 +734,7 @@ verschärften `AggregateConventionTests`. ADR-0025-Amendment vom 2026-08-04.
 
 # TODO-11, Optionalität von `IUnitOfWork`
 
-**P2 · KONFLIKT · IMP-07 vs. hacky-11 (+ IMP-46)**
+**P2 · gelöst · IMP-07 vs. hacky-11 (+ IMP-46)**
 
 | Quelle   | Aussage                                                                               |
 | -------- | ------------------------------------------------------------------------------------- |
@@ -747,7 +747,7 @@ Unstrittig ist, dass der ursprüngliche Bug (Absturz ohne Persistenz) weg ist; s
 „kein UoW registriert ⇒ Command committet stillschweigend nicht" ein akzeptabler Endzustand ist.
 Heute hängt die Sichtbarkeit an einem einzelnen `Information`-Log beim Start.
 
-## Lösungsvorschlag
+## Ursprünglicher Lösungsvorschlag
 
 **Empfehlung: hacky-11 folgen.** Ein `Information`-Log ist keine Absicherung — im Produktivbetrieb
 liest ihn niemand, und der Fehlermodus ist „Command meldet Erfolg, Daten fehlen".
@@ -766,6 +766,32 @@ if (!services.Any(d => d.ServiceType == typeof(IUnitOfWork)))
 
 Das Behavior nimmt dann `IUnitOfWork` ohne `?` und ohne Default, der Null-Check im `Handle`
 entfällt. Der Startup-Hinweis bleibt sinnvoll. IMP-07 wäre danach weiterhin gelöst — nur anders.
+
+## Gelöst — die Entscheidung ist explizit, nicht still (ADR-0027-Amendment, 2026-08-05)
+
+Der Vorschlag oben allein hätte nur den `?`-Operator weggeräumt: der Fehlermodus „Command meldet
+Erfolg, nichts committet" wäre exakt derselbe geblieben, nur besser verpackt. Umgesetzt ist deshalb
+die Variante, die den stillen Pfad **nur noch nach ausdrücklicher Ansage** erlaubt.
+
+- `NullUnitOfWork` wird in `RegisterCore` per `TryAddScoped` als Fallback registriert — ein echter
+  UoW (aus der Persistenz-Selektion oder vom Host) gewinnt immer. `UnitOfWorkBehavior` nimmt
+  `IUnitOfWork` ohne `?` und ohne Default, der Null-Check entfällt.
+- `UnitOfWorkPresenceCheck` wird vom Logger zum harten Check. Er besteht, wenn eine Persistenz
+  gewählt wurde, wenn der Host ein eigenes `IUnitOfWork` registriert hat, oder wenn die gescannten
+  Assemblies gar keine Commands enthalten (Tests, reine Query-Hosts). Er **wirft** — unter Nennung
+  der betroffenen Commands —, wenn Commands in den Fallback laufen würden.
+- Ein Host, der bewusst nichts committet (Gateway, Facade, eigene Persistenz), sagt das mit dem
+  neuen `options.UseNoPersistence()`. Das ist eine **positive Selektion** auf `PersistenceChoice`,
+  kein Opt-out-Flag im Sinne des ADR-0027-Amendments: es schaltet keine Prüfung ab, ist zu
+  `UseEfCorePersistence`/`UseMartenEventSourcing` exklusiv (Kombination wirft), und der Check läuft
+  weiter und protokolliert die bewusste Wahl.
+- `PersistenceChoice` bekommt dafür einen vierten Fall; deshalb unterscheidet die Wahl jetzt
+  `IsChosen` (es wurde etwas gesagt) von `IsSelected` (ein echter Store existiert — die Tatsache,
+  die Outbox, Domain-Event-Routing und Wolverine steuert).
+
+Damit sind **beide** Quellen erfüllt: der Absturz aus IMP-07 bleibt behoben, und der stille Pfad
+aus hacky-11 ist nur noch erreichbar, wenn ihn jemand hinschreibt. Getestet in
+`UnitOfWorkPresenceCheckTests` und `PersistenceChoiceTests`.
 
 ---
 

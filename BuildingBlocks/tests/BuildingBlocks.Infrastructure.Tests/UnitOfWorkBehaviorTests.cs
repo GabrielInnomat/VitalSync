@@ -2,12 +2,10 @@ using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Application.Persistence;
 using BuildingBlocks.Application.Results;
 using BuildingBlocks.Infrastructure.DependencyInjection;
-using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using BuildingBlocks.Infrastructure.Dispatching;
+using BuildingBlocks.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Testing;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
@@ -90,9 +88,9 @@ public sealed class UnitOfWorkBehaviorTests
     }
 
     [Fact]
-    public async Task Behavior_InstantiatedDirectlyWithoutUnitOfWork_PassesThrough()
+    public async Task Behavior_WithTheNullUnitOfWork_PassesThrough()
     {
-        var behavior = new UnitOfWorkBehavior<ProbeCommand, Result>();
+        var behavior = new UnitOfWorkBehavior<ProbeCommand, Result>(new NullUnitOfWork());
 
         var result = await behavior.HandleAsync(
             new ProbeCommand(),
@@ -101,60 +99,6 @@ public sealed class UnitOfWorkBehaviorTests
 
         Assert.True(result.IsSuccess);
     }
-
-    [Fact]
-    public void MissingUnitOfWork_LogsStartupNotice()
-    {
-        var services = new ServiceCollection();
-        services.AddFakeLogging();
-        services.AddBuildingBlocks(_ => { });
-
-        using var provider = services.BuildServiceProvider();
-
-        RunUnitOfWorkPresenceCheck(provider);
-
-        Assert.Contains(NoticeRecords(provider), record => record.Level == LogLevel.Information);
-    }
-
-    [Fact]
-    public void RegisteredUnitOfWork_DoesNotLogStartupNotice()
-    {
-        var services = new ServiceCollection();
-        services.AddFakeLogging();
-        services.AddScoped<IUnitOfWork>(_ => new RecordingUnitOfWork());
-        services.AddBuildingBlocks(_ => { });
-
-        using var provider = services.BuildServiceProvider();
-
-        RunUnitOfWorkPresenceCheck(provider);
-
-        Assert.Empty(NoticeRecords(provider));
-    }
-
-    [Fact]
-    public void UnitOfWorkRegisteredAfterBuildingBlocks_DoesNotLogStartupNotice()
-    {
-        var services = new ServiceCollection();
-        services.AddFakeLogging();
-        services.AddBuildingBlocks(_ => { });
-        services.AddScoped<IUnitOfWork>(_ => new RecordingUnitOfWork());
-
-        using var provider = services.BuildServiceProvider();
-
-        RunUnitOfWorkPresenceCheck(provider);
-
-        Assert.Empty(NoticeRecords(provider));
-    }
-
-    private static void RunUnitOfWorkPresenceCheck(ServiceProvider provider) =>
-        Assert.Single(
-            provider.GetServices<IStartupCheck>(),
-            check => check is UnitOfWorkPresenceCheck).Run();
-
-    private static IEnumerable<FakeLogRecord> NoticeRecords(ServiceProvider provider) =>
-        provider.GetRequiredService<FakeLogCollector>()
-            .GetSnapshot()
-            .Where(record => record.Message.Contains("No persistence configured", StringComparison.Ordinal));
 
     private static ServiceProvider BuildProvider(IUnitOfWork unitOfWork, ICommandHandler<ProbeCommand> handler)
     {

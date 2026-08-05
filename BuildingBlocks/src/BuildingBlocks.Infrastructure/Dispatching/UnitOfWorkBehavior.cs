@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingBlocks.Infrastructure.Dispatching;
 
-internal sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork? unitOfWork = null)
+internal sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork unitOfWork)
     : IPipelineBehavior<TRequest, TResponse>
     where TResponse : Result
 {
@@ -24,7 +24,7 @@ internal sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork? unitO
 
         var response = await continuation(cancellationToken).ConfigureAwait(false);
 
-        if (unitOfWork is null || !IsCommand || response.IsFailure)
+        if (!IsCommand || response.IsFailure)
         {
             return response;
         }

@@ -44,8 +44,33 @@ public sealed class PersistenceChoiceTests
             .Where(type => type != typeof(PersistenceChoice) && typeof(PersistenceChoice).IsAssignableFrom(type))
             .ToArray();
 
-        Assert.Equal(3, declared.Length);
+        Assert.Equal(4, declared.Length);
         Assert.All(declared, type => Assert.Equal(typeof(PersistenceChoice), type.DeclaringType));
+    }
+
+    [Fact]
+    public void DeliberatelyWithoutPersistence_IsChosenButNotSelected()
+    {
+        var settings = new WolverineWiringSettings();
+        settings.SelectPersistence(PersistenceChoice.NoPersistence);
+
+        Assert.True(settings.Persistence.IsChosen);
+        Assert.False(settings.Persistence.IsSelected);
+        Assert.True(settings.Persistence.IsDeliberatelyWithoutPersistence);
+        Assert.False(settings.RequiresWolverine);
+    }
+
+    [Fact]
+    public void NoPersistenceAfterAStrategy_Throws()
+    {
+        var settings = new WolverineWiringSettings();
+        settings.SelectPersistence(PersistenceChoice.Marten);
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => settings.SelectPersistence(PersistenceChoice.NoPersistence));
+
+        Assert.Contains("UseNoPersistence", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("UseMartenEventSourcing", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

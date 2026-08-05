@@ -299,6 +299,15 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   a second call used to fill fresh ones nobody resolves, so its behaviors ran at order 0,
   its persistence/messaging selection was ignored and its `[EventName]` names were missing
   at the first commit. Every selection goes into the same options callback.
+- **Committing nothing is a choice, not a default** (ADR-0027 amendment 2026-08-05).
+  `UnitOfWorkBehavior` takes a **non-optional** `IUnitOfWork`; Building Blocks registers a
+  `NullUnitOfWork` fallback (`TryAddScoped`, a real one always wins) so the pipeline resolves,
+  and `UnitOfWorkPresenceCheck` **throws at start** — naming the commands — when the scanned
+  assemblies contain commands, no persistence strategy was selected and the host registered no
+  `IUnitOfWork`. A host that genuinely commits nothing says `options.UseNoPersistence()`: a
+  positive selection on `PersistenceChoice`, mutually exclusive with the two persistence
+  strategies, not an opt-out flag. Never restore the old `IUnitOfWork? = null` default — its
+  failure mode is "command reports success, data is gone".
 
 ## Infrastructure package layout
 

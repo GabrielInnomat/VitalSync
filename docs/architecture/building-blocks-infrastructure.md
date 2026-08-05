@@ -146,7 +146,7 @@ Implements the `ISender` contract from `BuildingBlocks.Application`
 | --------------------------- | ----- | -------------- |
 | `LoggingBehavior`           | `0` (outermost) | Structured logging of request name, outcome (success/failure categories), and duration. Never logs payload contents by default. Being outermost, translated failures (expected domain errors, concurrency conflicts) are logged at `Warning`, while only genuinely unexpected exceptions are logged at `Error` (faulted) and rethrown. |
 | `ExceptionToResultBehavior` | `100` | Translates `DomainValidationException` / `BusinessRuleViolationException` into `Result.Failure` (ADR-0017), before logging sees the outcome and before any transaction is opened. Unexpected exceptions pass through untouched. |
-| `UnitOfWorkBehavior`        | `300` (innermost) | Commits the unit of work when a **command** completes successfully — including the atomic outbox write (see §2/§4). Queries and failed results are unaffected: nothing is committed, and query-only hosts need no `IUnitOfWork` registration. The unit of work is an **optional** dependency (nullable constructor injection): hosts without configured persistence (handler tests, gateway/facade services, hosts with their own persistence) dispatch commands as a pass-through without commit; `AddBuildingBlocks` logs a startup notice when no `IUnitOfWork` is registered so the no-op is visible. Translates the store's optimistic-concurrency exceptions raised on commit (Marten's `ConcurrencyException`, EF Core's `DbUpdateConcurrencyException`) into a `Failure` with category `Conflict`. |
+| `UnitOfWorkBehavior`        | `300` (innermost) | Commits the unit of work when a **command** completes successfully — including the atomic outbox write (see §2/§4). Queries and failed results are unaffected: nothing is committed, and query-only hosts need no `IUnitOfWork` registration. The dependency is **non-optional**: Building Blocks registers a `NullUnitOfWork` fallback so the pipeline always resolves, and `UnitOfWorkPresenceCheck` fails the host at start when that fallback would silently swallow real commands (see §Composition root). A host that deliberately commits nothing says so with `UseNoPersistence()`. Translates the store's optimistic-concurrency exceptions raised on commit (Marten's `ConcurrencyException`, EF Core's `DbUpdateConcurrencyException`) into a `Failure` with category `Conflict`. |
 
 The canonical execution order is therefore:
 `Logging → ExceptionToResult → UnitOfWork → handler`.
@@ -648,7 +648,7 @@ registers — resolves `IEnumerable<IStartupCheck>` and runs the
 | `HandlerRegistrationCheck`         | before   | a scanned command/query has no handler, or two result contracts |
 | `WolverineRuntimeCheck`            | before   | a capability needs Wolverine and no runtime is registered       |
 | `AggregateStateModelCheck<T>`      | before   | an aggregate state maps a forbidden navigation or key           |
-| `UnitOfWorkPresenceCheck`          | before   | never — it logs an informational notice                         |
+| `UnitOfWorkPresenceCheck`          | before   | commands are scanned, nothing commits them, and nobody said so  |
 | `IntegrationEventSubscriptionCheck`| after    | a handled integration event matches no bound pattern, or is own |
 
 **Only the phase is load-bearing, not the registration order.** The checks are pure
@@ -666,13 +666,45 @@ Two consequences for authoring:
   `IntegrationEventSubscriptionCheck` take `WolverineWiringSettings` and return early
   when the capability was not selected. Conditional registration would make "is this
   check even present?" a second thing to reason about.
-- **`UnitOfWorkPresenceCheck` probes the built container**, via
-  `IServiceProviderIsService`, not the `IServiceCollection` at composition time. A host
-  that registers `IUnitOfWork` *after* `AddBuildingBlocks` used to get the notice
-  wrongly; now it does not.
+- **`UnitOfWorkPresenceCheck` probes the built container**, by resolving `IUnitOfWork`
+  from a scope rather than reading the `IServiceCollection` at composition time. A host
+  that registers `IUnitOfWork` *after* `AddBuildingBlocks` used to be flagged wrongly;
+  now it is not.
 
 A new check is a new `IStartupCheck` plus one `TryAddEnumerable` line — never another
 hosted service.
+
+### Committing nothing is a choice, not a default
+
+`UnitOfWorkBehavior` used to take `IUnitOfWork? unitOfWork = null` and skip the commit
+when nothing was registered. The crash it originally fixed was real, but the state it
+left behind has the worst possible failure shape: **the command reports success and the
+data is gone**, with a single `Information` log at start as the only evidence. Nobody
+reads that log in production.
+
+The dependency is therefore non-optional. Building Blocks registers a `NullUnitOfWork`
+fallback in `RegisterCore` (`TryAddScoped`, so a real one always wins) purely so the
+pipeline resolves, and `UnitOfWorkPresenceCheck` decides at start whether reaching that
+fallback is acceptable:
+
+| Situation                                            | Outcome                        |
+| ---------------------------------------------------- | ------------------------------ |
+| a persistence strategy was selected                  | passes — the registrar wired a real `IUnitOfWork` |
+| `UseNoPersistence()` was selected                    | passes, logs the deliberate choice |
+| the host registered its own `IUnitOfWork`            | passes                         |
+| no commands in the scanned assemblies                | passes — there is nothing to commit |
+| commands are scanned and only the fallback resolves  | **throws**, naming the commands |
+
+`UseNoPersistence()` is a positive selection on `PersistenceChoice`, not an opt-out
+flag: it is mutually exclusive with `UseEfCorePersistence`/`UseMartenEventSourcing`
+(combining them throws) and it requires no message store, no Wolverine, and no domain
+event assembly. `PersistenceChoice` gains a fourth case for it, which is why the choice
+now distinguishes `IsChosen` (something was said) from `IsSelected` (a real store
+exists — the fact that drives the outbox, domain-event routing and Wolverine).
+
+The last row is the point of the whole change: a gateway, a test, or a query-only host
+still works untouched, while a real service host cannot reach the silent path without
+writing `UseNoPersistence()` in its own composition root.
 
 ### A note on folder names
 
