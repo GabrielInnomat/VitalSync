@@ -5,7 +5,7 @@ namespace BuildingBlocks.Domain.Aggregates;
 
 public abstract record AggregateState<TSelf, TKey>
     where TSelf : AggregateState<TSelf, TKey>
-    where TKey : struct, IEntityKey
+    where TKey : struct, IEntityKey, IEquatable<TKey>
 {
     public abstract TKey Id { get; init; }
 

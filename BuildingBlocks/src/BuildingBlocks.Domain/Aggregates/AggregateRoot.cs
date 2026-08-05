@@ -5,7 +5,7 @@ using BuildingBlocks.Domain.Rules;
 namespace BuildingBlocks.Domain.Aggregates;
 
 public abstract class AggregateRoot<TKey, TState> : EntityBase<TKey>, IAggregateRoot<TKey>, IDomainEventOwner, IDomainEventRaiser, IStateOwner
-    where TKey : struct, IEntityKey
+    where TKey : struct, IEntityKey, IEquatable<TKey>
     where TState : AggregateState<TState, TKey>
 {
     private readonly List<IDomainEvent> _domainEvents = [];

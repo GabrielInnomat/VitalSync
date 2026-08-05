@@ -9,7 +9,7 @@ namespace BuildingBlocks.Infrastructure.Persistence.EventSourced;
 internal sealed class MartenEventSourcedRepository<TAggregate, TKey>(IDocumentSession session, MartenAggregateTracker tracker)
     : IRepository<TAggregate, TKey>
     where TAggregate : class, IEventSourcedAggregateRoot<TKey>
-    where TKey : struct, IEntityKey
+    where TKey : struct, IEntityKey, IEquatable<TKey>
 {
     public async Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken cancellationToken)
     {

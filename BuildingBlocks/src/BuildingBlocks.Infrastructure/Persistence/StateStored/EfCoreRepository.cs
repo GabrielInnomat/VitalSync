@@ -9,7 +9,7 @@ namespace BuildingBlocks.Infrastructure.Persistence.StateStored;
 internal sealed class EfCoreRepository<TAggregate, TKey>(DbContext context, EfCoreAggregateTracker tracker)
     : IRepository<TAggregate, TKey>
     where TAggregate : class, IAggregateRoot<TKey>
-    where TKey : struct, IEntityKey
+    where TKey : struct, IEntityKey, IEquatable<TKey>
 {
     public async Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken cancellationToken)
     {

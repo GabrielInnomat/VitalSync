@@ -147,7 +147,7 @@ pipeline behavior in `Infrastructure` — handlers never commit themselves.
 ```csharp
 public interface IRepository<TAggregate, in TKey>
     where TAggregate : class, IAggregateRoot<TKey>
-    where TKey : struct, IEntityKey
+    where TKey : struct, IEntityKey, IEquatable<TKey>
 {
     Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken ct);
     Task AddAsync(TAggregate aggregate, CancellationToken ct);
@@ -171,9 +171,11 @@ internal factory in `Infrastructure` and validated at host startup
 ([ADR-0025](./decisions/0025-unified-state-fold-aggregate-model.md)
 reconstitution amendment 2026-08-04) — no public constructor is ever demanded.
 
-The `TKey : struct, IEntityKey` constraint ties the repository to the strongly
+The `TKey : struct, IEntityKey, IEquatable<TKey>` constraint ties the repository to the strongly
 typed identifier model of `BuildingBlocks.Domain` (ADR-0005): keys are value
-types implementing `IEntityKey`, never primitives.
+types implementing `IEntityKey`, never primitives, and they must declare value
+equality — a `readonly record struct` does so automatically (ADR-0008 amendment
+2026-08-05).
 
 Because the contract is persistence-agnostic, handlers do not change when a
 context switches between state-stored (EF Core) and event-sourced (Marten)

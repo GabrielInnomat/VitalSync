@@ -1,7 +1,7 @@
 namespace BuildingBlocks.Domain.Entities;
 
 public abstract class EntityBase<TKey> : IEntity<TKey>, IEquatable<EntityBase<TKey>>
-    where TKey : struct, IEntityKey
+    where TKey : struct, IEntityKey, IEquatable<TKey>
 {
     private protected EntityBase()
     {

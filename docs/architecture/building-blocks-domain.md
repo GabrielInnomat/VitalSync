@@ -97,7 +97,7 @@ public interface IEntityKey<out TValue> : IEntityKey
 }
 ```
 
-- `IEntityKey` is the **non-generic marker**. It is the constraint used throughout the block (`where TKey : struct, IEntityKey`), so the base classes can stay agnostic of the underlying value type. It also declares `IsEmpty`, which each key implements to define what "empty/invalid" means for its own value type.
+- `IEntityKey` is the **non-generic marker**. It is the constraint used throughout the block (`where TKey : struct, IEntityKey, IEquatable<TKey>`), so the base classes can stay agnostic of the underlying value type. It also declares `IsEmpty`, which each key implements to define what "empty/invalid" means for its own value type.
 - `IEntityKey<TValue>` exposes the underlying primitive via `Value`. The value type can be **any `notnull` type** — `Guid`, `int`, `string`, etc. — not just `Guid`.
 
 Every aggregate/entity key is a `readonly record struct` implementing `IEntityKey<TValue>` and providing an `IsEmpty` rule:
@@ -154,7 +154,28 @@ The identity-equality implementation lives **once**, on `EntityBase<TKey>`, whic
 left.Equals(right)  ⇔  left.GetType() == right.GetType()  ∧  left.Id == right.Id
 ```
 
-> Note: two _un-created_ aggregates both have `Id == default` and would compare equal until their creation events run. In practice aggregates are only created through factories that immediately raise the creation event.
+> Note: two _un-created_ aggregates both have `Id == default` and would compare equal until their creation events run. That is left as-is on purpose — see below.
+
+#### Why the equality rule does not special-case an empty identity
+
+A hull without identity never leaves the domain, because **four guards** stand in the way:
+
+| Guard | Where | Rejects |
+| --- | --- | --- |
+| Constructor check | `Entity<TKey, TState>` | a child constructed with an empty id |
+| Fold check | `AggregateRoot.ApplyEvent` | a state whose id is still empty after applying an event |
+| Restore check | `IStateOwner.Restore` | a persisted state carrying an empty identity |
+| Repository check | `EfCoreRepository` / `MartenEventSourcedRepository` | `AddAsync` with an empty identity |
+
+What remains is the window between an aggregate's private parameterless constructor and its first `RaiseEvent` — two statements on a local variable, inside a named factory or inside `AggregateFactory`. Nothing reachable from application code.
+
+Guarding inside `Equals` instead was rejected: a clause like `!Id.IsEmpty && …` makes an object unequal **to itself**, so it needs a `ReferenceEquals` short-circuit to stay reflexive — real complexity in the hottest equality path, for a hole that has no exit. `TransientIdentityTests` pins the arrangement, including the corollary that a hull's hash code **changes** when it gains identity, so a hull must never be put into a `HashSet` or used as a dictionary key.
+
+#### A key must declare value equality
+
+The constraint is `where TKey : struct, IEntityKey, IEquatable<TKey>`. Without the second interface, `Id.Equals(other.Id)` binds to `ValueType.Equals(object)`: field comparison by reflection, plus a boxing allocation on every comparison. With it, the typed overload is visible, the boxing disappears, and a key that has no value equality no longer compiles. A `readonly record struct` — which is what every key is supposed to be — satisfies it automatically.
+
+The constraint is viral: it is repeated at all 13 declarations that carry a `TKey`. `EntityKeyConstraintTests` catches a new declaration that forgets it, which the compiler would only notice once such a type passes its `TKey` on to one of the bases.
 
 ## The state object
 
@@ -163,7 +184,7 @@ Every aggregate's state derives from the self-referencing `AggregateState<TSelf,
 ```csharp
 public abstract record AggregateState<TSelf, TKey>
     where TSelf : AggregateState<TSelf, TKey>
-    where TKey : struct, IEntityKey
+    where TKey : struct, IEntityKey, IEquatable<TKey>
 {
     public abstract TKey Id { get; init; }
 
@@ -301,7 +322,7 @@ Every aggregate derives (directly or indirectly) from the single base `Aggregate
 ```csharp
 public abstract class AggregateRoot<TKey, TState>
     : EntityBase<TKey>, IAggregateRoot<TKey>, IDomainEventOwner, IDomainEventRaiser, IStateOwner
-    where TKey : struct, IEntityKey
+    where TKey : struct, IEntityKey, IEquatable<TKey>
     where TState : AggregateState<TState, TKey>
 ```
 
@@ -315,7 +336,7 @@ public abstract class AggregateRoot<TKey, TState>
 ```csharp
 public abstract class EventSourcedAggregateRoot<TKey, TState>
     : AggregateRoot<TKey, TState>, IEventSourcedAggregateRoot<TKey>
-    where TKey : struct, IEntityKey
+    where TKey : struct, IEntityKey, IEquatable<TKey>
     where TState : AggregateState<TState, TKey>
 ```
 

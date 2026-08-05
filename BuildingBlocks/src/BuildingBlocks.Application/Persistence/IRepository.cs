@@ -5,7 +5,7 @@ namespace BuildingBlocks.Application.Persistence;
 
 public interface IRepository<TAggregate, in TKey>
     where TAggregate : class, IAggregateRoot<TKey>
-    where TKey : struct, IEntityKey
+    where TKey : struct, IEntityKey, IEquatable<TKey>
 {
     Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken cancellationToken);
 

@@ -4,7 +4,7 @@ namespace BuildingBlocks.Domain.Entities;
 
 public abstract record EntityState<TSelf, TKey>
     where TSelf : EntityState<TSelf, TKey>
-    where TKey : struct, IEntityKey
+    where TKey : struct, IEntityKey, IEquatable<TKey>
 {
     public abstract TKey Id { get; init; }
 

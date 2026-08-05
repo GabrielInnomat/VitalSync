@@ -7,7 +7,7 @@ namespace BuildingBlocks.Infrastructure.Persistence;
 internal sealed class EntityKeyValueConverter<TKey, TValue>() : ValueConverter<TKey, TValue>(
     key => key.Value,
     value => KeyFactory(value))
-    where TKey : struct, IEntityKey<TValue>
+    where TKey : struct, IEntityKey<TValue>, IEquatable<TKey>
     where TValue : notnull
 {
     private static readonly Func<TValue, TKey> CompiledFactory = BuildFactory();

@@ -5,6 +5,7 @@
 - **Amended:** 2026-06-25 (aggregate identity now sourced from the state — see [ADR-0010](./0010-aggregate-state-object.md))
 - **Amended:** 2026-07-22 (keys split into `IEntityKey` marker + `IEntityKey<TValue>`; identity validation is type-agnostic via `IsEmpty`; aggregate roots split into two bases — see the note below and [ADR-0012](./0012-optional-event-sourcing-aggregate.md))
 - **Amended:** 2026-08-04 (the state-less `Entity<TKey>` is removed; the non-aggregate entity base is `Entity<TKey, TState>` — see the second note below and [ADR-0032](./0032-child-entities-raise-via-root.md))
+- **Amended:** 2026-08-05 (a key must be `IEquatable<TKey>`; transient identity is closed by guards, not by the equality rule — see the third note below)
 
 ## Context
 
@@ -34,13 +35,23 @@ A complication arises from the decision to hold an aggregate's state in a dedica
 
 > **Implementation note (amendment 2026-08-04):** The state-less `Entity<TKey>` no longer exists. [ADR-0032](./0032-child-entities-raise-via-root.md) gave non-aggregate entities a state and a raise channel, and the state-less base was left with no production deriver — every entity inside an aggregate has a state, because its data lives in the aggregate's state graph ([ADR-0031](./0031-aggregate-child-collections-as-owned-types.md)). Read every `Entity<TKey>` above as **`Entity<TKey, TState>`**: it still assigns `Id` in the **constructor**, get-only, with the `IsEmpty` guard there, and it still derives from `EntityBase<TKey>`, which remains the single home of the equality rule. `EntityBase<TKey>` now has exactly two direct children — `Entity<TKey, TState>` and `AggregateRoot<TKey, TState>` — which is also the whole abstract entity hierarchy.
 
+> **Implementation note (amendment 2026-08-05): a key must declare value equality, and transient identity is closed by guards.**
+>
+> Two loose ends of the original decision are tied off here.
+>
+> **First: `where TKey : struct, IEntityKey, IEquatable<TKey>`.** The consequence below notes that keys "being `record struct`, get value equality for free" — but nothing *required* it. A hand-written `struct` implementing only `IEntityKey` compiled fine, and `EntityBase.Equals` then bound `Id.Equals(other.Id)` to `ValueType.Equals(object)`: reflection-based field comparison, plus one boxing allocation per comparison. With `IEquatable<TKey>` in the constraint the typed overload is visible, the boxing disappears, and a key without value equality no longer compiles. The constraint is viral and is repeated at all 13 declarations that carry a `TKey` (10 of them public contracts). It is not a breaking change for any key that is a `readonly record struct`, which is what this ADR prescribes anyway. `EntityKeyConstraintTests` in `BuildingBlocks.Domain.Tests` and `BuildingBlocks.Application.Tests` fails when a new generic declaration forgets it — the compiler alone would only catch it once such a type passes its `TKey` on to one of the bases.
+>
+> **Second: `EntityBase` deliberately does *not* special-case an empty identity.** The consequence below observes that two un-created instances compare equal, and softens it with "in practice". That is now precise: **four guards make an unidentified entity unreachable from outside the domain.** `Entity`'s constructor rejects an empty id; `AggregateRoot.ApplyEvent` rejects a state whose id is still empty after folding; `IStateOwner.Restore` rejects a state carrying an empty identity; and both repositories reject `AddAsync` with an empty identity. The only window left is between an aggregate's private parameterless constructor and its first `RaiseEvent` — two statements on a local variable inside a factory or inside `AggregateFactory`.
+>
+> Fixing this in `EntityBase` instead was rejected. An `!Id.IsEmpty && …` clause makes an object unequal *to itself*, so it needs a `ReferenceEquals` short-circuit to stay reflexive — real complexity in the single most-used equality path, buying nothing that the four guards do not already buy. `TransientIdentityTests` pins the whole arrangement: it asserts the equality property that makes the guards necessary, that a hull's hash code changes when it gains identity (hence: never put a hull in a `HashSet`), that each guard throws, and that every way out of the domain — named factory, `Restore`, `LoadFromHistory` — yields an identified aggregate.
+
 ## Consequences
 
 - Whole classes of identifier-mix-up bugs become compile-time errors.
 - Identity cannot change after it is established, keeping equality and hashing stable.
 - Equality is type-sensitive: instances of different types with the same id are never equal.
-- For event-sourced aggregates, two *un-created* instances (both `Id == default`) compare equal until their creation events run; in practice aggregates are created only via factories that immediately raise the creation event.
-- Keys, being `record struct`, get value equality for free; the `struct` constraint on `TKey` keeps keys as value types throughout.
+- For event-sourced aggregates, two *un-created* instances (both `Id == default`) compare equal until their creation events run; in practice aggregates are created only via factories that immediately raise the creation event. **Superseded by the 2026-08-05 amendment above**, which replaces "in practice" with four guards that make an unidentified aggregate unreachable from outside the domain.
+- Keys, being `record struct`, get value equality for free; the `struct` constraint on `TKey` keeps keys as value types throughout. **Since the 2026-08-05 amendment this is required, not merely typical:** the constraint reads `where TKey : struct, IEntityKey, IEquatable<TKey>`.
 - Persistence must map strongly typed keys to their underlying primitive (handled by the Persistence building block).
 
 ## Alternatives considered

@@ -5,7 +5,7 @@ namespace BuildingBlocks.Domain.Aggregates;
 
 public abstract class EventSourcedAggregateRoot<TKey, TState>(TState initialState)
     : AggregateRoot<TKey, TState>(initialState), IEventSourcedAggregateRoot<TKey>
-    where TKey : struct, IEntityKey
+    where TKey : struct, IEntityKey, IEquatable<TKey>
     where TState : AggregateState<TState, TKey>
 {
     void IEventSourcedAggregateRoot<TKey>.LoadFromHistory(IEnumerable<IDomainEvent> history)

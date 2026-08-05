@@ -133,7 +133,18 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   signal for "privileged view, implemented explicitly, infrastructure only", shared
   with `IStateOwner`. The two are deliberately **not** merged: `IDomainEventOwner`
   applies to every aggregate, `IStateOwner` only to state-stored ones.
-- **Entity identity and equality** follow ADR-0008.
+- **Entity identity and equality** follow ADR-0008. Two rules from its 2026-08-05 amendment:
+  a key is constrained `where TKey : struct, IEntityKey, IEquatable<TKey>` — without the second
+  interface `Id.Equals` binds to `ValueType.Equals(object)` (reflection plus a boxing allocation
+  per comparison) and a key with no value equality compiles happily; the constraint is viral and
+  repeated at all 13 declarations carrying a `TKey`, and `EntityKeyConstraintTests` catches a new
+  one that forgets it. And `EntityBase.Equals` deliberately does **not** special-case an empty
+  identity: four guards (`Entity`'s constructor, `AggregateRoot.ApplyEvent`, `IStateOwner.Restore`,
+  both repositories' `AddAsync`) already make an unidentified entity unreachable from outside the
+  domain, whereas an `!Id.IsEmpty && …` clause would make an object unequal to itself and need a
+  `ReferenceEquals` short-circuit to stay reflexive. Do not "fix" the equality rule; add the guard.
+  Corollary worth knowing: a hull's hash code **changes** when it gains identity, so never put one
+  in a `HashSet` or use it as a dictionary key.
 - **Event identity is asymmetric** (ADR-0029): domain events are **pure value
   records with no identity fields** — `IDomainEvent`/`DomainEvent` are empty, and
   `EventId`/`OccurredAt` are minted by the unit of work at commit and travel on the

@@ -4,7 +4,7 @@ using BuildingBlocks.Domain.Rules;
 namespace BuildingBlocks.Domain.Entities;
 
 public abstract class Entity<TKey, TState> : EntityBase<TKey>
-    where TKey : struct, IEntityKey
+    where TKey : struct, IEntityKey, IEquatable<TKey>
     where TState : EntityState<TState, TKey>
 {
     private readonly IDomainEventRaiser _raiser;
