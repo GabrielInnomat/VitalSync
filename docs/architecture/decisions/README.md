@@ -61,6 +61,7 @@ original wording away — the amendment must remain readable as a correction.
 | [0030](./0030-persisted-names-and-aggregate-version.md)   | Persisted names are declared, and the aggregate version is part of the state | Accepted |
 | [0031](./0031-aggregate-child-collections-as-owned-types.md) | Aggregate child collections map as owned types      | Accepted                  |
 | [0032](./0032-child-entities-raise-via-root.md)             | Child entities raise domain events through their aggregate root | Accepted     |
+| [0033](./0033-typed-keys-are-mapped-explicitly.md)         | Typed keys are mapped explicitly, never discovered | Accepted                |
 
 ## Template
 

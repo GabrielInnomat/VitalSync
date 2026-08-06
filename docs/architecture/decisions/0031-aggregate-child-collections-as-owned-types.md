@@ -150,3 +150,17 @@ described under Decision. Three further shapes are now covered by tests rather t
 The declared-key convention is the price of the by-key walk and is now enforced at startup. It was
 implicit in the original decision ("declares the child's own strongly typed id as the key"); it is
 now checked.
+
+> **Amendment (2026-08-05): the metadata-API move was only half the story.**
+>
+> The consequence above notes that `ApplyEntityKeyConversions` had to move from the builder API to
+> the metadata API because owned types are shared-type entity types. That move preserved the
+> helper's silent side effect: `AddProperty` mapped **any** CLR property of key type, including one
+> the model had explicitly ignored and one that was computed and get-only. The first produced a
+> column nobody asked for; the second broke model creation with "No backing field could be found".
+>
+> **ADR-0033 removes the cause rather than the symptoms:** the helper no longer discovers or adds
+> properties at all, so a typed key is mapped explicitly — which every context here, including the
+> `OwnsMany` configuration this ADR mandates, already does. Owned types are unaffected either way:
+> they are separate entity types, so their properties are configured through `OwnsMany` and found
+> by `FindProperty`.

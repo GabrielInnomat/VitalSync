@@ -341,6 +341,16 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   runner, envelope) and
   `Messaging/IntegrationEvents/` hold what runs per message. Start-up checks live in
   `DependencyInjection/Validation/`.
+- **`ApplyEntityKeyConversions` converts, it never discovers** (ADR-0033). EF Core's discovery
+  never finds an `IEntityKey<T>` property ("not a supported primitive type"), and the helper used
+  to compensate with a CLR scan plus `AddProperty` — a helper that wrote to the model and could
+  therefore contradict it (an `Ignore()`d key returned as a column; a computed get-only key broke
+  model creation). It now only walks `GetProperties()` and attaches the converter, skipping
+  properties that already have one. So **every `DbContext` maps every typed key explicitly**,
+  which every context here already does anyway for column names, `IsRequired` and
+  `IsConcurrencyToken`. Forget one and EF Core fails at model build, naming the property and both
+  remedies — loud, not silent. Owned types were never affected (separate entity types, configured
+  via `OwnsMany`). Complex types stay out of scope: no `ComplexProperty` exists in the repo.
 - **An event's identity is minted in exactly one place.** `DomainEventEnvelopeFactory`
   reads `IClock.Now` **once per commit** and counts each event's per-aggregate `Version`
   backwards from the aggregate's current version; both units of work call it and contain

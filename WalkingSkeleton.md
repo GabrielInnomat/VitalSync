@@ -1105,6 +1105,23 @@ foreach (var entityType in modelBuilder.Model.GetEntityTypes())
 Zusammen mit hacky Nr. 4 umsetzen: dort wird die Schleife ohnehin von CLR- auf
 Model-Properties umgestellt, und `GetComplexProperties()` ist genau dann verfügbar.
 
+#### Nachtrag (2026-08-05): hacky Nr. 4 ist gelöst, WS-15 bleibt bewusst offen
+
+Die Annahme „beide Punkte gehören in einen Fix" hat sich nicht gehalten — sie sind gegenläufig.
+Der CLR-Scan wurde nicht auf Model-Properties umgestellt, sondern **ganz entfernt** (ADR-0033):
+eine `IEntityKey<T>`-Property wird von EF Cores Discovery nie gefunden, also mappt jeder
+`DbContext` seine typisierten Schlüssel explizit — was alle echten Kontexte ohnehin tun. Damit
+kann der Helper dem Modell nicht mehr widersprechen, und ein vergessener Schlüssel scheitert laut
+beim Modellaufbau.
+
+WS-15 wird davon nicht mitgenommen, sondern kleiner: der Helper läuft jetzt ohnehin über das
+Modell, `GetComplexProperties()` wäre eine zusätzliche Schleife. Offen bleibt es trotzdem, weil es
+heute keinen Anwendungsfall gibt: `ComplexProperty` kommt im gesamten Repo nicht vor. Write-seitig
+ist der Weg durch ADR-0031 (`OwnsMany`, `ToJson()`) und ADR-0025
+(kein Complex Type für den State) belegt, und Owned Types sind eigene Entity-Types, also bereits
+erfasst. Read-seitig sind die Modelle flach. Der Fix bleibt eine Zeile und gehört in den Moment,
+in dem das erste eingebettete Value Object mit typisiertem Schlüssel auftaucht.
+
 ---
 
 ### WS-16, Keine CI-Pipeline — **gelöst (2026-08-03)**

@@ -117,6 +117,24 @@ a record, so it compares by value. The cross-cutting checks that need the whole 
 root's `Validate` phase, since they are order-independent and only decidable once the
 options lambda has run.
 
+### Typed keys are converted, never discovered
+
+EF Core's property discovery does **not** find a property whose type is an `IEntityKey<T>` — it is
+"not a supported primitive type". `ApplyEntityKeyConversions` used to compensate by scanning the
+CLR type and calling `AddProperty`, which meant a helper that wrote to the model and could
+therefore contradict it: an `Ignore()`d key came back as a column, and a computed get-only key
+broke model creation with "No backing field could be found".
+
+Since ADR-0033 the helper only walks the properties the model already has and attaches an
+`EntityKeyValueConverter<TKey, TValue>` to each one of key type, skipping any that already carries
+a converter. It adds nothing, so it can override nothing. The price is that a `DbContext` maps
+every typed key explicitly — which every context here already does, because it also wants column
+names, `IsRequired` and `IsConcurrencyToken`. Forget one and EF Core fails when the model is
+built, naming the property, its type and both remedies; `EntityKeyConversionTests` pins that
+failure alongside the owned-type case.
+
+Complex types are out of scope: `ComplexProperty` appears nowhere in the repository, write-side
+children are owned types by ADR-0031, and read models are flat. See WS-15.
 ---
 
 ## 1. CQRS dispatcher (`ISender` implementation)

@@ -52,7 +52,7 @@ eine Entscheidung, keinen Code.
 | TODO-16 | `FailureCategory` fehlen Autorisierung und Unerwartet          | **P2** | offen             | IMP-18                                |
 | TODO-17 | `RuleChecker` schluckt `null`                                  | **P2** | gelöst            | hacky-10, IMP-36                      |
 | TODO-18 | `AddBuildingBlocks` ist nicht idempotent                       | **P2** | gelöst            | hacky-9                               |
-| TODO-19 | `ApplyEntityKeyConversions` scannt und mappt zu viel           | **P2** | offen             | hacky-4, WS-15                        |
+| TODO-19 | `ApplyEntityKeyConversions` scannt und mappt zu viel           | **P2** | teilweise         | hacky-4, WS-15                        |
 | TODO-20 | Global sequentielle Domain-Event-Queue                         | **P2** | offen             | hacky-13, IMP-25                      |
 | TODO-21 | Read-Modelle im state-stored Pfad nicht wiederaufbaubar        | **P2** | offen             | IMP-31                                |
 | TODO-22 | Unique-Constraint-Verletzungen werden nicht übersetzt          | **P2** | offen             | IMP-29                                |
@@ -1101,36 +1101,52 @@ Host-Builder, direkt registriertes Behavior, Factory-Registrierung, unbekannte O
 
 # TODO-19, `ApplyEntityKeyConversions` scannt und mappt zu viel
 
-**P2 · offen · hacky-4 + WS-15**
+**P2 · teilweise gelöst · hacky-4 + WS-15**
 
 Zwei Befunde in derselben Schleife
-([EntityKeyValueConverter.cs:66-103](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EntityKeyValueConverter.cs:66)):
+([EntityKeyModelBuilderExtensions.cs](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EntityKeyModelBuilderExtensions.cs)):
 
-- **Zu viel** (hacky-4): der Scan läuft über CLR-Properties und ruft
-  `modelBuilder.Entity(clrType).Property(name)` — das **legt die Property im Modell an**, wenn sie
-  fehlt. Jede berechnete, get-only oder `Ignore()`-te Property vom Key-Typ landet still als Spalte.
+- **Zu viel** (hacky-4): der Scan läuft über CLR-Properties und ruft `entityType.AddProperty(…)` —
+  das **legt die Property im Modell an**, wenn sie fehlt. Jede berechnete, get-only oder
+  `Ignore()`-te Property vom Key-Typ landet still als Spalte.
 - **Zu wenig** (WS-15): Complex Types werden gar nicht erfasst, der Helper kennt nur
   `Model.GetEntityTypes()`. Ein typisierter Schlüssel darin bekäme keinen Konverter und scheiterte
   erst beim Migrieren gegen PostgreSQL.
 
-## Lösungsvorschlag
+## Gelöst — der Discovery-Zweig ist weg (2026-08-05, ADR-0033)
 
-Beides in einem Durchgang, weil es dieselbe Schleife ist:
+> Das „zu viel" ist behoben, indem die Ursache entfernt wurde statt der Symptome.
+>
+> Erster Anlauf war die Guard-Variante (`IsIgnored` + kein Setter neben dem Navigations-Check,
+> vier Zeilen). Sie beseitigte beide Symptome und ließ den Mechanismus stehen — einen
+> Reflection-Scan, der ins Modell schreibt. Der Einwand, der sie erledigt hat: **echte Services
+> mappen ihren `DbContext` immer explizit**, weil sie ohnehin Spaltennamen, `IsRequired`,
+> `IsConcurrencyToken` und für Kinder `OwnsMany`+`HasKey` brauchen. Nachgeprüft: von allen
+> Aufrufern mappten nur `EntityKeyConversionTests` und `EntityKeyPersistenceTests` konventionell —
+> also genau die zwei Tests, die den Zweig testen sollten. Im Produktivbetrieb war er toter Code.
+>
+> Jetzt läuft der Helper nur noch über `entityType.GetProperties()` und hängt Konverter an. Er
+> kann dem Modell nicht widersprechen, weil er nicht mehr hineinschreibt: `Ignore()` und
+> berechnete Properties sind per Konstruktion sicher, die Guards entfallen ersatzlos, ebenso die
+> defensive Kopie um die Entity-Type-Schleife.
+>
+> Preis: ein vergessener typisierter Schlüssel bricht den Modellaufbau. Aber **laut** — EF Core
+> nennt Property, Typ und beide Auswege. `AnUnmappedKeyProperty_FailsLoudlyInsteadOfBeingDiscovered`
+> hält das fest, `ApplyEntityKeyConversions_ConfiguresConverterForOwnedChildKeys` den Owned-Fall.
+> Achtung beim Testschreiben: der InMemory-Provider mappt **jeden** CLR-Typ, das laute Scheitern
+> zeigt sich nur relational — die Testkontexte laufen deshalb auf `UseNpgsql` (ohne DB-Zugriff,
+> es geht nur um den Modellaufbau).
+## Offen: Complex Types (WS-15)
 
-```csharp
-foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-{
-    Konvertiere(entityType.GetProperties());
-    Konvertiere(entityType.GetKeys().SelectMany(k => k.Properties));
+Bewusst **nicht** miterledigt, weil heute kein Anwendungsfall existiert: `ComplexProperty` kommt
+im gesamten Repo nicht vor. Auf der **Write**-Seite ist der Weg für Kinder eines Aggregats durch
+ADR-0031 auf `OwnsMany` (+ `ToJson()` für identitätslose Werte) festgelegt, und ADR-0025 schließt
+Complex Types für den State selbst ausdrücklich aus. Owned Types sind eigene Entity-Types und
+damit von der Schleife bereits erfasst. Auf der **Read**-Seite sind die Modelle heute flach.
 
-    foreach (var complex in entityType.GetComplexProperties())
-    {
-        Konvertiere(complex.ComplexType.GetProperties());
-    }
-}
-```
-
-Dazu ein Test, der eine `Ignore()`-te Key-Property nachweislich ignoriert lässt.
+Der Fix wäre eine Zeile (`entityType.GetComplexProperties()` mit `complex.ComplexType`
+nachziehen) und gehört in den Moment, in dem das erste Read-Modell ein eingebettetes Value Object
+mit typisiertem Schlüssel bekommt — vorher wäre es ungedeckter Code mit einem konstruierten Test.
 
 ---
 

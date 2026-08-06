@@ -17,7 +17,7 @@ public sealed class EntityKeyConversionTests
     }
 
     [Fact]
-    public void ApplyEntityKeyConversions_ConfiguresConverterForStronglyTypedKeyProperties()
+    public void ApplyEntityKeyConversions_ConfiguresConverterForMappedKeyProperties()
     {
         using var context = new SampleContext();
 
@@ -27,6 +27,21 @@ public sealed class EntityKeyConversionTests
             .GetValueConverter();
 
         Assert.IsType<EntityKeyValueConverter<RecipeId, int>>(converter);
+    }
+
+    [Fact]
+    public void ApplyEntityKeyConversions_ConfiguresConverterForOwnedChildKeys()
+    {
+        using var context = new SampleContext();
+
+        var converter = context.Model
+            .FindEntityType(typeof(RecipeRow))!
+            .FindNavigation(nameof(RecipeRow.Steps))!
+            .TargetEntityType
+            .FindProperty(nameof(RecipeStepRow.Id))!
+            .GetValueConverter();
+
+        Assert.IsType<EntityKeyValueConverter<RecipeStepId, int>>(converter);
     }
 
     [Fact]
@@ -42,6 +57,28 @@ public sealed class EntityKeyConversionTests
         Assert.IsType<CustomReferenceConverter>(converter);
     }
 
+    [Fact]
+    public void ApplyEntityKeyConversions_TouchesNothingTheModelDoesNotMap()
+    {
+        using var context = new SampleContext();
+
+        var entityType = context.Model.FindEntityType(typeof(TaggedRow))!;
+
+        Assert.Null(entityType.FindProperty(nameof(TaggedRow.IgnoredReference)));
+        Assert.Null(entityType.FindProperty(nameof(TaggedRow.ComputedReference)));
+    }
+
+    [Fact]
+    public void AnUnmappedKeyProperty_FailsLoudlyInsteadOfBeingDiscovered()
+    {
+        using var context = new UnmappedContext();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => context.Model);
+
+        Assert.Contains(nameof(RecipeRow.Id), exception.Message, StringComparison.Ordinal);
+        Assert.Contains(nameof(RecipeId), exception.Message, StringComparison.Ordinal);
+    }
+
     private sealed class SampleContext : DbContext
     {
         public DbSet<RecipeRow> Recipes => Set<RecipeRow>();
@@ -49,14 +86,45 @@ public sealed class EntityKeyConversionTests
         public DbSet<TaggedRow> Tagged => Set<TaggedRow>();
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
-            optionsBuilder.UseInMemoryDatabase(nameof(SampleContext));
+            optionsBuilder.UseNpgsql("Host=localhost;Database=sample");
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<TaggedRow>()
-                .Property(row => row.Reference)
-                .HasConversion(new CustomReferenceConverter());
+            modelBuilder.Entity<RecipeRow>(entity =>
+            {
+                entity.HasKey(row => row.Id);
+                entity.Property(row => row.Id);
+                entity.Property(row => row.Name);
 
+                entity.OwnsMany(row => row.Steps, steps =>
+                {
+                    steps.HasKey(step => step.Id);
+                    steps.Property(step => step.Id);
+                    steps.Property(step => step.Label);
+                });
+            });
+
+            modelBuilder.Entity<TaggedRow>(entity =>
+            {
+                entity.HasKey(row => row.Id);
+                entity.Property(row => row.Reference).HasConversion(new CustomReferenceConverter());
+                entity.Ignore(row => row.IgnoredReference);
+            });
+
+            modelBuilder.ApplyEntityKeyConversions();
+        }
+    }
+
+    private sealed class UnmappedContext : DbContext
+    {
+        public DbSet<RecipeRow> Recipes => Set<RecipeRow>();
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
+            optionsBuilder.UseNpgsql("Host=localhost;Database=unmapped");
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<RecipeRow>().Ignore(row => row.Steps);
             modelBuilder.ApplyEntityKeyConversions();
         }
     }
@@ -66,6 +134,15 @@ public sealed class EntityKeyConversionTests
         public RecipeId Id { get; set; }
 
         public string Name { get; set; } = string.Empty;
+
+        public IReadOnlyCollection<RecipeStepRow> Steps { get; init; } = new List<RecipeStepRow>();
+    }
+
+    private sealed class RecipeStepRow
+    {
+        public RecipeStepId Id { get; set; }
+
+        public string Label { get; set; } = string.Empty;
     }
 
     private sealed class TaggedRow
@@ -73,6 +150,10 @@ public sealed class EntityKeyConversionTests
         public int Id { get; set; }
 
         public RecipeId Reference { get; set; }
+
+        public RecipeId IgnoredReference { get; set; }
+
+        public RecipeId ComputedReference => new(Reference.Value + 1);
     }
 
     private sealed class CustomReferenceConverter() : ValueConverter<RecipeId, int>(
@@ -80,6 +161,11 @@ public sealed class EntityKeyConversionTests
         value => new RecipeId(value));
 
     private readonly record struct RecipeId(int Value) : IEntityKey<int>
+    {
+        public bool IsEmpty => Value == 0;
+    }
+
+    private readonly record struct RecipeStepId(int Value) : IEntityKey<int>
     {
         public bool IsEmpty => Value == 0;
     }

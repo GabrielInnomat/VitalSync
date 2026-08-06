@@ -7,7 +7,7 @@
 | 1   | AssemblyQualifiedName als Persistenz-Contract                  | gelöst |
 | 2   | CLR-Typname im Event-Stream-Key                                | gelöst |
 | 3   | `FailureResults` sucht statische Methode per Name              | gelöst |
-| 4   | `ApplyEntityKeyConversions` scannt CLR- statt Model-Properties | offen  |
+| 4   | `ApplyEntityKeyConversions` scannt CLR- statt Model-Properties | gelöst |
 | 5   | Kein `Id.IsEmpty`-Guard in `AddAsync`                          | gelöst    |
 | 6   | `CurrentValues.SetValues` kopiert nur Skalare                  | gelöst |
 | 7   | `DomainEventStamper` erkennt „unstamped" über Sentinel         | gelöst |
@@ -167,6 +167,25 @@ sind und die Builder-API für sie wirft. Der **CLR-Scan bleibt** und mit ihm der
 Nebeneffekt: `AddProperty` legt eine unbekannte Property weiterhin still im Modell an. Navigationen
 werden immerhin explizit übersprungen. Der Punkt bleibt offen.
 
+## Gelöst (2026-08-05) — die Prämisse war falsch, nicht nur der Nebeneffekt
+
+> Der Lösungsvorschlag oben („nur konvertieren, was EF bereits kennt") scheiterte im ersten Anlauf
+> an einer echten Hürde: eine Property vom Typ `IEntityKey<T>` wird von EF Cores Discovery gar
+> nicht erst entdeckt („not a supported primitive type"), steht also nicht in `GetProperties()`.
+> Der Umbau brach `EntityKeyPersistenceTests`, `AddProperty` schien load-bearing.
+>
+> Es war aber nur der **Test** konventionsgemappt. Jeder echte Kontext — beide Sample-Write-, beide
+> Sample-Read-Kontexte und alle übrigen Fixtures — konfiguriert seine Entitäten explizit, weil er
+> ohnehin Spaltennamen, `IsRequired`, `IsConcurrencyToken` und für Kinder `OwnsMany`+`HasKey`
+> braucht. Damit findet `FindProperty` immer etwas, und der Discovery-Zweig war im Produktivbetrieb
+> **toter Code, der das ganze Risiko trug**.
+>
+> Also ist er weg (ADR-0033): der Helper läuft über die Properties, die das Modell schon hat, und
+> hängt Konverter an — mehr nicht. Er kann dem Modell nicht mehr widersprechen, weil er nicht mehr
+> hineinschreibt; `Ignore()` und berechnete Properties sind per Konstruktion sicher statt per
+> Guard. Preis: ein vergessener typisierter Schlüssel bricht den Modellaufbau — laut, mit
+> EF-Meldung, die Property, Typ und beide Auswege nennt. `EntityKeyConversionTests` hält genau das
+> fest. Siehe [TODO-19](todo.md).
 ---
 
 # 5, Kein `Id.IsEmpty`-Guard in `AddAsync`

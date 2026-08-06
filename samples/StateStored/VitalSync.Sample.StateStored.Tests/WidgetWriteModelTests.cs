@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VitalSync.Sample.StateStored.Infrastructure.Write;
 
 namespace VitalSync.Sample.StateStored.Tests;
@@ -59,6 +61,24 @@ public sealed class WidgetWriteModelTests
             .FindProperty(nameof(Domain.WidgetState.Version))!;
 
         Assert.True(version.IsConcurrencyToken);
+    }
+
+    [Fact]
+    public void Identity_ComesFromTheDomain_NeverFromTheStore()
+    {
+        using var context = NewContext();
+
+        var root = context.Model.FindEntityType(typeof(Domain.WidgetState))!;
+        var rootId = root.FindProperty(nameof(Domain.WidgetState.Id))!;
+
+        Assert.Equal(ValueGenerated.Never, rootId.ValueGenerated);
+        Assert.Equal(NpgsqlValueGenerationStrategy.None, rootId.GetValueGenerationStrategy());
+
+        var childId = root.GetNavigations().Single().TargetEntityType
+            .FindProperty(nameof(Domain.WidgetPartState.Id))!;
+
+        Assert.Equal(ValueGenerated.Never, childId.ValueGenerated);
+        Assert.Equal(NpgsqlValueGenerationStrategy.None, childId.GetValueGenerationStrategy());
     }
 
     private static WidgetWriteDbContext NewContext() =>

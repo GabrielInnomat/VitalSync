@@ -45,6 +45,14 @@ public sealed class EntityKeyPersistenceTests(PostgreSqlFixture fixture)
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.HasDefaultSchema(schema);
+
+            modelBuilder.Entity<RecipeRow>(entity =>
+            {
+                entity.HasKey(row => row.Id);
+                entity.Property(row => row.Id);
+                entity.Property(row => row.Name);
+            });
+
             modelBuilder.ApplyEntityKeyConversions();
         }
     }
