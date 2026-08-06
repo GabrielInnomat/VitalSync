@@ -351,6 +351,17 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   `IsConcurrencyToken`. Forget one and EF Core fails at model build, naming the property and both
   remedies — loud, not silent. Owned types were never affected (separate entity types, configured
   via `OwnsMany`). Complex types stay out of scope: no `ComplexProperty` exists in the repo.
+- **A typed key serializes as its bare value** (ADR-0034). `IsEmpty` is a computed domain
+  predicate, but to a serializer it is an ordinary property, so a key used to reach three
+  append-only or contractual stores as `{"Value":"8f3a…","IsEmpty":false}` — the Marten event
+  stream, the outbox payload and the integration-event body. `EntityKeyJsonConverterFactory`
+  now writes the bare value (`"GadgetId": "8f3a…"`) and reads it back through the same
+  single-argument constructor the EF Core value converter needs (shared
+  `EntityKeyActivator<TKey, TValue>`). `EntityKeyJsonOptions` is the **one** place that attaches
+  it, applied at all three sites — including Marten, which therefore runs on System.Text.Json:
+  a `[JsonIgnore]` binds to one serializer and Marten's default was the other, so it would have
+  been silently ineffective exactly where the immutable data lives. The old object shape is
+  **not** accepted on read; do not add a tolerance branch, that would make two formats permanent.
 - **An event's identity is minted in exactly one place.** `DomainEventEnvelopeFactory`
   reads `IClock.Now` **once per commit** and counts each event's per-aggregate `Version`
   backwards from the aggregate's current version; both units of work call it and contain

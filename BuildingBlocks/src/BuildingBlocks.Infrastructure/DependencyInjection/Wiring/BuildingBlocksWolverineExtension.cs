@@ -1,3 +1,4 @@
+using BuildingBlocks.Infrastructure.Persistence;
 using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
@@ -6,6 +7,8 @@ internal sealed class BuildingBlocksWolverineExtension(WolverineWiringSettings s
 {
     public void Configure(WolverineOptions options)
     {
+        options.UseSystemTextJsonForSerialization(EntityKeyJsonOptions.Apply);
+
         if (settings.Persistence.IsSelected)
         {
             options.ApplyBuildingBlockDomainEventRouting();

@@ -477,9 +477,10 @@ damaligen Laufs.)
   aus Etappe 1 („die EF-Migration darf das Wolverine-Schema nicht kennen") hat hier kein
   Gegenstück, weil es keine Write-Migration gibt.
 - **Typisierte Schlüssel serialisieren ihre berechneten Member ins Event.** Im Store
-  steht `"GadgetId": {"Value": "…", "IsEmpty": false}` — `IsEmpty` ist eine berechnete
-  Eigenschaft und landet dauerhaft im Eventstrom. Harmlos beim Lesen, aber Events sind
-  unveränderlich: was einmal drinsteht, bleibt drin.
+  stand `"GadgetId": {"Value": "…", "IsEmpty": false}` — `IsEmpty` ist eine berechnete
+  Eigenschaft und landete dauerhaft im Eventstrom. Harmlos beim Lesen, aber Events sind
+  unveränderlich: was einmal drinsteht, bleibt drin. Inzwischen gelöst (WS-09,
+  ADR-0034): ein Schlüssel serialisiert als nackter Wert.
 - **Integration Events gehen mit `delivery_mode: 1` an RabbitMQ**, also nicht persistent.
   Bis zur Übergabe schützt der Outbox; danach würde ein Broker-Neustart die Nachricht
   verlieren.
@@ -639,7 +640,7 @@ verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Impro
 | WS-06 | Fehlkonfiguration ist ungleich abgedeckt                       | Etappe 1     | teilweise |
 | WS-07 | Der gRPC-Vertrag liegt noch beim Service                       | Etappe 1     | offen     |
 | WS-08 | Integration Events sind nicht persistent                       | Etappe 2     | gelöst    |
-| WS-09 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | Etappe 2     | offen     |
+| WS-09 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | Etappe 2     | gelöst    |
 | WS-10 | Marten-Nebenläufigkeit verdrahtet, aber im Sample unbelegt     | Etappe 2     | offen     |
 | WS-11 | Der Migrations-Worker ist asymmetrisch                         | Etappe 2     | offen     |
 | WS-12 | Kein Idempotenz-Bookkeeping über die Kontextgrenze             | Etappe 3     | offen     |
@@ -936,15 +937,22 @@ an deren Exchange-Konfiguration statt an `ToRabbitTopics`.
 
 ---
 
-### WS-09, Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom
+### WS-09, Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom — **gelöst (2026-08-06)**
+
+Siehe [TODO-26](todo.md) und
+[ADR-0034](docs/architecture/decisions/0034-typed-keys-serialize-as-bare-values.md).
+Ein `IEntityKey<TValue>` schreibt sich jetzt als **nackter Wert** (`"GadgetId": "8f3a…"`),
+in allen drei JSON-Pfaden, die Building Blocks besitzt: Marten-Eventstrom, Outbox-Payload
+und Integration-Event-Body. Marten serialisiert dafür mit System.Text.Json — ein
+`[JsonIgnore]` hätte genau dort nichts bewirkt, wo die unveränderlichen Daten liegen.
 
 `WidgetId`/`GadgetId` implementieren `IsEmpty` als berechnetes Member
 ([WidgetId.cs:7](samples/StateStored/VitalSync.Sample.StateStored.Domain/WidgetId.cs:7));
-verifiziert existiert **kein einziges `[JsonIgnore]`** im Repository. Im Eventstrom steht
-damit `"GadgetId": {"Value": "…", "IsEmpty": false}`. Events sind unveränderlich — das ist
-eine dauerhafte Entscheidung, die gerade unbemerkt getroffen wird.
+verifiziert existierte **kein einziges `[JsonIgnore]`** im Repository. Im Eventstrom stand
+damit `"GadgetId": {"Value": "…", "IsEmpty": false}`. Events sind unveränderlich — das war
+eine dauerhafte Entscheidung, die unbemerkt getroffen wurde.
 
-#### Lösungsvorschlag
+#### Ursprünglicher Lösungsvorschlag
 
 Nicht am Sample, sondern in BuildingBlocks lösen, sonst muss jeder Schlüsseltyp daran denken:
 

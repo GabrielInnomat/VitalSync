@@ -59,7 +59,7 @@ eine Entscheidung, keinen Code.
 | TODO-23 | Keine Tracing-Instrumentierung der CQRS-Pipeline               | **P2** | offen             | IMP-30                                |
 | TODO-24 | `DbContext` als DI-Schlüssel                                   | **P2** | offen             | IMP-20                                |
 | TODO-25 | Marten-Nebenläufigkeit verdrahtet, aber unbelegt               | **P2** | offen             | WS-10                                 |
-| TODO-26 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | **P2** | offen             | WS-09                                 |
+| TODO-26 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | **P2** | gelöst            | WS-09                                 |
 | TODO-27 | Schema-Erzeugung zur Laufzeit in Produktion                    | **P2** | offen             | WS-11                                 |
 | TODO-28 | Restliche Messaging-Guard-Rails                                | **P2** | teilweise         | IMP-13, WS-06                         |
 | TODO-29 | `DomainEventPublisher` koppelt Projektion und Integration-Publikation     | **P3** | offen             | IMP-26                                |
@@ -1310,15 +1310,45 @@ Test für den state-stored Pfad braucht.
 
 # TODO-26, Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom
 
-**P2 · offen · WS-09**
+**P2 · gelöst · WS-09**
+
+## Gelöst — ein Schlüssel serialisiert als nackter Wert (ADR-0034, 2026-08-06)
+
+`EntityKeyJsonConverterFactory` erzeugt für jedes `IEntityKey<TValue>` einen Converter, der den
+Schlüssel als **nackten Wert** schreibt (`"GadgetId": "8f3a…"`) und ihn über denselben
+Ein-Argument-Konstruktor zurückliest, den der EF-Core-Value-Converter ohnehin verlangt; beide
+teilen sich `EntityKeyActivator<TKey, TValue>`.
+
+`EntityKeyJsonOptions` ist die **eine** Stelle, die den Factory-Converter anhängt, und sie wird an
+allen drei JSON-Pfaden angewandt, die Building Blocks besitzt:
+
+| Pfad                            | Verdrahtung                                                       |
+| ------------------------------- | ----------------------------------------------------------------- |
+| Outbox-Payload                  | `DomainEventEnvelopeSerializer.SerializerOptions`                 |
+| Marten-Eventstrom               | `UseSystemTextJsonForSerialization` in `PersistenceRegistrar`     |
+| Integration-Event-Body (RabbitMQ) | `UseSystemTextJsonForSerialization` in `BuildingBlocksWolverineExtension` |
+
+Dass Marten dabei auf System.Text.Json umgestellt wird, ist Teil der Entscheidung: das im
+ursprünglichen Vorschlag genannte `[JsonIgnore]` bindet an **einen** Serializer, und Martens
+Default war der andere — das Attribut wäre ausgerechnet dort wirkungslos geblieben, wo die
+unveränderlichen Daten liegen.
+
+Gelesen wird **nur** das neue Format. Ein Toleranz-Zweig für die alte Objektform würde sie
+dauerhaft machen; produktive Streams gibt es nicht.
+
+Belegt durch `EntityKeyJsonConverterTests` (Converter), `DomainEventEnvelopeSerializerTests`
+(Outbox-Payload) und `EntityKeyEventStreamFormatTests`, das die rohe `mt_events.data`-Spalte gegen
+einen echten PostgreSQL-Container prüft.
+
+## Ursprünglicher Befund
 
 `WidgetId`/`GadgetId` implementieren `IsEmpty` als berechnetes Member
 ([WidgetId.cs:7](samples/StateStored/VitalSync.Sample.StateStored.Domain/WidgetId.cs:7)),
-verifiziert existiert **kein einziges `[JsonIgnore]`** im Repository. Im Eventstrom steht damit
+verifiziert existierte **kein einziges `[JsonIgnore]`** im Repository. Im Eventstrom stand damit
 `"GadgetId": {"Value": "…", "IsEmpty": false}`. Events sind unveränderlich — eine dauerhafte
-Entscheidung, die gerade unbemerkt getroffen wird.
+Entscheidung, die unbemerkt getroffen wurde.
 
-## Lösungsvorschlag
+## Ursprünglicher Lösungsvorschlag
 
 In BuildingBlocks lösen, nicht am Sample, sonst muss jeder Schlüsseltyp daran denken:
 

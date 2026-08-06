@@ -48,6 +48,7 @@ internal sealed class PersistenceRegistrar(IServiceCollection services, Wolverin
             var storeOptions = new StoreOptions();
             storeOptions.Connection(connectionString);
             storeOptions.Events.StreamIdentity = StreamIdentity.AsString;
+            storeOptions.UseSystemTextJsonForSerialization(EntityKeyJsonOptions.Create());
 
             foreach (var (domainEventType, eventName) in serviceProvider
                 .GetRequiredService<DomainEventTypeRegistry>()

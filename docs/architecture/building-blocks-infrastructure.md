@@ -72,7 +72,7 @@ capability. The folder is the namespace.
 | Folder                             | Capability                                                          |
 | ---------------------------------- | ------------------------------------------------------------------- |
 | `Dispatching/`                     | DI-based `ISender` implementation + pipeline behaviors              |
-| `Persistence/`                     | shared: aggregate reconstitution, tracking base, envelope factory, typed-key conversion for EF Core |
+| `Persistence/`                     | shared: aggregate reconstitution, tracking base, envelope factory, typed-key conversion for EF Core and JSON |
 | `Persistence/StateStored/`         | EF Core write path — repository, unit of work, tracker, state graph |
 | `Persistence/EventSourced/`        | Marten write path — repository, unit of work, tracker               |
 | `Messaging/DomainEvents/`          | in-context events: publisher, projection runner, type registry, serializer, handler |
@@ -135,6 +135,28 @@ failure alongside the owned-type case.
 
 Complex types are out of scope: `ComplexProperty` appears nowhere in the repository, write-side
 children are owned types by ADR-0031, and read models are flat. See WS-15.
+
+### A typed key serializes as its bare value
+
+`IsEmpty` is a domain predicate derived from `Value`, but to a JSON serializer it is an ordinary
+public property. A typed key therefore used to reach three append-only or contractual stores as
+`{"Value":"8f3a…","IsEmpty":false}`: Marten's `mt_events.data`, the outbox payload, and the
+integration-event body on RabbitMQ. None of the three shapes was chosen; all three came from a
+default, and events are immutable.
+
+Since ADR-0034 a key writes as its **bare underlying value** (`"GadgetId": "8f3a…"`).
+`EntityKeyJsonConverterFactory` builds an `EntityKeyJsonConverter<TKey, TValue>` for any
+`IEntityKey<TValue>` and reads it back through the same single-argument constructor the EF Core
+value converter already requires — both share `EntityKeyActivator<TKey, TValue>`.
+`EntityKeyJsonOptions` is the single place that attaches the factory, and it is applied at all
+three sites: the envelope serializer's options, Marten via `UseSystemTextJsonForSerialization`, and
+Wolverine via `UseSystemTextJsonForSerialization` in `BuildingBlocksWolverineExtension`.
+
+Marten runs on System.Text.Json as part of that decision. A `[JsonIgnore]` on `IEntityKey.IsEmpty`
+would have been smaller, but it binds to one serializer and Marten's default is the other — the
+attribute would have been silently ineffective exactly where the immutable data lives. The read
+side deliberately does not accept the old object shape; there are no streams to be compatible with.
+
 ---
 
 ## 1. CQRS dispatcher (`ISender` implementation)

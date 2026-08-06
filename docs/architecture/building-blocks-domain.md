@@ -113,6 +113,8 @@ Because each aggregate has its own key type, passing the wrong key is a **compil
 
 > Because `IsEmpty` lives on the key, identity validation is **type-agnostic**: an `int`-backed key can define `IsEmpty => Value <= 0`, a `string`-backed key `IsEmpty => string.IsNullOrWhiteSpace(Value)`, and so on. The base classes never inspect the raw value type themselves.
 
+> `IsEmpty` stays a **domain** concept and never reaches storage. A typed key serializes as its bare underlying value (`"RecipeId": "8f3a…"`), not as an object with `Value` and `IsEmpty`; the converter that guarantees it lives in `Infrastructure`, so the key type needs no serialization attribute and the domain needs no serializer dependency. See [ADR-0034](./decisions/0034-typed-keys-serialize-as-bare-values.md).
+
 ### Where identity lives
 
 There are two cases, by design:

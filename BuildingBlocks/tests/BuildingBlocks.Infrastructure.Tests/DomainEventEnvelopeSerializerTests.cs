@@ -78,12 +78,27 @@ public sealed class DomainEventEnvelopeSerializerTests
     }
 
     [Fact]
+    public void Wrap_WritesTypedKeysAsBareValues_NotAsObjectsWithComputedMembers()
+    {
+        var envelope = Wrap(new RecipeRenamed(
+            new RecipeId(Guid.Parse("11111111-1111-1111-1111-111111111111")),
+            "Pizza",
+            5m,
+            DateTimeOffset.UnixEpoch));
+
+        Assert.Contains("""
+            "RecipeId":"11111111-1111-1111-1111-111111111111"
+            """, envelope.Payload, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsEmpty", envelope.Payload, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void StoredPayload_SurvivesARenameOfTheClrType()
     {
         var registry = new DomainEventTypeRegistry([typeof(DomainEventEnvelopeSerializerTests).Assembly]);
         var envelope = new DomainEventEnvelope(
             "recipe-created-v1",
-            """{"RecipeId":{"Value":"11111111-1111-1111-1111-111111111111"}}""",
+            """{"RecipeId":"11111111-1111-1111-1111-111111111111"}""",
             EventId,
             "recipe",
             "recipe-1",

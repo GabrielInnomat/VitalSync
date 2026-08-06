@@ -1,11 +1,12 @@
 using System.Text.Json;
 using BuildingBlocks.Domain.Events;
+using BuildingBlocks.Infrastructure.Persistence;
 
 namespace BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 
 public sealed class DomainEventEnvelopeSerializer(DomainEventTypeRegistry registry)
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.General);
+    private static readonly JsonSerializerOptions SerializerOptions = EntityKeyJsonOptions.Create();
 
     public DomainEventEnvelope Wrap(
         IDomainEvent domainEvent,
