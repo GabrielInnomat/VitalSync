@@ -197,6 +197,32 @@ public sealed class EfCoreChildCollectionTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task StateWithAColumnNameLeftToConvention_IsRejectedAtStartup()
+    {
+        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
+
+        var builder = Host.CreateApplicationBuilder();
+
+        builder.AddBuildingBlocks(
+            options => options
+                .AddDomainEventsFrom(typeof(BasketOpened).Assembly)
+                .UseEfCorePersistence<DerivedNameContext>(fixture.ConnectionString),
+            wolverine =>
+            {
+                wolverine.Durability.Mode = DurabilityMode.Solo;
+                wolverine.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
+            });
+
+        using var host = builder.Build();
+
+        var thrown = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => host.StartAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains("DerivedNameState.Label", thrown.Message, StringComparison.Ordinal);
+        Assert.Contains("HasColumnName", thrown.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task NullChildCollection_IsRejectedWithAnActionableMessage()
     {
         Assert.SkipUnless(fixture.Available, fixture.SkipReason);

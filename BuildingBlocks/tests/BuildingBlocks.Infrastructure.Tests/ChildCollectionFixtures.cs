@@ -389,7 +389,11 @@ public sealed class BasketContext(DbContextOptions<BasketContext> options) : DbC
             entity.OwnsOne(state => state.Address, address =>
                 address.Property(value => value.City).HasColumnName("address_city"));
 
-            entity.OwnsMany(state => state.Notes, notes => notes.ToJson("notes"));
+            entity.OwnsMany(state => state.Notes, notes =>
+            {
+                notes.ToJson("notes");
+                notes.Property(note => note.Text).HasJsonPropertyName("text");
+            });
 
             entity.OwnsMany(state => state.Lines, lines =>
             {
@@ -478,6 +482,34 @@ public sealed class LooseContext(DbContextOptions<LooseContext> options) : DbCon
             entity.ToTable("loose_states");
             entity.HasKey(state => state.Id);
             entity.HasOne(state => state.Owner).WithMany();
+        });
+
+        modelBuilder.ApplyEntityKeyConversions();
+    }
+}
+
+public sealed record DerivedNameState(BasketId Id) : AggregateState<DerivedNameState, BasketId>
+{
+    public string Label { get; init; } = string.Empty;
+
+    public static DerivedNameState Empty => new(default(BasketId));
+
+    public override DerivedNameState Apply(IDomainEvent domainEvent) => this;
+}
+
+public sealed class DerivedNameContext(DbContextOptions<DerivedNameContext> options) : DbContext(options)
+{
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
+
+        modelBuilder.Entity<DerivedNameState>(entity =>
+        {
+            entity.ToTable("derived_names");
+            entity.HasKey(state => state.Id);
+            entity.Property(state => state.Id).HasColumnName("id");
+            entity.Property(state => state.Version).HasColumnName("version").IsConcurrencyToken();
+            entity.Property(state => state.Label);
         });
 
         modelBuilder.ApplyEntityKeyConversions();

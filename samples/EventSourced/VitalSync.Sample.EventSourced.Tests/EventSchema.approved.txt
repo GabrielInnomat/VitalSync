@@ -1,0 +1,28 @@
+domain-event gadget-component-added-v1
+  ComponentId : guid
+  GadgetId : guid
+  Label : string
+
+domain-event gadget-component-relabelled-v1
+  ComponentId : guid
+  GadgetId : guid
+  Label : string
+
+domain-event gadget-created-v1
+  GadgetId : guid
+  Name : string
+
+domain-event gadget-renamed-v1
+  GadgetId : guid
+  Name : string
+  RenameCount : int
+
+domain-event gadget-retired-v1
+  GadgetId : guid
+  Reason : string
+
+integration-event sample-event-sourced.gadget-retired
+  EventId : guid
+  GadgetId : guid
+  OccurredAt : datetimeoffset
+  Reason : string

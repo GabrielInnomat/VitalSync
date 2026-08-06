@@ -481,6 +481,10 @@ damaligen Laufs.)
   Eigenschaft und landete dauerhaft im Eventstrom. Harmlos beim Lesen, aber Events sind
   unveränderlich: was einmal drinsteht, bleibt drin. Inzwischen gelöst (WS-09,
   ADR-0034): ein Schlüssel serialisiert als nackter Wert.
+- **Feldnamen im Event sind abgeleitet.** Kein einziges `[JsonPropertyName]` im Repository:
+  der JSON-Name eines Feldes war der CLR-Property-Name, ein Rename deserialisiert gespeicherte
+  Events still auf `default`. Inzwischen gelöst (WS-18, ADR-0035): ein eingecheckter
+  Schema-Snapshot pro Service macht den Rename rot.
 - **Integration Events gehen mit `delivery_mode: 1` an RabbitMQ**, also nicht persistent.
   Bis zur Übergabe schützt der Outbox; danach würde ein Broker-Neustart die Nachricht
   verlieren.
@@ -649,6 +653,7 @@ verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Impro
 | WS-15 | `ApplyEntityKeyConversions` erfasst keine Complex Types        | vorbestehend | offen     |
 | WS-16 | Keine CI-Pipeline                                              | vorbestehend | gelöst    |
 | WS-17 | Zeitbasierte Negativassertion im Sink-Test                     | vorbestehend | teilweise |
+| WS-18 | Feldnamen in Events sind abgeleitet, ein Rename zerstört still | Nachtrag WS-09 | gelöst  |
 
 **Erledigt (Commit `e44ae9b`, 2026-08-02):** Der produktive AppHost widersprach
 ADR-0021, weil er je _eine_ Datenbank pro Service anlegte (`nutritionDb`, `fitnessDb`).
@@ -967,6 +972,28 @@ Sauberer, aber aufwendiger: ein `JsonConverter` für `IEntityKey<TValue>`, der d
 als **nackten Wert** schreibt (`"GadgetId": "8f3a…"` statt eines Objekts). Das halbiert die
 Streamgröße und macht die Events von Hand lesbar — lohnt sich, solange noch keine
 produktiven Streams existieren. Danach ist es eine Event-Migration.
+
+---
+
+### WS-18, Feldnamen in Events sind abgeleitet, ein Rename zerstört still — **gelöst (2026-08-06)**
+
+Bei der Umsetzung von WS-09 gefunden: ADR-0030 hat abgeleitete Namen auf **Typebene** abgeschafft,
+die **Feldebene** aber offen gelassen. Verifiziert existierte **kein einziges
+`[JsonPropertyName]`** im Repository, der JSON-Name eines Feldes war also der CLR-Property-Name.
+Ein Rename von `Titel` zu `Name` lässt gespeicherte Events still auf `default` deserialisieren —
+kein Fehler, kein Log, kein roter Test. Dieselbe Fehlerklasse wie WS-Nachbarn TODO-03 und TODO-04,
+beide P1.
+
+Gelöst mit einem **Snapshot statt eines Attributs pro Feld**: `PersistedSchema` rendert alle Domain-
+und Integration-Events einer Assembly deterministisch und vergleicht gegen ein eingechecktes
+`EventSchema.approved.txt`, das in **beiden** Samples liegt. Dazu erzwingt
+`AggregateStateModelCheck` jetzt auch auf der state-stored Seite einen explizit deklarierten
+Spaltennamen. Siehe [TODO-49](todo.md) und
+[ADR-0035](docs/architecture/decisions/0035-persisted-field-names-are-pinned-by-a-snapshot.md).
+
+Was der Durchstich hier gezeigt hat: eine Entscheidung, die auf Typebene sauber getroffen ist, kann
+eine Ebene tiefer unbemerkt weiterlaufen. Der Befund fiel nur auf, weil WS-09 den Eventstrom
+tatsächlich von Hand gelesen hat.
 
 ---
 

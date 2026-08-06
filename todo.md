@@ -11,7 +11,8 @@ Zusammenführung der drei Befunddokumente, Stand 2026-08-02:
 | **nach Zusammenführung von Überschneidungen** |          | **43**      |
 | Nachtrag AppHost `e44ae9b` (TODO-45, TODO-46) | 2        | 2           |
 | Nachtrag WS-08 (TODO-48)                      | 1        | 1           |
-| **Summe geführt**                             |          | **46**      |
+| Nachtrag ADR-0034-Folge (TODO-49)             | 1        | 1           |
+| **Summe geführt**                             |          | **47**      |
 
 Die 14 in `Improvements.md` als gelöst verifizierten Punkte wurden nicht übernomen.
 
@@ -82,6 +83,7 @@ eine Entscheidung, keinen Code.
 | TODO-46 | Die MigrationService-Worker sind leere Hüllen                  | **P2** | offen             | AppHost `e44ae9b`                     |
 | TODO-47 | Kind-Entitäten haben kein Verhalten                            | **P2** | gelöst            | ADR-0031 Folgearbeit                  |
 | TODO-48 | Publisher Confirms sind unbelegt                               | **P2** | offen             | WS-08 Nachtrag                        |
+| TODO-49 | Feldnamen in Events sind abgeleitet, ein Rename zerstört still | **P1** | gelöst            | ADR-0034-Folge                        |
 
 ---
 
@@ -1195,6 +1197,22 @@ Die Alternative (Rebuild aus dem aktuellen Zustand) ist billiger, kostet aber ei
 Codepfad pro Read-Modell und trägt nicht für Modelle, die Historie aggregieren („Anzahl
 Umbenennungen"). Braucht eine ADR.
 
+## Nachtrag (2026-08-06): Read-Modell-Schema gehört an dieselbe Entscheidung
+
+Aus TODO-49 / ADR-0035 übernommen. Der Schema-Snapshot deckt Domain- und Integration-Events ab,
+Read-Modelle bewusst **nicht** — mit genau der Begründung, die dieses TODO bestreitet: sie seien
+abgeleitet und wiederaufbaubar, also koste ein Rename dort nichts außer einem Rebuild. Solange
+dieses TODO offen ist, stimmt das für state-stored Kontexte nicht: ohne Replay-Quelle ist ein
+Read-Modell **kein** abgeleiteter Cache, sondern faktisch die einzige Kopie seiner Daten, und ein
+umbenanntes Feld ist ein Datenverlust wie im Event.
+
+Daraus folgt die Reihenfolge, nicht ein zweites Schutzverfahren: Wer dieses TODO löst, macht die
+Ausnahme in ADR-0035 nachträglich wahr — dann ist ein Read-Modell wirklich wegwerfbar und braucht
+keinen Snapshot. Wer es **nicht** löst, muss die Read-Modelle in den Snapshot aufnehmen (der
+Renderer kann das ohne Änderung, er nimmt beliebige Typen). Beides ist vertretbar, aber die
+Kombination „kein Replay **und** kein Snapshot" ist die einzige Variante, die still Daten verliert.
+Die Entscheidung gehört in die ADR, die dieses TODO ohnehin braucht.
+
 ---
 
 # TODO-22, Unique-Constraint-Verletzungen werden nicht übersetzt
@@ -2020,6 +2038,61 @@ options.UseRabbitMq(uri).ConfigureChannelCreation(channel =>
 Ein Test, der das belegt, ist teuer: ein verworfener Publish lässt sich ohne Broker-Manipulation
 kaum herbeiführen. Realistisch ist die Prüfung der Konfiguration am gestarteten Host plus eine
 Messung des Durchsatzpreises — Confirms serialisieren den Sendepfad spürbar.
+
+---
+
+# TODO-49, Feldnamen in Events sind abgeleitet, ein Rename zerstört still
+
+**P1 · gelöst · ADR-0034-Folge**
+
+## Gelöst — ein Snapshot friert die persistierten Feldnamen ein (ADR-0035, 2026-08-06)
+
+**Befund bei der Umsetzung von TODO-26.** ADR-0030 hat abgeleitete Namen auf **Typebene**
+abgeschafft (`[EventName]`, `[AggregateName]`), die **Feldebene** aber offen gelassen: verifiziert
+existierte **kein einziges `[JsonPropertyName]`** im Repository, der JSON-Name eines Feldes war also
+der CLR-Property-Name. Ein Rename von `Titel` zu `Name` benennt damit das Feld auf der Leitung um;
+gespeicherte Events tragen weiter den alten Namen, der Deserializer findet nichts und lässt die
+Property auf `default`. Kein Fehler, kein Log, kein roter Test — dieselbe Fehlerklasse wie TODO-03
+(`AssemblyQualifiedName`) und TODO-04 (Streamschlüssel am Klassennamen), beide P1.
+
+**Kein Attribut pro Feld.** Attribute kaufen Rename-*Toleranz*, und die lohnt nur, wo ein Rename
+häufig **und** bedeutungserhaltend ist — das ist die Typebene (`Created`/`Registered`/`Added` sind
+dasselbe Event). Auf Feldebene ist ein Rename fast immer eine Bedeutungsänderung: `IngredientId` zu
+`WorkoutId` ist ein anderes Feld, ein Attribut wäre dort eine dauerhafte Lüge. Dazu die
+Kardinalität: rund eines pro Typ ist tragbar, rund fünf pro Typ nicht. Leitsatz: **ein Rename, der
+Daten kaputtmacht, darf wehtun — er darf nur nicht still sein.**
+
+Umgesetzt in drei Teilen:
+
+| Teil                                                   | Ort                                                                  |
+| ------------------------------------------------------ | -------------------------------------------------------------------- |
+| Renderer + Vergleich gegen eine eingecheckte Baseline   | `BuildingBlocks.Infrastructure/Schema/PersistedSchema.cs`             |
+| Baseline je Kontext                                    | `EventSchema.approved.txt` in beiden Sample-Testprojekten             |
+| Spaltenname erzwungen statt nur gelebt                  | `AggregateStateModelCheck` (auch `HasJsonPropertyName` bei `ToJson()`) |
+
+Der Renderer liest über **`JsonTypeInfo`**, nicht über `GetProperties()` — er friert damit ein, was
+der Serializer *tut*, inklusive `[JsonPropertyName]` und einer künftigen `PropertyNamingPolicy`. Ein
+typisierter Schlüssel rendert als der Wert, zu dem er serialisiert (`guid`, `int`), womit ADR-0034 in
+der Baseline sichtbar bleibt. Sortiert wird nach Namen, weil Umsortieren für JSON bedeutungslos ist.
+
+Bewusst ein **Test** und kein Startup-Check: ein Snapshot braucht eine eingecheckte Baseline, die zur
+Laufzeit nicht existiert. Die Entscheidungsregel steht in der Fehlermeldung, weil genau dort falsch
+entschieden wird — Feld **hinzugefügt** heißt Baseline aktualisieren, Feld **umbenannt, entfernt oder
+umgetypt** heißt neues `-v2`-Event und `-v1` unangetastet.
+
+**Nicht enthalten:** Read-Modelle. Ein Read-Modell ist abgeleitet und wiederaufbaubar, ein
+Feld-Rename kostet dort einen Rebuild statt Daten — das gilt aber nur, solange der Rebuild wirklich
+möglich ist, was für state-stored Kontexte an **TODO-21** hängt.
+
+**Nachhut:** Marten-Snapshotting ist in ADR-0019 als „additiv" zurückgestellt. Für die Events stimmt
+das, für den State nicht — ein Snapshot befördert `GadgetState` von „liegt nirgends" zu „liegt als
+JSON ohne Schema" und muss dann in die Baseline. Verifiziert existiert heute weder ein
+`session.Store<>` noch eine `SingleStreamProjection`, der ES-State wird also nirgends persistiert.
+
+Belegt durch `PersistedSchemaTests` in `BuildingBlocks.Infrastructure.Tests` (Rendering, effektiver
+JSON-Name, nackter Schlüsselwert, Verify-Verhalten), je ein `PersistedSchemaTests` in beiden Samples
+gegen die echten Baselines, und
+`EfCoreChildCollectionTests.StateWithAColumnNameLeftToConvention_IsRejectedAtStartup`.
 
 ---
 

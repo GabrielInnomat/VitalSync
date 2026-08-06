@@ -1,0 +1,31 @@
+domain-event widget-created-v1
+  Name : string
+  WidgetId : guid
+
+domain-event widget-part-added-v1
+  Label : string
+  PartId : guid
+  Quantity : int
+  WidgetId : guid
+
+domain-event widget-part-quantity-changed-v1
+  PartId : guid
+  PreviousQuantity : int
+  Quantity : int
+  WidgetId : guid
+
+domain-event widget-part-removed-v1
+  PartId : guid
+  Quantity : int
+  WidgetId : guid
+
+domain-event widget-renamed-v1
+  Name : string
+  RenameCount : int
+  WidgetId : guid
+
+integration-event sample-state-stored.widget-created
+  EventId : guid
+  Name : string
+  OccurredAt : datetimeoffset
+  WidgetId : guid

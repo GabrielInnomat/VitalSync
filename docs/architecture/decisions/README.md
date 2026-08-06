@@ -63,6 +63,7 @@ original wording away — the amendment must remain readable as a correction.
 | [0032](./0032-child-entities-raise-via-root.md)             | Child entities raise domain events through their aggregate root | Accepted     |
 | [0033](./0033-typed-keys-are-mapped-explicitly.md)         | Typed keys are mapped explicitly, never discovered | Accepted                |
 | [0034](./0034-typed-keys-serialize-as-bare-values.md)      | A typed key serializes as its bare value           | Accepted                |
+| [0035](./0035-persisted-field-names-are-pinned-by-a-snapshot.md) | A persisted field name is pinned by a snapshot, not by an attribute | Accepted |
 
 ## Template
 

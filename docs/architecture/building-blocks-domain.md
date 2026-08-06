@@ -468,6 +468,12 @@ public interface IDomainEvent;
 
 > Domain events are **internal** to a service's domain. Translating them into integration events for cross-service messaging happens at the service boundary, not here.
 
+An event's **type name** is declared with `[EventName]` and is therefore rename-proof. Its **field
+names** are not: they are the CLR property names the serializer sees, so renaming a property renames
+the stored field. Domain has no attribute for that on purpose — a field rename almost always changes
+meaning and should cost a new event version. What makes it visible is a checked-in schema snapshot
+per service, rendered by `PersistedSchema` in Infrastructure and asserted by a test (ADR-0035).
+
 ## Business rules and validation
 
 Two distinct concepts, each with its own rule interface and exception:

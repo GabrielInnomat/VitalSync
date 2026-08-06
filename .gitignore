@@ -398,4 +398,6 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
-NutriFit.AppHost/aspirate-output/docker-compose.yaml
+
+# Rendering of a failing persisted schema snapshot
+*.received.txt

@@ -324,7 +324,8 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   through DI, so an implementation registered in the container has no reason to be
   visible. Exactly four types are public API — `ServiceCollectionExtensions`,
   `HostApplicationBuilderExtensions`, `BuildingBlocksOptions`,
-  `EntityKeyModelBuilderExtensions`. Seven more are public **only** because Wolverine
+  `EntityKeyModelBuilderExtensions` — plus `PersistedSchema`, public because a service's
+  **tests** call it (ADR-0035). Seven more are public **only** because Wolverine
   generates C# into another assembly and names them (`DomainEventEnvelope`,
   `DomainEventEnvelopeHandler`, `DomainEventEnvelopeSerializer`, `DomainEventTypeRegistry`,
   `IIntegrationEventSinkFactory`, `IntegrationEventSourceContext`,
@@ -362,6 +363,24 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   a `[JsonIgnore]` binds to one serializer and Marten's default was the other, so it would have
   been silently ineffective exactly where the immutable data lives. The old object shape is
   **not** accepted on read; do not add a tolerance branch, that would make two formats permanent.
+- **A persisted field name is pinned by a snapshot, not by an attribute** (ADR-0035). ADR-0030
+  killed derived names at the type level; the field level stayed derived, so renaming a property
+  renames the JSON field and stored events deserialize to `default` — silently. There is still
+  **no `[JsonPropertyName]` per field**: a field rename almost always changes meaning, so it
+  *should* cost a new event version. Instead each service's tests call
+  `PersistedSchema.Verify(path, assemblies)` against a checked-in `EventSchema.approved.txt`
+  next to the test (both samples have one). The renderer reads through **`JsonTypeInfo`**, so it
+  pins what the serializer actually does — a `[JsonPropertyName]` shows up, a typed key renders
+  as its bare value (ADR-0034). Decision rule, also carried in the failure message: a field only
+  **added** stays readable → approve the new snapshot; renamed, removed or retyped → leave the
+  event alone and add a successor under a new `[EventName]`. It is a **test**, not a start-up
+  check, because a baseline does not exist at run time. The state-stored path needs no snapshot
+  (EF migrations are its baseline) but obeys the same rule by force: `AggregateStateModelCheck`
+  rejects at start-up any state or owned-child property without an explicit `HasColumnName`, or
+  without `HasJsonPropertyName` for a `ToJson()` child. Two limits to know: the snapshot pins
+  **names, not wire formats** (adding a `JsonStringEnumConverter` later is invisible), and read
+  models are deliberately out (derived and rebuildable). Marten snapshotting would move an
+  event-sourced **state** into durable JSON — it then belongs in the baseline.
 - **An event's identity is minted in exactly one place.** `DomainEventEnvelopeFactory`
   reads `IClock.Now` **once per commit** and counts each event's per-aggregate `Version`
   backwards from the aggregate's current version; both units of work call it and contain

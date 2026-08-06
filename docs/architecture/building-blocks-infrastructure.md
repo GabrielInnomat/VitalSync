@@ -54,6 +54,7 @@ Everything else is `internal`, with `InternalsVisibleTo` for the test assembly.
 | `HostApplicationBuilderExtensions`| `AddBuildingBlocks` on the host builder (ADR-0027)                |
 | `BuildingBlocksOptions`           | the configuration surface passed to it                            |
 | `EntityKeyModelBuilderExtensions` | `ApplyEntityKeyConversions`, called from a host's `DbContext`     |
+| `PersistedSchema`                 | the event-schema snapshot, called from a service's tests (ADR-0035) |
 
 Seven further types are public **only** because Wolverine generates C# at runtime and
 the generated code names them: `DomainEventEnvelope`, `DomainEventEnvelopeHandler`,
@@ -82,6 +83,7 @@ capability. The folder is the namespace.
 | `DependencyInjection/Registration/`| what a host selected, one collaborator per capability               |
 | `DependencyInjection/Wiring/`      | how Wolverine itself is configured                                  |
 | `DependencyInjection/Validation/`  | the start-up checks (ADR-0027)                                      |
+| `Schema/`                          | the persisted-event snapshot a service's tests compare against (ADR-0035) |
 
 Two cuts here carry meaning rather than tidiness:
 
@@ -156,6 +158,38 @@ Marten runs on System.Text.Json as part of that decision. A `[JsonIgnore]` on `I
 would have been smaller, but it binds to one serializer and Marten's default is the other — the
 attribute would have been silently ineffective exactly where the immutable data lives. The read
 side deliberately does not accept the old object shape; there are no streams to be compatible with.
+
+### A persisted field name is pinned by a snapshot
+
+ADR-0030 removed derived names at the type level and left the field level open: without an explicit
+`[JsonPropertyName]` the JSON name of a field is the CLR property name, so renaming `Titel` to
+`Name` renames the field on the wire. Stored events keep the old name and deserialize to `default`
+— no exception, no log entry, no failing test.
+
+ADR-0035 answers this with visibility rather than tolerance. `PersistedSchema` renders every domain
+event and integration event of a set of assemblies into a deterministic text file and compares it
+against an approved baseline that lives with the service that owns the events:
+
+```text
+domain-event widget-created-v1
+  Name : string
+  WidgetId : guid
+```
+
+The rendering reads through **`JsonTypeInfo`**, so it pins what the serializer actually does
+(including a `[JsonPropertyName]` or a future `PropertyNamingPolicy`) rather than what reflection
+sees. A typed key renders as the value it serializes to, which keeps ADR-0034 visible in the
+baseline. Everything is sorted by name, because reordering members is meaningless for JSON.
+
+The decision rule travels in the failure message: a field that was only **added** stays readable, so
+approve the new snapshot; a field that was renamed, removed or retyped does not, so leave the event
+untouched and introduce a successor under a new `[EventName]`.
+
+The state-stored path needs no snapshot — a relational schema can contradict, and the EF migration
+history is that path's baseline — but the same "declared, never derived" rule now holds there by
+force: `AggregateStateModelCheck` rejects at start-up any property of an `AggregateState` or of one
+of its owned children without an explicit `HasColumnName`, or without `HasJsonPropertyName` for a
+`ToJson()` child.
 
 ---
 
@@ -317,7 +351,11 @@ public interface IRepository<TAggregate, in TKey>
   navigation — such a model would be loaded by nothing and saved by nothing. The
   same validator rejects an owned collection that is not mapped to JSON and does
   not declare a single, non-shadow key: without that key the commit cannot match
-  a replaced child against the tracked one. A child collection whose runtime
+  a replaced child against the tracked one. It also rejects any property of a
+  state or of an owned child whose stored name is left to convention: an explicit
+  `HasColumnName`, or `HasJsonPropertyName` for a `ToJson()` child, keeps a CLR
+  rename free of charge instead of turning it into a destructive migration
+  (ADR-0035). A child collection whose runtime
   value is read-only, fixed-size or `null` is rejected with a
   `NotSupportedException` at any depth of the graph, because EF Core adds and
   removes dependents through the collection instance itself. Authoring rules for
@@ -693,7 +731,7 @@ registers — resolves `IEnumerable<IStartupCheck>` and runs the
 | ---------------------------------- | -------- | -------------------------------------------------------------- |
 | `HandlerRegistrationCheck`         | before   | a scanned command/query has no handler, or two result contracts |
 | `WolverineRuntimeCheck`            | before   | a capability needs Wolverine and no runtime is registered       |
-| `AggregateStateModelCheck<T>`      | before   | an aggregate state maps a forbidden navigation or key           |
+| `AggregateStateModelCheck<T>`      | before   | an aggregate state maps a forbidden navigation or key, or leaves a stored field name to convention |
 | `UnitOfWorkPresenceCheck`          | before   | commands are scanned, nothing commits them, and nobody said so  |
 | `IntegrationEventSubscriptionCheck`| after    | a handled integration event matches no bound pattern, or is own |
 

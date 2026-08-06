@@ -18,13 +18,14 @@ internal sealed class AggregateStateModelCheck<TContext>(IServiceProvider servic
 
         var offenders = new List<string>();
         var keyless = new List<string>();
+        var derivedNames = new List<string>();
         var visited = new HashSet<IEntityType>();
 
         foreach (var entityType in context.Model.GetEntityTypes())
         {
             if (!entityType.IsOwned() && IsAggregateState(entityType.ClrType))
             {
-                Validate(entityType, offenders, keyless, visited);
+                Validate(entityType, offenders, keyless, derivedNames, visited);
             }
         }
 
@@ -46,17 +47,40 @@ internal sealed class AggregateStateModelCheck<TContext>(IServiceProvider servic
                 + "non-shadow property. Without it the commit cannot match a replaced child against the tracked "
                 + $"one and would rewrite rows instead of updating them (ADR-0031): {string.Join("; ", keyless)}.");
         }
+
+        if (derivedNames.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "Aggregate state mapping validation failed at startup. A stored field name is a persistence "
+                + "contract, so it is declared and never derived from the CLR property name (ADR-0030/0035). "
+                + "Without an explicit HasColumnName a rename of the property renames the column, which turns a "
+                + "pure refactoring into a destructive migration; with one it costs nothing. Declare a name for: "
+                + $"{string.Join("; ", derivedNames)}.");
+        }
     }
 
     private static void Validate(
         IEntityType entityType,
         List<string> offenders,
         List<string> keyless,
+        List<string> derivedNames,
         HashSet<IEntityType> visited)
     {
         if (!visited.Add(entityType))
         {
             return;
+        }
+
+        var storedNameAnnotation = entityType.IsMappedToJson()
+            ? RelationalAnnotationNames.JsonPropertyName
+            : RelationalAnnotationNames.ColumnName;
+
+        foreach (var property in entityType.GetProperties())
+        {
+            if (!property.IsShadowProperty() && property.FindAnnotation(storedNameAnnotation) is null)
+            {
+                derivedNames.Add($"'{entityType.ClrType.Name}.{property.Name}'");
+            }
         }
 
         foreach (var navigation in entityType.GetNavigations())
@@ -72,7 +96,7 @@ internal sealed class AggregateStateModelCheck<TContext>(IServiceProvider servic
                         keyless.Add($"'{entityType.ClrType.Name}.{navigation.Name}'");
                     }
 
-                    Validate(navigation.TargetEntityType, offenders, keyless, visited);
+                    Validate(navigation.TargetEntityType, offenders, keyless, derivedNames, visited);
                 }
 
                 continue;

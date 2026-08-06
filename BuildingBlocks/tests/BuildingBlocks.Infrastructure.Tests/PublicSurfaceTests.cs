@@ -13,6 +13,11 @@ public sealed class PublicSurfaceTests
         "BuildingBlocks.Infrastructure.Persistence.EntityKeyModelBuilderExtensions",
     ];
 
+    private static readonly string[] IntendedTestingApi =
+    [
+        "BuildingBlocks.Infrastructure.Schema.PersistedSchema",
+    ];
+
     private static readonly string[] RequiredByWolverineCodeGeneration =
     [
         "BuildingBlocks.Infrastructure.Messaging.DomainEvents.DomainEventEnvelope",
@@ -27,7 +32,11 @@ public sealed class PublicSurfaceTests
     [Fact]
     public void ThePublicSurface_IsExactlyTheIntendedApiPlusWhatCodeGenerationForces()
     {
-        var expected = IntendedApi.Concat(RequiredByWolverineCodeGeneration).Order(StringComparer.Ordinal).ToArray();
+        var expected = IntendedApi
+            .Concat(IntendedTestingApi)
+            .Concat(RequiredByWolverineCodeGeneration)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
 
         var actual = typeof(ServiceCollectionExtensions).Assembly
             .GetExportedTypes()
