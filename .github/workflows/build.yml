@@ -31,18 +31,14 @@ jobs:
       - name: Test
         env:
           VITALSYNC_REQUIRE_CONTAINERS: "1"
-        run: |
-          dotnet test --configuration Release --no-build \
-            --logger "console;verbosity=detailed" \
-            --logger "trx" \
-            --results-directory ./test-results
+        run: dotnet test --configuration Release --no-build -- --output Detailed
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: ./test-results
+          path: "**/bin/Release/net10.0/TestResults/**"
           if-no-files-found: ignore
 
       - name: Create the ASP.NET development certificate
@@ -77,9 +73,17 @@ jobs:
           VITALSYNC_REQUIRE_CONTAINERS: "1"
         run: |
           dotnet test samples/StateStored/VitalSync.Sample.StateStored.Tests \
-            --configuration Release --no-build
+            --configuration Release --no-build -- --output Detailed
           dotnet test samples/EventSourced/VitalSync.Sample.EventSourced.Tests \
-            --configuration Release --no-build
+            --configuration Release --no-build -- --output Detailed
+
+      - name: Upload smoke test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: "samples/**/bin/Release/net10.0/TestResults/**"
+          if-no-files-found: ignore
 
       - name: AppHost log
         if: failure()
