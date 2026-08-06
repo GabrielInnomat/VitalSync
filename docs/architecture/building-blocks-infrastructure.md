@@ -466,8 +466,21 @@ A small cluster of classes, using Marten as a **raw stream store**:
   `ISender` (ADR-0023 scope note) — Wolverine is the transport, **never** the
   in-process mediator. The `Result` model, exception translation, and pipeline
   ordering remain authoritative.
-- Retries and dead-lettering are configured here with sane, overridable
-  defaults.
+- **Retries are graded by failure class** (ADR-0023 amendment 2026-08-06). One rule for
+  every exception served two opposite failure classes badly, so
+  `ApplyBuildingBlockMessagingDefaults` registers three, and Wolverine takes the first
+  that matches. **Hopeless** — `JsonException`, `DomainValidationException`,
+  `BusinessRuleViolationException` — is dead-lettered immediately: it never recovers, and
+  retrying it writes four error log entries where one is the truth, multiplying the metric
+  every alert threshold is calibrated against. **Transient** — an `NpgsqlException` whose
+  `IsTransient` is set, and `TimeoutException` — retries over 1 s / 5 s / 15 s / 30 s and
+  deliberately does **not** end in `MoveToErrorQueue`: a failover outlasts any cooldown
+  ladder, so the message stays on the queue for the broker to redeliver, which is safe
+  precisely because of the 7-day idempotency window below. **Unknown** — anything else —
+  keeps the original 100 ms / 500 ms / 2 s and then dead-letters. The transient rule
+  matches the `IsTransient` **predicate**, not the type, so a unique violation (`23505`)
+  falls through to the unknown class instead of being retried as if the database were
+  ill.
 - **Routing.** Connecting the transport moves nothing on its own — Wolverine
   routes only what a routing rule matches, and `PublishAsync` silently discards
   an unroutable message. `UseWolverineMessaging` therefore installs the rule

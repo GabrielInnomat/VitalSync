@@ -1,4 +1,5 @@
 using BuildingBlocks.Application.IntegrationEvents;
+using BuildingBlocks.Domain.Rules;
 
 namespace DeadLetterFixture;
 
@@ -31,5 +32,26 @@ public sealed class AlwaysFailsConsumer
         recorder.Record(message.Name);
 
         throw new InvalidOperationException($"'{message.Name}' can never be handled.");
+    }
+}
+
+[IntegrationEventTopic("upstream.always-invalid")]
+public sealed record AlwaysInvalidIntegrationEvent(string Name) : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+
+    public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class AlwaysInvalidConsumer
+{
+    public static void Handle(AlwaysInvalidIntegrationEvent message, AttemptRecorder recorder)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(recorder);
+
+        recorder.Record(message.Name);
+
+        throw new DomainValidationException($"'{message.Name}' will never become valid.");
     }
 }

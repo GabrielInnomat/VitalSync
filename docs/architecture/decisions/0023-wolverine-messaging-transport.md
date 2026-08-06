@@ -9,6 +9,7 @@
 - **Amended:** 2026-08-04 (persistent delivery — see the note below)
 - **Amended:** 2026-08-06 (the inbox idempotency window — see the note below)
 - **Amended:** 2026-08-06 (a mapper without a transport is a start-up error — see the note below)
+- **Amended:** 2026-08-06 (retries are graded by failure class — see the note below)
 
 ## Context
 
@@ -320,6 +321,40 @@ everything else from ADR-0004 intact.
 > `UseNoPersistence()` is real but principled — "this host commits nothing" is an intent
 > that cannot be read off the code, whereas "this host publishes nothing" is simply the
 > absence of a mapper.
+
+> **Retries are graded by failure class (amendment 2026-08-06).** The original policy was
+> a single rule — retry every exception three times with a 100 ms / 500 ms / 2 s cooldown,
+> then dead-letter — which treats two opposite failure classes identically and serves
+> neither.
+>
+> A **deterministic** failure never recovers: malformed JSON is malformed on the fourth
+> attempt too, and a rejected business rule stays rejected. Retrying it costs 2.6 s of
+> consumer time and, worse, writes **four** error log entries where one is the truth,
+> multiplying the error metric every alert threshold is calibrated against. A **transient**
+> failure does recover, but rarely inside 2.6 s: a database failover or a lock timeout
+> outlasts the whole cooldown ladder, so the message is dead-lettered and needs a manual
+> requeue — precisely the operation the 7-day inbox idempotency window above was widened
+> to make safe. The two amendments describe the same operational reality from opposite
+> sides.
+>
+> `ApplyBuildingBlockMessagingDefaults` therefore registers three classes, in evaluation
+> order (Wolverine takes the first matching rule):
+>
+> | Class | Matched by | Policy |
+> | --- | --- | --- |
+> | Hopeless | `JsonException`, `DomainValidationException`, `BusinessRuleViolationException` | dead-letter immediately, no retry |
+> | Transient | `NpgsqlException` with `IsTransient`, `TimeoutException` | retry with 1 s / 5 s / 15 s / 30 s, no dead-letter |
+> | Unknown | any other `Exception` | unchanged: 100 ms / 500 ms / 2 s, then dead-letter |
+>
+> Two details are load-bearing. The transient rule matches on the **predicate**
+> `IsTransient`, not on the type: a `PostgresException` carrying a unique violation
+> (`23505`) is a `NpgsqlException` but is *not* transient, so it falls through to the
+> unknown class — deliberately, because translating it into a `Failure.Conflict` is a
+> separate concern and must not be pre-empted here. And the transient rule does **not**
+> end in `MoveToErrorQueue`: after 51 s of cooldown the message stays on the queue and the
+> broker redelivers it, which is the correct outcome for an outage that outlives a single
+> consumer's patience. The unknown class keeps its old numbers so that its four attempts
+> remain the pinned behaviour of `DeadLetterTests`.
 
 ## Consequences
 

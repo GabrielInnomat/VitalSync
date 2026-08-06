@@ -62,7 +62,7 @@ eine Entscheidung, keinen Code.
 | TODO-25 | Marten-Nebenläufigkeit verdrahtet, aber unbelegt               | **P2** | offen             | WS-10                                 |
 | TODO-26 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | **P2** | gelöst            | WS-09                                 |
 | TODO-27 | Schema-Erzeugung zur Laufzeit in Produktion                    | **P2** | offen             | WS-11                                 |
-| TODO-28 | Restliche Messaging-Guard-Rails                                | **P2** | teilweise         | IMP-13, WS-06                         |
+| TODO-28 | Restliche Messaging-Guard-Rails                                | **P2** | gelöst            | IMP-13, WS-06                         |
 | TODO-29 | `DomainEventPublisher` koppelt Projektion und Integration-Publikation     | **P3** | offen             | IMP-26                                |
 | TODO-30 | `IIntegrationEventMapper` ist untypisiert                      | **P3** | offen             | IMP-12                                |
 | TODO-31 | `Result` hat keine Kombinatoren                                | **P3** | offen             | IMP-34                                |
@@ -1491,7 +1491,7 @@ MigrationService-Worker (TODO-46), der die Datenbanken ohnehin schon migriert.
 
 # TODO-28, Restliche Messaging-Guard-Rails
 
-**P2 · teilweise · IMP-13 + WS-06**
+**P2 · gelöst · IMP-13 + WS-06**
 
 Der große Teil ist erledigt: `BuildingBlocksWolverineExtension` wendet die passende Kombination
 automatisch an, die `Apply*`-Methoden sind `internal`, ein Startup-Validator prüft `UseWolverine`,
@@ -1537,16 +1537,45 @@ Die Asymmetrie zu den Projektionen steht jetzt in `cqrs-and-event-sourcing.md`, 
 Belegt durch `IntegrationEventMapperCheckTests` (4 Tests, darunter der Host mit eigener
 Sink-Factory).
 
+## Gelöst (2026-08-06): die differenzierte Retry-Policy
+
+Der letzte Punkt mit Substanz ist umgesetzt. `ApplyBuildingBlockMessagingDefaults` registriert drei
+Regeln statt einer; Wolverine nimmt die erste, die passt:
+
+| Klasse | Erkannt an | Politik |
+| --- | --- | --- |
+| Hoffnungslos | `JsonException`, `DomainValidationException`, `BusinessRuleViolationException` | sofort Dead-Letter, kein Retry |
+| Transient | `NpgsqlException` mit `IsTransient`, `TimeoutException` | 1 s / 5 s / 15 s / 30 s, **kein** Dead-Letter |
+| Unbekannt | jede andere `Exception` | unverändert 100 ms / 500 ms / 2 s, dann Dead-Letter |
+
+Der eigentliche Gewinn ist nicht die gesparte Wartezeit, sondern die **Fehlermetrik**: ein
+deterministischer Fehler erzeugte vier Error-Logs, wo einer die Wahrheit ist — mal vier auf jedem
+Alert-Schwellwert. Umgekehrt überlebt ein DB-Failover die 2,6 s der alten Leiter nie und landete in
+der DLQ, obwohl er sich erholt. Genau deshalb endet die transiente Klasse **nicht** in
+`MoveToErrorQueue`: die Nachricht bleibt auf der Queue und wird erneut zugestellt. Sicher ist das
+nur wegen des 7-Tage-Idempotenzfensters aus TODO-14 — beide Punkte beschreiben dieselbe
+Betriebsrealität von zwei Seiten.
+
+Die transiente Regel matcht das **Prädikat** `IsTransient`, nicht den Typ: eine `PostgresException`
+mit Unique-Violation (`23505`) ist keine transiente Störung und fällt bewusst in die unbekannte
+Klasse, denn ihre Übersetzung nach `Failure.Conflict` ist TODO-22 und darf hier nicht vorweggenommen
+werden. Die Zahlen der unbekannten Klasse bleiben, damit die vier Versuche in `DeadLetterTests` ihre
+gepinnte Bedeutung behalten.
+
+Zur zweiten Frage des offenen Punkts — ob Wolverines Broker-DLQ die richtige Endstation ist: ja, sie
+bleibt. Sie ist durabel und quorum-repliziert (ADR-0023, Nachtrag 2026-08-04), und ein Requeue von
+dort ist wegen des Idempotenzfensters gefahrlos. Die Alternative, eine eigene Tabelle, hätte nur den
+Vorteil einer SQL-Abfrage — und den Nachteil, den Broker-Zustand zu duplizieren.
+
+Belegt durch den neuen `ADeterministicFailure_IsDeadLetteredWithoutBeingRetried` neben dem
+bestehenden Vier-Versuche-Test. Beide deklarieren jetzt eine **pro Lauf eindeutige Queue**: mehrere
+Probe-Queues binden dasselbe Pattern `upstream.*`, und eine wiederverwendete dauerhafte Queue sammelt
+Nachrichten früherer Tests ein — das hat den bestehenden Test einmalig rot gemacht.
+
 ## Offen
 
-Von den vier Punkten bleibt **einer** hier, einer ist umgezogen, einer ist entschieden:
+Nichts mehr in diesem TODO. Verbleibende Randnotizen:
 
-- **Differenzierte Retry-Policy.** Heute fängt `ApplyBuildingBlockMessagingDefaults` alles mit
-  `OnException<Exception>().RetryWithCooldown(100ms, 500ms, 2s).Then.MoveToErrorQueue()`. Ein
-  `JsonException` ist damit dreimal Wartezeit für einen Fehler, der sich nie erholt, während eine
-  transiente `NpgsqlException` mit demselben knappen Fenster abgefertigt wird. Braucht eine
-  Aufteilung nach Fehlerklasse — und eine Aussage dazu, ob Wolverines Dead-Letter-Queue auf dem
-  Broker (nicht die Tabelle, siehe `DeadLetterTests`) die richtige Endstation ist.
 - **Umgebungsabhängiges `AutoProvision`** ist nach **TODO-27** verschoben. Es ist derselbe Fall wie
   Martens `AutoCreateSchemaObjects`: eine Komponente, die beim ersten Start eines Deployments
   fremde Infrastruktur anlegt, ohne dass jemand es freigegeben hat. Beide gehören in dieselbe

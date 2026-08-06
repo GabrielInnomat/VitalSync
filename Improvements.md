@@ -25,7 +25,7 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-10 | Zwei inkompatible Aggregat-Programmiermodelle                            | gelöst            |
 | IMP-11 | `IIntegrationEvent` ist ein leerer Marker                                | gelöst            |
 | IMP-12 | `IIntegrationEventMapper` ist untypisiert                                | offen             |
-| IMP-13 | Messaging-Konfiguration ohne Guard-Rails                                 | teilweise         |
+| IMP-13 | Messaging-Konfiguration ohne Guard-Rails                                 | gelöst            |
 | IMP-14 | Constraint-Mismatch zwischen Repository-Vertrag und Implementierung      | gelöst            |
 | IMP-15 | Repository lädt Aggregate unvollständig                                  | gelöst            |
 | IMP-16 | Kein Validierungs-Behavior, Mehrfachfehler nicht erzeugbar               | teilweise         |
@@ -330,7 +330,11 @@ und der `WolverineWiringStartupValidator` prüft beim Start, ob `UseWolverine` �
 wurde. `AddBuildingBlocks` lehnt außerdem eine Subscription ohne Transport ab
 ([ServiceCollectionExtensions.cs:63-69](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs:63)).
 
-**Offen:** differenzierte Retry-Policy (heute `OnException<Exception>` für alles).
+**Gelöst (2026-08-06).** Die **differenzierte Retry-Policy** ist umgesetzt: drei Fehlerklassen statt
+einer — hoffnungslos (`JsonException`, `DomainValidationException`, `BusinessRuleViolationException`)
+sofort in die DLQ, transient (`NpgsqlException` mit `IsTransient`, `TimeoutException`) über
+1 s / 5 s / 15 s / 30 s **ohne** DLQ, alles Übrige unverändert. Damit ist IMP-13 vollständig
+abgeschlossen.
 
 **Nachtrag (2026-08-06).** Zwei der vier offenen Punkte sind weg: die
 **Mapper-ohne-Transport-Prüfung** ist als `IntegrationEventMapperCheck` umgesetzt (Startfehler,

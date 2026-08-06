@@ -12,8 +12,6 @@ namespace BuildingBlocks.Infrastructure.Tests;
 [Collection(BrokerAndDatabaseCollection.Name)]
 public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture rabbit)
 {
-    private const string QueueName = "dead-letter-probe";
-
     private const string DeadLetterQueueName = "wolverine-dead-letter-queue";
 
     private const int ExpectedAttempts = 4;
@@ -27,7 +25,7 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
         Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         var recorder = new AttemptRecorder();
-        using var host = await StartHostAsync(recorder);
+        using var host = await StartHostAsync(recorder, UniqueQueueName("dead-letter-probe"));
         using var upstream = await StartUpstreamPublisherAsync();
         var name = Guid.NewGuid().ToString();
 
@@ -41,6 +39,32 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
+
+    [Fact]
+    public async Task ADeterministicFailure_IsDeadLetteredWithoutBeingRetried()
+    {
+        Assert.SkipUnless(postgres.Available, postgres.SkipReason);
+        Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
+
+        var recorder = new AttemptRecorder();
+        using var host = await StartHostAsync(recorder, UniqueQueueName("dead-letter-invalid-probe"));
+        using var upstream = await StartUpstreamPublisherAsync();
+        var name = Guid.NewGuid().ToString();
+
+        await upstream.Services.GetRequiredService<IMessageBus>()
+            .PublishAsync(new AlwaysInvalidIntegrationEvent(name));
+
+        var deadLettered = await WaitForDeadLetterAsync(name, recorder);
+        Assert.Contains(name, deadLettered, StringComparison.Ordinal);
+
+        await Task.Delay(500, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, recorder.Names.Count(recorded => recorded == name));
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    private static string UniqueQueueName(string prefix) => $"{prefix}-{Guid.NewGuid():N}";
 
     private async Task<string> WaitForDeadLetterAsync(string name, AttemptRecorder recorder)
     {
@@ -74,7 +98,7 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
         }
     }
 
-    private async Task<IHost> StartHostAsync(AttemptRecorder recorder) =>
+    private async Task<IHost> StartHostAsync(AttemptRecorder recorder, string queueName) =>
         await Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
             {
@@ -86,7 +110,7 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
                     options.UseMartenEventSourcing(postgres.ConnectionString);
                     options.UseWolverineMessaging(rabbit.ConnectionUri, TestMessaging.ExchangeName, TestMessaging.ContextName);
                     options.SubscribeToIntegrationEvents(
-                        QueueName,
+                        queueName,
                         typeof(AlwaysFailsConsumer).Assembly,
                         "upstream.*");
                 });
@@ -107,6 +131,10 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
                 options.PublishMessagesToRabbitMqExchange<AlwaysFailsIntegrationEvent>(
                     TestMessaging.ExchangeName,
                     _ => "upstream.always-fails");
+
+                options.PublishMessagesToRabbitMqExchange<AlwaysInvalidIntegrationEvent>(
+                    TestMessaging.ExchangeName,
+                    _ => "upstream.always-invalid");
             })
             .StartAsync(TestContext.Current.CancellationToken);
 }

@@ -17,6 +17,8 @@ namespace BuildingBlocks.Infrastructure.Tests;
 
 public sealed class IntegrationEventSinkDeliveryTests
 {
+    private static readonly TimeSpan TrackingTimeout = TimeSpan.FromSeconds(30);
+
     [Fact]
     public async Task DeliveredEnvelope_PublishesIntegrationEventWithOriginCorrelation()
     {
@@ -24,6 +26,7 @@ public sealed class IntegrationEventSinkDeliveryTests
         var recorder = host.Services.GetRequiredService<SinkProbeRecorder>();
 
         var session = await host.TrackActivity()
+            .Timeout(TrackingTimeout)
             .WaitForMessageToBeReceivedAt<SinkProbeIntegrationEvent>(host)
             .PublishMessageAndWaitAsync(WrapProbeEvent("happy"));
 
@@ -43,6 +46,7 @@ public sealed class IntegrationEventSinkDeliveryTests
         crashSwitch.Enabled = true;
 
         await host.TrackActivity()
+            .Timeout(TrackingTimeout)
             .DoNotAssertOnExceptionsDetected()
             .PublishMessageAndWaitAsync(WrapProbeEvent("crash"));
 
@@ -119,9 +123,14 @@ public sealed class SinkProbeRecorder
 
 public sealed class SinkProbeCrashSwitch
 {
+    private int _enabled;
     private int _tripped;
 
-    public bool Enabled { get; set; }
+    public bool Enabled
+    {
+        get => Volatile.Read(ref _enabled) != 0;
+        set => Volatile.Write(ref _enabled, value ? 1 : 0);
+    }
 
     public bool Tripped => Volatile.Read(ref _tripped) != 0;
 

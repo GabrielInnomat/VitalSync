@@ -562,6 +562,18 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   failures are invisible. A consumer that keeps throwing is retried three times and the message
   then goes to Wolverine's `wolverine-dead-letter-queue` **on the broker** — not to the
   `wolverine_dead_letters` table in the write database, which stays empty (`DeadLetterTests`).
+- **Retries are graded by failure class** (ADR-0023 amendment 2026-08-06). Three rules, first
+  match wins. **Hopeless** (`JsonException`, `DomainValidationException`,
+  `BusinessRuleViolationException`) is dead-lettered on the **first** attempt — it never
+  recovers, and retrying it writes four error logs where one is the truth, multiplying the
+  metric every alert threshold is calibrated against. **Transient** (`NpgsqlException` with
+  `IsTransient`, `TimeoutException`) retries over 1 s / 5 s / 15 s / 30 s and deliberately
+  does **not** dead-letter — a failover outlasts any cooldown ladder, so the message stays on
+  the queue for redelivery, which is safe only because of the 7-day idempotency window.
+  **Unknown** keeps the old 100 ms / 500 ms / 2 s and then dead-letters. Match the
+  `IsTransient` **predicate**, never the bare `NpgsqlException` type: a unique violation
+  (`23505`) is not transient and must fall through to the unknown class, because turning it
+  into a `Failure.Conflict` is a separate concern.
 - **Integration-event delivery is durable** (ADR-0023 amendment 2026-08-04): the publish
   rule adds `UseDurableOutbox()`, so the sending endpoint is `EndpointMode.Durable`. That
   one setting decides two things at once — the AMQP persistence flag (`delivery_mode: 2`)

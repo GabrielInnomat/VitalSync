@@ -1,8 +1,11 @@
+using System.Text.Json;
 using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Application.DomainEvents;
 using BuildingBlocks.Application.IntegrationEvents;
+using BuildingBlocks.Domain.Rules;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
+using Npgsql;
 using Wolverine;
 using Wolverine.ErrorHandling;
 using Wolverine.RabbitMQ;
@@ -14,6 +17,21 @@ internal static class WolverineOptionsExtensions
     public const string DomainEventLocalQueueName = "building-blocks-domain-events";
 
     public static readonly TimeSpan IdempotencyWindow = TimeSpan.FromDays(7);
+
+    public static readonly TimeSpan[] TransientRetryCooldowns =
+    [
+        TimeSpan.FromSeconds(1),
+        TimeSpan.FromSeconds(5),
+        TimeSpan.FromSeconds(15),
+        TimeSpan.FromSeconds(30),
+    ];
+
+    public static readonly TimeSpan[] UnknownRetryCooldowns =
+    [
+        TimeSpan.FromMilliseconds(100),
+        TimeSpan.FromMilliseconds(500),
+        TimeSpan.FromSeconds(2),
+    ];
 
     public static WolverineOptions ApplyBuildingBlockIdempotencyWindow(this WolverineOptions options)
     {
@@ -60,11 +78,17 @@ internal static class WolverineOptionsExtensions
                 integrationEvent => TopicResolver.For(integrationEvent.GetType(), messaging.ContextName))
             .UseDurableOutbox();
 
+        options.Policies.OnException<JsonException>().MoveToErrorQueue();
+        options.Policies.OnException<DomainValidationException>().MoveToErrorQueue();
+        options.Policies.OnException<BusinessRuleViolationException>().MoveToErrorQueue();
+
+        options.Policies.OnException<NpgsqlException>(exception => exception.IsTransient)
+            .RetryWithCooldown(TransientRetryCooldowns);
+        options.Policies.OnException<TimeoutException>()
+            .RetryWithCooldown(TransientRetryCooldowns);
+
         options.Policies.OnException<Exception>()
-            .RetryWithCooldown(
-                TimeSpan.FromMilliseconds(100),
-                TimeSpan.FromMilliseconds(500),
-                TimeSpan.FromSeconds(2))
+            .RetryWithCooldown(UnknownRetryCooldowns)
             .Then.MoveToErrorQueue();
 
         return options;
