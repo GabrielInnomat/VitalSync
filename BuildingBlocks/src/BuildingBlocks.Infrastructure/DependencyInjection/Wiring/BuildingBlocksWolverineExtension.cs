@@ -11,6 +11,7 @@ internal sealed class BuildingBlocksWolverineExtension(WolverineWiringSettings s
 
         if (settings.Persistence.IsSelected)
         {
+            options.ApplyBuildingBlockIdempotencyWindow();
             options.ApplyBuildingBlockDomainEventRouting();
         }
 

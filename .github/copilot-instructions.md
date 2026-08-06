@@ -577,6 +577,24 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   `IntegrationEventDurabilityTests` (real broker) and `WolverineExtensionTests` (no Docker).
   Consequence to know: a queue's type is fixed at declaration, so a broker still holding a
   classic queue of the same name makes `AutoProvision` fail and the queue must be deleted.
+- **Consumer idempotency has two halves, and only one is built here** (ADR-0023 amendment
+  2026-08-06). Wolverine's **durable inbox already deduplicates**: the subscriber queue
+  listens with `UseDurableInbox()`, every incoming envelope lands in
+  `wolverine_incoming_envelopes` under a primary key on the envelope id, a second arrival
+  raises PostgreSQL `23505` and the message is acknowledged **without** running a handler.
+  The id crosses the wire as the AMQP `MessageId`, so a nack, a requeue, a crash before the
+  ack, a broker reconnect and the sender's outbox retry are covered for free — do not build
+  anything for those. What was broken is that Wolverine **deletes** handled rows after
+  `DurabilitySettings.KeepAfterMessageHandling`, default five minutes, so the guarantee
+  expired silently; `ApplyBuildingBlockIdempotencyWindow` sets it to **7 days** whenever a
+  persistence strategy was selected, and a test pins that the value is not the framework
+  default. Still uncovered on purpose: a republication under a **new** envelope id (outbox
+  replay, operational re-send, future event replay). The business key for that is
+  `IIntegrationEvent.EventId` (ADR-0029) and a dedup table keyed by it is **deferred** to
+  TODO-14 part B, which hangs off the replay decision in TODO-21. Until then **shared
+  identity is the sanctioned route** — a consumer deriving its own aggregate adopts the
+  foreign id, the way `MirrorWidgetHandler` does. Never write a consumer that assumes
+  exactly-once.
 - **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
   and the event schema is unchanged, so snapshots can be added per context later with
   **no event migration**.

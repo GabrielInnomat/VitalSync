@@ -48,7 +48,7 @@ eine Entscheidung, keinen Code.
 | TODO-11 | Optionalität von `IUnitOfWork`                                 | **P2** | gelöst            | IMP-07, hacky-11, IMP-46              |
 | TODO-12 | Name der `Result`-Fehlerfactory                                | **P2** | gelöst            | hacky-3, IMP-27, IMP-39               |
 | TODO-13 | Wo lebt die Event-Identität?                                   | **P2** | gelöst            | IMP-41, IMP-11                        |
-| TODO-14 | Idempotenz-Bookkeeping über die Kontextgrenze                  | **P2** | offen             | IMP-11, WS-12                         |
+| TODO-14 | Idempotenz-Bookkeeping über die Kontextgrenze                  | **P2** | teilweise         | IMP-11, WS-12                         |
 | TODO-15 | Mehrfachfehler und Feldvalidierung end-to-end                  | **P2** | offen             | IMP-16, IMP-17, hacky-12              |
 | TODO-16 | `FailureCategory` fehlen Autorisierung und Unerwartet          | **P2** | offen             | IMP-18                                |
 | TODO-17 | `RuleChecker` schluckt `null`                                  | **P2** | gelöst            | hacky-10, IMP-36                      |
@@ -921,7 +921,7 @@ Asymmetrie später als Inkonsistenz „aufgeräumt". Entscheidung vor TODO-02 un
 
 # TODO-14, Idempotenz-Bookkeeping über die Kontextgrenze
 
-**P2 · offen · IMP-11 + WS-12**
+**P2 · teilweise · IMP-11 + WS-12**
 
 Der Spiegel in Etappe 3 ist nur deshalb idempotent, weil das Gadget die Widget-Id übernimmt
 ([MirrorWidget.cs:20](samples/EventSourced/VitalSync.Sample.EventSourced.Application/MirrorWidget.cs:20)).
@@ -932,13 +932,65 @@ Bookkeeping über verarbeitete `EventId`s. Das gibt es nicht — aber seit TODO-
 ([IIntegrationEvent.cs](BuildingBlocks/src/BuildingBlocks.Application/IntegrationEvents/IIntegrationEvent.cs)), es
 gibt also inzwischen eine Id, über die man Buch führen kann.
 
-## Lösungsvorschlag
+## Befund 2026-08-06: die Hälfte war bereits gelöst, nur mit einer stillen Frist
 
-TODO-13 ist entschieden, die Id existiert — es fehlt noch das Bookkeeping selbst:
+Vor der Umsetzung wurde Wolverines Empfangspfad recherchiert statt vermutet — und der Befund hat
+die Aufgabe halbiert:
 
-Als Wolverine-Middleware auf dem Consumer-Pfad, damit kein Konsument daran denken muss. Bis dahin
-gilt: **geteilte Identität ist der einzige sanktionierte Idempotenz-Weg** — das gehört so in
-`docs/architecture/communication.md`, sonst wird es als allgemeines Muster kopiert.
+**Die durable Inbox dedupliziert bereits.** `ListenToRabbitQueue(...).UseDurableInbox()` speichert
+jede eingehende Envelope in `wolverine_incoming_envelopes`, deren Primärschlüssel die
+`Envelope.Id` ist. Ein zweiter `INSERT` derselben Id verletzt den Constraint (PostgreSQL `23505`),
+Wolverine erkennt das als `DuplicateIncomingEnvelopeException` und **quittiert die Nachricht ohne
+sie zu verarbeiten**. Die Envelope-Id überlebt die Leitung, weil der `RabbitMqEnvelopeMapper` sie
+als AMQP-`MessageId` schreibt und beim Empfang zurückliest. Ein Redelivery durch Nack, Requeue,
+Consumer-Crash vor dem Ack oder Broker-Reconnect ist damit gedeckt — ebenso ein Outbox-Retry des
+Senders, der dieselbe Envelope-Id behält.
+
+**Aber der Schutz verfiel nach fünf Minuten.** `DurabilitySettings.KeepAfterMessageHandling` stand
+auf dem Framework-Default `5.Minutes()`; ein Hintergrundjob löscht `Handled`-Zeilen nach Ablauf.
+Wolverine nennt diese Zeilen im eigenen Quellkommentar „*records to use in idempotency checking*" —
+die Idempotenzzusage des Systems hing also an einer Frist, die niemand hier je entschieden hat.
+Dasselbe Muster wie ADR-0034 (`IsEmpty` im Eventstrom) und ADR-0035 (abgeleitete Feldnamen): eine
+dauerhafte Entscheidung, die aus einem Default entstanden ist.
+
+## Gelöst (Teil A, 2026-08-06): die Frist ist jetzt eine Entscheidung
+
+`ApplyBuildingBlockIdempotencyWindow` setzt `Durability.KeepAfterMessageHandling` auf **7 Tage**
+([WolverineOptionsExtensions.cs](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/Wiring/WolverineOptionsExtensions.cs)),
+angewendet genau dann, wenn eine Persistenzstrategie gewählt wurde — ohne Message Store gibt es
+keine Inbox-Zeilen, die man aufheben könnte. Sieben Tage decken ein Wochenende plus
+Betriebsreaktionszeit ab, also den realistischsten offenen Fall: ein Operator spielt Stunden oder
+Tage später eine Nachricht aus der Dead-Letter-Queue zurück.
+
+Drei Tests halten das fest: der Wert wird bei gewählter Persistenz gesetzt, er ist beweisbar
+**nicht** der Wolverine-Default (sonst wäre der Test wertlos, sobald das Framework seinen Default
+ändert), und ohne Persistenz bleibt die Einstellung unberührt.
+
+## Offen (Teil B): fachliche Dedup über `EventId`
+
+Nicht gedeckt bleibt die **Republikation mit neuer Envelope-Id** — ein Outbox-Replay, ein
+Betriebseingriff, oder ein künftiger Event-Replay. Der Inbox-Schlüssel ist die Transportidentität;
+die fachliche Identität ist `IIntegrationEvent.EventId`, und ADR-0029 hat sie ausdrücklich mit der
+Auflage eingeführt, sie nicht pro Aufruf neu zu erzeugen, „*or redeliveries break deduplication*".
+Diese Zusage hat bis heute keinen Konsumenten.
+
+Lösungsweg, wenn es soweit ist: eine Wolverine-Middleware auf dem Consumer-Pfad (analog
+`OwnContextIntegrationEventFilter`), die `EventId` gegen eine `processed_integration_events`-Tabelle
+in der Write-DB des konsumierenden Kontexts prüft und den Eintrag **in derselben Transaktion** wie
+die Handler-Arbeit schreibt. Beide Unit-of-Work-Pfade haben eine scoped Session
+(`IDocumentSession` bzw. `DbContext`), der Eintrag reist also mit dem Commit mit; der
+Primärschlüssel auf `EventId` fängt parallele Zustellungen ab, die Vorabprüfung ist nur Optimierung.
+Kosten: zwei Implementierungen, ein Startup-Check für den EF-Pfad (die Tabelle muss gemappt sein)
+und eine Aufräumstrategie, sonst wächst die Tabelle unbegrenzt.
+
+**Bewusst vertagt**, bis **TODO-21** entschieden ist. Dort fällt die Entscheidung, ob ein Replay
+überhaupt existieren wird — und ohne Replay ist der verbleibende ungedeckte Fall so schmal, dass
+die Tabelle auf Verdacht gebaut wäre. Fällt TODO-21 zugunsten eines Domain-Event-Journals, wird
+Teil B fällig, weil ein Replay per Definition Ereignisse mit neuer Transportidentität erzeugt.
+
+Bis dahin gilt unverändert: **geteilte Identität ist der sanktionierte Idempotenzweg** — festgehalten
+in `docs/architecture/communication.md`, damit der Sonderfall des Spiegels nicht als allgemeines
+Muster kopiert wird.
 
 ---
 
@@ -1212,6 +1264,21 @@ keinen Snapshot. Wer es **nicht** löst, muss die Read-Modelle in den Snapshot a
 Renderer kann das ohne Änderung, er nimmt beliebige Typen). Beides ist vertretbar, aber die
 Kombination „kein Replay **und** kein Snapshot" ist die einzige Variante, die still Daten verliert.
 Die Entscheidung gehört in die ADR, die dieses TODO ohnehin braucht.
+
+## Nachtrag (2026-08-06): TODO-14 Teil B hängt ebenfalls an dieser Entscheidung
+
+Der zweite Nachzügler. **TODO-14** hat seinen Teil A gelöst (Wolverines Inbox-Idempotenzfenster ist
+jetzt eine Entscheidung statt eines 5-Minuten-Defaults) und seinen Teil B — fachliche
+Deduplizierung über `IIntegrationEvent.EventId` — bewusst hierhin vertagt. Grund: Der einzige von
+Teil A **nicht** gedeckte Fall ist die Republikation eines Ereignisses mit **neuer**
+Transportidentität, und die entsteht praktisch erst durch ein Replay. Ein Domain-Event-Journal, wie
+dieses TODO es vorschlägt, erzeugt genau das.
+
+Also: Fällt die Entscheidung hier für Replay, wird TODO-14 Teil B fällig — ein Replay ohne
+fachliche Dedup beim Konsumenten spielt jedem nachgelagerten Kontext seine Historie ein zweites Mal
+ein. Fällt sie dagegen für „Rebuild aus dem aktuellen Zustand", bleibt Teil B dauerhaft unnötig und
+sollte gestrichen werden — zusammen mit der `EventId`-Zusage aus ADR-0029, auf die sich dann
+niemand verlässt.
 
 ---
 

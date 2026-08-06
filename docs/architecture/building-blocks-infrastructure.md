@@ -503,6 +503,21 @@ A small cluster of classes, using Marten as a **raw stream store**:
 - **Consumer side included.** Queue declaration, binding, listening, and consumer
   discovery are wired by `SubscribeToIntegrationEvents` (ADR-0023 amendment
   2026-08-01); the subscribing host adds nothing of its own.
+- **The inbox idempotency window is a decision.** The subscriber queue listens with
+  `UseDurableInbox()`, so every incoming envelope is stored in
+  `wolverine_incoming_envelopes` under a primary key on the envelope id; a second
+  arrival of the same id violates that key and Wolverine acknowledges the message
+  without running a handler. Since the id crosses the wire as the AMQP `MessageId`,
+  that already covers a nack, a requeue, a crash before the ack, a broker reconnect
+  and the sender's own outbox retry. Wolverine then **deletes** those rows after
+  `DurabilitySettings.KeepAfterMessageHandling`, whose default is five minutes, so
+  the guarantee silently expired. `ApplyBuildingBlockIdempotencyWindow` widens it to
+  **7 days** whenever a persistence strategy was selected — without a message store
+  there are no inbox rows to keep. Seven days covers a weekend plus the time an
+  operator needs to replay a message out of the dead-letter queue. What this does
+  **not** cover is a republication under a *new* envelope id; the business key for
+  that is `IIntegrationEvent.EventId`, and a dedup table keyed by it is deferred
+  until the replay question is decided (TODO-14 part B).
 
 ### Runtime code generation
 

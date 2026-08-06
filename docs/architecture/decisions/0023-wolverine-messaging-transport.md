@@ -7,6 +7,7 @@
 - **Amended:** 2026-08-01 (subscribing half — see the note below)
 - **Amended:** 2026-08-03 (topic attribute owned by Building Blocks — see the note below)
 - **Amended:** 2026-08-04 (persistent delivery — see the note below)
+- **Amended:** 2026-08-06 (the inbox idempotency window — see the note below)
 
 ## Context
 
@@ -260,6 +261,43 @@ everything else from ADR-0004 intact.
 > adapter** that calls `ISender`, so the `Result` model, exception-to-Result
 > translation (ADR-0017), and pipeline-behavior ordering remain authoritative
 > and the framework-agnostic core stays decoupled from the transport.
+
+> **The inbox idempotency window is a decision, not a default (amendment 2026-08-06).**
+> Delivery is at-least-once, so TODO-14 asked for consumer-side bookkeeping over processed
+> `EventId`s. Measuring first showed that half of it already existed — and that the other
+> half failed in the way this repository keeps finding.
+>
+> - **The durable inbox already deduplicates.** `SubscribeToIntegrationEvents` listens with
+>   `UseDurableInbox()`, so each incoming envelope is stored in
+>   `wolverine_incoming_envelopes` whose primary key is the envelope id. A second `INSERT`
+>   of the same id raises PostgreSQL `23505`, which Wolverine turns into a
+>   `DuplicateIncomingEnvelopeException` and answers by acknowledging the message **without
+>   invoking a handler**. The id survives the wire because the RabbitMQ envelope mapper
+>   writes it as the AMQP `MessageId` and reads it back on arrival. A nack, a requeue, a
+>   consumer crash before the ack, a broker reconnect, and the sender's own durable-outbox
+>   retry are therefore all covered, and always were.
+> - **But the guarantee expired after five minutes.** Wolverine deletes handled inbox rows
+>   after `DurabilitySettings.KeepAfterMessageHandling`, whose default is `5.Minutes()` —
+>   rows its own source comments call *"records to use in idempotency checking"*. The
+>   system's idempotency promise thus rested on a retention period nobody here had chosen:
+>   the same shape as ADR-0034 (`IsEmpty` in the event stream) and ADR-0035 (derived field
+>   names), a permanent decision inherited from a default.
+> - **The window is now 7 days**, applied by `ApplyBuildingBlockIdempotencyWindow` exactly
+>   when a persistence strategy was selected — without a message store there are no inbox
+>   rows to keep. Seven days covers a weekend plus the time an operator needs to replay a
+>   message out of the dead-letter queue, which is the realistic case: the same envelope id
+>   arriving hours later, long after the row would have been swept. A test pins that the
+>   value is provably **not** the framework default, so the guarantee cannot quietly revert
+>   when Wolverine changes its own.
+> - **What stays uncovered, deliberately.** A republication under a *new* envelope id — an
+>   outbox replay, an operational re-send, a future event replay — passes the inbox
+>   untouched, because the inbox key is transport identity. The business key for that case
+>   is `IIntegrationEvent.EventId` ([ADR-0029](./0029-event-identity-placement.md)), and a
+>   dedup table keyed by it is **deferred** until the replay question is settled
+>   (TODO-14 part B, hanging off TODO-21): without a replay the remaining gap is too narrow
+>   to justify a table, two persistence implementations, a start-up check and a retention
+>   strategy. Until then, **shared identity is the sanctioned idempotency route** for a
+>   consumer deriving its own aggregate, as recorded in `communication.md`.
 
 ## Consequences
 

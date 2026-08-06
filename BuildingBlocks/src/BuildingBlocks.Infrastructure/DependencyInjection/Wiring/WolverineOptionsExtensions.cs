@@ -13,6 +13,17 @@ internal static class WolverineOptionsExtensions
 {
     public const string DomainEventLocalQueueName = "building-blocks-domain-events";
 
+    public static readonly TimeSpan IdempotencyWindow = TimeSpan.FromDays(7);
+
+    public static WolverineOptions ApplyBuildingBlockIdempotencyWindow(this WolverineOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        options.Durability.KeepAfterMessageHandling = IdempotencyWindow;
+
+        return options;
+    }
+
     public static WolverineOptions ApplyBuildingBlockDomainEventRouting(this WolverineOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);

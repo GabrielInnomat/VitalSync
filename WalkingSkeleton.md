@@ -647,7 +647,7 @@ verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Impro
 | WS-09 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | Etappe 2     | gelöst    |
 | WS-10 | Marten-Nebenläufigkeit verdrahtet, aber im Sample unbelegt     | Etappe 2     | offen     |
 | WS-11 | Der Migrations-Worker ist asymmetrisch                         | Etappe 2     | offen     |
-| WS-12 | Kein Idempotenz-Bookkeeping über die Kontextgrenze             | Etappe 3     | offen     |
+| WS-12 | Kein Idempotenz-Bookkeeping über die Kontextgrenze             | Etappe 3     | teilweise |
 | WS-13 | Ein Kontext konsumiert seine eigenen Integration Events        | Etappe 3     | gelöst    |
 | WS-14 | Die Verbindung Vertrag → Konsument ist unbewacht               | Etappe 3     | gelöst    |
 | WS-15 | `ApplyEntityKeyConversions` erfasst keine Complex Types        | vorbestehend | offen     |
@@ -1039,7 +1039,7 @@ beide Stores haben dasselbe Muster und sollten dieselbe Antwort bekommen.
 
 ---
 
-### WS-12, Kein Idempotenz-Bookkeeping über die Kontextgrenze
+### WS-12, Kein Idempotenz-Bookkeeping über die Kontextgrenze — **teilweise gelöst (2026-08-06)**
 
 Der Spiegel in Etappe 3 ist nur deshalb idempotent, weil das Gadget die Widget-Id übernimmt
 ([MirrorWidget.cs:20](samples/EventSourced/VitalSync.Sample.EventSourced.Application/MirrorWidget.cs:20)).
@@ -1049,15 +1049,32 @@ echtes Bookkeeping über verarbeitete `EventId`s. Das gibt es heute nicht — di
 Integration Event existiert seit [IMP-11](Improvements.md) (gelöst via ADR-0029) inzwischen,
 über die man Buch führen könnte.
 
-#### Lösungsvorschlag
+#### Was die Umsetzung korrigiert hat
 
-Der erste Schritt — `IIntegrationEvent` eine `EventId` geben
-([IMP-11](Improvements.md)) — ist erledigt; jetzt das Bookkeeping als Building Block anbieten.
+Der Befund war zur Hälfte falsch. **Wolverines durable Inbox dedupliziert längst** — die
+Listener-Queue läuft mit `UseDurableInbox()`, und der Primärschlüssel auf
+`wolverine_incoming_envelopes.id` lässt einen zweiten `INSERT` derselben Envelope-Id auflaufen
+(PostgreSQL `23505`); die Nachricht wird dann quittiert, ohne einen Handler zu starten. Die
+Envelope-Id überlebt die Leitung als AMQP-`MessageId`. Nack, Requeue, Consumer-Crash vor dem Ack,
+Broker-Reconnect und der Outbox-Retry des Senders waren also nie ungeschützt.
 
-Als Wolverine-Middleware auf dem Consumer-Pfad umsetzbar, damit kein Konsument daran denken
-muss. Bis dahin gilt: geteilte Identität ist der einzige sanktionierte Idempotenz-Weg — das
-gehört so in `docs/architecture/communication.md`, sonst wird es als allgemeines Muster
-kopiert.
+Ungeschützt war etwas anderes, und zwar auf die hier übliche stille Art: der Schutz **verfiel nach
+fünf Minuten**, weil `DurabilitySettings.KeepAfterMessageHandling` auf dem Framework-Default stand.
+Wolverine nennt diese Zeilen selbst „*records to use in idempotency checking*". Die Idempotenzzusage
+des Systems hing an einer Frist, die niemand entschieden hatte — dasselbe Muster wie WS-09
+(`IsEmpty` im Eventstrom) und WS-18 (abgeleitete Feldnamen).
+
+**Teil A ist umgesetzt:** das Fenster steht jetzt auf 7 Tage, angewendet genau dann, wenn eine
+Persistenzstrategie gewählt wurde, und ein Test hält fest, dass der Wert beweisbar nicht der
+Framework-Default ist. Damit ist der praxisnächste Fall gedeckt: ein Operator spielt Stunden später
+eine Nachricht aus der Dead-Letter-Queue zurück.
+
+**Teil B — fachliche Dedup über `EventId` — ist bewusst vertagt** an TODO-21, siehe
+[TODO-14](todo.md). Ungedeckt bleibt nur die Republikation mit **neuer** Transportidentität, und die
+entsteht praktisch erst durch ein Replay, über das TODO-21 noch nicht entschieden hat. Bis dahin
+gilt unverändert: geteilte Identität ist der sanktionierte Idempotenz-Weg — seit diesem Nachtrag
+auch so in `docs/architecture/communication.md` festgehalten, damit der Sonderfall des Spiegels
+nicht als allgemeines Muster kopiert wird.
 
 ---
 

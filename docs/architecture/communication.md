@@ -48,6 +48,18 @@ Identity placement is deliberately **asymmetric** (ADR-0029): **domain events ca
 
 See [Domain model](./domain-model.md) for domain events and [Building Blocks](./building-blocks.md) for the outbox/dispatch abstractions.
 
+### Consumer idempotency
+
+Delivery is **at-least-once**, so a consumer must tolerate seeing the same integration event twice. Two mechanisms carry that today, and it is worth knowing which one covers what.
+
+**Wolverine's durable inbox covers the transport.** Every subscription listens with `UseDurableInbox()`, which stores each incoming envelope in `wolverine_incoming_envelopes` under a primary key on the envelope id. A second arrival of the same id violates that key, and Wolverine acknowledges the message without running any handler. The id survives the wire as the AMQP `MessageId`, so a nack, a requeue, a consumer crash before the ack, a broker reconnect and a sender-side outbox retry are all deduplicated for free.
+
+That protection is time-boxed: handled rows are deleted after `DurabilitySettings.KeepAfterMessageHandling`. Building Blocks sets that window to **7 days** rather than leaving Wolverine's 5-minute default in place — long enough to cover a weekend plus the time an operator needs to replay a message out of the dead-letter queue. The window is a decision, not a default, and a test pins that it differs from the framework's.
+
+**Shared identity covers the business case, and it is the sanctioned pattern.** A consumer that derives its own aggregate from a foreign event should adopt the foreign identity, as the walking skeleton's mirror does: `MirrorWidgetHandler` builds its `GadgetId` from the incoming `WidgetId` and returns success when the aggregate already exists. Re-processing then writes the same row twice instead of creating a second aggregate.
+
+What is **not** covered is a republication under a *new* transport identity — an outbox replay or an operational re-send. The stable business key for that case is `IIntegrationEvent.EventId` (ADR-0029), but nothing consumes it yet; a dedup table keyed by `EventId` is deliberately deferred until the replay question is decided (TODO-14 part B, hanging off TODO-21). Until then, do not write a consumer that depends on being called exactly once.
+
 ### Broker topology
 
 All integration events are published to a single topic exchange, which Wolverine provisions automatically. **The exchange name belongs to the product, not to Building Blocks** (ADR-0023 amendment 2026-08-05): VitalSync defines it once as `VitalSyncMessaging.IntegrationEventExchangeName` (`vitalsync.integration-events`) in `VitalSync.ServiceDefaults`, and every host passes that constant to `UseWolverineMessaging` — never a literal, because a typo in one host binds it to an exchange nobody else uses and no host can notice that locally. The routing key of an event is its **`[IntegrationEventTopic("<context>.<event>")]`** attribute in kebab-case — a Building Blocks attribute living in `BuildingBlocks.Application` next to `IIntegrationEvent`, so contract assemblies stay free of any transport dependency (ADR-0023 amendment 2026-08-03):

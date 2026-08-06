@@ -267,6 +267,33 @@ public sealed class WolverineExtensionTests
             endpoint => endpoint.Uri.ToString().Contains("building-blocks-domain-events", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void Configure_WithPersistence_WidensTheInboxIdempotencyWindow()
+    {
+        var options = ConfigureOptions(Settings(settings =>
+            settings.SelectPersistence(PersistenceChoice.Marten)));
+
+        Assert.Equal(TimeSpan.FromDays(7), options.Durability.KeepAfterMessageHandling);
+    }
+
+    [Fact]
+    public void TheInboxIdempotencyWindow_IsNotTheWolverineDefault()
+    {
+        Assert.NotEqual(
+            new DurabilitySettings().KeepAfterMessageHandling,
+            DependencyInjection.Wiring.WolverineOptionsExtensions.IdempotencyWindow);
+    }
+
+    [Fact]
+    public void Configure_WithoutPersistence_LeavesTheIdempotencyWindowAlone()
+    {
+        var options = ConfigureOptions(new WolverineWiringSettings());
+
+        Assert.Equal(
+            new DurabilitySettings().KeepAfterMessageHandling,
+            options.Durability.KeepAfterMessageHandling);
+    }
+
     private static WolverineWiringSettings Settings(Action<WolverineWiringSettings> configure)
     {
         var settings = new WolverineWiringSettings();
