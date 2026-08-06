@@ -31,7 +31,19 @@ jobs:
       - name: Test
         env:
           VITALSYNC_REQUIRE_CONTAINERS: "1"
-        run: dotnet test --configuration Release --no-build
+        run: |
+          dotnet test --configuration Release --no-build \
+            --logger "console;verbosity=detailed" \
+            --logger "trx" \
+            --results-directory ./test-results
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./test-results
+          if-no-files-found: ignore
 
       - name: Create the ASP.NET development certificate
         run: dotnet dev-certs https
@@ -71,7 +83,12 @@ jobs:
 
       - name: AppHost log
         if: failure()
-        run: cat apphost.log
+        run: |
+          if [ -f apphost.log ]; then
+            cat apphost.log
+          else
+            echo "apphost.log not found — the AppHost was never started (an earlier step failed)."
+          fi
 
       - name: Stop the samples AppHost
         if: always()
