@@ -1471,6 +1471,22 @@ Gehört in denselben ADR wie die Frage, wie die Wolverine-Tabellen in Produktion
 Stores haben dasselbe Muster und sollten dieselbe Antwort bekommen. Spätestens beim ersten echten
 event-sourced Service fällig.
 
+## Nachtrag (2026-08-06): `AutoProvision` gehört hierher
+
+Aus TODO-28 übernommen. `ApplyBuildingBlockMessagingDefaults` ruft `UseRabbitMq(...).AutoProvision()`
+auf, legt also Exchange, Queues und Bindings beim Start selbst an, wenn sie fehlen. Das ist
+dieselbe Klasse wie die beiden Punkte oben, nur auf dem Broker statt in der Datenbank: eine
+Komponente ändert beim ersten Start eines neuen Deployments fremde Infrastruktur, ohne Freigabe.
+
+Der Broker hat dabei sogar den unangenehmeren Fall — der Typ einer Queue steht bei der Deklaration
+fest. Hält der Broker noch eine klassische Queue desselben Namens, scheitert `AutoProvision` und
+die Queue muss von Hand gelöscht werden (ADR-0023, Nachtrag 2026-08-04). Ein Deployment, das
+Infrastruktur anlegen darf, kann sie also auch blockieren.
+
+Die drei Fälle brauchen **eine** Antwort, nicht drei: wer legt Schema und Topologie an, wann, und
+was macht der Service, wenn er sie beim Start nicht vorfindet. Kandidat ist der jeweilige
+MigrationService-Worker (TODO-46), der die Datenbanken ohnehin schon migriert.
+
 ---
 
 # TODO-28, Restliche Messaging-Guard-Rails
@@ -1496,6 +1512,46 @@ if (mapperRegistriert && WolverineWiring.RabbitMqUri is null && !_noMessagingSel
 Für **Projektionen** bewusst nichts tun: mehrere Handler pro Event und Events ganz ohne Projektion
 sind beide legitim. Die Begründung gehört nach `docs/architecture/cqrs-and-event-sourcing.md`, damit
 die Asymmetrie nicht später als Lücke missverstanden wird.
+
+## Gelöst (2026-08-06): der Punkt mit den Zähnen
+
+`IntegrationEventMapperCheck` scheitert beim Start und nennt die Mapper. Zwei Abweichungen vom
+Vorschlag oben, beide bewusst:
+
+**Der Check fragt nach der Wirkung, nicht nach der Auswahl.** Nicht „`UseWolverineMessaging` wurde
+nicht aufgerufen", sondern „es sind Mapper registriert **und** die aufgelöste
+`IIntegrationEventSinkFactory` ist immer noch die Null-Variante". Beide Formulierungen fangen den
+echten Fehler, aber nur die erste lässt einen Host durch, der seine Sink-Factory selbst stellt —
+und genau das tut `IntegrationEventSinkDeliveryTests`. Die Wiring-Variante hätte einen grünen Test
+rot gemacht, obwohl dort nichts still verschwindet. Dasselbe Muster wie bei
+`UnitOfWorkPresenceCheck`, der `IUnitOfWork` gegen `NullUnitOfWork` prüft statt die
+Persistenzauswahl zu lesen.
+
+**Kein `UseNoMessaging()`.** Der Vorschlag sah es vor; es kommt nicht. ADR-0027 (Nachtrag
+2026-08-05) verbietet Escape-Hatches an `BuildingBlocksOptions` grundsätzlich, und hier fehlt der
+Anlass ohnehin: `UseNoPersistence()` existiert, weil „dieser Host committet bewusst nichts" eine
+Absicht ist, die man dem Code nicht ansieht. „Dieser Host publiziert nichts" sieht man ihm an — es
+gibt keinen Mapper. Der Ausweg aus dem Check ist, den toten Mapper zu löschen.
+
+Die Asymmetrie zu den Projektionen steht jetzt in `cqrs-and-event-sourcing.md`, wie oben verlangt.
+Belegt durch `IntegrationEventMapperCheckTests` (4 Tests, darunter der Host mit eigener
+Sink-Factory).
+
+## Offen
+
+Von den vier Punkten bleibt **einer** hier, einer ist umgezogen, einer ist entschieden:
+
+- **Differenzierte Retry-Policy.** Heute fängt `ApplyBuildingBlockMessagingDefaults` alles mit
+  `OnException<Exception>().RetryWithCooldown(100ms, 500ms, 2s).Then.MoveToErrorQueue()`. Ein
+  `JsonException` ist damit dreimal Wartezeit für einen Fehler, der sich nie erholt, während eine
+  transiente `NpgsqlException` mit demselben knappen Fenster abgefertigt wird. Braucht eine
+  Aufteilung nach Fehlerklasse — und eine Aussage dazu, ob Wolverines Dead-Letter-Queue auf dem
+  Broker (nicht die Tabelle, siehe `DeadLetterTests`) die richtige Endstation ist.
+- **Umgebungsabhängiges `AutoProvision`** ist nach **TODO-27** verschoben. Es ist derselbe Fall wie
+  Martens `AutoCreateSchemaObjects`: eine Komponente, die beim ersten Start eines Deployments
+  fremde Infrastruktur anlegt, ohne dass jemand es freigegeben hat. Beide gehören in dieselbe
+  Entscheidung und dieselbe ADR, statt zweimal halb beantwortet zu werden.
+- **`UseNoMessaging`** ist entschieden (kommt nicht, Begründung oben) und damit erledigt.
 
 ---
 

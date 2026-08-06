@@ -595,6 +595,20 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   identity is the sanctioned route** — a consumer deriving its own aggregate adopts the
   foreign id, the way `MirrorWidgetHandler` does. Never write a consumer that assumes
   exactly-once.
+- **A mapper without a transport fails the host at start** (ADR-0023 amendment 2026-08-06).
+  `IntegrationEventMapperCheck` throws, naming the mappers, when integration-event mappers
+  are registered and every event they produce would reach `NullIntegrationEventSink` — a
+  warning log while the commit reports success, indistinguishable downstream from an
+  upstream context that has not published yet. The check asks about the **effect**, not the
+  selection: it fires when the resolved `IIntegrationEventSinkFactory` is still the null
+  one, **not** when `UseWolverineMessaging` was skipped, so a host supplying its own sink
+  factory passes. Copy that shape for new checks — it is the same reason
+  `UnitOfWorkPresenceCheck` probes `IUnitOfWork` instead of the persistence choice. There
+  is deliberately **no `UseNoMessaging()`**: unlike `UseNoPersistence()`, which states an
+  intent you cannot read off the code, "this host publishes nothing" is simply the absence
+  of a mapper — so the remedy is to delete the dead mapper, and adding the opt-out is
+  refused. The mirror case, a **domain event with no projection handler**, stays unchecked
+  on purpose: several handlers and no handler are both legitimate.
 - **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
   and the event schema is unchanged, so snapshots can be added per context later with
   **no event migration**.

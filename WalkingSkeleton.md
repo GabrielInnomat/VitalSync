@@ -641,7 +641,7 @@ verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Impro
 | WS-03 | Reihenfolge über Events hinweg ist durch nichts garantiert     | Schritt 3    | gelöst    |
 | WS-04 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`     | Schritt 3    | offen     |
 | WS-05 | Vergessenes `[Topic]` fällt nicht auf                          | Etappe 1     | gelöst    |
-| WS-06 | Fehlkonfiguration ist ungleich abgedeckt                       | Etappe 1     | teilweise |
+| WS-06 | Fehlkonfiguration ist ungleich abgedeckt                       | Etappe 1     | gelöst |
 | WS-07 | Der gRPC-Vertrag liegt noch beim Service                       | Etappe 1     | offen     |
 | WS-08 | Integration Events sind nicht persistent                       | Etappe 2     | gelöst    |
 | WS-09 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | Etappe 2     | gelöst    |
@@ -879,6 +879,20 @@ if (mapperRegistriert && WolverineWiring.RabbitMqUri is null)
 
 Für Projektionen bewusst nichts tun, und die Begründung in `docs/architecture/*` festhalten, damit
 die Asymmetrie nicht später als Lücke missverstanden wird.
+
+#### Gelöst (2026-08-06)
+
+`IntegrationEventMapperCheck` schließt die Mapper-Seite, als **Startup-Check** statt als
+Kompositionszeit-Prüfung wie oben vorgeschlagen. Der Unterschied ist nicht kosmetisch: die
+Kompositionszeit-Variante liest die Wiring-Settings, der Startup-Check die aufgelöste
+`IIntegrationEventSinkFactory`. Nur die zweite Formulierung lässt einen Host durch, der seine
+Sink-Factory selbst stellt — was `IntegrationEventSinkDeliveryTests` tut, und was kein Fehler ist.
+Die Wiring-Variante hätte den Test rot gemacht und wäre damit zu streng gewesen für genau den
+Fall, den sie nicht meint.
+
+Die Projektionsseite bleibt wie begründet ungeprüft; die Begründung steht jetzt in
+`docs/architecture/cqrs-and-event-sourcing.md` (Abschnitt „One missing wire is an error, the other
+is not"), wie hier verlangt. Belegt durch `IntegrationEventMapperCheckTests`.
 
 ---
 

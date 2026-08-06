@@ -330,9 +330,15 @@ und der `WolverineWiringStartupValidator` prüft beim Start, ob `UseWolverine` �
 wurde. `AddBuildingBlocks` lehnt außerdem eine Subscription ohne Transport ab
 ([ServiceCollectionExtensions.cs:63-69](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs:63)).
 
-**Offen:** Mapper-ohne-Transport-Prüfung, `UseNoMessaging` statt stillem Null-Sink-Default,
-umgebungsabhängiges `AutoProvision`, differenzierte Retry-Policy (heute `OnException<Exception>` für
-alles).
+**Offen:** differenzierte Retry-Policy (heute `OnException<Exception>` für alles).
+
+**Nachtrag (2026-08-06).** Zwei der vier offenen Punkte sind weg: die
+**Mapper-ohne-Transport-Prüfung** ist als `IntegrationEventMapperCheck` umgesetzt (Startfehler,
+nennt die Mapper), und **`UseNoMessaging`** kommt bewusst **nicht** — ein Host, der nichts
+publiziert, hat schlicht keinen Mapper, also gibt es keine Absicht zu erklären. Das
+umgebungsabhängige **`AutoProvision`** ist nach TODO-27 verschoben, wo es mit Martens
+`AutoCreateSchemaObjects` dieselbe Entscheidung teilt. Details in TODO-28 und im ADR-0023-Nachtrag
+vom selben Tag.
 
 ## Lösungsvorschlag
 

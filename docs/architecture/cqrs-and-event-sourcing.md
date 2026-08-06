@@ -134,6 +134,25 @@ a Building Block; Infrastructure ships only the plumbing (Publisher, outbox,
 dispatch loop, projection runner, transport). Read models are **rebuildable** by
 replaying events (ES) or re-running projections over the write side.
 
+### One missing wire is an error, the other is not
+
+A registered **integration-event mapper without a messaging transport** fails the host
+at start (`IntegrationEventMapperCheck`). A mapper exists for exactly one purpose —
+producing an event that leaves this context — so without a sink every event it makes is
+handed to the null sink and dropped after a log warning while the commit reports
+success. Nothing downstream distinguishes that from an upstream context that simply has
+not published yet, which is why it must be loud at start rather than quiet at run time.
+There is deliberately **no `UseNoMessaging()`** to opt out of it: unlike
+`UseNoPersistence()`, which states a real intent ("this host commits nothing"), a host
+that publishes nothing has nothing to declare — it just has no mapper. The remedy is to
+configure the transport or delete the mapper.
+
+A **domain event without a projection handler** is the opposite and stays unchecked, on
+purpose. Several handlers per event are normal, no handler at all is normal, and a
+context is free to project only the events its read models care about. The asymmetry is
+not a gap: the mapper case has a single correct wiring and a silent failure, the
+projection case has neither.
+
 ## Open questions
 
 - Which Bounded Contexts (if any) justify Event Sourcing? _(To be decided per context.)_

@@ -749,6 +749,7 @@ registers — resolves `IEnumerable<IStartupCheck>` and runs the
 | `AggregateStateModelCheck<T>`      | before   | an aggregate state maps a forbidden navigation or key, or leaves a stored field name to convention |
 | `UnitOfWorkPresenceCheck`          | before   | commands are scanned, nothing commits them, and nobody said so  |
 | `IntegrationEventSubscriptionCheck`| after    | a handled integration event matches no bound pattern, or is own |
+| `IntegrationEventMapperCheck`      | before   | mappers are registered and every event they produce would reach the null sink |
 
 **Only the phase is load-bearing, not the registration order.** The checks are pure
 readers — none mutates state another one reads — so their relative sequence decides
@@ -769,6 +770,13 @@ Two consequences for authoring:
   from a scope rather than reading the `IServiceCollection` at composition time. A host
   that registers `IUnitOfWork` *after* `AddBuildingBlocks` used to be flagged wrongly;
   now it is not.
+- **A check asks about the effect, not about the selection.** `IntegrationEventMapperCheck`
+  fires when a mapper is registered and the resolved `IIntegrationEventSinkFactory` is
+  still the null one — deliberately *not* when `UseWolverineMessaging` was skipped. Both
+  phrasings catch the real mistake, but only the first lets a host supply its own sink
+  factory, which the delivery tests do. It is the same shape as `UnitOfWorkPresenceCheck`
+  asking whether `IUnitOfWork` is the `NullUnitOfWork` rather than whether a persistence
+  strategy was chosen.
 
 A new check is a new `IStartupCheck` plus one `TryAddEnumerable` line — never another
 hosted service.

@@ -156,6 +156,7 @@ internal static class BuildingBlocksComposition
             new HandlerRegistrationCheck(provider, options.ScannedAssemblies));
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, WolverineRuntimeCheck>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, IntegrationEventSubscriptionCheck>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, IntegrationEventMapperCheck>());
         services.AddSingleton<IStartupCheck>(provider => new UnitOfWorkPresenceCheck(
             provider,
             options.WolverineWiring,

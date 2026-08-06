@@ -8,6 +8,7 @@
 - **Amended:** 2026-08-03 (topic attribute owned by Building Blocks — see the note below)
 - **Amended:** 2026-08-04 (persistent delivery — see the note below)
 - **Amended:** 2026-08-06 (the inbox idempotency window — see the note below)
+- **Amended:** 2026-08-06 (a mapper without a transport is a start-up error — see the note below)
 
 ## Context
 
@@ -298,6 +299,27 @@ everything else from ADR-0004 intact.
 >   to justify a table, two persistence implementations, a start-up check and a retention
 >   strategy. Until then, **shared identity is the sanctioned idempotency route** for a
 >   consumer deriving its own aggregate, as recorded in `communication.md`.
+
+> **A mapper without a transport is a start-up error (amendment 2026-08-06).** The guard
+> rails above all protect a *configured* transport. The remaining hole was the missing one:
+> a host that registers an `IIntegrationEventMapper` and never calls
+> `UseWolverineMessaging`. Every event the mapper produces is then handed to
+> `NullIntegrationEventSink`, logged as a warning and dropped, while the commit reports
+> success — the exact failure shape this ADR already rejects for a message with no route.
+> `IntegrationEventMapperCheck` now fails the host at start, naming the mappers.
+>
+> The check asks about the **effect**, not about the selection: it fires when mappers are
+> registered *and* the resolved `IIntegrationEventSinkFactory` is still the null one. A
+> host that supplies its own sink factory therefore passes, which is what makes the
+> guard compatible with the delivery tests.
+>
+> There is deliberately **no `UseNoMessaging()`** as a counterpart to `UseNoPersistence()`.
+> That escape hatch was in the original proposal and is refused for the reason ADR-0027's
+> 2026-08-05 amendment gives: an opt-out restores exactly the silence the check exists to
+> remove, and the host reaching for it is the one already in trouble. The asymmetry to
+> `UseNoPersistence()` is real but principled — "this host commits nothing" is an intent
+> that cannot be read off the code, whereas "this host publishes nothing" is simply the
+> absence of a mapper.
 
 ## Consequences
 
