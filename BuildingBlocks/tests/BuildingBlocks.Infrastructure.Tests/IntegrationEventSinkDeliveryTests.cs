@@ -98,7 +98,7 @@ public sealed class IntegrationEventSinkDeliveryTests
 
                 options.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
 
-                options.ApplyBuildingBlockDomainEventRouting();
+                options.ApplyBuildingBlocksDomainEventRouting();
 
                 options.LocalQueue(BuildingBlockDefaults.DomainEventLocalQueueName).BufferedInMemory();
 

@@ -57,7 +57,7 @@ public sealed class EfCoreChildCollectionTests(PostgreSqlFixture fixture)
 
     [Fact]
     public async Task ChildRaisedChange_RoundTripsThroughTheOwnedGraph()
-    {        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
+    {
         Assert.SkipUnless(fixture.Available, fixture.SkipReason);
 
         using var host = await StartHostAsync();

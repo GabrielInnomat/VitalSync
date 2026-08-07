@@ -7,6 +7,7 @@ using VitalSync.Sample.Contracts;
 using VitalSync.Sample.EventSourced.Application;
 using VitalSync.Sample.EventSourced.Infrastructure;
 using Wolverine;
+using Wolverine.Runtime.Routing;
 
 namespace VitalSync.Sample.EventSourced.Tests;
 
@@ -38,7 +39,11 @@ public sealed class SubscriptionDiscoveryTests
             host.Services.GetRequiredService<IMessageBus>()
                 .InvokeAsync(new WidgetCreatedIntegrationEvent(Guid.NewGuid(), "ignored", Guid.NewGuid(), DateTimeOffset.UtcNow), TestContext.Current.CancellationToken));
 
-        Assert.NotNull(thrown);
+        var missingHandler = Assert.IsType<IndeterminateRoutesException>(thrown);
+        Assert.Contains(
+            nameof(WidgetCreatedIntegrationEvent),
+            missingHandler.Message,
+            StringComparison.Ordinal);
     }
 
     private static Task<IHost> BuildHost(ISender sender, bool includeConsumerAssembly) =>

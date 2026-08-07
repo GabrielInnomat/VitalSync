@@ -1,3 +1,4 @@
+using System.Reflection;
 using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Application.DomainEvents;
 using BuildingBlocks.Application.IntegrationEvents;
@@ -49,6 +50,25 @@ public sealed class SampleRegistrationTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<ICommandHandler<RemoveWidgetPart, string>>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IQueryHandler<GetWidget, WidgetView>>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IWidgetReadStore>());
+    }
+
+    [Fact]
+    public void Infrastructure_SubscribesToNothing_SoNoEventCanTravelBackIntoThisContext()
+    {
+        var consumers = typeof(SampleStateStoredInfrastructure).Assembly
+            .GetTypes()
+            .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
+            .Where(method => method.Name is "Handle" or "HandleAsync" or "Consume" or "ConsumeAsync")
+            .Where(method => method.GetParameters()
+                .Any(parameter => typeof(IIntegrationEvent).IsAssignableFrom(parameter.ParameterType)))
+            .Select(method => $"{method.DeclaringType?.FullName}.{method.Name}")
+            .ToArray();
+
+        Assert.True(
+            consumers.Length == 0,
+            "The state-stored sample publishes but never consumes, which is what makes the one-way flow in "
+            + "CrossContextSmokeTests structural rather than a matter of timing. Found: "
+            + string.Join(", ", consumers));
     }
 
     private static ServiceProvider BuildProvider()

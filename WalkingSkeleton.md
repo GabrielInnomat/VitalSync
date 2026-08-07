@@ -554,7 +554,7 @@ Scope Note: der Handler ist ein dünner Adapter auf `ISender`), und seine Implem
 nimmt einen `IServiceProvider` — für Wolverines Codegen ist das Service Location. Es ist
 derselbe Fehlermodus, den Etappe 1 für `IDomainEventPublisher` und
 `IIntegrationEventSinkFactory` gefunden hat, nur eine Ebene weiter außen. `ISender` ist
-jetzt ebenfalls opt-in, in `ApplyBuildingBlockDomainEventRouting`.
+jetzt ebenfalls opt-in, in `ApplyBuildingBlocksDomainEventRouting`.
 
 **Wie es gefunden wurde:** nicht im Debugger, sondern indem die beiden Services aus dem
 Aspire-Host herausgenommen und von Hand gegen dieselben Container gestartet wurden —
@@ -583,7 +583,7 @@ weiteres Gadget anlegen.
 Kriterium 8 ist durch `DeadLetterTests` abgedeckt (Testcontainers: PostgreSQL **und**
 RabbitMQ, echte Produktionsverdrahtung über `AddBuildingBlocks`). Ein Konsument, der
 immer wirft, wird genau **viermal** aufgerufen — der erste Versuch plus die drei
-Wiederholungen aus `ApplyBuildingBlockMessagingDefaults` — und die Nachricht ist danach
+Wiederholungen aus `ApplyBuildingBlocksMessagingDefaults` — und die Nachricht ist danach
 aus der Dead-Letter-Queue lesbar. Doppelte Mutationsprobe: eine Wiederholung weniger →
 `Expected: 4, Actual: 2`; `MoveToErrorQueue()` durch `Discard()` ersetzt → Timeout beim
 Warten auf die Nachricht. Beide Hälften der Zusage sind damit einzeln festgenagelt.

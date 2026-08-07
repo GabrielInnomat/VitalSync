@@ -49,10 +49,12 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
             Assert.True(result.IsSuccess);
         }
 
-        var delivered = await host.Services.GetRequiredService<FlushDeliverySignal>()
+        var (deliveredEvent, metadata) = await host.Services.GetRequiredService<FlushDeliverySignal>()
             .Delivered.WaitAsync(DeliveryTimeout, TestContext.Current.CancellationToken);
-        var created = Assert.IsType<FlushCounterCreated>(delivered);
+        var created = Assert.IsType<FlushCounterCreated>(deliveredEvent);
         Assert.Equal(id, created.CounterId.Value);
+
+        AssertWatermarkMetadata(metadata, "flush-counter", id);
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
@@ -92,12 +94,23 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
             Assert.True(result.IsSuccess);
         }
 
-        var delivered = await host.Services.GetRequiredService<FlushDeliverySignal>()
+        var (deliveredEvent, metadata) = await host.Services.GetRequiredService<FlushDeliverySignal>()
             .Delivered.WaitAsync(DeliveryTimeout, TestContext.Current.CancellationToken);
-        var started = Assert.IsType<FlushProbeStarted>(delivered);
+        var started = Assert.IsType<FlushProbeStarted>(deliveredEvent);
         Assert.Equal(id, started.ProbeId.Value);
 
+        AssertWatermarkMetadata(metadata, "flush-probe", id);
+
         await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    private static void AssertWatermarkMetadata(DomainEventMetadata metadata, string aggregateName, Guid aggregateId)
+    {
+        Assert.Equal(aggregateName, metadata.AggregateName);
+        Assert.Equal(aggregateId.ToString(), metadata.AggregateId);
+        Assert.Equal(1, metadata.Version);
+        Assert.NotEqual(Guid.Empty, metadata.EventId);
+        Assert.NotEqual(default, metadata.OccurredAt);
     }
 
     private static void ConfigureFlushOnlyDurability(WolverineOptions options)
@@ -113,12 +126,13 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
 
 public sealed class FlushDeliverySignal
 {
-    private readonly TaskCompletionSource<IDomainEvent> _delivered =
+    private readonly TaskCompletionSource<(IDomainEvent Event, DomainEventMetadata Metadata)> _delivered =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    public Task<IDomainEvent> Delivered => _delivered.Task;
+    public Task<(IDomainEvent Event, DomainEventMetadata Metadata)> Delivered => _delivered.Task;
 
-    public void MarkDelivered(IDomainEvent domainEvent) => _delivered.TrySetResult(domainEvent);
+    public void MarkDelivered(IDomainEvent domainEvent, DomainEventMetadata metadata) =>
+        _delivered.TrySetResult((domainEvent, metadata));
 }
 
 public sealed record CreateFlushCounter(Guid Id) : ICommand;
@@ -138,7 +152,7 @@ public sealed class FlushCounterProjection(FlushDeliverySignal signal) : IProjec
 {
     public Task HandleAsync(FlushCounterCreated domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
-        signal.MarkDelivered(domainEvent);
+        signal.MarkDelivered(domainEvent, metadata);
         return Task.CompletedTask;
     }
 }
@@ -194,7 +208,7 @@ public sealed class FlushProbeProjection(FlushDeliverySignal signal) : IProjecti
 {
     public Task HandleAsync(FlushProbeStarted domainEvent, DomainEventMetadata metadata, CancellationToken cancellationToken)
     {
-        signal.MarkDelivered(domainEvent);
+        signal.MarkDelivered(domainEvent, metadata);
         return Task.CompletedTask;
     }
 }

@@ -55,3 +55,43 @@ public sealed class AlwaysInvalidConsumer
         throw new DomainValidationException($"'{message.Name}' will never become valid.");
     }
 }
+
+[IntegrationEventTopic("upstream.recorded")]
+public sealed record RecordedIntegrationEvent(string Name) : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+
+    public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class RecordingConsumer
+{
+    public static void Handle(RecordedIntegrationEvent message, AttemptRecorder recorder)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(recorder);
+
+        recorder.Record(message.Name);
+    }
+}
+
+[IntegrationEventTopic("upstream.always-times-out")]
+public sealed record AlwaysTimesOutIntegrationEvent(string Name) : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+
+    public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class AlwaysTimesOutConsumer
+{
+    public static void Handle(AlwaysTimesOutIntegrationEvent message, AttemptRecorder recorder)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(recorder);
+
+        recorder.Record(message.Name);
+
+        throw new TimeoutException($"'{message.Name}' timed out; the store may come back.");
+    }
+}

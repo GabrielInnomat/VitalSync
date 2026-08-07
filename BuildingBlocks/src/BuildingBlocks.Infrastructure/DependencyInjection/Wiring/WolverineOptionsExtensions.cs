@@ -33,7 +33,7 @@ internal static class WolverineOptionsExtensions
         TimeSpan.FromSeconds(2),
     ];
 
-    public static WolverineOptions ApplyBuildingBlockIdempotencyWindow(this WolverineOptions options)
+    public static WolverineOptions ApplyBuildingBlocksIdempotencyWindow(this WolverineOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
 
@@ -42,7 +42,7 @@ internal static class WolverineOptionsExtensions
         return options;
     }
 
-    public static WolverineOptions ApplyBuildingBlockDomainEventRouting(this WolverineOptions options)
+    public static WolverineOptions ApplyBuildingBlocksDomainEventRouting(this WolverineOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
 
@@ -61,7 +61,7 @@ internal static class WolverineOptionsExtensions
         return options;
     }
 
-    public static WolverineOptions ApplyBuildingBlockMessagingDefaults(
+    public static WolverineOptions ApplyBuildingBlocksMessagingDefaults(
         this WolverineOptions options,
         MessagingSettings messaging)
     {
@@ -94,7 +94,7 @@ internal static class WolverineOptionsExtensions
         return options;
     }
 
-    public static WolverineOptions ApplyBuildingBlockSubscription(
+    public static WolverineOptions ApplyBuildingBlocksSubscription(
         this WolverineOptions options,
         IntegrationEventSubscription subscription,
         string exchangeName)

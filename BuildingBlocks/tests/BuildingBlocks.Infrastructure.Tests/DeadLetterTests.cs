@@ -18,6 +18,8 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
 
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(60);
 
+    private static readonly TimeSpan TransientObservationWindow = TimeSpan.FromSeconds(15);
+
     [Fact]
     public async Task AConsumerThatAlwaysFails_IsRetriedAndThenDeadLettered()
     {
@@ -25,8 +27,9 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
         Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         var recorder = new AttemptRecorder();
-        using var host = await StartHostAsync(recorder, TestMessaging.UniqueQueueName("dead-letter-probe"));
-        using var upstream = await StartUpstreamPublisherAsync();
+        var exchangeName = TestMessaging.UniqueExchangeName("dead-letter-probe");
+        using var host = await StartHostAsync(recorder, TestMessaging.UniqueQueueName("dead-letter-probe"), exchangeName);
+        using var upstream = await StartUpstreamPublisherAsync(exchangeName);
         var name = Guid.NewGuid().ToString();
 
         await upstream.Services.GetRequiredService<IMessageBus>()
@@ -35,7 +38,11 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
         var deadLettered = await WaitForDeadLetterAsync(name, recorder);
         Assert.Contains(name, deadLettered, StringComparison.Ordinal);
 
-        Assert.Equal(ExpectedAttempts, recorder.Attempts);
+        Assert.True(
+            recorder.Attempts >= ExpectedAttempts,
+            $"An unclassified failure is retried {ExpectedAttempts - 1} times before it is dead-lettered, so the "
+            + $"handler must have run at least {ExpectedAttempts} times. It ran {recorder.Attempts} times. "
+            + "Redelivery may push the count higher, which is why this is a lower bound.");
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
@@ -47,8 +54,9 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
         Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         var recorder = new AttemptRecorder();
-        using var host = await StartHostAsync(recorder, TestMessaging.UniqueQueueName("dead-letter-invalid-probe"));
-        using var upstream = await StartUpstreamPublisherAsync();
+        var exchangeName = TestMessaging.UniqueExchangeName("dead-letter-invalid-probe");
+        using var host = await StartHostAsync(recorder, TestMessaging.UniqueQueueName("dead-letter-invalid-probe"), exchangeName);
+        using var upstream = await StartUpstreamPublisherAsync(exchangeName);
         var name = Guid.NewGuid().ToString();
 
         await upstream.Services.GetRequiredService<IMessageBus>()
@@ -62,28 +70,50 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
+    [Fact]
+    public async Task ATransientFailure_IsRetriedAndDeliberatelyNotDeadLettered()
+    {
+        Assert.SkipUnless(postgres.Available, postgres.SkipReason);
+        Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
+
+        var recorder = new AttemptRecorder();
+        var exchangeName = TestMessaging.UniqueExchangeName("transient-probe");
+        using var host = await StartHostAsync(recorder, TestMessaging.UniqueQueueName("transient-probe"), exchangeName);
+        using var upstream = await StartUpstreamPublisherAsync(exchangeName);
+        var name = Guid.NewGuid().ToString();
+
+        await upstream.Services.GetRequiredService<IMessageBus>()
+            .PublishAsync(new AlwaysTimesOutIntegrationEvent(name));
+
+        var deadline = DateTime.UtcNow + TransientObservationWindow;
+        while (DateTime.UtcNow < deadline)
+        {
+            Assert.False(
+                await IsInTheDeadLetterQueueAsync(name),
+                "A transient failure must stay on the queue for redelivery instead of being dead-lettered "
+                + "(ADR-0023 amendment): a database failover outlasts any cooldown ladder, and the 7-day "
+                + "idempotency window is what makes the redelivery safe.");
+
+            await Task.Delay(500, TestContext.Current.CancellationToken);
+        }
+
+        Assert.True(
+            recorder.Attempts > 1,
+            $"The transient cooldown ladder should have retried the handler within {TransientObservationWindow}, "
+            + $"but it ran {recorder.Attempts} time(s). Without a retry this test would prove nothing.");
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
     private async Task<string> WaitForDeadLetterAsync(string name, AttemptRecorder recorder)
     {
-        var factory = new ConnectionFactory { Uri = rabbit.ConnectionUri };
-        await using var connection = await factory.CreateConnectionAsync(TestContext.Current.CancellationToken);
-        await using var channel = await connection.CreateChannelAsync(
-            cancellationToken: TestContext.Current.CancellationToken);
-
         var deadline = DateTime.UtcNow + Timeout;
         while (true)
         {
-            var message = await channel.BasicGetAsync(
-                DeadLetterQueueName,
-                autoAck: true,
-                TestContext.Current.CancellationToken);
-
-            if (message is not null)
+            var body = await FindInTheDeadLetterQueueAsync(name);
+            if (body is not null)
             {
-                var body = Encoding.UTF8.GetString(message.Body.Span);
-                if (body.Contains(name, StringComparison.Ordinal))
-                {
-                    return body;
-                }
+                return body;
             }
 
             Assert.True(
@@ -94,7 +124,60 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
         }
     }
 
-    private async Task<IHost> StartHostAsync(AttemptRecorder recorder, string queueName) =>
+    private async Task<bool> IsInTheDeadLetterQueueAsync(string name) =>
+        await FindInTheDeadLetterQueueAsync(name) is not null;
+
+    private async Task<string?> FindInTheDeadLetterQueueAsync(string name)
+    {
+        const int batchSize = 50;
+
+        var factory = new ConnectionFactory { Uri = rabbit.ConnectionUri };
+        await using var connection = await factory.CreateConnectionAsync(TestContext.Current.CancellationToken);
+        await using var channel = await connection.CreateChannelAsync(
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var inspected = new List<ulong>();
+        string? found = null;
+
+        try
+        {
+            for (var read = 0; read < batchSize; read++)
+            {
+                var message = await channel.BasicGetAsync(
+                    DeadLetterQueueName,
+                    autoAck: false,
+                    TestContext.Current.CancellationToken);
+
+                if (message is null)
+                {
+                    break;
+                }
+
+                inspected.Add(message.DeliveryTag);
+
+                var body = Encoding.UTF8.GetString(message.Body.Span);
+                if (found is null && body.Contains(name, StringComparison.Ordinal))
+                {
+                    found = body;
+                }
+            }
+        }
+        finally
+        {
+            foreach (var deliveryTag in inspected)
+            {
+                await channel.BasicNackAsync(
+                    deliveryTag,
+                    multiple: false,
+                    requeue: true,
+                    TestContext.Current.CancellationToken);
+            }
+        }
+
+        return found;
+    }
+
+    private async Task<IHost> StartHostAsync(AttemptRecorder recorder, string queueName, string exchangeName) =>
         await Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
             {
@@ -104,7 +187,7 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
                 {
                     options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
                     options.UseMartenEventSourcing(postgres.ConnectionString);
-                    options.UseWolverineMessaging(rabbit.ConnectionUri, TestMessaging.ExchangeName, TestMessaging.ContextName);
+                    options.UseWolverineMessaging(rabbit.ConnectionUri, exchangeName, TestMessaging.ContextName);
                     options.SubscribeToIntegrationEvents(
                         queueName,
                         typeof(AlwaysFailsConsumer).Assembly,
@@ -114,7 +197,7 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
             .UseWolverine(options => options.Durability.Mode = DurabilityMode.Solo)
             .StartAsync(TestContext.Current.CancellationToken);
 
-    private async Task<IHost> StartUpstreamPublisherAsync() =>
+    private async Task<IHost> StartUpstreamPublisherAsync(string exchangeName) =>
         await Host.CreateDefaultBuilder()
             .UseWolverine(options =>
             {
@@ -122,15 +205,19 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
 
                 options.UseRabbitMq(rabbit.ConnectionUri)
                     .AutoProvision()
-                    .DeclareExchange(TestMessaging.ExchangeName, exchange => exchange.IsDurable = true);
+                    .DeclareExchange(exchangeName, exchange => exchange.IsDurable = true);
 
                 options.PublishMessagesToRabbitMqExchange<AlwaysFailsIntegrationEvent>(
-                    TestMessaging.ExchangeName,
+                    exchangeName,
                     _ => "upstream.always-fails");
 
                 options.PublishMessagesToRabbitMqExchange<AlwaysInvalidIntegrationEvent>(
-                    TestMessaging.ExchangeName,
+                    exchangeName,
                     _ => "upstream.always-invalid");
+
+                options.PublishMessagesToRabbitMqExchange<AlwaysTimesOutIntegrationEvent>(
+                    exchangeName,
+                    _ => "upstream.always-times-out");
             })
             .StartAsync(TestContext.Current.CancellationToken);
 }
@@ -141,3 +228,4 @@ public sealed class BrokerAndDatabaseCollection
 {
     public const string Name = "BrokerAndDatabase";
 }
+

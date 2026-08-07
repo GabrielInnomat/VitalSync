@@ -77,7 +77,7 @@ eine Entscheidung, keinen Code.
 | TODO-40 | Sichtbarkeits-Disziplin ist uneinheitlich                      | **P4** | gelöst            | IMP-38                                |
 | TODO-41 | Wirkungslose Varianz-Modifikatoren                             | **P4** | offen             | IMP-43                                |
 | TODO-42 | Uneinheitliche Projektstruktur                                 | **P4** | gelöst            | IMP-44                                |
-| TODO-43 | Irreführende Test- und Methodennamen                           | **P4** | offen             | IMP-45, IMP-48                        |
+| TODO-43 | Irreführende Test- und Methodennamen                           | **P4** | gelöst            | IMP-45, IMP-48                        |
 | TODO-44 | Bewusste Ausnahmen dokumentieren                               | **P4** | wird nicht gelöst | IMP-35, IMP-46                        |
 | TODO-45 | Api-Readiness prüft nicht mehr existierende Connection-Namen   | **P1** | gelöst            | AppHost `e44ae9b`                     |
 | TODO-46 | Die MigrationService-Worker sind leere Hüllen                  | **P2** | offen             | AppHost `e44ae9b`                     |
@@ -966,7 +966,7 @@ dauerhafte Entscheidung, die aus einem Default entstanden ist.
 
 ## Gelöst (Teil A, 2026-08-06): die Frist ist jetzt eine Entscheidung
 
-`ApplyBuildingBlockIdempotencyWindow` setzt `Durability.KeepAfterMessageHandling` auf **7 Tage**
+`ApplyBuildingBlocksIdempotencyWindow` setzt `Durability.KeepAfterMessageHandling` auf **7 Tage**
 ([WolverineOptionsExtensions.cs](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/Wiring/WolverineOptionsExtensions.cs)),
 angewendet genau dann, wenn eine Persistenzstrategie gewählt wurde — ohne Message Store gibt es
 keine Inbox-Zeilen, die man aufheben könnte. Sieben Tage decken ein Wochenende plus
@@ -976,6 +976,14 @@ Tage später eine Nachricht aus der Dead-Letter-Queue zurück.
 Drei Tests halten das fest: der Wert wird bei gewählter Persistenz gesetzt, er ist beweisbar
 **nicht** der Wolverine-Default (sonst wäre der Test wertlos, sobald das Framework seinen Default
 ändert), und ohne Persistenz bleibt die Einstellung unberührt.
+
+**Nachtrag 2026-08-07:** Diese drei Tests prüfen die *Konfiguration*, nicht die *Wirkung* — sie
+wären auch dann grün, wenn Wolverines Inbox gar nicht deduplizierte. `InboxDeduplicationTests`
+schließt das: eine echte Envelope wird aus der Queue gelesen und **byteweise samt `MessageId`**
+zweimal zurückpubliziert; der Handler läuft danach genau einmal. Erst damit ist die Zusage aus
+diesem Abschnitt belegt statt angenommen. Nebenbefund aus dem Bau dieses Tests: dieselbe
+Deduplizierung war die Ursache des jahrelang ungeklärten Zustellraces aus TODO-37 — sie wirkte über
+die geteilte Test-Exchange hinweg zwischen Testklassen.
 
 ## Offen (Teil B): fachliche Dedup über `EventId`
 
@@ -1518,7 +1526,7 @@ event-sourced Service fällig.
 
 ## Nachtrag (2026-08-06): `AutoProvision` gehört hierher
 
-Aus TODO-28 übernommen. `ApplyBuildingBlockMessagingDefaults` ruft `UseRabbitMq(...).AutoProvision()`
+Aus TODO-28 übernommen. `ApplyBuildingBlocksMessagingDefaults` ruft `UseRabbitMq(...).AutoProvision()`
 auf, legt also Exchange, Queues und Bindings beim Start selbst an, wenn sie fehlen. Das ist
 dieselbe Klasse wie die beiden Punkte oben, nur auf dem Broker statt in der Datenbank: eine
 Komponente ändert beim ersten Start eines neuen Deployments fremde Infrastruktur, ohne Freigabe.
@@ -1584,7 +1592,7 @@ Sink-Factory).
 
 ## Gelöst (2026-08-06): die differenzierte Retry-Policy
 
-Der letzte Punkt mit Substanz ist umgesetzt. `ApplyBuildingBlockMessagingDefaults` registriert drei
+Der letzte Punkt mit Substanz ist umgesetzt. `ApplyBuildingBlocksMessagingDefaults` registriert drei
 Regeln statt einer; Wolverine nimmt die erste, die passt:
 
 | Klasse | Erkannt an | Politik |
@@ -1883,6 +1891,46 @@ Zwei Kategorien, die kein Defekt sind, und eine dritte, die eine echte Zustellun
    an deren Ankunft (`Assert.Contains("control", …)`). Der Drain ist die zusätzliche Absicherung,
    nicht die einzige.
 
+## Nachtrag 2026-08-07 (nachmittags): die fehlende Erklärung — und damit sind Punkt 2 und 3 hinfällig
+
+Die oben eingeforderte Erklärung für Versuch 2 liegt jetzt vor, und sie hat nichts mit dem Binding
+oder mit buffered/durable zu tun. **Alle Broker-Tests teilten sich eine einzige Exchange**
+(`TestMessaging.ExchangeName`). Eine Topic-Exchange fächert eine Publikation an *jede* passende
+Queue aus — unter **einer** Envelope-Id. Alle Probe-Hosts hängen über
+`[Collection(BrokerAndDatabaseCollection.Name)]` am selben Postgres-Container und damit an
+derselben `wolverine_incoming_envelopes`. Also gewinnt genau **ein** Host das Rennen, verarbeitet
+die Nachricht, und die durable Inbox verwirft alle übrigen Kopien als Duplikate — dieselbe
+Deduplizierung, die TODO-14 Teil A als Feature beschreibt.
+
+Das erklärt jeden Einzelbefund: dass ein Publish „verloren" ging, obwohl das Binding stand; dass
+mal der eine, mal der andere Test rot war (wer gewinnt, ist Scheduling); und warum Versuch 2 es
+**verschlimmerte** — der durable Sending-Endpoint schrieb den Message Store, also die geteilte
+Inbox, überhaupt erst konsequent. Reproduziert wurde es durch zwei **neue** Tests
+(`DeadLetterTests.ATransientFailure_…`, `InboxDeduplicationTests`), die sofort und deterministisch
+mit „the consumer never saw the message" fielen, obwohl parallel im Log ein *fremder* Queue-Name
+dieselbe Nachricht verarbeitete.
+
+Behoben durch `TestMessaging.UniqueExchangeName(prefix)`: eine eigene Exchange pro Test, damit
+existiert der Fan-out nicht mehr. Damit ist der Umbau, der zweimal scheiterte, jetzt umgesetzt:
+
+- Die **Publish-Schleifen sind ersetzt** durch je ein einziges Publish. Der Anker ist nicht mehr
+  „irgendwann kam control an", sondern die **FIFO-Ordnung**: suppressed und control gehen über
+  dieselbe Exchange in dieselbe Queue, also ist die suppressed-Nachricht nachweislich zugestellt
+  und verworfen, sobald control ankommt.
+- **`WaitForTheQueueToDrainAsync` ist ersatzlos gelöscht.** Die Heuristik `MessageCount == 0` plus
+  500 ms Puffer sagte ohnehin nichts über *verarbeitete* Nachrichten aus. Geblieben ist ein kurzes
+  Nachlauffenster, das die Negativassertion wiederholt prüft.
+- **`DeadLetterTests` liest die Dead-Letter-Queue nicht mehr destruktiv** (`autoAck: false`, danach
+  `BasicNack` mit `requeue: true`). Die DLQ ist plattformweit geteilt; der vorherige
+  `autoAck: true`-Drain löschte die Beweise der jeweils anderen Tests.
+- Die **exakte** Attempt-Zahl (`Assert.Equal(4, …)`) ist eine untere Schranke geworden. Vier ist die
+  Zahl der Policy-Versuche, nicht die der Handler-Läufe: ein Redelivery erhöht sie legitim.
+
+Lehre, die über diesen Fall hinausgeht: die zwei vorherigen Versuche scheiterten nicht am
+Lösungsansatz, sondern daran, dass die *Testumgebung* eine Kopplung enthielt, die niemand als
+Testkopplung gelesen hat — sie sah aus wie Produktionsverhalten. „Einmal publizieren reicht nicht"
+war die richtige Beobachtung mit der falschen Ursache.
+
 Grundsätzlich gilt: „es kommt nie mehr etwas" ist in einem verteilten System ohne Zeitfenster nicht
 entscheidbar. Erreichbar ist nur, das Fenster an einen beobachtbaren terminalen Zustand zu hängen
 (DLQ-Ankunft, Sentinel-Zustellung) — genau das ist oben passiert, wo es ging.
@@ -1901,6 +1949,20 @@ und StateStored damit gar nichts abonniert, konnte der Test per Konstruktion nie
 Er hat jetzt einen Anker über den nachweislich funktionierenden Vorwärtspfad: nach dem Rename wird ein
 zweites Widget angelegt und dessen Spiegelung abgewartet. Erst danach wird das erste Widget geprüft. Ein
 Rückkanal hätte in derselben Zeit zugestellt.
+
+**Korrektur 2026-08-07 (nachmittags):** Dieser Anker war falsch konstruiert. Der Sentinel lief über
+StateStored → EventSourced, also über **dieselbe Richtung, die ohnehin funktioniert**; über die
+Laufzeit des Rückkanals EventSourced → StateStored sagt er nichts, denn beide Wege teilen weder
+Queue noch Consumer. „Ein Rückkanal hätte in derselben Zeit zugestellt" war eine Annahme, keine
+Ableitung. Da im `samples/`-Baum weiterhin nur eine einzige `SubscribeToIntegrationEvents` existiert,
+ist die belastbare Aussage ohnehin **strukturell**: der StateStored-Kontext hat keinen Consumer, also
+kann kein Ereignis zurückreisen. Genau das prüft jetzt
+`SampleRegistrationTests.Infrastructure_SubscribesToNothing_…` reflektiv über die
+Infrastructure-Assembly — ein Test, der beim Hinzufügen eines Consumers rot wird, statt erst dann,
+wenn dieser Consumer auch noch zufällig schnell genug ist. Der Smoke-Test behält daneben ein
+Beobachtungsfenster von 5 s, das durchgehend prüft, dass Name und `RenameCount` unverändert bleiben;
+er ist damit ehrlich als das ausgewiesen, was er ist — eine Plausibilitätsprüfung ohne Anker, deren
+Aussagekraft der strukturelle Test trägt.
 
 ## Der behobene Flake (2026-08-07)
 
@@ -1924,6 +1986,13 @@ Der gemeinsame Helfer heißt jetzt `TestMessaging.UniqueQueueName(prefix)` und w
 `IntegrationEventSubscriptionValidationTests` benutzt. Wichtig dabei: xUnit erzeugt **pro Test** eine
 neue Klasseninstanz, ein `readonly`-Instanzfeld liefert also pro Test einen eigenen Namen — ein
 `static readonly` täte das nicht.
+
+**Nachtrag am selben Tag:** Eine eigene Queue reicht nicht, es braucht auch eine eigene **Exchange**
+(`TestMessaging.UniqueExchangeName(prefix)`). Der Grund steht oben im Nachtrag zu den Publish-Schleifen:
+eine geteilte Topic-Exchange fächert eine Publikation unter einer Envelope-Id an alle passenden Queues
+aus, und die geteilte durable Inbox lässt davon genau eine überleben. Eine eigene Queue schützt vor
+*Nachrichtenresten früherer Läufe*, eine eigene Exchange vor *Konkurrenz gleichzeitig lebender Hosts* —
+zwei verschiedene Probleme, die beide wie „die Nachricht kam nicht an" aussehen.
 
 ## Nicht weiterverfolgt: TrackActivity in den Smoke-Tests
 
@@ -2122,20 +2191,42 @@ und `IAggregateRoot` leitet von den beiden anderen ab → sonst CS0061).
 
 # TODO-43, Irreführende Test- und Methodennamen
 
-**P4 · offen · IMP-45 + IMP-48**
+**P4 · gelöst · IMP-45 + IMP-48**
 
 - **`SenderContractTests`** baut ein `Substitute.For<ISender>()`, konfiguriert dessen Rückgabewert
   und prüft, dass dieser zurückkommt — getestet wird NSubstitute. Der Wert ist nicht null (die
   Signaturen und Constraints kompilieren nachweislich), aber der Name verspricht mehr.
+  **Gelöst am 2026-08-07 durch Löschung** statt Umbenennung: dass die Signaturen kompilieren,
+  beweist bereits jeder echte Aufrufer in `BuildingBlocks.Infrastructure.Tests`. Ein Testfall, der
+  nie fehlschlagen kann, kostet bei jedem Lauf Zeit und suggeriert im Bericht eine Abdeckung, die
+  er nicht liefert — ein ehrlicherer Name hätte das nicht geändert.
 - **Wolverine-Extensions** mischten Singular und Plural: `ApplyBuildingBlock*` (drei `internal`)
   gegen `UseBuildingBlocksEfCorePersistence` (`public`). **Erledigt als Nebeneffekt von TODO-06** —
-  die öffentliche Methode ist gelöscht, übrig sind nur noch die drei internen mit einheitlichem Namen.
+  die öffentliche Methode ist gelöscht, übrig sind nur noch die vier internen mit einheitlichem Namen.
 
-## Lösungsvorschlag
+## Nachtrag 2026-08-07 — vollständig gelöst
 
-`SenderContractTests` → `SenderSignatureTests`; das Verhalten ist in
-`BuildingBlocks.Infrastructure.Tests` geprüft. Die drei `internal` Methoden auf den Plural
-vereinheitlichen (`ApplyBuildingBlocksDomainEventRouting` usw.) — kein Breaking Change nach außen.
+Die vier internen Methoden heißen jetzt `ApplyBuildingBlocksIdempotencyWindow`,
+`ApplyBuildingBlocksDomainEventRouting`, `ApplyBuildingBlocksMessagingDefaults` und
+`ApplyBuildingBlocksSubscription`. Drei Dateien, neun Vorkommen, alles `internal`, keine
+Außenwirkung.
+
+Der Umbau hing nicht am Code, sondern an der Frage, was mit den ADRs geschieht: **ADR-0023**
+(Z. 287, 340) und **ADR-0027** (Z. 18–19) nennen die alten Namen im Fließtext, und ADRs sind
+unveränderlich. Entschieden wurde, sie **nicht** anzufassen — und das ist die eigentlich
+festhaltenswerte Regel:
+
+> **Codenamen in ADRs sind historisch zu lesen.** Ein ADR hält eine *Entscheidung* fest, samt dem
+> Code-Vokabular, das zum Zeitpunkt der Annahme galt. Er ist keine Referenzdokumentation und wird
+> nicht namensaktuell gehalten. Der Beleg steht schon länger im Repo: ADR-0027 Z. 18 nennt
+> `ApplyBuildingBlockEfCoreOutbox` — eine Methode, die seit TODO-06 nicht mehr existiert. Ein
+> Nachtrag „eine interne Methode heißt jetzt anders" trüge auch keine Entscheidung, sondern nur
+> Rauschen in ein Dokument, dessen Wert gerade in seiner Stabilität liegt.
+
+Namensaktuell gehalten wird stattdessen die **lebende** Doku, die den aktuellen Stand beschreiben
+soll: `docs/architecture/building-blocks-infrastructure.md`, `WalkingSkeleton.md`, `todo.md`,
+`Improvements.md` und die beiden Instruktionsdateien — alle nachgezogen. Wer eine Methode aus einem
+ADR sucht und sie nicht findet, sucht sie dort.
 
 ---
 

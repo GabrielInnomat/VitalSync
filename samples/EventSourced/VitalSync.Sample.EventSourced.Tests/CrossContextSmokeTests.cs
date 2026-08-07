@@ -10,6 +10,8 @@ public sealed class CrossContextSmokeTests
 {
     private static readonly TimeSpan MirrorTimeout = TimeSpan.FromSeconds(30);
 
+    private static readonly TimeSpan DivergenceWindow = TimeSpan.FromSeconds(5);
+
     [Fact]
     public async Task AWidgetCreatedInOneContext_AppearsAsAGadgetInTheOther()
     {
@@ -43,16 +45,17 @@ public sealed class CrossContextSmokeTests
 
         await consumer!.RenameAsync(new RenameGadgetRequest { GadgetId = created.WidgetId, Name = "diverged" });
 
-        var sentinelName = "sentinel-" + Guid.NewGuid().ToString("N")[..8];
-        var sentinel = await publisher.CreateAsync(
-            new StateStoredContracts.CreateWidgetRequest { Name = sentinelName });
-        await WaitForMirrorAsync(consumer, sentinel.WidgetId);
+        var deadline = DateTime.UtcNow + DivergenceWindow;
+        while (DateTime.UtcNow < deadline)
+        {
+            var polled = await publisher.GetAsync(
+                new StateStoredContracts.GetWidgetRequest { WidgetId = created.WidgetId });
 
-        var widget = await publisher.GetAsync(
-            new StateStoredContracts.GetWidgetRequest { WidgetId = created.WidgetId });
+            Assert.Equal("one-way", polled.Name);
+            Assert.Equal(0, polled.RenameCount);
 
-        Assert.Equal("one-way", widget.Name);
-        Assert.Equal(0, widget.RenameCount);
+            await Task.Delay(250, TestContext.Current.CancellationToken);
+        }
     }
 
     private static async Task<GadgetReply> WaitForMirrorAsync(IGadgetService consumer, string id)

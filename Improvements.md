@@ -57,10 +57,10 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-42 | `IRepository`-API ist asymmetrisch und irreführend benannt               | gelöst            |
 | IMP-43 | Wirkungslose Varianz-Modifikatoren                                       | offen             |
 | IMP-44 | Uneinheitliche Projektstruktur                                           | gelöst            |
-| IMP-45 | `SenderContractTests` testet NSubstitute statt Produktionscode           | offen             |
+| IMP-45 | `SenderContractTests` testet NSubstitute statt Produktionscode           | gelöst            |
 | IMP-46 | Behaviors nutzen Service Locator statt optionaler Abhängigkeiten         | teilweise         |
 | IMP-47 | Keine zentrale Paketverwaltung                                           | offen             |
-| IMP-48 | Uneinheitliche Benennung der Wolverine-Extensions                        | teilweise         |
+| IMP-48 | Uneinheitliche Benennung der Wolverine-Extensions                        | gelöst            |
 
 ---
 
@@ -1249,6 +1249,13 @@ public sealed class SenderSignatureTests
 Das echte Verhalten ist inzwischen in `BuildingBlocks.Infrastructure.Tests` abgedeckt (IMP-09), der
 Test hat seine Lücke also nicht mehr zu füllen — nur seinen Namen zu korrigieren.
 
+**Gelöst am 2026-08-07, anders als vorgeschlagen:** Die Datei wurde **gelöscht** statt umbenannt.
+Eine Signaturprüfung braucht keinen Testlauf — dass die Signaturen kompilieren und die generischen
+Constraints zusammenpassen, beweist bereits jeder Aufrufer in `BuildingBlocks.Infrastructure.Tests`,
+der `ISender` echt implementiert. Ein Testfall, dessen einzige Aussage "dieser Code kompiliert" ist,
+wird bei jedem Lauf ausgeführt, kann nie fehlschlagen und suggeriert im Bericht eine Abdeckung, die
+er nicht liefert.
+
 ---
 
 # IMP-46, Behaviors nutzen Service Locator statt optionaler Abhängigkeiten
@@ -1324,3 +1331,22 @@ internal static WolverineOptions ApplyBuildingBlocksSubscription(this WolverineO
 
 Drei `internal` Renames, kein Breaking Change nach außen. Mitnehmen, wenn ohnehin jemand in dieser
 Datei arbeitet.
+
+## Nachtrag 2026-08-07 — umgesetzt, vier statt drei
+
+Vollständig gelöst. Umbenannt wurden **vier** Methoden, nicht drei: neben den oben genannten auch
+`ApplyBuildingBlocksIdempotencyWindow`, das erst nach dem Verfassen dieses Eintrags dazukam. Betroffen
+waren drei Dateien und neun Vorkommen — alles `internal`, keine Außenwirkung.
+
+Der eigentliche Widerstand lag nicht im Code, sondern in der Frage, was mit den ADRs geschieht:
+[ADR-0023](docs/architecture/decisions/0023-wolverine-messaging-transport.md) und
+[ADR-0027](docs/architecture/decisions/0027-building-blocks-own-wolverine-wiring.md) nennen die alten
+Namen, und ADRs sind unveränderlich. Entschieden wurde, sie **nicht** anzufassen: ein Nachtrag „eine
+interne Methode heißt jetzt anders" trägt keine Entscheidung, und ADR-0027 nennt ohnehin schon
+`ApplyBuildingBlockEfCoreOutbox` — eine Methode, die seit TODO-06 nicht mehr existiert. Codenamen in
+ADRs sind hier also bereits faktisch Momentaufnahmen des Standes bei Annahme, keine gepflegten
+Verträge. Nachgezogen wurde stattdessen die **lebende** Doku
+([building-blocks-infrastructure.md](docs/architecture/building-blocks-infrastructure.md),
+[WalkingSkeleton.md](WalkingSkeleton.md), [todo.md](todo.md), die beiden Instruktionsdateien), die
+den aktuellen Stand beschreiben soll und deshalb namensaktuell sein muss.
+

@@ -3,7 +3,6 @@ using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 using DeadLetterFixture;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using RabbitMQ.Client;
 using Wolverine;
 using Wolverine.RabbitMQ;
 
@@ -16,6 +15,8 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
 
     private static readonly TimeSpan Grace = TimeSpan.FromSeconds(30);
 
+    private static readonly TimeSpan SettlingWindow = TimeSpan.FromSeconds(2);
+
     [Fact]
     public async Task AHandlerWhoseTopicNoBoundPatternMatches_FailsTheStart()
     {
@@ -23,7 +24,11 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
         Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            StartConsumerAsync(TestMessaging.UniqueQueueName("validation-no-match"), TestMessaging.ContextName, "somewhere-else.*"));
+            StartConsumerAsync(
+                TestMessaging.UniqueQueueName("validation-no-match"),
+                TestMessaging.UniqueExchangeName("validation-no-match"),
+                TestMessaging.ContextName,
+                "somewhere-else.*"));
 
         Assert.Contains(nameof(AlwaysFailsIntegrationEvent), thrown.Message, StringComparison.Ordinal);
         Assert.Contains(UpstreamTopic, thrown.Message, StringComparison.Ordinal);
@@ -37,7 +42,11 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
         Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            StartConsumerAsync(TestMessaging.UniqueQueueName("validation-own-context"), TestMessaging.UpstreamContextName, "upstream.*"));
+            StartConsumerAsync(
+                TestMessaging.UniqueQueueName("validation-own-context"),
+                TestMessaging.UniqueExchangeName("validation-own-context"),
+                TestMessaging.UpstreamContextName,
+                "upstream.*"));
 
         Assert.Contains("this very context", thrown.Message, StringComparison.Ordinal);
         Assert.Contains(TestMessaging.UpstreamContextName, thrown.Message, StringComparison.Ordinal);
@@ -51,6 +60,7 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
 
         using var host = await StartConsumerAsync(
             TestMessaging.UniqueQueueName("validation-happy"),
+            TestMessaging.UniqueExchangeName("validation-happy"),
             TestMessaging.ContextName,
             "upstream.*");
 
@@ -64,31 +74,29 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
         Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         var queueName = TestMessaging.UniqueQueueName("self-consumption-probe");
+        var exchangeName = TestMessaging.UniqueExchangeName("self-consumption-probe");
 
         var recorder = new AttemptRecorder();
-        using var host = await StartConsumerAsync(queueName, TestMessaging.ContextName, "upstream.*", recorder);
-        using var publisher = await StartPublisherAsync();
+        using var host = await StartConsumerAsync(queueName, exchangeName, TestMessaging.ContextName, "upstream.*", recorder);
+        using var publisher = await StartPublisherAsync(exchangeName);
         var bus = publisher.Services.GetRequiredService<IMessageBus>();
 
-        var deadline = DateTime.UtcNow + Grace;
-        while (!recorder.Names.Contains("control") && DateTime.UtcNow < deadline)
+        await bus.PublishAsync(
+            new AlwaysFailsIntegrationEvent("suppressed"),
+            SourceContextHeader(TestMessaging.ContextName));
+
+        await bus.PublishAsync(
+            new AlwaysFailsIntegrationEvent("control"),
+            SourceContextHeader(TestMessaging.UpstreamContextName));
+
+        await WaitUntilSeenAsync(recorder, "control");
+
+        var settle = DateTime.UtcNow + SettlingWindow;
+        while (DateTime.UtcNow < settle)
         {
-            await bus.PublishAsync(
-                new AlwaysFailsIntegrationEvent("suppressed"),
-                SourceContextHeader(TestMessaging.ContextName));
-
-            await bus.PublishAsync(
-                new AlwaysFailsIntegrationEvent("control"),
-                SourceContextHeader(TestMessaging.UpstreamContextName));
-
+            Assert.DoesNotContain("suppressed", recorder.Names);
             await Task.Delay(200, TestContext.Current.CancellationToken);
         }
-
-        Assert.Contains("control", recorder.Names);
-
-        await WaitForTheQueueToDrainAsync(queueName);
-
-        Assert.DoesNotContain("suppressed", recorder.Names);
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
@@ -100,25 +108,33 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
         Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         var queueName = TestMessaging.UniqueQueueName("foreign-source-probe");
+        var exchangeName = TestMessaging.UniqueExchangeName("foreign-source-probe");
 
         var recorder = new AttemptRecorder();
-        using var host = await StartConsumerAsync(queueName, TestMessaging.ContextName, "upstream.*", recorder);
-        using var publisher = await StartPublisherAsync();
+        using var host = await StartConsumerAsync(queueName, exchangeName, TestMessaging.ContextName, "upstream.*", recorder);
+        using var publisher = await StartPublisherAsync(exchangeName);
         var bus = publisher.Services.GetRequiredService<IMessageBus>();
 
+        await bus.PublishAsync(
+            new AlwaysFailsIntegrationEvent("delivered"),
+            SourceContextHeader(TestMessaging.UpstreamContextName));
+
+        await WaitUntilSeenAsync(recorder, "delivered");
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    private static async Task WaitUntilSeenAsync(AttemptRecorder recorder, string name)
+    {
         var deadline = DateTime.UtcNow + Grace;
-        while (recorder.Attempts == 0 && DateTime.UtcNow < deadline)
+        while (!recorder.Names.Contains(name))
         {
-            await bus.PublishAsync(
-                new AlwaysFailsIntegrationEvent("delivered"),
-                SourceContextHeader(TestMessaging.UpstreamContextName));
+            Assert.True(
+                DateTime.UtcNow < deadline,
+                $"The consumer never saw '{name}' within {Grace}. Seen: {string.Join(", ", recorder.Names)}.");
 
             await Task.Delay(200, TestContext.Current.CancellationToken);
         }
-
-        Assert.True(recorder.Attempts > 0, "The consumer never saw a message published by a foreign context.");
-
-        await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
     private static DeliveryOptions SourceContextHeader(string contextName)
@@ -128,32 +144,9 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
         return delivery;
     }
 
-    private async Task WaitForTheQueueToDrainAsync(string queueName)
-    {
-        var factory = new ConnectionFactory { Uri = rabbit.ConnectionUri };
-        await using var connection = await factory.CreateConnectionAsync(TestContext.Current.CancellationToken);
-        await using var channel = await connection.CreateChannelAsync(
-            cancellationToken: TestContext.Current.CancellationToken);
-
-        var deadline = DateTime.UtcNow + Grace;
-        while (DateTime.UtcNow < deadline)
-        {
-            var declared = await channel.QueueDeclarePassiveAsync(
-                queueName,
-                TestContext.Current.CancellationToken);
-
-            if (declared.MessageCount == 0)
-            {
-                await Task.Delay(500, TestContext.Current.CancellationToken);
-                return;
-            }
-
-            await Task.Delay(200, TestContext.Current.CancellationToken);
-        }
-    }
-
     private async Task<IHost> StartConsumerAsync(
         string queueName,
+        string exchangeName,
         string contextName,
         string topicPattern,
         AttemptRecorder? recorder = null) =>
@@ -166,7 +159,7 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
                 {
                     options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
                     options.UseMartenEventSourcing(postgres.ConnectionString);
-                    options.UseWolverineMessaging(rabbit.ConnectionUri, TestMessaging.ExchangeName, contextName);
+                    options.UseWolverineMessaging(rabbit.ConnectionUri, exchangeName, contextName);
                     options.SubscribeToIntegrationEvents(
                         queueName,
                         typeof(AlwaysFailsConsumer).Assembly,
@@ -176,7 +169,7 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
             .UseWolverine(options => options.Durability.Mode = DurabilityMode.Solo)
             .StartAsync(TestContext.Current.CancellationToken);
 
-    private async Task<IHost> StartPublisherAsync() =>
+    private async Task<IHost> StartPublisherAsync(string exchangeName) =>
         await Host.CreateDefaultBuilder()
             .UseWolverine(options =>
             {
@@ -184,11 +177,12 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
 
                 options.UseRabbitMq(rabbit.ConnectionUri)
                     .AutoProvision()
-                    .DeclareExchange(TestMessaging.ExchangeName, exchange => exchange.IsDurable = true);
+                    .DeclareExchange(exchangeName, exchange => exchange.IsDurable = true);
 
                 options.PublishMessagesToRabbitMqExchange<AlwaysFailsIntegrationEvent>(
-                    TestMessaging.ExchangeName,
+                    exchangeName,
                     _ => UpstreamTopic);
             })
             .StartAsync(TestContext.Current.CancellationToken);
 }
+

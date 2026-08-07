@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using BuildingBlocks.Application.Results;
 using BuildingBlocks.Domain.Events;
 using BuildingBlocks.Infrastructure.DependencyInjection;
@@ -55,6 +56,78 @@ public sealed class ArchitectureTests
 
         Assert.Contains("BuildingBlocks.Application", references);
         Assert.Contains("BuildingBlocks.Domain", references);
+    }
+
+    [Fact]
+    public void Domain_DeclaresNoInfrastructurePackage_NotEvenAnUnusedOne()
+    {
+        var packages = ResolvedPackages("BuildingBlocks/src/BuildingBlocks.Domain");
+
+        Assert.DoesNotContain(packages, IsForbiddenInfrastructureDependency);
+    }
+
+    [Fact]
+    public void Application_DeclaresNoInfrastructurePackage_NotEvenAnUnusedOne()
+    {
+        var packages = ResolvedPackages("BuildingBlocks/src/BuildingBlocks.Application");
+
+        Assert.DoesNotContain(packages, IsForbiddenInfrastructureDependency);
+    }
+
+    [Fact]
+    public void BuildingBlocks_NeverMentionsTheProductItServes()
+    {
+        var sources = Directory.EnumerateFiles(
+            Path.Combine(RepositoryRoot(), "BuildingBlocks", "src"),
+            "*.*",
+            SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Where(path => Path.GetExtension(path) is ".cs" or ".csproj" or ".json" or ".editorconfig");
+
+        var offenders = sources
+            .Where(path => File.ReadAllText(path).Contains("vitalsync", StringComparison.OrdinalIgnoreCase))
+            .Select(path => Path.GetRelativePath(RepositoryRoot(), path))
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "Building Blocks must stay independent of VitalSync (ADR-0018): the product name may not appear "
+            + $"under BuildingBlocks/src. Offending files: {string.Join(", ", offenders)}");
+    }
+
+    private static IReadOnlyCollection<string> ResolvedPackages(string projectDirectory)
+    {
+        var assets = Path.Combine(
+            RepositoryRoot(),
+            projectDirectory.Replace('/', Path.DirectorySeparatorChar),
+            "obj",
+            "project.assets.json");
+
+        Assert.True(File.Exists(assets), $"'{assets}' does not exist; restore the solution before running this test.");
+
+        using var document = JsonDocument.Parse(File.ReadAllText(assets));
+
+        return document.RootElement.TryGetProperty("targets", out var targets)
+            ?
+            [
+                .. targets.EnumerateObject()
+                    .SelectMany(target => target.Value.EnumerateObject())
+                    .Select(library => library.Name.Split('/')[0]),
+            ]
+            : [];
+    }
+
+    private static string RepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "VitalSync.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        Assert.NotNull(directory);
+        return directory!.FullName;
     }
 
     private static IReadOnlyCollection<string> ReferencedAssemblyNames(Assembly assembly) =>

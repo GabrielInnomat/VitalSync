@@ -11,17 +11,17 @@ internal sealed class BuildingBlocksWolverineExtension(WolverineWiringSettings s
 
         if (settings.Persistence.IsSelected)
         {
-            options.ApplyBuildingBlockIdempotencyWindow();
-            options.ApplyBuildingBlockDomainEventRouting();
+            options.ApplyBuildingBlocksIdempotencyWindow();
+            options.ApplyBuildingBlocksDomainEventRouting();
         }
 
         if (settings.Messaging is { } messaging)
         {
-            options.ApplyBuildingBlockMessagingDefaults(messaging);
+            options.ApplyBuildingBlocksMessagingDefaults(messaging);
 
             if (settings.Subscription is { } subscription)
             {
-                options.ApplyBuildingBlockSubscription(subscription, messaging.ExchangeName);
+                options.ApplyBuildingBlocksSubscription(subscription, messaging.ExchangeName);
             }
         }
     }

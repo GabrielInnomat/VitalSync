@@ -475,7 +475,7 @@ A small cluster of classes, using Marten as a **raw stream store**:
   ordering remain authoritative.
 - **Retries are graded by failure class** (ADR-0023 amendment 2026-08-06). One rule for
   every exception served two opposite failure classes badly, so
-  `ApplyBuildingBlockMessagingDefaults` registers three, and Wolverine takes the first
+  `ApplyBuildingBlocksMessagingDefaults` registers three, and Wolverine takes the first
   that matches. **Hopeless** — `JsonException`, `DomainValidationException`,
   `BusinessRuleViolationException` — is dead-lettered immediately: it never recovers, and
   retrying it writes four error log entries where one is the truth, multiplying the metric
@@ -531,7 +531,7 @@ A small cluster of classes, using Marten as a **raw stream store**:
   that already covers a nack, a requeue, a crash before the ack, a broker reconnect
   and the sender's own outbox retry. Wolverine then **deletes** those rows after
   `DurabilitySettings.KeepAfterMessageHandling`, whose default is five minutes, so
-  the guarantee silently expired. `ApplyBuildingBlockIdempotencyWindow` widens it to
+  the guarantee silently expired. `ApplyBuildingBlocksIdempotencyWindow` widens it to
   **7 days** whenever a persistence strategy was selected — without a message store
   there are no inbox rows to keep. Seven days covers a weekend plus the time an
   operator needs to replay a message out of the dead-letter queue. What this does
@@ -859,6 +859,21 @@ key from an event type is `TopicResolver`, not `IntegrationEventTopic`, because
 `[IntegrationEventTopic]` in `BuildingBlocks.Application` is the attribute it reads. A
 class and an attribute that differ only by the compiler-elided `Attribute` suffix both
 compile and both read the same in a call site, which is precisely the problem.
+
+### A note on names found in ADRs
+
+The four Wolverine wiring extensions are `ApplyBuildingBlocksIdempotencyWindow`,
+`ApplyBuildingBlocksDomainEventRouting`, `ApplyBuildingBlocksMessagingDefaults`, and
+`ApplyBuildingBlocksSubscription` — plural, matching the assembly. **ADR-0023 and ADR-0027
+name them in the singular**, and were deliberately left untouched when they were renamed
+(todo.md, TODO-43).
+
+That is the general rule, not an exception: **a code name in an ADR is historical.** An ADR
+records a decision together with the vocabulary that existed when it was accepted; it is not
+reference documentation and is not kept name-current. ADR-0027 has named
+`ApplyBuildingBlockEfCoreOutbox` — a method deleted in TODO-06 — for some time already. When
+a name in an ADR does not resolve, this file, `WalkingSkeleton.md`, and the two instruction
+files are the ones that are kept current; look there.
 
 ## 8. Clock (`IClock` implementation)
 
