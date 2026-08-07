@@ -650,6 +650,20 @@ Index: `docs/architecture/decisions/README.md`.
   Keep both flags when touching the workflow — a green run that skipped the container and
   smoke tests is exactly the blind spot the walking skeleton exposed. The SDK is pinned by
   `global.json`; no Aspire workload is installed (the AppHosts use `Aspire.AppHost.Sdk` as a package).
+- **The `Diagnostics` step is not decoration.** Aspire routes resource and container logs to the
+  dashboard, not to the AppHost's stdout, so `apphost.log` alone shows a clean start and then
+  nothing — a stalled container is indistinguishable from a broken one. The `if: failure()` step
+  therefore also dumps `docker ps --all`, `docker images` and `docker logs --tail 200` per
+  container, and the wait loop prints a container status line every sixth attempt. Without this
+  a failed smoke stage can only be answered by re-running it.
+- **Both test stages emit a TRX report (`--report-xunit-trx`), and that is load-bearing.** The
+  console output names the *count* of failed tests but never the *name* — a red run says
+  "Failed: 1, Passed: 244" and nothing else. The name used to live only in the 668 KB TestResults
+  log inside the artifact, so diagnosing a red run cost a download, and once the artifact expired
+  the information was gone for good. Each stage therefore has an `if: failure()` step that greps
+  the TRX for `outcome="Failed"` and prints those entries with message and stack trace. Keep the
+  flag and the step together: `--report-xunit-trx` without the step writes a file nobody reads,
+  and the step without the flag finds nothing.
 
 ## When contributing
 

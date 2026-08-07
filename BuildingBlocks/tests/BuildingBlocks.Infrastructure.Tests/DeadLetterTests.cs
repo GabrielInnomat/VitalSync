@@ -57,8 +57,6 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
         var deadLettered = await WaitForDeadLetterAsync(name, recorder);
         Assert.Contains(name, deadLettered, StringComparison.Ordinal);
 
-        await Task.Delay(500, TestContext.Current.CancellationToken);
-
         Assert.Equal(1, recorder.Names.Count(recorded => recorded == name));
 
         await host.StopAsync(TestContext.Current.CancellationToken);

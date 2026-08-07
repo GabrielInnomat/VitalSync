@@ -226,7 +226,7 @@ Implements the `ISender` contract from `BuildingBlocks.Application`
 | --------------------------- | ----- | -------------- |
 | `LoggingBehavior`           | `0` (outermost) | Structured logging of request name, outcome (success/failure categories), and duration. Never logs payload contents by default. Being outermost, translated failures (expected domain errors, concurrency conflicts) are logged at `Warning`, while only genuinely unexpected exceptions are logged at `Error` (faulted) and rethrown. |
 | `ExceptionToResultBehavior` | `100` | Translates `DomainValidationException` / `BusinessRuleViolationException` into `Result.Failed` (ADR-0017), before logging sees the outcome and before any transaction is opened. Unexpected exceptions pass through untouched. |
-| `UnitOfWorkBehavior`        | `300` (innermost) | Commits the unit of work when a **command** completes successfully — including the atomic outbox write (see §2/§4). Queries and failed results are unaffected: nothing is committed, and query-only hosts need no `IUnitOfWork` registration. The dependency is **non-optional**: Building Blocks registers a `NullUnitOfWork` fallback so the pipeline always resolves, and `UnitOfWorkPresenceCheck` fails the host at start when that fallback would silently swallow real commands (see §Composition root). A host that deliberately commits nothing says so with `UseNoPersistence()`. Translates the store's optimistic-concurrency exceptions raised on commit (Marten's `ConcurrencyException`, EF Core's `DbUpdateConcurrencyException`) into a `Failure` with category `Conflict`. |
+| `UnitOfWorkBehavior`        | `300` (innermost) | Commits the unit of work when a **command** completes successfully — including the atomic outbox write (see §2/§4). Queries and failed results are unaffected: nothing is committed, and query-only hosts need no `IUnitOfWork` registration. The dependency is **non-optional**: Building Blocks registers a `NullUnitOfWork` fallback so the pipeline always resolves, and `UnitOfWorkPresenceCheck` fails the host at start when that fallback would silently swallow real commands (see §Composition root). A host that deliberately commits nothing says so with `UseNoPersistence()`. Translates the store's optimistic-concurrency exceptions raised on commit (Marten's `ConcurrencyException`, EF Core's `DbUpdateConcurrencyException`) into a `Failure` with category `Conflict`, and does the same for a PostgreSQL unique-constraint violation (SQLSTATE `23505`) — expected on both persistence paths, so it is caught both wrapped in a `DbUpdateException` and bare, as Marten raises it. |
 
 The canonical execution order is therefore:
 `Logging → ExceptionToResult → UnitOfWork → handler`.
@@ -264,6 +264,13 @@ public interface IUnitOfWork
   the tracker and therefore cannot observe these exceptions. The commit path —
   via the `UnitOfWorkBehavior` (§1) — translates them into a `Conflict`
   failure.
+- **A unique-constraint violation is a business outcome, not a crash.** "This
+  name already exists" is expected, so `UnitOfWorkBehavior` maps SQLSTATE
+  `23505` to a `Conflict` failure carrying the violated constraint's name —
+  otherwise the caller gets a 500 and the error metric counts a system fault
+  for a correctly working system. Mapping a constraint name onto a *business*
+  code (`ux_recipes_name` → `recipe.name_taken`) belongs to the service, not
+  here.
 - Two implementations, one per persistence style, sharing the same behavior:
   an EF Core–backed unit of work and a Marten-session–backed unit of work.
   Wolverine's native Marten/EF Core integration provides the shared

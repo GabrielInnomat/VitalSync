@@ -31,7 +31,23 @@ jobs:
       - name: Test
         env:
           VITALSYNC_REQUIRE_CONTAINERS: "1"
-        run: dotnet test --configuration Release --no-build -- --output Detailed
+        run: dotnet test --configuration Release --no-build -- --output Detailed --report-xunit-trx
+
+      - name: Failed test detail
+        if: failure()
+        run: |
+          found=0
+          while IFS= read -r trx; do
+            if grep -q 'outcome="Failed"' "$trx"; then
+              found=1
+              echo "::group::$trx"
+              sed -n '/outcome="Failed"/,/<\/UnitTestResult>/p' "$trx"
+              echo "::endgroup::"
+            fi
+          done < <(find . -name '*.trx' -type f)
+          if [ "$found" -eq 0 ]; then
+            echo "No TRX report contained a failed test - the failure came from outside the test run."
+          fi
 
       - name: Upload test results
         if: always()
@@ -60,6 +76,10 @@ jobs:
               echo "Both sample APIs are up after ${attempt} attempts."
               exit 0
             fi
+            if [ $((attempt % 6)) -eq 0 ]; then
+              echo "Still waiting after ${attempt} attempts. Containers:"
+              docker ps --all --format '  {{.Names}} | {{.Image}} | {{.Status}}' || true
+            fi
             sleep 5
           done
           echo "The sample APIs did not become reachable."
@@ -73,9 +93,20 @@ jobs:
           VITALSYNC_REQUIRE_CONTAINERS: "1"
         run: |
           dotnet test samples/StateStored/VitalSync.Sample.StateStored.Tests \
-            --configuration Release --no-build -- --output Detailed
+            --configuration Release --no-build -- --output Detailed --report-xunit-trx
           dotnet test samples/EventSourced/VitalSync.Sample.EventSourced.Tests \
-            --configuration Release --no-build -- --output Detailed
+            --configuration Release --no-build -- --output Detailed --report-xunit-trx
+
+      - name: Failed smoke test detail
+        if: failure()
+        run: |
+          while IFS= read -r trx; do
+            if grep -q 'outcome="Failed"' "$trx"; then
+              echo "::group::$trx"
+              sed -n '/outcome="Failed"/,/<\/UnitTestResult>/p' "$trx"
+              echo "::endgroup::"
+            fi
+          done < <(find samples -name '*.trx' -type f)
 
       - name: Upload smoke test results
         if: always()
@@ -85,14 +116,23 @@ jobs:
           path: "samples/**/bin/Release/net10.0/TestResults/**"
           if-no-files-found: ignore
 
-      - name: AppHost log
+      - name: Diagnostics
         if: failure()
         run: |
+          echo "=== apphost.log ==="
           if [ -f apphost.log ]; then
             cat apphost.log
           else
             echo "apphost.log not found — the AppHost was never started (an earlier step failed)."
           fi
+          echo "=== docker ps --all ==="
+          docker ps --all || true
+          echo "=== docker images ==="
+          docker images || true
+          for container in $(docker ps --all --quiet 2> /dev/null); do
+            echo "=== docker logs $(docker inspect --format '{{.Name}} {{.Config.Image}} {{.State.Status}}' "${container}" 2> /dev/null) ==="
+            docker logs --tail 200 "${container}" 2>&1 || true
+          done
 
       - name: Stop the samples AppHost
         if: always()

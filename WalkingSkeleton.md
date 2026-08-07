@@ -1221,11 +1221,18 @@ vorinstalliert, die Voraussetzung ist also erfüllt.
 ### WS-17, Zeitbasierte Negativassertion im Sink-Test
 
 **Teilweise.** `IntegrationEventSinkDeliveryTests` ruft inzwischen die Produktionsmethode
-auf statt die Verdrahtung nachzubauen. Die Negativassertion — „das Integration Event geht
-bei fehlgeschlagenem Handler **nicht** raus" — bleibt aber zeitbasiert
-([IntegrationEventSinkDeliveryTests.cs:55](BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests/IntegrationEventSinkDeliveryTests.cs:55)):
-250 ms warten und dann prüfen, dass nichts angekommen ist. Auf einem langsamen CI-Runner ist
-das entweder flaky oder — schlimmer — grün, obwohl die Nachricht 300 ms später doch käme.
+auf statt die Verdrahtung nachzubauen, und beide Hälften des Negativtests hängen seit
+2026-08-07 an Signalen: die Vorbedingung an einem `TaskCompletionSource` im
+`SinkProbeCrashSwitch` (das war der einzige über Wochen rote CI-Test), die Negativassertion an
+einem **Sentinel** — ein zweiter, gesunder Envelope, auf dessen Zustellung deterministisch
+gewartet wird. Geprüft wird jetzt „genau der Sentinel kam an, das Crash-Event nicht" statt
+„innerhalb von 250 ms kam nichts". In `DeadLetterTests` ist der Puffer ersatzlos entfallen, weil
+die Dead-Letter-Ankunft bereits der terminale Zustand ist.
+
+**Offen bleibt** der Drain-Puffer in `IntegrationEventSubscriptionValidationTests` — dort scheitert
+ein Sentinel daran, dass der Consumer konstruktionsbedingt immer wirft und Wolverine den Listener
+nach der Fehlerlawine pausiert; das bräuchte ein anderes Fixture. Ebenso die `Task.Delay`-Stellen
+in den Sample-Smoke-Tests. Details in `todo.md`, TODO-37.
 
 #### Lösungsvorschlag
 

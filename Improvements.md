@@ -41,7 +41,7 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-26 | `DomainEventPublisher` koppelt Projektion und Integration-Event-Publikation         | offen             |
 | IMP-27 | `FailureResults`-Reflection ist vermeidbar                               | gelöst            |
 | IMP-28 | Kein `IClock` im Container                                               | gelöst            |
-| IMP-29 | Unique-Constraint-Verletzungen werden nicht übersetzt                    | offen             |
+| IMP-29 | Unique-Constraint-Verletzungen werden nicht übersetzt                    | gelöst            |
 | IMP-30 | Keine Tracing-Instrumentierung der CQRS-Pipeline                         | offen             |
 | IMP-31 | Read-Modelle im state-stored Pfad sind nicht wiederaufbaubar             | offen             |
 | IMP-32 | Keine Batch- oder Bulk-Fähigkeit                                         | offen             |

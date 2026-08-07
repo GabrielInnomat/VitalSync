@@ -6,6 +6,7 @@ using BuildingBlocks.Infrastructure.Dispatching;
 using BuildingBlocks.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
@@ -72,6 +73,70 @@ public sealed class UnitOfWorkBehaviorTests
     }
 
     [Fact]
+    public async Task EfCoreUniqueViolationOnCommit_IsMappedToConflictFailure()
+    {
+        var unitOfWork = new ThrowingUnitOfWork(
+            new DbUpdateException("save failed", UniqueViolation("ux_widgets_name")));
+        using var provider = BuildProvider(unitOfWork, new PassingCommandHandler());
+        var sender = provider.GetRequiredService<ISender>();
+
+        var result = await sender.SendAsync(new ProbeCommand(), CancellationToken.None);
+
+        Assert.True(result.IsFailure);
+        var failure = Assert.Single(result.Failures);
+        Assert.Equal(FailureCategory.Conflict, failure.Category);
+        Assert.Equal(UnitOfWorkBehavior<ProbeCommand, Result>.UniqueViolationCode, failure.Code);
+        Assert.Contains("ux_widgets_name", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MartenUniqueViolationOnCommit_IsMappedToConflictFailure()
+    {
+        var unitOfWork = new ThrowingUnitOfWork(UniqueViolation("ux_gadgets_name"));
+        using var provider = BuildProvider(unitOfWork, new PassingCommandHandler());
+        var sender = provider.GetRequiredService<ISender>();
+
+        var result = await sender.SendAsync(new ProbeCommand(), CancellationToken.None);
+
+        Assert.True(result.IsFailure);
+        var failure = Assert.Single(result.Failures);
+        Assert.Equal(FailureCategory.Conflict, failure.Category);
+        Assert.Equal(UnitOfWorkBehavior<ProbeCommand, Result>.UniqueViolationCode, failure.Code);
+        Assert.Contains("ux_gadgets_name", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UniqueViolationWithoutConstraintName_StillProducesANonEmptyMessage()
+    {
+        var unitOfWork = new ThrowingUnitOfWork(
+            new DbUpdateException("save failed", UniqueViolation(constraintName: null)));
+        using var provider = BuildProvider(unitOfWork, new PassingCommandHandler());
+        var sender = provider.GetRequiredService<ISender>();
+
+        var result = await sender.SendAsync(new ProbeCommand(), CancellationToken.None);
+
+        var failure = Assert.Single(result.Failures);
+        Assert.Equal(UnitOfWorkBehavior<ProbeCommand, Result>.UniqueViolationCode, failure.Code);
+        Assert.False(string.IsNullOrWhiteSpace(failure.Message));
+    }
+
+    [Fact]
+    public async Task ForeignKeyViolationOnCommit_IsNotSwallowed()
+    {
+        var violation = new PostgresException(
+            "insert or update violates foreign key constraint",
+            "ERROR",
+            "ERROR",
+            PostgresErrorCodes.ForeignKeyViolation);
+        var unitOfWork = new ThrowingUnitOfWork(new DbUpdateException("save failed", violation));
+        using var provider = BuildProvider(unitOfWork, new PassingCommandHandler());
+        var sender = provider.GetRequiredService<ISender>();
+
+        await Assert.ThrowsAsync<DbUpdateException>(
+            () => sender.SendAsync(new ProbeCommand(), CancellationToken.None));
+    }
+
+    [Fact]
     public async Task SuccessfulCommand_WithoutRegisteredUnitOfWork_PassesThrough()
     {
         var services = new ServiceCollection();
@@ -99,6 +164,14 @@ public sealed class UnitOfWorkBehaviorTests
 
         Assert.True(result.IsSuccess);
     }
+
+    private static PostgresException UniqueViolation(string? constraintName) =>
+        new(
+            "duplicate key value violates unique constraint",
+            "ERROR",
+            "ERROR",
+            PostgresErrorCodes.UniqueViolation,
+            constraintName: constraintName);
 
     private static ServiceProvider BuildProvider(IUnitOfWork unitOfWork, ICommandHandler<ProbeCommand> handler)
     {

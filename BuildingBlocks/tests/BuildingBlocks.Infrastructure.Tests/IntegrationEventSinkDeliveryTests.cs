@@ -50,12 +50,27 @@ public sealed class IntegrationEventSinkDeliveryTests
             .DoNotAssertOnExceptionsDetected()
             .PublishMessageAndWaitAsync(WrapProbeEvent("crash"));
 
+        var tripped = await Task.WhenAny(
+                crashSwitch.Tripped,
+                Task.Delay(TrackingTimeout, TestContext.Current.CancellationToken))
+            .ConfigureAwait(true) == crashSwitch.Tripped;
+
         Assert.True(
-            crashSwitch.Tripped,
+            tripped,
             "The crashing mapper never ran, so the envelope was not handled at all and the assertion below would hold for the wrong reason.");
 
-        await Task.Delay(250, TestContext.Current.CancellationToken);
-        Assert.Empty(recorder.Received);
+        crashSwitch.Enabled = false;
+
+        await host.TrackActivity()
+            .Timeout(TrackingTimeout)
+            .WaitForMessageToBeReceivedAt<SinkProbeIntegrationEvent>(host)
+            .PublishMessageAndWaitAsync(WrapProbeEvent("sentinel"));
+
+        var delivered = recorder.Received
+            .Select(envelope => Assert.IsType<SinkProbeIntegrationEvent>(envelope.Message).Name)
+            .ToArray();
+
+        Assert.Equal(["sentinel"], delivered);
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
@@ -123,8 +138,8 @@ public sealed class SinkProbeRecorder
 
 public sealed class SinkProbeCrashSwitch
 {
+    private readonly TaskCompletionSource _tripped = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int _enabled;
-    private int _tripped;
 
     public bool Enabled
     {
@@ -132,9 +147,9 @@ public sealed class SinkProbeCrashSwitch
         set => Volatile.Write(ref _enabled, value ? 1 : 0);
     }
 
-    public bool Tripped => Volatile.Read(ref _tripped) != 0;
+    public Task Tripped => _tripped.Task;
 
-    public void Trip() => Volatile.Write(ref _tripped, 1);
+    public void Trip() => _tripped.TrySetResult();
 }
 
 public sealed class SinkProbeMapper : IIntegrationEventMapper

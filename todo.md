@@ -56,7 +56,7 @@ eine Entscheidung, keinen Code.
 | TODO-19 | `ApplyEntityKeyConversions` scannt und mappt zu viel           | **P2** | teilweise         | hacky-4, WS-15                        |
 | TODO-20 | Global sequentielle Domain-Event-Queue                         | **P2** | offen             | hacky-13, IMP-25                      |
 | TODO-21 | Read-Modelle im state-stored Pfad nicht wiederaufbaubar        | **P2** | offen             | IMP-31                                |
-| TODO-22 | Unique-Constraint-Verletzungen werden nicht übersetzt          | **P2** | offen             | IMP-29                                |
+| TODO-22 | Unique-Constraint-Verletzungen werden nicht übersetzt          | **P2** | gelöst            | IMP-29                                |
 | TODO-23 | Keine Tracing-Instrumentierung der CQRS-Pipeline               | **P2** | offen             | IMP-30                                |
 | TODO-24 | `DbContext` als DI-Schlüssel                                   | **P2** | offen             | IMP-20                                |
 | TODO-25 | Marten-Nebenläufigkeit verdrahtet, aber unbelegt               | **P2** | offen             | WS-10                                 |
@@ -651,6 +651,17 @@ fehlender `SAMPLE_*_API_URL` (Tippfehler im Workflow, umbenannte Variable) hätt
 Variable in der Smoke-Stufe. Empirisch geprüft — ohne URLs und mit gesetztem Flag fallen die
 betroffenen Tests um (4 im state-stored, 7 im event-sourced Sample); ohne Flag überspringen sie
 weiterhin, damit die Suite lokal ohne laufendes System benutzbar bleibt.
+
+**Nachgezogen (2026-08-07): der Name des fehlgeschlagenen Tests fehlte im Log.** Trotz
+`--output Detailed` schrieb der Lauf nur „Failed! - Failed: 1, Passed: 244" auf die Konsole; der
+Testname stand ausschließlich in der 668 KB großen Logdatei im Artefakt — und bei älteren Läufen
+war das Artefakt bereits abgelaufen, die Information also unwiederbringlich weg. Jede rote Pipeline
+kostete damit einen Artefakt-Download. Beide Teststufen erzeugen jetzt zusätzlich einen
+xUnit-TRX-Report (`--report-xunit-trx`), und je ein `if: failure()`-Schritt schreibt die Einträge
+mit `outcome="Failed"` samt Meldung und Stacktrace direkt in eine aufklappbare Log-Gruppe. Sagt
+kein Report einen fehlgeschlagenen Test, gibt der Schritt das ausdrücklich aus — dann lag der
+Fehlschlag außerhalb des Testlaufs (etwa der Runner, der eine Zeit lang gar nicht erst zugeteilt
+wurde).
 
 ---
 
@@ -1284,7 +1295,7 @@ niemand verlässt.
 
 # TODO-22, Unique-Constraint-Verletzungen werden nicht übersetzt
 
-**P2 · offen · IMP-29**
+**P2 · gelöst · IMP-29**
 
 `UnitOfWorkBehavior` fängt `ConcurrencyException` und `DbUpdateConcurrencyException`
 ([UnitOfWorkBehavior.cs:58-65](BuildingBlocks/src/BuildingBlocks.Infrastructure/Dispatching/UnitOfWorkBehavior.cs:58)).
@@ -1307,6 +1318,40 @@ catch (DbUpdateException exception) when (exception.InnerException is PostgresEx
 Der Constraint-Name gehört in die Meldung, sonst ist der Fehler im Log nicht zuzuordnen. Das
 Mapping von Constraint-Namen auf fachliche Codes (`ux_recipes_name` → `recipe.name_taken`) gehört
 in den Service, nicht in die Building Blocks — hängt an TODO-15.
+
+## Gelöst (2026-08-07) — und zwar auf beiden Persistenzpfaden
+
+Wichtig für die Nachvollziehbarkeit: Commit `6918414` heißt „Improve unique constraint violation
+handling", hat aber **ausschließlich `todo.md` und `Improvements.md`** angefasst und dort nur
+`FailureResults.Create<TResponse>` durch `pipeline.Failed` im Vorschlags-Snippet ersetzt
+(Nachzug zu TODO-12). Der Produktivcode blieb unverändert. Die Commit-Nachricht las sich, als wäre
+der Punkt erledigt — er war es nicht.
+
+Umgesetzt ist jetzt der Vorschlag oben, mit **einer Abweichung**: der Vorschlag deckte nur den
+EF-Core-Pfad ab (`DbUpdateException` mit `PostgresException` als `InnerException`). Marten wirft
+die `PostgresException` jedoch **nackt**, weil dort kein EF-Core-`SaveChanges` dazwischenliegt.
+Da `UnitOfWorkBehavior` von beiden Pfaden geteilt wird, wäre derselbe fachliche Fall je nach Store
+einmal 409 und einmal 500 geworden — genau die Asymmetrie, die ADR-0026 an dieser Stelle nicht will.
+`UnitOfWorkBehavior` fängt deshalb beide Formen und führt die Erkennung in **einem** Prädikat
+(`IsUniqueViolation`) zusammen.
+
+Zwei Details, die beim Nachbauen zählen:
+
+- Die neuen `catch`-Blöcke stehen **nach** `DbUpdateConcurrencyException`. Die ist von
+  `DbUpdateException` abgeleitet, ein vorgezogener Block würde den Nebenläufigkeitskonflikt
+  fälschlich als Unique-Verletzung melden — der Compiler erzwingt diese Reihenfolge hier nicht,
+  weil der neue Block einen `when`-Filter trägt.
+- `Failure` verlangt eine nicht-leere Meldung, `ConstraintName` kann aber `null` sein. Ohne den
+  Fallback auf die Exception-Meldung wäre aus einem 409 eine `ArgumentException` und damit doch
+  wieder ein 500 geworden.
+
+Belegt durch vier neue Tests in `UnitOfWorkBehaviorTests`: EF-Pfad, Marten-Pfad, fehlender
+Constraint-Name, und eine Abgrenzung — eine **Foreign-Key**-Verletzung (SQLSTATE `23503`) wird
+weiterhin durchgereicht statt still zu einem `Conflict` zu werden.
+
+**Nicht** miterledigt und weiterhin an TODO-15 hängend: das Mapping des Constraint-Namens auf einen
+fachlichen Code. Der Aufrufer bekommt heute `persistence.unique_violation` plus den Constraint-Namen
+im Klartext.
 
 ---
 
@@ -1788,14 +1833,55 @@ aufruft, und dann in einen ADR, zusammen mit der bisher nur faktisch getroffenen
 
 **P3 · teilweise · WS-17**
 
-`IntegrationEventSinkDeliveryTests` ruft inzwischen die Produktionsmethode auf. Die
-Negativassertion — „das Integration Event geht bei fehlgeschlagenem Handler **nicht** raus" —
-bleibt aber zeitbasiert
-([IntegrationEventSinkDeliveryTests.cs:55](BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests/IntegrationEventSinkDeliveryTests.cs:55)):
-250 ms warten, dann prüfen, dass nichts ankam. Auf einem langsamen CI-Runner (TODO-09!) ist das
-entweder flaky oder grün, obwohl die Nachricht 300 ms später doch käme.
+`IntegrationEventSinkDeliveryTests` ruft die Produktionsmethode auf, und beide Hälften des
+Negativtests hängen seit dem CI-Flake-Fix (2026-08-07) an Signalen statt an Fristen:
 
-## Lösungsvorschlag
+- Die **Vorbedingung** „der abstürzende Mapper ist gelaufen" wartet auf ein
+  `TaskCompletionSource` im `SinkProbeCrashSwitch` statt auf Wolverines Stille-Erkennung.
+- Die **Negativassertion** benutzt ein **Sentinel**: nach dem Crash-Envelope wird der Switch
+  abgeschaltet und ein zweiter, gesunder Envelope geschickt, auf dessen Zustellung deterministisch
+  gewartet wird. Danach lautet die Prüfung `Assert.Equal(["sentinel"], delivered)` — der Test sagt
+  jetzt „genau der Sentinel kam an, das Crash-Event nicht" statt „innerhalb von 250 ms kam nichts".
+  Das ist zugleich eine stärkere Aussage: vorher hätte auch ein komplett toter Zustellpfad den Test
+  grün gemacht.
+
+In `DeadLetterTests` ist der 500-ms-Puffer vor „es gab keinen Retry" **ersatzlos entfallen**. Die
+Ankunft in der Dead-Letter-Queue ist bereits der terminale Zustand: Wolverine verschiebt erst,
+nachdem der Handler endgültig aufgegeben hat, also ist `recorder.Attempts` zu diesem Zeitpunkt
+final. Der Delay hat nie etwas abgesichert, was der Anker davor nicht schon garantiert.
+
+## Was bewusst zeitbasiert bleibt
+
+Zwei Kategorien, die kein Defekt sind:
+
+1. **Polling-Intervalle innerhalb einer Schleife mit Deadline** (`WaitForDeadLetterAsync`,
+   `WaitForMessageAsync`, die Publish-Schleifen der Subscription-Tests). Sie prüfen eine Bedingung
+   und scheitern nach einem Timeout mit Meldung — das ist die korrekte Bauform, nicht die kritisierte.
+2. **`WaitForTheQueueToDrainAsync` in `IntegrationEventSubscriptionValidationTests`**, der nach
+   `MessageCount == 0` noch 500 ms puffert. Ein Sentinel wurde hier **versucht und wieder
+   zurückgenommen**: Der Consumer dieses Tests wirft konstruktionsbedingt _immer_, die Publish-Schleife
+   erzeugt dadurch eine Fehlerlawine, und Wolverine pausiert daraufhin den Listener — ein Sentinel über
+   denselben Handler kommt dann nicht mehr an und macht den Test rot. Ein belastbarer Sentinel bräuchte
+   einen Handler, der erfolgreich ist; das ist ein Umbau des Fixtures, kein Umbau der Assertion.
+
+Grundsätzlich gilt: „es kommt nie mehr etwas" ist in einem verteilten System ohne Zeitfenster nicht
+entscheidbar. Erreichbar ist nur, das Fenster an einen beobachtbaren terminalen Zustand zu hängen
+(DLQ-Ankunft, Sentinel-Zustellung) — genau das ist oben passiert, wo es ging.
+
+## Offen
+
+Die `Task.Delay`-Stellen in den Sample-Smoke-Tests sind noch nicht angesehen.
+
+## Der behobene Flake (2026-08-07)
+
+`MapperFailingAfterSinkPublish_HoldsTheIntegrationEventBack` war über Wochen der **einzige** rote
+Test im CI — immer genau einer, immer dieselbe Assembly. Er prüfte direkt nach
+`PublishMessageAndWaitAsync` einen booleschen Zustand. Auf dem 2-Kern-Runner konnte das Tracking
+zurückkehren, bevor der Handler gelaufen war; die Vorbedingung schlug dann fehl, obwohl das
+Verhalten korrekt war. Lokal (32 Kerne) war der Flake auch unter künstlicher Volllast in 16 Läufen
+nicht reproduzierbar.
+
+## Lösungsvorschlag für die Sample-Smoke-Tests
 
 Auf ein deterministisches Signal umstellen statt auf eine Frist:
 
@@ -1808,8 +1894,7 @@ Assert.Empty(session.Sent.MessagesOf<WidgetCreatedIntegrationEvent>());
 ```
 
 Die Assertion sagt dann „bis zum Abschluss der Verarbeitung wurde nichts gesendet" statt
-„innerhalb von 250 ms" — das ist die Aussage, die der Test treffen will. Betrifft auch die
-`Task.Delay`-Stellen in den Sample-Smoke-Tests.
+„innerhalb von 250 ms" — das ist die Aussage, die der Test treffen will.
 
 ---
 
