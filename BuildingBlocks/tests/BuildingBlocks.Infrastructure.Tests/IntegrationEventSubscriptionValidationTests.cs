@@ -23,7 +23,7 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
         Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            StartConsumerAsync("validation-no-match", TestMessaging.ContextName, "somewhere-else.*"));
+            StartConsumerAsync(TestMessaging.UniqueQueueName("validation-no-match"), TestMessaging.ContextName, "somewhere-else.*"));
 
         Assert.Contains(nameof(AlwaysFailsIntegrationEvent), thrown.Message, StringComparison.Ordinal);
         Assert.Contains(UpstreamTopic, thrown.Message, StringComparison.Ordinal);
@@ -37,7 +37,7 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
         Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            StartConsumerAsync("validation-own-context", TestMessaging.UpstreamContextName, "upstream.*"));
+            StartConsumerAsync(TestMessaging.UniqueQueueName("validation-own-context"), TestMessaging.UpstreamContextName, "upstream.*"));
 
         Assert.Contains("this very context", thrown.Message, StringComparison.Ordinal);
         Assert.Contains(TestMessaging.UpstreamContextName, thrown.Message, StringComparison.Ordinal);
@@ -50,7 +50,7 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
         Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         using var host = await StartConsumerAsync(
-            "validation-happy",
+            TestMessaging.UniqueQueueName("validation-happy"),
             TestMessaging.ContextName,
             "upstream.*");
 
@@ -63,7 +63,7 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
         Assert.SkipUnless(postgres.Available, postgres.SkipReason);
         Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
-        const string queueName = "self-consumption-probe";
+        var queueName = TestMessaging.UniqueQueueName("self-consumption-probe");
 
         var recorder = new AttemptRecorder();
         using var host = await StartConsumerAsync(queueName, TestMessaging.ContextName, "upstream.*", recorder);
@@ -99,7 +99,7 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
         Assert.SkipUnless(postgres.Available, postgres.SkipReason);
         Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
-        const string queueName = "foreign-source-probe";
+        var queueName = TestMessaging.UniqueQueueName("foreign-source-probe");
 
         var recorder = new AttemptRecorder();
         using var host = await StartConsumerAsync(queueName, TestMessaging.ContextName, "upstream.*", recorder);

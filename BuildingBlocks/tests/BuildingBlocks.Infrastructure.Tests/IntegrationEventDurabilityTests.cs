@@ -14,9 +14,9 @@ namespace BuildingBlocks.Infrastructure.Tests;
 [Collection(BrokerAndDatabaseCollection.Name)]
 public sealed class IntegrationEventDurabilityTests(PostgreSqlFixture postgres, RabbitMqFixture rabbit)
 {
-    private const string SubscriberQueueName = "durability-subscriber";
+    private readonly string _subscriberQueueName = TestMessaging.UniqueQueueName("durability-subscriber");
 
-    private const string SinkQueueName = "durability-sink";
+    private readonly string _sinkQueueName = TestMessaging.UniqueQueueName("durability-sink");
 
     private static readonly TimeSpan DeliveryTimeout = TimeSpan.FromSeconds(30);
 
@@ -32,13 +32,13 @@ public sealed class IntegrationEventDurabilityTests(PostgreSqlFixture postgres, 
             cancellationToken: TestContext.Current.CancellationToken);
 
         await channel.QueueDeclareAsync(
-            SinkQueueName,
+            _sinkQueueName,
             durable: true,
             exclusive: false,
             autoDelete: false,
             cancellationToken: TestContext.Current.CancellationToken);
         await channel.QueueBindAsync(
-            SinkQueueName,
+            _sinkQueueName,
             TestMessaging.ExchangeName,
             "probe.*",
             cancellationToken: TestContext.Current.CancellationToken);
@@ -47,7 +47,7 @@ public sealed class IntegrationEventDurabilityTests(PostgreSqlFixture postgres, 
         await host.Services.GetRequiredService<IMessageBus>()
             .PublishAsync(new DurabilityProbeIntegrationEvent(name));
 
-        var delivered = await WaitForMessageAsync(channel, name);
+        var delivered = await WaitForMessageAsync(channel, _sinkQueueName, name);
 
         Assert.True(
             delivered.BasicProperties.Persistent,
@@ -83,7 +83,7 @@ public sealed class IntegrationEventDurabilityTests(PostgreSqlFixture postgres, 
 
         using var host = await StartHostAsync();
 
-        AssertQueueIsQuorum(host, SubscriberQueueName);
+        AssertQueueIsQuorum(host, _subscriberQueueName);
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
@@ -113,13 +113,13 @@ public sealed class IntegrationEventDurabilityTests(PostgreSqlFixture postgres, 
         Assert.True(queue.IsDurable, $"'{queueName}' is not durable, so a broker restart would drop it.");
     }
 
-    private static async Task<BasicGetResult> WaitForMessageAsync(IChannel channel, string name)
+    private static async Task<BasicGetResult> WaitForMessageAsync(IChannel channel, string queueName, string name)
     {
         var deadline = DateTime.UtcNow + DeliveryTimeout;
         while (true)
         {
             var message = await channel.BasicGetAsync(
-                SinkQueueName,
+                queueName,
                 autoAck: true,
                 TestContext.Current.CancellationToken);
 
@@ -152,7 +152,7 @@ public sealed class IntegrationEventDurabilityTests(PostgreSqlFixture postgres, 
                     options.UseMartenEventSourcing(postgres.ConnectionString);
                     options.UseWolverineMessaging(rabbit.ConnectionUri, TestMessaging.ExchangeName, TestMessaging.ContextName);
                     options.SubscribeToIntegrationEvents(
-                        SubscriberQueueName,
+                        _subscriberQueueName,
                         typeof(AlwaysFailsConsumer).Assembly,
                         "upstream.*");
                 });

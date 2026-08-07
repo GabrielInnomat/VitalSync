@@ -71,7 +71,7 @@ eine Entscheidung, keinen Code.
 | TODO-34 | Keine zentrale Paketverwaltung                                 | **P3** | offen             | IMP-47                                |
 | TODO-35 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`     | **P3** | offen             | WS-04                                 |
 | TODO-36 | Der gRPC-Vertrag liegt noch beim Service                       | **P3** | offen             | WS-07                                 |
-| TODO-37 | Zeitbasierte Assertionen in Tests                              | **P3** | teilweise         | WS-17                                 |
+| TODO-37 | Zeitbasierte Assertionen in Tests                              | **P3** | gelöst            | WS-17                                 |
 | TODO-38 | Keine Batch- oder Bulk-Fähigkeit                               | **P3** | offen             | IMP-32                                |
 | TODO-39 | Keine Saga- oder Process-Manager-Abstraktion                   | **P3** | offen             | IMP-33                                |
 | TODO-40 | Sichtbarkeits-Disziplin ist uneinheitlich                      | **P4** | gelöst            | IMP-38                                |
@@ -1831,7 +1831,7 @@ aufruft, und dann in einen ADR, zusammen mit der bisher nur faktisch getroffenen
 
 # TODO-37, Zeitbasierte Assertionen in Tests
 
-**P3 · teilweise · WS-17**
+**P3 · gelöst · WS-17**
 
 `IntegrationEventSinkDeliveryTests` ruft die Produktionsmethode auf, und beide Hälften des
 Negativtests hängen seit dem CI-Flake-Fix (2026-08-07) an Signalen statt an Fristen:
@@ -1852,25 +1852,55 @@ final. Der Delay hat nie etwas abgesichert, was der Anker davor nicht schon gara
 
 ## Was bewusst zeitbasiert bleibt
 
-Zwei Kategorien, die kein Defekt sind:
+Zwei Kategorien, die kein Defekt sind, und eine dritte, die eine echte Zustellunsicherheit abfängt:
 
 1. **Polling-Intervalle innerhalb einer Schleife mit Deadline** (`WaitForDeadLetterAsync`,
-   `WaitForMessageAsync`, die Publish-Schleifen der Subscription-Tests). Sie prüfen eine Bedingung
-   und scheitern nach einem Timeout mit Meldung — das ist die korrekte Bauform, nicht die kritisierte.
-2. **`WaitForTheQueueToDrainAsync` in `IntegrationEventSubscriptionValidationTests`**, der nach
-   `MessageCount == 0` noch 500 ms puffert. Ein Sentinel wurde hier **versucht und wieder
-   zurückgenommen**: Der Consumer dieses Tests wirft konstruktionsbedingt _immer_, die Publish-Schleife
-   erzeugt dadurch eine Fehlerlawine, und Wolverine pausiert daraufhin den Listener — ein Sentinel über
-   denselben Handler kommt dann nicht mehr an und macht den Test rot. Ein belastbarer Sentinel bräuchte
-   einen Handler, der erfolgreich ist; das ist ein Umbau des Fixtures, kein Umbau der Assertion.
+   `WaitForMessageAsync`). Sie prüfen eine Bedingung und scheitern nach einem Timeout mit Meldung —
+   das ist die korrekte Bauform, nicht die kritisierte.
+2. **Die Publish-Schleifen in `IntegrationEventSubscriptionValidationTests`.** Sie sind kein
+   Zeitpuffer, sondern ein **Retry gegen eine reale Zustellunsicherheit**. Ein Umbau auf einmaliges
+   Publish wurde am 2026-08-07 zweimal versucht und beide Male empirisch widerlegt:
+
+   - **Versuch 1** — einmaliges Publish plus explizites `QueueBindAsync`: beide Publish-Tests rot.
+   - **Versuch 2** — zusätzlich der Test-Publisher auf den Produktionspfad umgestellt
+     (`AddBuildingBlocks` mit `UseWolverineMessaging`, also ein **durabler** Sending-Endpoint mit
+     Message-Store statt des vorherigen buffered Endpoints ohne Persistenz): in 5 Läufen 3× rot,
+     wechselnd der eine oder der andere Test, jeweils 30-s-Timeout.
+
+   Belegt ist dabei, dass das explizite Binding **nötig, aber nicht hinreichend** ist: ohne
+   `QueueBindAsync` waren 2 von 3 Läufen rot, mit ihm immer noch 3 von 5. Wolverine kehrt also aus
+   `StartAsync` zurück, bevor das Exchange-zu-Queue-Binding am Broker steht — und selbst danach
+   erreicht ein einzelnes Publish den Consumer nicht verlässlich. Die verbleibende Ursache ist
+   **nicht** geklärt; „buffered vs. durable" allein erklärt sie nachweislich nicht.
+
+   Die Schleife publiziert deshalb weiter, bis der Anker (`control` bzw. der erste Handler-Aufruf)
+   eintrifft. Wer das erneut angeht, braucht zuerst eine Erklärung für den Befund aus Versuch 2 —
+   nicht eine weitere Vermutung.
+
+3. **`WaitForTheQueueToDrainAsync`** im Selbstkonsum-Test, der nach `MessageCount == 0` noch 500 ms
+   puffert. Der Test ist **nicht** allein zeitbasiert: er publiziert neben der zu unterdrückenden
+   Nachricht eine `control`-Nachricht aus einem fremden Kontext und verankert die Negativassertion
+   an deren Ankunft (`Assert.Contains("control", …)`). Der Drain ist die zusätzliche Absicherung,
+   nicht die einzige.
 
 Grundsätzlich gilt: „es kommt nie mehr etwas" ist in einem verteilten System ohne Zeitfenster nicht
 entscheidbar. Erreichbar ist nur, das Fenster an einen beobachtbaren terminalen Zustand zu hängen
 (DLQ-Ankunft, Sentinel-Zustellung) — genau das ist oben passiert, wo es ging.
 
-## Offen
+## Sample-Smoke-Tests (2026-08-07 geprüft)
 
-Die `Task.Delay`-Stellen in den Sample-Smoke-Tests sind noch nicht angesehen.
+Die ursprüngliche Vermutung, hier lägen weitere Frist-Assertionen, war **falsch**: alle drei
+`Task.Delay`-Stellen in den Smoke-Tests sind Polling-Intervalle innerhalb einer Schleife mit
+Deadline und Fehlermeldung, also Kategorie 1 oben.
+
+Der tatsächliche Defekt lag woanders. `CrossContextSmokeTests.RenamingTheMirroredGadget_DoesNotTravelBack`
+prüfte **unmittelbar** nach dem Rename, dass das Widget unverändert ist — ohne jeden Anker. Da im
+gesamten `samples/`-Baum nur **eine** `SubscribeToIntegrationEvents` existiert (im EventSourced-Sample)
+und StateStored damit gar nichts abonniert, konnte der Test per Konstruktion nie fehlschlagen.
+
+Er hat jetzt einen Anker über den nachweislich funktionierenden Vorwärtspfad: nach dem Rename wird ein
+zweites Widget angelegt und dessen Spiegelung abgewartet. Erst danach wird das erste Widget geprüft. Ein
+Rückkanal hätte in derselben Zeit zugestellt.
 
 ## Der behobene Flake (2026-08-07)
 
@@ -1881,20 +1911,25 @@ zurückkehren, bevor der Handler gelaufen war; die Vorbedingung schlug dann fehl
 Verhalten korrekt war. Lokal (32 Kerne) war der Flake auch unter künstlicher Volllast in 16 Läufen
 nicht reproduzierbar.
 
-## Lösungsvorschlag für die Sample-Smoke-Tests
+## Queue-Namen pro Lauf (2026-08-07)
 
-Auf ein deterministisches Signal umstellen statt auf eine Frist:
+Alle Broker-Testklassen teilen sich über `[Collection(BrokerAndDatabaseCollection.Name)]` denselben
+RabbitMQ- und Postgres-Container, und die Queues sind durable mit `autoDelete: false` — sie überleben
+das Testende und sammeln weiter Nachrichten. Mehrere Klassen banden dasselbe Pattern (`upstream.*`,
+`probe.*`) auf **fest benannte** Queues, obwohl die Konvention „eine eigene Queue pro Lauf" bereits
+dokumentiert war; umgesetzt war sie nur in `DeadLetterTests`.
 
-```csharp
-var session = await host.TrackActivity()
-    .IncludeExternalTransports()
-    .InvokeMessageAndWaitAsync(command);
+Der gemeinsame Helfer heißt jetzt `TestMessaging.UniqueQueueName(prefix)` und wird in
+`DeadLetterTests`, `IntegrationEventRoutingTests`, `IntegrationEventDurabilityTests` und
+`IntegrationEventSubscriptionValidationTests` benutzt. Wichtig dabei: xUnit erzeugt **pro Test** eine
+neue Klasseninstanz, ein `readonly`-Instanzfeld liefert also pro Test einen eigenen Namen — ein
+`static readonly` täte das nicht.
 
-Assert.Empty(session.Sent.MessagesOf<WidgetCreatedIntegrationEvent>());
-```
+## Nicht weiterverfolgt: TrackActivity in den Smoke-Tests
 
-Die Assertion sagt dann „bis zum Abschluss der Verarbeitung wurde nichts gesendet" statt
-„innerhalb von 250 ms" — das ist die Aussage, die der Test treffen will.
+Der frühere Vorschlag, die Smoke-Tests auf Wolverines `TrackActivity()` umzustellen, ist
+gegenstandslos: die Smoke-Tests sprechen über gRPC gegen **fremde Prozesse**, die der Aspire-Host
+startet. Ein In-Process-Tracking-Handle existiert dort nicht.
 
 ---
 

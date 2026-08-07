@@ -7,4 +7,6 @@ internal static class TestMessaging
     public const string ContextName = "probe";
 
     public const string UpstreamContextName = "upstream";
+
+    public static string UniqueQueueName(string prefix) => $"{prefix}-{Guid.NewGuid():N}";
 }

@@ -12,7 +12,8 @@ namespace BuildingBlocks.Infrastructure.Tests;
 [Collection(BrokerAndDatabaseCollection.Name)]
 public sealed class IntegrationEventRoutingTests(PostgreSqlFixture postgres, RabbitMqFixture rabbit)
 {
-    private const string ProbeQueueName = "integration-event-routing-probe";
+    private readonly string _probeQueueName = TestMessaging.UniqueQueueName("integration-event-routing-probe");
+
     private static readonly TimeSpan DeliveryTimeout = TimeSpan.FromSeconds(30);
 
     [Fact]
@@ -31,7 +32,7 @@ public sealed class IntegrationEventRoutingTests(PostgreSqlFixture postgres, Rab
         Assert.Equal(name, Assert.IsType<RoutingProbeIntegrationEvent>(received.Message).Name);
 
         Assert.Equal("rabbitmq", received.Destination?.Scheme);
-        Assert.Contains(ProbeQueueName, received.Destination?.ToString(), StringComparison.Ordinal);
+        Assert.Contains(_probeQueueName, received.Destination?.ToString(), StringComparison.Ordinal);
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
@@ -89,7 +90,7 @@ public sealed class IntegrationEventRoutingTests(PostgreSqlFixture postgres, Rab
                 options.Discovery.DisableConventionalDiscovery();
                 options.Discovery.IncludeType(typeof(RoutingProbeHandler));
 
-                options.ListenToRabbitQueue(ProbeQueueName)
+                options.ListenToRabbitQueue(_probeQueueName)
                     .ConfigureQueue(queue => queue
                         .BindTopic("probe.*")
                         .ToExchange(TestMessaging.ExchangeName));

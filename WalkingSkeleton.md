@@ -652,7 +652,7 @@ verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Impro
 | WS-14 | Die Verbindung Vertrag → Konsument ist unbewacht               | Etappe 3     | gelöst    |
 | WS-15 | `ApplyEntityKeyConversions` erfasst keine Complex Types        | vorbestehend | offen     |
 | WS-16 | Keine CI-Pipeline                                              | vorbestehend | gelöst    |
-| WS-17 | Zeitbasierte Negativassertion im Sink-Test                     | vorbestehend | teilweise |
+| WS-17 | Zeitbasierte Negativassertion im Sink-Test                     | vorbestehend | gelöst |
 | WS-18 | Feldnamen in Events sind abgeleitet, ein Rename zerstört still | Nachtrag WS-09 | gelöst  |
 
 **Erledigt (Commit `e44ae9b`, 2026-08-02):** Der produktive AppHost widersprach
@@ -1220,7 +1220,7 @@ vorinstalliert, die Voraussetzung ist also erfüllt.
 
 ### WS-17, Zeitbasierte Negativassertion im Sink-Test
 
-**Teilweise.** `IntegrationEventSinkDeliveryTests` ruft inzwischen die Produktionsmethode
+**Gelöst.** `IntegrationEventSinkDeliveryTests` ruft inzwischen die Produktionsmethode
 auf statt die Verdrahtung nachzubauen, und beide Hälften des Negativtests hängen seit
 2026-08-07 an Signalen: die Vorbedingung an einem `TaskCompletionSource` im
 `SinkProbeCrashSwitch` (das war der einzige über Wochen rote CI-Test), die Negativassertion an
@@ -1229,27 +1229,17 @@ gewartet wird. Geprüft wird jetzt „genau der Sentinel kam an, das Crash-Event
 „innerhalb von 250 ms kam nichts". In `DeadLetterTests` ist der Puffer ersatzlos entfallen, weil
 die Dead-Letter-Ankunft bereits der terminale Zustand ist.
 
-**Offen bleibt** der Drain-Puffer in `IntegrationEventSubscriptionValidationTests` — dort scheitert
-ein Sentinel daran, dass der Consumer konstruktionsbedingt immer wirft und Wolverine den Listener
-nach der Fehlerlawine pausiert; das bräuchte ein anderes Fixture. Ebenso die `Task.Delay`-Stellen
-in den Sample-Smoke-Tests. Details in `todo.md`, TODO-37.
+Die Sample-Smoke-Tests waren ein Fehlbefund: ihre `Task.Delay`-Stellen sind Polling-Intervalle
+mit Deadline, also die korrekte Bauform. Der tatsächliche Defekt dort war
+`RenamingTheMirroredGadget_DoesNotTravelBack`, der ohne jeden Anker prüfte und deshalb per
+Konstruktion nie fehlschlagen konnte; er hat jetzt einen Sentinel über den Vorwärtspfad.
 
-#### Lösungsvorschlag
-
-Auf ein deterministisches Signal umstellen statt auf eine Frist:
-
-```csharp
-var session = await host.TrackActivity()
-    .IncludeExternalTransports()
-    .WaitForMessageToBeReceivedAt<DomainEventEnvelope>(host)
-    .InvokeMessageAndWaitAsync(command);
-
-Assert.Empty(session.Sent.MessagesOf<WidgetCreatedIntegrationEvent>());
-```
-
-Die Assertion sagt dann „bis zum Abschluss der Verarbeitung wurde nichts gesendet" statt
-„innerhalb von 250 ms wurde nichts gesendet" — das ist die Aussage, die der Test treffen
-will. Betrifft auch die übrigen `Task.Delay`-Stellen in den Sample-Smoke-Tests.
+Der Drain-Puffer und die Publish-Schleifen in `IntegrationEventSubscriptionValidationTests` bleiben
+bewusst stehen. Der Test ist nicht rein zeitbasiert, sondern verankert seine Negativassertion an
+einer `control`-Nachricht; und die Schleife ist ein Retry gegen eine reproduzierte
+Zustellunsicherheit, kein Zeitpuffer. Zwei Umbauversuche auf einmaliges Publish — einer davon mit
+durablem Sending-Endpoint über den Produktionspfad — sind am 2026-08-07 empirisch gescheitert.
+Details in `todo.md`, TODO-37.
 
 ---
 

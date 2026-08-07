@@ -43,6 +43,11 @@ public sealed class CrossContextSmokeTests
 
         await consumer!.RenameAsync(new RenameGadgetRequest { GadgetId = created.WidgetId, Name = "diverged" });
 
+        var sentinelName = "sentinel-" + Guid.NewGuid().ToString("N")[..8];
+        var sentinel = await publisher.CreateAsync(
+            new StateStoredContracts.CreateWidgetRequest { Name = sentinelName });
+        await WaitForMirrorAsync(consumer, sentinel.WidgetId);
+
         var widget = await publisher.GetAsync(
             new StateStoredContracts.GetWidgetRequest { WidgetId = created.WidgetId });
 

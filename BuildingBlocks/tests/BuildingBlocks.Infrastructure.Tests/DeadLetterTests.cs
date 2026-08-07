@@ -25,7 +25,7 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
         Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         var recorder = new AttemptRecorder();
-        using var host = await StartHostAsync(recorder, UniqueQueueName("dead-letter-probe"));
+        using var host = await StartHostAsync(recorder, TestMessaging.UniqueQueueName("dead-letter-probe"));
         using var upstream = await StartUpstreamPublisherAsync();
         var name = Guid.NewGuid().ToString();
 
@@ -47,7 +47,7 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
         Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
 
         var recorder = new AttemptRecorder();
-        using var host = await StartHostAsync(recorder, UniqueQueueName("dead-letter-invalid-probe"));
+        using var host = await StartHostAsync(recorder, TestMessaging.UniqueQueueName("dead-letter-invalid-probe"));
         using var upstream = await StartUpstreamPublisherAsync();
         var name = Guid.NewGuid().ToString();
 
@@ -61,8 +61,6 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
-
-    private static string UniqueQueueName(string prefix) => $"{prefix}-{Guid.NewGuid():N}";
 
     private async Task<string> WaitForDeadLetterAsync(string name, AttemptRecorder recorder)
     {
