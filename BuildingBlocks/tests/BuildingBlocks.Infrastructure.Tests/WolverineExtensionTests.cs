@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Wolverine;
+using Wolverine.RabbitMQ;
 using Wolverine.RabbitMQ.Internal;
 
 namespace BuildingBlocks.Infrastructure.Tests;
@@ -177,6 +178,25 @@ public sealed class WolverineExtensionTests
         var queue = RabbitMqTransportOf(options).Queues["fitness.integration-events"];
 
         Assert.True(queue.IsDurable);
+    }
+
+    [Fact]
+    public void Configure_WithBrokerUri_EnablesPublisherConfirmationsAndTheirTracking()
+    {
+        var options = ConfigureOptions(Settings(settings => settings.SelectMessaging(TestMessagingSettings)));
+
+        var channel = new WolverineRabbitMqChannelOptions();
+
+        Assert.False(channel.PublisherConfirmationsEnabled);
+        Assert.False(channel.PublisherConfirmationTrackingEnabled);
+
+        var configureChannel = RabbitMqTransportOf(options).ChannelCreationOptions;
+
+        Assert.NotNull(configureChannel);
+        configureChannel(channel);
+
+        Assert.True(channel.PublisherConfirmationsEnabled);
+        Assert.True(channel.PublisherConfirmationTrackingEnabled);
     }
 
     private static RabbitMqTransport RabbitMqTransportOf(WolverineOptions options)

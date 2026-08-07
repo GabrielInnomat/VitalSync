@@ -520,6 +520,25 @@ A small cluster of classes, using Marten as a **raw stream store**:
   the message and so did a process crash between commit and acknowledgement. Pinned
   by `IntegrationEventDurabilityTests` against a real broker and by
   `WolverineExtensionTests` without Docker.
+- **Publisher confirmations close the last metre.** A durable outbox deletes its row
+  once Wolverine considers the envelope sent, and without confirmations "sent" means
+  *in the socket*, not *in the broker* — a broker that discards the message
+  afterwards tells nobody. RabbitMQ.Client 7 moved both switches onto
+  `CreateChannelOptions` and defaults them to `false`; Wolverine passes that default
+  through unchanged. `ApplyBuildingBlocksMessagingDefaults` therefore calls
+  `ConfigureChannelCreation` and enables **both** `PublisherConfirmationsEnabled` and
+  `PublisherConfirmationTrackingEnabled`. Enabling only the first is worse than
+  enabling neither: the broker answers, but without a correlatable sequence number.
+  With tracking on, `BasicPublishAsync` raises a `PublishException` on a `nack` or a
+  `basic.return`, so the failure surfaces where the retry policies already are and
+  the outbox row survives. The price is a broker round trip per message — measured at
+  roughly 1 150 msg/s against ~62 500 without, sequential single sends. That is not
+  the bottleneck: domain events already pass through a `.Sequential()` queue
+  (TODO-20), which caps throughput harder. Pinned by
+  `Configure_WithBrokerUri_EnablesPublisherConfirmationsAndTheirTracking`, which
+  first asserts that a fresh `WolverineRabbitMqChannelOptions` has both flags off —
+  without that anchor the test would quietly become worthless the day Wolverine
+  changes its own default.
 - **Consumer side included.** Queue declaration, binding, listening, and consumer
   discovery are wired by `SubscribeToIntegrationEvents` (ADR-0023 amendment
   2026-08-01); the subscribing host adds nothing of its own.

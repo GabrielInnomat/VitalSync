@@ -71,6 +71,11 @@ internal static class WolverineOptionsExtensions
         options.UseRabbitMq(messaging.RabbitMqUri)
             .AutoProvision()
             .UseQuorumQueues()
+            .ConfigureChannelCreation(channel =>
+            {
+                channel.PublisherConfirmationsEnabled = true;
+                channel.PublisherConfirmationTrackingEnabled = true;
+            })
             .DeclareExchange(messaging.ExchangeName, exchange => exchange.IsDurable = true);
 
         options.PublishMessagesToRabbitMqExchange<IIntegrationEvent>(

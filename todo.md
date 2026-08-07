@@ -82,7 +82,7 @@ eine Entscheidung, keinen Code.
 | TODO-45 | Api-Readiness prüft nicht mehr existierende Connection-Namen   | **P1** | gelöst            | AppHost `e44ae9b`                     |
 | TODO-46 | Die MigrationService-Worker sind leere Hüllen                  | **P2** | offen             | AppHost `e44ae9b`                     |
 | TODO-47 | Kind-Entitäten haben kein Verhalten                            | **P2** | gelöst            | ADR-0031 Folgearbeit                  |
-| TODO-48 | Publisher Confirms sind unbelegt                               | **P2** | offen             | WS-08 Nachtrag                        |
+| TODO-48 | Publisher Confirms sind unbelegt                                | **P2** | gelöst            | WS-08 Nachtrag                        |
 | TODO-49 | Feldnamen in Events sind abgeleitet, ein Rename zerstört still | **P1** | gelöst            | ADR-0034-Folge                        |
 
 ---
@@ -2375,7 +2375,7 @@ eine Liste; ein Merge-Schlüssel existiert vor dem Commit gar nicht, ADR-0029), 
 
 # TODO-48, Publisher Confirms sind unbelegt
 
-**P2 · offen · WS-08 Nachtrag**
+**P2 · gelöst · WS-08 Nachtrag**
 
 Mit TODO-07 ist die Kette bis in den Broker hinein durabel: durabler Sending-Endpoint,
 persistente Nachricht, durable Quorum-Queues. Was **nicht** belegt ist: ob der Publisher auf die
@@ -2401,6 +2401,77 @@ options.UseRabbitMq(uri).ConfigureChannelCreation(channel =>
 Ein Test, der das belegt, ist teuer: ein verworfener Publish lässt sich ohne Broker-Manipulation
 kaum herbeiführen. Realistisch ist die Prüfung der Konfiguration am gestarteten Host plus eine
 Messung des Durchsatzpreises — Confirms serialisieren den Sendepfad spürbar.
+
+## Gelöst — Confirms sind aktiv, der Preis ist gemessen (2026-08-07)
+
+**Die Vorfrage ist beantwortet, und zwar negativ: niemand hatte Confirms an.** Die Kette wurde auf
+drei Ebenen nachgesehen:
+
+- **RabbitMQ.Client 7.1.2** (unsere transitiv aufgelöste Version) hat das Feature nicht
+  abgeschafft, sondern nach `CreateChannelOptions` verschoben. Beide Schalter —
+  `PublisherConfirmationsEnabled` und `PublisherConfirmationTrackingEnabled` — dokumentieren
+  ausdrücklich „Defaults to `false`".
+- **Wolverine 6.23.0** bietet `ConfigureChannelCreation(...)` mit einem eigenen
+  `WolverineRabbitMqChannelOptions`, dessen beide Properties ebenfalls „Defaults to false"
+  tragen. Wolverine reicht den Client-Default also unverändert durch und setzt nichts eigenes.
+- **`ApplyBuildingBlocksMessagingDefaults`** rief `UseRabbitMq(...).AutoProvision().UseQuorumQueues()
+  .DeclareExchange(...)` — kein `ConfigureChannelCreation`.
+
+Damit war die Vermutung dieses Eintrags bestätigt: Die mit TODO-07 aufgebaute Durabilitätskette
+endete an ihrem letzten Meter. Der Sending-Endpoint ist `UseDurableOutbox()`, also wird die
+Outbox-Zeile gelöscht, sobald Wolverine den Envelope als gesendet betrachtet — und ohne Confirms
+heißt „gesendet" *im Socket*, nicht *im Broker*. Genau dazwischen liegen die Fälle, für die TODO-07
+gebaut wurde.
+
+**Beide Schalter sind jetzt gesetzt**
+([WolverineOptionsExtensions.cs](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/Wiring/WolverineOptionsExtensions.cs)).
+Nur `Confirmations` ohne `Tracking` wäre die schlechteste Variante gewesen: Der Broker antwortet
+dann zwar, aber ohne korrelierbare Sequenznummer, und die Client-Doku empfiehlt für diesen Fall,
+den `PublishSequenceNumberHeader` von Hand zu setzen. Mit Tracking wirft `BasicPublishAsync` bei
+`nack` oder `basic.return` eine `PublishException` — der Fehler landet also als Exception genau
+dort, wo Wolverines Retry-Policies greifen, und die Outbox-Zeile bleibt stehen.
+
+### Der gemessene Preis
+
+Einmalige Messung gegen den Testcontainer-Broker, 500 persistente Nachrichten à 512 Byte,
+sequentiell über einen Kanal, roh über `RabbitMQ.Client` (also ohne Wolverine, um genau den
+Mechanismus zu isolieren):
+
+| | Dauer für 500 Nachrichten | Durchsatz |
+| --- | --- | --- |
+| ohne Confirms | 8 ms | ~62 500 msg/s |
+| mit Confirms + Tracking | 435 ms | ~1 150 msg/s |
+
+Rund **Faktor 54**, was nicht überrascht: Ohne Confirms ist der Publish fire-and-forget, mit
+Confirms kostet jede Nachricht einen Round-Trip zum Broker (~0,87 ms lokal). Der Wert ist die
+Untergrenze des Nutzens, nicht das reale Systemverhalten — er misst den ungünstigsten Fall,
+sequentielles Einzelsenden.
+
+**Warum das trotzdem akzeptabel ist**, und zwar aus zwei unabhängigen Gründen:
+
+1. **Der Engpass liegt woanders.** Domain Events laufen über eine `.Sequential()`-Queue
+   (TODO-20) — der Durchsatz ist dort bereits schärfer gedeckelt als durch Confirms. Wer diesen
+   Preis für zu hoch hält, muss zuerst TODO-20 lösen; danach ist neu zu messen.
+2. **Die Größenordnung passt zur Domäne.** ~1 150 msg/s sind rund 100 Millionen Integration
+   Events pro Tag. VitalSync erzeugt pro Nutzeraktion in der Größenordnung *eines*
+   Integration Events.
+
+Die Messsonde wurde nach der Messung wieder gelöscht: Ein Durchsatztest im CI misst die Laune des
+Runners, nicht den Code, und wäre der genaue Gegentyp zu den in
+[testing-strategy.md](docs/architecture/testing-strategy.md) festgehaltenen Regeln. Belegt bleibt
+die **Konfiguration**, durch
+`Configure_WithBrokerUri_EnablesPublisherConfirmationsAndTheirTracking` in
+`WolverineExtensionTests` — der Test prüft zuerst, dass ein frisches
+`WolverineRabbitMqChannelOptions` beide Flags auf `false` hat, und erst danach, dass unsere
+Konfiguration sie umlegt. Ohne diesen Anker wäre er stillschweigend wertlos, sobald Wolverine den
+Default einmal selbst ändert.
+
+### Was weiterhin unbelegt bleibt
+
+Dass eine tatsächlich verworfene Nachricht zu einer `PublishException` führt. Das erfordert einen
+Broker, der unter Speicherdruck steht oder dem die Ziel-Exchange fehlt — beides ist ohne
+Broker-Manipulation nicht reproduzierbar. Der Mechanismus ist jetzt aktiv und die Zusage der
+Client-Bibliothek dokumentiert; mehr ist zu vertretbaren Kosten nicht zu haben.
 
 ---
 
