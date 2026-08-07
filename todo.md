@@ -59,7 +59,7 @@ eine Entscheidung, keinen Code.
 | TODO-22 | Unique-Constraint-Verletzungen werden nicht übersetzt          | **P2** | gelöst            | IMP-29                                |
 | TODO-23 | Keine Tracing-Instrumentierung der CQRS-Pipeline               | **P2** | offen             | IMP-30                                |
 | TODO-24 | `DbContext` als DI-Schlüssel                                   | **P2** | offen             | IMP-20                                |
-| TODO-25 | Marten-Nebenläufigkeit verdrahtet, aber unbelegt               | **P2** | offen             | WS-10                                 |
+| TODO-25 | Marten-Nebenläufigkeit verdrahtet, aber unbelegt               | **P2** | gelöst            | WS-10                                 |
 | TODO-26 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | **P2** | gelöst            | WS-09                                 |
 | TODO-27 | Schema-Erzeugung zur Laufzeit in Produktion                    | **P2** | offen             | WS-11                                 |
 | TODO-28 | Restliche Messaging-Guard-Rails                                | **P2** | gelöst            | IMP-13, WS-06                         |
@@ -1427,7 +1427,45 @@ Factory-Registrierung.
 
 # TODO-25, Marten-Nebenläufigkeit verdrahtet, aber unbelegt
 
-**P2 · offen · WS-10**
+**P2 · gelöst · WS-10**
+
+## Gelöst — der Konflikt kommt beim Aufrufer als `Failure.Conflict` an (2026-08-07)
+
+`ConcurrencyConflictScenarioTests` fährt die Kette **als Ganzes** gegen echtes PostgreSQL, für
+beide Persistenzpfade: ein Kommando geht über `ISender` hinein, verliert unterwegs das Rennen um
+sein Aggregat und kommt als `Result` mit `FailureCategory.Conflict` und dem Code
+`persistence.concurrency_conflict` zurück.
+
+Das Verschachteln ist **nicht** getimt, sondern erzwungen: eine Test-Behavior auf
+`UnitOfWorkBehaviorOrder + 100` liegt damit **innerhalb** der Unit of Work. Ihr `NextAsync`
+kehrt zurück, nachdem der Handler das Aggregat geladen und verändert hat, aber bevor
+`UnitOfWorkBehavior` committet — genau dort schreibt sie den Konkurrenten in einem eigenen
+DI-Scope. Der Handler bleibt unangetastet; es gibt keinen Delay, keinen Task-Wettlauf und damit
+nichts, was auf einem langsamen Runner kippen könnte.
+
+| Pfad         | Konkurrent                            | Was der Verlierer sieht                                      |
+| ------------ | ------------------------------------- | ------------------------------------------------------------ |
+| State-stored | zweiter `DbContext` schreibt `version` | `UPDATE … WHERE version = <geladen>` trifft 0 Zeilen → `DbUpdateConcurrencyException` |
+| Event-sourced | zweite Session hängt an den Stream an | erwartete Stream-Version passt nicht → `ConcurrencyException` |
+
+Beide Ausnahmen fängt `UnitOfWorkBehavior` bereits ab; belegt ist jetzt, dass sie im echten Stack
+überhaupt entstehen und die Übersetzung greift.
+
+Der **Negativ-Anker** steckt in der Nachprüfung: nach dem Konflikt wird das Aggregat neu geladen
+und auf den Stand des *Gewinners* geprüft (Name bzw. Zählerstand, und Version 2). Ohne diese
+Zusicherung bliebe der Test auch dann grün, wenn beide Schreiber durchkämen und der Konflikt aus
+einer ganz anderen Ecke stammte.
+
+`MirrorWidgetTests` bleibt unverändert und wird **nicht** ersetzt: der dort gemockte
+`Failure.Conflict` prüft eine andere Frage — dass ein Consumer bei einem fehlgeschlagenen
+Kommando wirft, statt die Nachricht stillschweigend als erledigt zu quittieren. Nur als *Beleg
+für die Nebenläufigkeit* war er ungeeignet.
+
+Die state-stored Hälfte war mit TODO-02 bereits auf Unit-of-Work-Ebene abgedeckt
+(`EfCoreAggregateRoundTripTests.TwoConcurrentRenames_LetTheSecondCommitFailAsAConflict`); neu ist,
+dass beide Pfade den Weg **bis zum Aufrufer** gehen.
+
+## Ursprünglicher Befund
 
 Der Repository-Pfad hängt mit erwarteter Version an
 ([MartenUnitOfWork.cs:54](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EventSourced/MartenUnitOfWork.cs:54)),
@@ -1436,7 +1474,7 @@ als `FailureCategory.Conflict` beim **Aufrufer** ankommt, prüft kein Szenario:
 `MirrorWidgetTests` arbeitet mit einem gemockten `Failure.Conflict`
 ([MirrorWidgetTests.cs:73](samples/EventSourced/VitalSync.Sample.EventSourced.Tests/MirrorWidgetTests.cs:73)).
 
-## Lösungsvorschlag
+## Ursprünglicher Lösungsvorschlag
 
 Ein Szenario-Test gegen den echten Stack (Testcontainers, wie die übrigen).
 

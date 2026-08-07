@@ -645,7 +645,7 @@ verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Impro
 | WS-07 | Der gRPC-Vertrag liegt noch beim Service                       | Etappe 1     | offen     |
 | WS-08 | Integration Events sind nicht persistent                       | Etappe 2     | gelöst    |
 | WS-09 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | Etappe 2     | gelöst    |
-| WS-10 | Marten-Nebenläufigkeit verdrahtet, aber im Sample unbelegt     | Etappe 2     | offen     |
+| WS-10 | Marten-Nebenläufigkeit verdrahtet, aber im Sample unbelegt     | Etappe 2     | gelöst    |
 | WS-11 | Der Migrations-Worker ist asymmetrisch                         | Etappe 2     | offen     |
 | WS-12 | Kein Idempotenz-Bookkeeping über die Kontextgrenze             | Etappe 3     | teilweise |
 | WS-13 | Ein Kontext konsumiert seine eigenen Integration Events        | Etappe 3     | gelöst    |
@@ -1012,6 +1012,10 @@ tatsächlich von Hand gelesen hat.
 ---
 
 ### WS-10, Marten-Nebenläufigkeit verdrahtet, aber im Sample unbelegt
+
+**Gelöst mit TODO-25 (2026-08-07)** — `ConcurrencyConflictScenarioTests` in den Building Blocks
+belegt die Kette für **beide** Persistenzpfade bis zum Aufrufer. Der Test liegt bewusst nicht im
+Sample: die Übersetzung gehört den Building Blocks, das Sample würde sie nur nachspielen.
 
 Der Repository-Pfad hängt mit erwarteter Version an
 ([MartenUnitOfWork.cs:54](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EventSourced/MartenUnitOfWork.cs:54)),
