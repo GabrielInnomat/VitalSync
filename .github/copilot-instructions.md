@@ -90,8 +90,9 @@ Guidance for finding things:
   startup when the name is not configured, so renaming a resource in the AppHost fails loudly
   instead of leaving the service permanently unhealthy while the BFF waits on it
   (`tests/VitalSync.ServiceDefaults.Tests`). `AddServiceDefaults()` also registers the
-  OpenTelemetry sources `Npgsql`, `Wolverine`, and `Marten` (plus the `Npgsql` meter), so
-  database and transport spans exist without any per-host wiring — do not re-add them.
+  OpenTelemetry sources `BuildingBlocks`, `Npgsql`, `Wolverine`, and `Marten` (plus the
+  `Npgsql` meter), so CQRS, database and transport spans exist without any per-host wiring —
+  do not re-add them.
 
 See `docs/architecture/communication.md` and the ADRs below.
 

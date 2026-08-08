@@ -57,7 +57,7 @@ eine Entscheidung, keinen Code.
 | TODO-20 | Global sequentielle Domain-Event-Queue                         | **P2** | offen             | hacky-13, IMP-25                      |
 | TODO-21 | Read-Modelle im state-stored Pfad nicht wiederaufbaubar        | **P2** | offen             | IMP-31                                |
 | TODO-22 | Unique-Constraint-Verletzungen werden nicht übersetzt          | **P2** | gelöst            | IMP-29                                |
-| TODO-23 | Keine Tracing-Instrumentierung der CQRS-Pipeline               | **P2** | offen             | IMP-30                                |
+| TODO-23 | Keine Tracing-Instrumentierung der CQRS-Pipeline               | **P2** | gelöst            | IMP-30                                |
 | TODO-24 | `DbContext` als DI-Schlüssel                                   | **P2** | gelöst            | IMP-20                                |
 | TODO-25 | Marten-Nebenläufigkeit verdrahtet, aber unbelegt               | **P2** | gelöst            | WS-10                                 |
 | TODO-26 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | **P2** | gelöst            | WS-09                                 |
@@ -1407,7 +1407,7 @@ im Klartext.
 
 # TODO-23, Keine Tracing-Instrumentierung der CQRS-Pipeline
 
-**P2 · offen · IMP-30**
+**P2 · gelöst · IMP-30**
 
 Verifiziert: **kein einziges `Activity`/`ActivitySource` in `BuildingBlocks/src`**.
 `LoggingBehavior` misst die Dauer und loggt sie, erzeugt aber keinen Span. In einem
@@ -1420,21 +1420,63 @@ sieht, dass ein Request 800 ms brauchte, aber nicht, welcher Handler oder welche
 Transport-Spans existieren damit. Die hier beschriebene Lücke, der Span der CQRS-Pipeline selbst,
 bleibt offen.
 
-## Lösungsvorschlag
+## Gelöst — drei Spans, die je eine eigene Frage beantworten (2026-08-08)
 
-```csharp
-internal static class BuildingBlocksActivitySource
-{
-    public static readonly ActivitySource Instance = new("VitalSync.BuildingBlocks", "1.0.0");
-}
+`BuildingBlocks.Infrastructure.Telemetry.BuildingBlocksTelemetry` hält die `ActivitySource`, die
+Tag-Namen stehen als Konstanten in `TelemetryTags`. Instrumentiert sind genau drei Stellen:
 
-using var activity = BuildingBlocksActivitySource.Instance.StartActivity($"Send {requestName}");
-activity?.SetTag("vitalsync.request.type", requestName);
-```
+- **`RequestSender`** — ein Span `Send {RequestName}` je Request, um die gesamte Pipeline
+  (Verhalten *und* Handler) gelegt. Tags: `buildingblocks.request.name`,
+  `buildingblocks.request.kind` (`command`/`query`), `buildingblocks.outcome`.
+- **`ProjectionRunner`** — ein Span `Project {HandlerName}` **pro Handler**, nicht einer um alle.
+  Die Frage im Befund lautet „welcher Handler oder welche Projektion"; ein umschließender Span
+  beantwortet sie nicht. Tags: Handler-Typ, Ereignisname, `AggregateName`/`AggregateId`/`Version`
+  aus den `DomainEventMetadata`.
+- **`DomainEventPublisher`** — ein Span `Publish {EventName}` über Projektionen **und**
+  Integration-Publikation, mit `buildingblocks.integration_events.published` als Zähler. Die
+  Projektions-Spans hängen darunter, sodass im Dashboard ablesbar ist, wie viel Zeit auf
+  Projektionen und wie viel auf den Broker entfällt.
 
-Analog in `ProjectionRunner` und `DomainEventPublisher`; der Service-Default registriert die Quelle per
-`AddSource("VitalSync.BuildingBlocks")`. Kleiner Aufwand, hoher Betriebsnutzen — sinnvollerweise
-zusammen mit dem ersten produktiven Service.
+**Anders als im Vorschlag:**
+
+- **Quellenname `"BuildingBlocks"`, nicht `"VitalSync.BuildingBlocks"`.** ADR-0018 (Nachtrag
+  2026-08-05) garantiert, dass die Zeichenkette `vitalsync` nirgends unter `BuildingBlocks/src`
+  vorkommt; der vorgeschlagene Name hätte genau dieses Versprechen gebrochen. Aus demselben Grund
+  lautet das Tag-Präfix `buildingblocks.` und nicht `vitalsync.` — konsistent mit dem bereits
+  existierenden Nachrichten-Header `buildingblocks.source-context`.
+- **Keine fest verdrahtete Versionsnummer.** Der Vorschlag hätte `"1.0.0"` als Literal gesetzt, das
+  beim ersten Release still falsch wird; die Quelle liest stattdessen die
+  `AssemblyInformationalVersion` ihrer eigenen Assembly.
+- **Der Typ bleibt `internal`.** In `AspireExtensions.cs` steht der Name als Literal — genau wie
+  bei `Npgsql`, `Wolverine` und `Marten`. Eine typisierte Konstante hätte eine `ProjectReference`
+  von `VitalSync.ServiceDefaults` auf `BuildingBlocks.Infrastructure` verlangt, und ServiceDefaults
+  hat heute **keine einzige** `ProjectReference`; damit lägen Marten, Wolverine und EF Core im
+  Abhängigkeitsbaum jedes Hosts, auch im Blazor-Frontend. Die öffentliche Fläche der Infrastructure
+  bleibt so bei den bekannten Einträgen, `PublicSurfaceTests` musste nicht angefasst werden. Gegen
+  das Auseinanderdriften der beiden Literale sichern zwei Tests von entgegengesetzten Seiten:
+  `OpenTelemetryConfigurationTests` (neue `[InlineData("BuildingBlocks")]`) beweist, dass der Host
+  auf diesen Namen hört, `TracingTests` beweist, dass Building Blocks unter ihm sendet.
+
+**Zwei Fallen, die die Umsetzung bestimmt haben:**
+
+- **Die Guard-Semantik bleibt synchron.** `RequestSender.SendAsync` prüft mit
+  `ArgumentNullException.ThrowIfNull`. Hätte man die Methode selbst `async` gemacht, flöge die
+  Ausnahme erst beim `await` statt beim Aufruf. Guard und Dispatcher-Lookup bleiben daher in der
+  öffentlichen Methode; nur der eigentliche Aufruf wandert in einen privaten `async`-Helfer.
+  `WithoutAListener_TheGuardStillThrowsSynchronously` verankert das — vorher pinnte es kein Test.
+- **Ein fachlicher Fehlschlag ist kein Fehler-Span.** Ein `Result.Failed` setzt
+  `ActivityStatusCode.Ok` und nennt die Kategorien im Tag; nur eine durchgereichte Ausnahme setzt
+  `Error`. Das spiegelt die bestehende Logging-Regel (erwartete Domänenfehler als `Warning`, nicht
+  als `Error`) und verhindert, dass jede Validierungsmeldung eine Fehlerrate anhebt.
+- **Ohne Zuhörer keine Allokation.** Der interpolierte Span-Name wird ausgewertet, *bevor*
+  `StartActivity` `null` liefern kann. Alle drei Stellen prüfen deshalb vorab
+  `Source.HasListeners()` und laufen sonst auf dem unveränderten Pfad.
+
+Die Tests nutzen einen `ActivityListener` mit `ActivitySamplingResult.AllData` und werten die
+erzeugten Spans aus — keine Zeitmessung, keine Wartezeit, damit kein Flake-Potenzial. Acht Tests:
+Name und Tags bei Erfolg, Query-Kennzeichnung, Fehlschlag ohne Fehlerstatus, Ausnahme mit
+Fehlerstatus, synchroner Guard, ein Span je Projektionshandler, Verschachtelung unter dem
+Publish-Span, Zähler der Integration Events.
 
 ---
 

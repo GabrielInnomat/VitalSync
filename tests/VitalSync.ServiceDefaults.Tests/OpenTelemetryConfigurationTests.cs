@@ -8,6 +8,7 @@ namespace VitalSync.ServiceDefaults.Tests;
 public class OpenTelemetryConfigurationTests
 {
     [Theory]
+    [InlineData("BuildingBlocks")]
     [InlineData("Npgsql")]
     [InlineData("Wolverine")]
     [InlineData("Marten")]

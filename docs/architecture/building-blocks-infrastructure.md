@@ -79,6 +79,7 @@ capability. The folder is the namespace.
 | `Messaging/DomainEvents/`          | in-context events: publisher, projection runner, type registry, serializer, handler |
 | `Messaging/IntegrationEvents/`     | the cross-context contract: topics, sink, source context, filter    |
 | `Time/`                            | `IClock` implementation on top of `TimeProvider`                    |
+| `Telemetry/`                       | the `ActivitySource` and the tag names the three instrumented paths use |
 | `DependencyInjection/`             | entry points, options, and the composition root                     |
 | `DependencyInjection/Registration/`| what a host selected, one collaborator per capability               |
 | `DependencyInjection/Wiring/`      | how Wolverine itself is configured                                  |
@@ -927,6 +928,43 @@ internal sealed class SystemClock(TimeProvider timeProvider) : IClock
   writing its own fake clock.
 - **Registered with `TryAdd`** (`TimeProvider.System` and `IClock`), so a host
   or test can substitute either one. Singleton, because both are stateless.
+
+## 9. Tracing (`ActivitySource`)
+
+Three paths carry a span, and each answers a different question. The source is named
+**`BuildingBlocks`** and its version is the assembly's `AssemblyInformationalVersion`; every tag
+starts with `buildingblocks.`, matching the existing message header
+`buildingblocks.source-context`.
+
+| Path                   | Span                    | Answers                                                     |
+| ---------------------- | ----------------------- | ----------------------------------------------------------- |
+| `RequestSender`        | `Send {RequestName}`    | which command or query, how long, with what outcome         |
+| `ProjectionRunner`     | `Project {HandlerName}` | **which** projection handler, per handler                   |
+| `DomainEventPublisher` | `Publish {EventName}`   | projections vs. broker, and how many integration events went out |
+
+The projection spans nest inside the publish span, so a trace shows directly how a commit's
+after-work splits between read models and the transport.
+
+Four rules hold here and are worth keeping:
+
+- **The name must not say `vitalsync`.** ADR-0018 guarantees the string does not occur anywhere
+  under `BuildingBlocks/src`. The source name is therefore `BuildingBlocks`, and the host
+  registers it as a literal in `AspireExtensions.cs` — exactly like `Npgsql`, `Wolverine`, and
+  `Marten`. A typed constant would need a `ProjectReference` from `VitalSync.ServiceDefaults` to
+  `BuildingBlocks.Infrastructure`, which has none today, and would drag Marten, Wolverine, and
+  EF Core into every host's dependency tree. Two tests pin the literal from opposite ends:
+  `OpenTelemetryConfigurationTests` proves the host listens to that name,
+  `TracingTests` proves Building Blocks emits under it.
+- **A domain failure is not an error span.** `Result.Failed` sets `ActivityStatusCode.Ok` and
+  names the categories in a tag; only a propagating exception sets `Error`. This mirrors the
+  logging rule (expected domain errors log as `Warning`) and keeps validation noise out of
+  error-rate dashboards.
+- **A null guard stays synchronous.** `RequestSender.SendAsync` is not `async` — the
+  `ArgumentNullException.ThrowIfNull` must fire at the call, not at the `await`. The dispatch
+  call moves into a private `async` helper instead.
+- **No listener, no cost.** The interpolated span name is evaluated before `StartActivity` can
+  return `null`, so all three sites check `Source.HasListeners()` first and otherwise run the
+  unchanged path.
 
 ## What deliberately does NOT live here
 

@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Application.Results;
+using BuildingBlocks.Infrastructure.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.Dispatching;
@@ -22,7 +24,11 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
             static type => (CommandDispatcher)Activator.CreateInstance(
                 typeof(CommandDispatcher<>).MakeGenericType(type))!);
 
-        return dispatcher.DispatchAsync(command, serviceProvider, cancellationToken);
+        return TraceAsync(
+            command.GetType(),
+            TelemetryTags.RequestKindCommand,
+            ct => dispatcher.DispatchAsync(command, serviceProvider, ct),
+            cancellationToken);
     }
 
     public Task<Result<TResult>> SendAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken)
@@ -34,7 +40,11 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
             static key => Activator.CreateInstance(
                 typeof(CommandWithResultDispatcher<,>).MakeGenericType(key.Request, key.Result))!);
 
-        return dispatcher.DispatchAsync(command, serviceProvider, cancellationToken);
+        return TraceAsync(
+            command.GetType(),
+            TelemetryTags.RequestKindCommand,
+            ct => dispatcher.DispatchAsync(command, serviceProvider, ct),
+            cancellationToken);
     }
 
     public Task<Result<TResult>> SendAsync<TResult>(IQuery<TResult> query, CancellationToken cancellationToken)
@@ -46,7 +56,57 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
             static key => Activator.CreateInstance(
                 typeof(QueryDispatcher<,>).MakeGenericType(key.Request, key.Result))!);
 
-        return dispatcher.DispatchAsync(query, serviceProvider, cancellationToken);
+        return TraceAsync(
+            query.GetType(),
+            TelemetryTags.RequestKindQuery,
+            ct => dispatcher.DispatchAsync(query, serviceProvider, ct),
+            cancellationToken);
+    }
+
+    private static async Task<TResponse> TraceAsync<TResponse>(
+        Type requestType,
+        string requestKind,
+        Func<CancellationToken, Task<TResponse>> dispatchAsync,
+        CancellationToken cancellationToken)
+        where TResponse : Result
+    {
+        if (!BuildingBlocksTelemetry.Source.HasListeners())
+        {
+            return await dispatchAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        var requestName = requestType.Name;
+        using var activity = BuildingBlocksTelemetry.Source.StartActivity(
+            $"Send {requestName}",
+            ActivityKind.Internal);
+
+        activity?.SetTag(TelemetryTags.RequestName, requestName);
+        activity?.SetTag(TelemetryTags.RequestKind, requestKind);
+
+        try
+        {
+            var response = await dispatchAsync(cancellationToken).ConfigureAwait(false);
+
+            if (activity is not null)
+            {
+                if (response.IsSuccess)
+                {
+                    activity.MarkSucceeded();
+                }
+                else
+                {
+                    activity.MarkFailed(
+                        string.Join(",", response.Failures.Select(failure => failure.Category).Distinct()));
+                }
+            }
+
+            return response;
+        }
+        catch (Exception exception)
+        {
+            activity?.MarkFaulted(exception);
+            throw;
+        }
     }
 
     private static RequestPipelineContinuation<TResponse> BuildPipeline<TRequest, TResponse>(

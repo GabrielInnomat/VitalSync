@@ -42,7 +42,7 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-27 | `FailureResults`-Reflection ist vermeidbar                               | gelöst            |
 | IMP-28 | Kein `IClock` im Container                                               | gelöst            |
 | IMP-29 | Unique-Constraint-Verletzungen werden nicht übersetzt                    | gelöst            |
-| IMP-30 | Keine Tracing-Instrumentierung der CQRS-Pipeline                         | offen             |
+| IMP-30 | Keine Tracing-Instrumentierung der CQRS-Pipeline                         | gelöst            |
 | IMP-31 | Read-Modelle im state-stored Pfad sind nicht wiederaufbaubar             | offen             |
 | IMP-32 | Keine Batch- oder Bulk-Fähigkeit                                         | offen             |
 | IMP-33 | Keine Saga- oder Process-Manager-Abstraktion                             | offen             |
@@ -849,21 +849,16 @@ Handler oder welche Projektion.
 Transport-Spans existieren damit. Die hier beschriebene Lücke, der Span der CQRS-Pipeline selbst,
 bleibt offen.
 
-## Lösungsvorschlag
+## Gelöst (2026-08-08)
 
-```csharp
-internal static class BuildingBlocksActivitySource
-{
-    public static readonly ActivitySource Instance = new("VitalSync.BuildingBlocks", "1.0.0");
-}
-
-using var activity = BuildingBlocksActivitySource.Instance.StartActivity($"Send {requestName}");
-activity?.SetTag("vitalsync.request.type", requestName);
-```
-
-Analog in `ProjectionRunner` und `DomainEventPublisher`. Der Service-Default registriert die Quelle dann per
-`AddSource("VitalSync.BuildingBlocks")`. Kleiner Aufwand, hoher Betriebsnutzen — sinnvollerweise
-zusammen mit dem ersten produktiven Service.
+Umgesetzt als TODO-23. Drei Spans: `Send {RequestName}` im `RequestSender` (um die ganze
+Pipeline), `Project {HandlerName}` **pro** Projektionshandler im `ProjectionRunner` und
+`Publish {EventName}` im `DomainEventPublisher`, unter dem die Projektions-Spans hängen. Der
+Quellenname ist `"BuildingBlocks"` und **nicht** der oben vorgeschlagene `"VitalSync.BuildingBlocks"`
+— ADR-0018 verbietet die Zeichenkette `vitalsync` unter `BuildingBlocks/src`; aus demselben Grund
+lautet das Tag-Präfix `buildingblocks.`. Die Versionsangabe ist die
+`AssemblyInformationalVersion` statt eines Literals. Details, inklusive der beiden Fallen
+(synchroner Null-Guard, fachlicher Fehlschlag ≠ Fehler-Span), in `todo.md` bei TODO-23.
 
 ---
 

@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using BuildingBlocks.Application.DomainEvents;
 using BuildingBlocks.Domain.Events;
+using BuildingBlocks.Infrastructure.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.Messaging.DomainEvents;
@@ -43,7 +45,42 @@ internal sealed class ProjectionRunner(IServiceProvider serviceProvider)
             var typedEvent = (TDomainEvent)domainEvent;
             foreach (var handler in services.GetServices<IProjectionHandler<TDomainEvent>>())
             {
-                await handler.HandleAsync(typedEvent, metadata, cancellationToken).ConfigureAwait(false);
+                await InvokeHandlerAsync(handler, typedEvent, metadata, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        private static async Task InvokeHandlerAsync(
+            IProjectionHandler<TDomainEvent> handler,
+            TDomainEvent domainEvent,
+            DomainEventMetadata metadata,
+            CancellationToken cancellationToken)
+        {
+            if (!BuildingBlocksTelemetry.Source.HasListeners())
+            {
+                await handler.HandleAsync(domainEvent, metadata, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            var handlerName = handler.GetType().Name;
+            using var activity = BuildingBlocksTelemetry.Source.StartActivity(
+                $"Project {handlerName}",
+                ActivityKind.Internal);
+
+            activity?.SetTag(TelemetryTags.ProjectionHandler, handler.GetType().FullName);
+            activity?.SetTag(TelemetryTags.DomainEventName, typeof(TDomainEvent).Name);
+            activity?.SetTag(TelemetryTags.AggregateName, metadata.AggregateName);
+            activity?.SetTag(TelemetryTags.AggregateId, metadata.AggregateId);
+            activity?.SetTag(TelemetryTags.AggregateVersion, metadata.Version);
+
+            try
+            {
+                await handler.HandleAsync(domainEvent, metadata, cancellationToken).ConfigureAwait(false);
+                activity?.MarkSucceeded();
+            }
+            catch (Exception exception)
+            {
+                activity?.MarkFaulted(exception);
+                throw;
             }
         }
     }
