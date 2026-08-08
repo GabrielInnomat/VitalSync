@@ -95,10 +95,10 @@ implements a Building Blocks interface, so the compiler cannot catch a rename th
 would simply stop discovering the handler and messages would be dropped with no route and no
 error. A foreign framework's convention is not a place for our naming policy.
 
-> **Amendment (2026-08-05) — a behavior receives a `RequestPipeline<TResponse>`, not a bare continuation.**
+> **Amendment (2026-08-05) â€” a behavior receives a `RequestPipeline<TResponse>`, not a bare continuation.**
 > `IPipelineBehavior.HandleAsync` took a `RequestPipelineContinuation<TResponse>`, which let a
 > behavior *call* the rest of the pipeline but not *produce* a response of its own. Every
-> short-circuiting behavior — exception translation, concurrency-conflict mapping — therefore needed
+> short-circuiting behavior â€” exception translation, concurrency-conflict mapping â€” therefore needed
 > to build a failed `TResponse` from an opaque type parameter, and did so through an internal
 > `FailureResults` helper that looked the static factory up **by name** via reflection and a cached
 > expression tree. A response type without a matching factory failed at run time, on the failure
@@ -112,8 +112,8 @@ error. A foreign framework's convention is not a place for our naming policy.
 > short-circuiting behavior is compile-time correct by construction.
 >
 > The rejected alternative was a static abstract interface member
-> (`IFailureResult<TSelf>` plus `where TResponse : Result, IFailureResult<TResponse>`). It works —
-> it was prototyped — but it repairs the type parameter after the fact and adds a constraint every
+> (`IFailureResult<TSelf>` plus `where TResponse : Result, IFailureResult<TResponse>`). It works â€”
+> it was prototyped â€” but it repairs the type parameter after the fact and adds a constraint every
 > future service-defined behavior must repeat, to solve a problem the dispatcher created. Also
 > rejected: collapsing `Result` into `Result<Unit>`, which would move the cost into every void
 > command handler in every service to save one infrastructure type.

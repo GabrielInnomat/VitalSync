@@ -6,16 +6,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingBlocks.Infrastructure.Persistence.StateStored;
 
-internal sealed class EfCoreRepository<TAggregate, TKey>(DbContext context, EfCoreAggregateTracker tracker)
+internal sealed class EfCoreRepository<TAggregate, TKey>(
+    WriteDbContextAccessor writeDbContext,
+    EfCoreAggregateTracker tracker)
     : IRepository<TAggregate, TKey>
     where TAggregate : class, IAggregateRoot<TKey>
     where TKey : struct, IEntityKey, IEquatable<TKey>
 {
+    private readonly DbContext _context = writeDbContext?.Context
+        ?? throw new ArgumentNullException(nameof(writeDbContext));
+
     public async Task<TAggregate?> GetByIdAsync(TKey id, CancellationToken cancellationToken)
     {
         var aggregate = CreateEmpty(out var stateOwner);
 
-        var state = await context
+        var state = await _context
             .FindAsync(stateOwner.StateType, [id], cancellationToken)
             .ConfigureAwait(false);
 
@@ -37,8 +42,8 @@ internal sealed class EfCoreRepository<TAggregate, TKey>(DbContext context, EfCo
         var stateOwner = AsStateOwner(aggregate);
         var state = stateOwner.State;
 
-        AggregateStateGraph.EnsureTrackableCollections(context, state);
-        context.Add(state);
+        AggregateStateGraph.EnsureTrackableCollections(_context, state);
+        _context.Add(state);
         Track(aggregate, stateOwner, state);
         return Task.CompletedTask;
     }

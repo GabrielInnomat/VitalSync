@@ -33,4 +33,6 @@ public sealed record Failure
     public static Failure NotFound(string code, string message) => new(code, message, FailureCategory.NotFound);
 
     public static Failure Conflict(string code, string message) => new(code, message, FailureCategory.Conflict);
+
+    public static Failure Forbidden(string code, string message) => new(code, message, FailureCategory.Forbidden);
 }

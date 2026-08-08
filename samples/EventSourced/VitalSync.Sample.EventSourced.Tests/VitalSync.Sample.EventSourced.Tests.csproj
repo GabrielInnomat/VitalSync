@@ -30,6 +30,7 @@
     <ProjectReference Include="..\..\StateStored\VitalSync.Sample.StateStored.Contracts\VitalSync.Sample.StateStored.Contracts.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Domain\VitalSync.Sample.EventSourced.Domain.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Infrastructure\VitalSync.Sample.EventSourced.Infrastructure.csproj" />
+    <ProjectReference Include="..\VitalSync.Sample.EventSourced.Api\VitalSync.Sample.EventSourced.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>

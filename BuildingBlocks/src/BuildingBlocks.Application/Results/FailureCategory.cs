@@ -9,4 +9,6 @@ public enum FailureCategory
     NotFound,
 
     Conflict,
+
+    Forbidden,
 }

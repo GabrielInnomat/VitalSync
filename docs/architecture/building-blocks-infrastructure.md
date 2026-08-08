@@ -595,7 +595,14 @@ services.AddBuildingBlocks(options =>
   the host never registers the context and therefore cannot break the
   single-transaction outbox guarantee with a plain `AddDbContext`. Aspire
   hosts *enrich* the registration afterwards (e.g. `EnrichNpgsqlDbContext`)
-  instead of re-registering it.
+  instead of re-registering it. The context is reachable through an internal
+  `WriteDbContextAccessor`, which is what `EfCoreRepository` takes — **not** a bare
+  `DbContext`. A bounded context owns a write *and* a read database (ADR-0021), so
+  the unqualified `DbContext` key belonged to the write context by convention only:
+  a host registering its read context under that key decided by registration order
+  which database the repository wrote to, silently. The accessor is filled by this
+  registration and used by nobody else, so the question no longer arises — and
+  unlike a marker interface it puts no requirement on the host's own context type.
 - `UseMartenEventSourcing` configures Marten with **string stream identities**
   (`StreamIdentity.AsString`, required by the `EntityKeyFormatter` stream-key
   scheme, §3) and **lightweight sessions** (no identity-map/change-tracking

@@ -282,8 +282,16 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 - Expected domain errors (`BusinessRuleViolationException`, `DomainValidationException`)
   are **translated to `Result.Failed`** by an Application pipeline behavior; unexpected
   errors bubble to a thin global handler (ADR-0017). `FailureCategory` is one of
-  `Validation`, `BusinessRule`, `NotFound`, `Conflict` — transport status mapping is
-  owned by the BFF/service host, never by `Application`.
+  `Validation`, `BusinessRule`, `NotFound`, `Conflict`, `Forbidden` — transport status
+  mapping is owned by the BFF/service host, never by `Application`. There is
+  deliberately **no** `Unexpected` value (ADR-0017 rejects it explicitly: an unexpected
+  error stays an exception rather than becoming a second failure channel) and no
+  `Unauthorized` (authentication never reaches this layer). Adding a category is **not**
+  compiler-checked at the transport boundary and cannot be — a `switch` over an enum
+  always needs a discard arm (CS8509), which swallows the new value. Two run-time
+  guards stand in for it: each sample's `FailureStatusMappingTests` walks
+  `Enum.GetValues<FailureCategory>()` and fails on anything reaching the adapter's
+  fallback status, and `FailureTests` requires a factory of the same name on `Failure`.
 - Pipeline behaviors run in an **explicit numeric order**: logging is outermost so
   expected domain errors are logged as `Warning` (not `Error`), then exception-to-`Result`
   translation, then the unit of work closest to the handler. Built-ins occupy fixed
@@ -460,7 +468,15 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   `FindAsync(stateType, [id])` and rehydrates an empty aggregate around it, and the
   `EfCoreUnitOfWork` copies the current state onto the tracked entry with
   `CurrentValues.SetValues` before saving — states are immutable, so without that copy
-  EF Core finds nothing to save and the change is silently lost.
+  EF Core finds nothing to save and the change is silently lost. The repository takes an
+  internal `WriteDbContextAccessor`, **never** a bare `DbContext`: a bounded context owns a
+  write *and* a read database (ADR-0021), so the unqualified `DbContext` key belonged to the
+  write context by convention only, and a host registering its read context under that key
+  decided by registration order which database was written to — silently. The accessor is
+  filled by `UseEfCorePersistence<TContext>` and used by nobody else. Do not reintroduce a
+  `DbContext` registration, and do not replace the accessor with a marker interface: that
+  would put a requirement on every service's own context type for a problem that lives
+  entirely in our registration.
 - **A child of an aggregate maps as an owned type** (ADR-0031): `OwnsMany(...)` with its own
   table and its own strongly typed key via `HasKey`; `ToJson()` only for identity-less values.
   `CurrentValues` covers scalars, so `EfCoreUnitOfWork` hands the state to

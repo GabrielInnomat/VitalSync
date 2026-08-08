@@ -290,9 +290,19 @@ Per [ADR-0017](./decisions/0017-application-error-handling-and-result.md):
 | `BusinessRule` | `BusinessRuleViolationException` (translated)                  |
 | `NotFound`     | Returned directly by handlers for missing aggregates           |
 | `Conflict`     | Returned directly by handlers for already-exists / concurrency |
+| `Forbidden`    | Returned directly by handlers for a denied authorization       |
 
 There is deliberately **no** `Unexpected` category — unexpected failures remain
-exceptions handled globally.
+exceptions handled globally (ADR-0017). There is also no `Unauthorized`:
+authentication is the host's business and never reaches this layer.
+
+The set is **not** compiler-checked at the transport boundary, and cannot be: a
+`switch` expression over an enum always needs a discard arm (CS8509), which swallows
+any value added later. Each adapter is therefore covered by a test that walks
+`Enum.GetValues<FailureCategory>()` and fails on anything falling through to the
+adapter's fallback status, and `FailureTests` asserts that every declared value has
+a factory of its own name on `Failure`. Add a category, and both guards tell you
+where to go.
 
 ## Transport status mapping (not defined here)
 

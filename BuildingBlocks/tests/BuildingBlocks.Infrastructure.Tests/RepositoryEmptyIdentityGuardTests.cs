@@ -14,7 +14,9 @@ public sealed class RepositoryEmptyIdentityGuardTests
     {
         await using var context = new DbContext(
             new DbContextOptionsBuilder().UseInMemoryDatabase(Guid.NewGuid().ToString("N")).Options);
-        var repository = new EfCoreRepository<Counter, CounterId>(context, new EfCoreAggregateTracker());
+        var repository = new EfCoreRepository<Counter, CounterId>(
+            new WriteDbContextAccessor(context),
+            new EfCoreAggregateTracker());
         var emptyHull = CreateEmptyHull<Counter>();
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -28,7 +30,9 @@ public sealed class RepositoryEmptyIdentityGuardTests
     {
         await using var context = new GuardProbeContext(
             new DbContextOptionsBuilder<GuardProbeContext>().UseInMemoryDatabase(Guid.NewGuid().ToString("N")).Options);
-        var repository = new EfCoreRepository<Counter, CounterId>(context, new EfCoreAggregateTracker());
+        var repository = new EfCoreRepository<Counter, CounterId>(
+            new WriteDbContextAccessor(context),
+            new EfCoreAggregateTracker());
         var counter = Counter.Create(new CounterId(Guid.NewGuid()));
 
         await repository.AddAsync(counter, TestContext.Current.CancellationToken);

@@ -13,5 +13,8 @@
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Contracts\VitalSync.Sample.EventSourced.Contracts.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Infrastructure\VitalSync.Sample.EventSourced.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="VitalSync.Sample.EventSourced.Tests" />
+  </ItemGroup>
 
 </Project>

@@ -75,6 +75,29 @@ public sealed class FailureTests
     }
 
     [Fact]
+    public void Forbidden_CreatesFailureWithForbiddenCategory()
+    {
+        var failure = Failure.Forbidden("code", "message");
+
+        Assert.Equal(FailureCategory.Forbidden, failure.Category);
+    }
+
+    [Fact]
+    public void EveryDeclaredCategory_HasAFactoryOfItsOwnName()
+    {
+        var missing = Enum.GetValues<FailureCategory>()
+            .Where(static category => typeof(Failure).GetMethod(
+                category.ToString(),
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static,
+                [typeof(string), typeof(string)]) is null)
+            .ToList();
+
+        Assert.True(
+            missing.Count == 0,
+            $"These failure categories have no factory on Failure: {string.Join(", ", missing)}.");
+    }
+
+    [Fact]
     public void Equals_SameValues_AreEqual()
     {
         var a = new Failure("code", "message", FailureCategory.Conflict);

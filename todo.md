@@ -50,7 +50,7 @@ eine Entscheidung, keinen Code.
 | TODO-13 | Wo lebt die Event-Identität?                                   | **P2** | gelöst            | IMP-41, IMP-11                        |
 | TODO-14 | Idempotenz-Bookkeeping über die Kontextgrenze                  | **P2** | teilweise         | IMP-11, WS-12                         |
 | TODO-15 | Mehrfachfehler und Feldvalidierung end-to-end                  | **P2** | offen             | IMP-16, IMP-17, hacky-12              |
-| TODO-16 | `FailureCategory` fehlen Autorisierung und Unerwartet          | **P2** | offen             | IMP-18                                |
+| TODO-16 | `FailureCategory` fehlt Autorisierung                          | **P2** | gelöst            | IMP-18                                |
 | TODO-17 | `RuleChecker` schluckt `null`                                  | **P2** | gelöst            | hacky-10, IMP-36                      |
 | TODO-18 | `AddBuildingBlocks` ist nicht idempotent                       | **P2** | gelöst            | hacky-9                               |
 | TODO-19 | `ApplyEntityKeyConversions` scannt und mappt zu viel           | **P2** | teilweise         | hacky-4, WS-15                        |
@@ -58,7 +58,7 @@ eine Entscheidung, keinen Code.
 | TODO-21 | Read-Modelle im state-stored Pfad nicht wiederaufbaubar        | **P2** | offen             | IMP-31                                |
 | TODO-22 | Unique-Constraint-Verletzungen werden nicht übersetzt          | **P2** | gelöst            | IMP-29                                |
 | TODO-23 | Keine Tracing-Instrumentierung der CQRS-Pipeline               | **P2** | offen             | IMP-30                                |
-| TODO-24 | `DbContext` als DI-Schlüssel                                   | **P2** | offen             | IMP-20                                |
+| TODO-24 | `DbContext` als DI-Schlüssel                                   | **P2** | gelöst            | IMP-20                                |
 | TODO-25 | Marten-Nebenläufigkeit verdrahtet, aber unbelegt               | **P2** | gelöst            | WS-10                                 |
 | TODO-26 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | **P2** | gelöst            | WS-09                                 |
 | TODO-27 | Schema-Erzeugung zur Laufzeit in Produktion                    | **P2** | offen             | WS-11                                 |
@@ -1051,16 +1051,58 @@ aus einer Konstante im Behavior. Alternative, falls das zu viel ist: Mehrfach-Fa
 
 ---
 
-# TODO-16, `FailureCategory` fehlen Autorisierung und Unerwartet
+# TODO-16, `FailureCategory` fehlt Autorisierung
 
-**P2 · offen · IMP-18**
+**P2 · gelöst · IMP-18**
+
+## Gelöst — `Forbidden` ergänzt, `Unexpected` bewusst verworfen (2026-08-08)
+
+`FailureCategory` hat jetzt fünf Werte; `Failure.Forbidden(code, message)` ist die zugehörige
+Factory, beide gRPC-Adapter bilden sie auf `StatusCode.PermissionDenied` ab.
+
+**Anders als vorgeschlagen, in zwei Punkten.**
+
+**1. `Unexpected` wird nicht ergänzt.** ADR-0017 verwirft den Wert nicht versehentlich, sondern
+ausdrücklich (`Alternatives considered`: *„rejected: it would invite wrapping bugs in
+`Result.Failure`"*, und im Entscheidungstext: *„There is deliberately **no** `Unexpected`
+FailureCategory"*). Ein unerwarteter Fehler bleibt eine Ausnahme und erreicht den dünnen globalen
+Handler; ihn zu einem `Result` zu degradieren wäre genau der zweite Fehlerkanal, den ADR-0017
+schließt. Es gibt heute auch keinen einzigen Aufrufer, der ihn bräuchte. Der ursprüngliche
+Befund wird damit **teilweise abgelehnt**, nicht vergessen — das ist die Entscheidung, kein
+offener Rest.
+
+**2. Die Begründung des Befunds war sachlich falsch.** Dort stand, die neuen Werte würden die
+`switch`-Ausdrücke im Transport „compile-time-vollständigkeitsgeprüft" machen. Das kann C# nicht
+leisten: ein `switch`-Ausdruck über ein Enum **verlangt** einen Discard-Arm (CS8509, weil ein
+Enum jeden `int` tragen kann), und dieser Arm schluckt jeden künftigen Wert klaglos. Der Compiler
+wird also nie melden, dass jemand eine Kategorie vergessen hat. Ein bloßes Erweitern des Enums
+hätte das Problem nur verschoben.
+
+Deshalb drei Schritte statt einem:
+
+| Schritt | Wirkung |
+| --- | --- |
+| Mapping aus beiden gRPC-Services in je eine `FailureStatusMapping` herausgezogen | überhaupt erst testbar; die Aufrufstellen bleiben durch `using static` unverändert |
+| Wächter je Sample: iteriert `Enum.GetValues<FailureCategory>()` und meldet jeden Wert, der in `StatusCode.Unknown` fällt | ersetzt die Compiler-Prüfung, die es nicht gibt |
+| Wächter in `FailureTests`: jeder deklarierte Wert braucht eine gleichnamige Factory auf `Failure` | verhindert das halbe Erweitern |
+
+Der Discard-Arm bleibt erhalten und wird separat mit einem gecasteten `(FailureCategory)int.MaxValue`
+belegt — er ist für undeklarierte Werte zuständig, nicht für vergessene.
+
+**Gegenprobe:** ein testweise eingefügter sechster Wert `Probe` ließ genau die beiden Wächter
+fallen, je einen Test, mit den vorgesehenen Meldungen; danach zurückgenommen.
+
+`Unauthorized` (401) bleibt wie im Befund draußen: Authentifizierung ist Sache des Hosts und
+erreicht die Application-Schicht nie.
+
+## Ursprünglicher Befund
 
 Vier Werte: `Validation`, `BusinessRule`, `NotFound`, `Conflict`
 ([FailureCategory.cs](BuildingBlocks/src/BuildingBlocks.Application/Results/FailureCategory.cs)). Ein
 Autorisierungsfehler (403) hat keine Kategorie und landet im `_ => StatusCode.Unknown`-Arm des
 gRPC-Adapters; dasselbe gilt für einen bewusst zu einem `Result` degradierten Infrastrukturfehler.
 
-## Lösungsvorschlag
+## Ursprünglicher Lösungsvorschlag
 
 ```csharp
 public enum FailureCategory
@@ -1398,7 +1440,37 @@ zusammen mit dem ersten produktiven Service.
 
 # TODO-24, `DbContext` als DI-Schlüssel
 
-**P2 · offen · IMP-20**
+**P2 · gelöst · IMP-20**
+
+## Gelöst — der Schreibkontext hat einen eigenen Schlüssel (2026-08-08)
+
+Der nackte `DbContext`-Eintrag ist ersatzlos weg. `PersistenceRegistrar` registriert stattdessen
+einen internen `WriteDbContextAccessor`, der den bei `UseEfCorePersistence<TContext>` genannten
+Kontext hält, und `EfCoreRepository` nimmt diesen Accessor statt eines `DbContext`. Der
+mehrdeutige Schlüssel existiert damit nicht mehr — er ist nicht bloß besser dokumentiert, sondern
+von niemandem sonst besetzbar. Es gab genau einen Konsumenten; `EfCoreUnitOfWork<TContext>` und
+`AggregateStateModelCheck<TContext>` waren bereits typisiert.
+
+**Anders als vorgeschlagen:** kein Marker-Interface `IWriteDbContext`. Ein Marker verlangt, dass
+jeder Service seinen Write-Kontext davon ableitet — eine Auflage an fremden Code für ein Problem,
+das ausschließlich in *unserer* Registrierung entsteht — und erzwingt im Repository einen Cast
+zurück auf `DbContext`. Der Accessor löst dasselbe, ohne den Kontexttyp des Hosts anzufassen. Sein
+Name endet auf `*Accessor` und nicht auf `WriteDbContext`, weil er ein Halter ist und kein
+`DbContext`-Subtyp.
+
+Der Test `WriteDbContextResolutionTests` stellt den Fehlermodus nach, statt nur die Verdrahtung
+abzunicken: er registriert **vor** `AddBuildingBlocks` einen Read-Kontext unter dem nackten
+`DbContext`-Schlüssel — unter der alten Registrierung hätte `TryAddScoped` damit verloren und das
+Repository hätte in die Lesedatenbank geschrieben. Dass der Fremdeintrag wirklich gewinnt, ist
+ausdrücklich verankert (`Assert.IsType<ReadProbeContext>(… GetRequiredService<DbContext>())`),
+sonst bewiese der Test nichts. Danach wird gezeigt, dass `AddAsync` trotzdem im Write-Kontext
+landet und der Read-Kontext leer bleibt. Der Test braucht keinen Container: `context.Add` und der
+ChangeTracker arbeiten ohne Verbindung, obwohl Npgsql konfiguriert ist.
+
+Die saubere Variante `EfCoreRepository<TContext, TAggregate, TKey>` bleibt aus dem im Vorschlag
+genannten Grund unmöglich.
+
+## Ursprünglicher Befund
 
 ```csharp
 _services.TryAddScoped<DbContext>(static provider => provider.GetRequiredService<TContext>());
@@ -1411,7 +1483,7 @@ Jeder Kontext hat laut ADR-0021 ein Write- **und** ein Read-Paar. Der unqualifiz
 Registriert ein Service versehentlich seinen Read-Kontext ebenfalls als `DbContext`, entscheidet
 die Registrierungsreihenfolge, in welche Datenbank das Repository schreibt.
 
-## Lösungsvorschlag
+## Ursprünglicher Lösungsvorschlag
 
 Die Konvention ins Typsystem heben — die kleinste wirksame Änderung:
 

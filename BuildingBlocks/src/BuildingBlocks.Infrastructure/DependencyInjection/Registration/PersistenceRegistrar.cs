@@ -30,7 +30,8 @@ internal sealed class PersistenceRegistrar(IServiceCollection services, Wolverin
             configureContext?.Invoke(builder);
         });
 
-        services.TryAddScoped<DbContext>(static provider => provider.GetRequiredService<TContext>());
+        services.TryAddScoped(static provider =>
+            new WriteDbContextAccessor(provider.GetRequiredService<TContext>()));
         services.TryAddScoped<EfCoreAggregateTracker>();
         services.TryAddSingleton<DomainEventEnvelopeFactory>();
         services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork<TContext>>();

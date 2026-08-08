@@ -28,6 +28,7 @@
     <ProjectReference Include="..\VitalSync.Sample.StateStored.Domain\VitalSync.Sample.StateStored.Domain.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.StateStored.Infrastructure\VitalSync.Sample.StateStored.Infrastructure.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.StateStored.Contracts\VitalSync.Sample.StateStored.Contracts.csproj" />
+    <ProjectReference Include="..\VitalSync.Sample.StateStored.Api\VitalSync.Sample.StateStored.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>

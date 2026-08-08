@@ -30,9 +30,9 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-15 | Repository lädt Aggregate unvollständig                                  | gelöst            |
 | IMP-16 | Kein Validierungs-Behavior, Mehrfachfehler nicht erzeugbar               | teilweise         |
 | IMP-17 | `Failure` ohne Zielfeld und ohne fachliche Fehlercodes                   | offen             |
-| IMP-18 | `FailureCategory` fehlen Autorisierung und Unerwartet                    | offen             |
+| IMP-18 | `FailureCategory` fehlen Autorisierung und Unerwartet                    | teilweise gelöst  |
 | IMP-19 | Ein Assembly für EF Core, Marten, Wolverine und RabbitMQ                 | offen             |
-| IMP-20 | `DbContext` als DI-Schlüssel kollidiert mit dem Read/Write-Paar          | offen             |
+| IMP-20 | `DbContext` als DI-Schlüssel kollidiert mit dem Read/Write-Paar          | gelöst            |
 | IMP-21 | `IRepository` koppelt an die konkrete Domain-Basisklasse                 | gelöst            |
 | IMP-22 | `AssemblyQualifiedName` als Event-Typ-Token                              | gelöst            |
 | IMP-23 | Marten-Stream-Key hängt am Klassennamen                                  | gelöst            |
@@ -501,6 +501,13 @@ durch, statt eine Konstante zu setzen — die Exception muss den Code dafür mit
 
 # IMP-18, `FailureCategory` fehlen Autorisierung und Unerwartet
 
+**Teilweise gelöst mit TODO-16 (2026-08-08).** `Forbidden` ist ergänzt (samt Factory und Mapping
+auf `StatusCode.PermissionDenied`); **`Unexpected` wird bewusst nicht ergänzt** — ADR-0017 verwirft
+den Wert ausdrücklich, damit unerwartete Fehler Ausnahmen bleiben und nicht zu einem zweiten
+Fehlerkanal degradieren. Der im Vorschlag erwartete Compiler-Schutz existiert nicht: ein
+Enum-`switch` braucht ohnehin einen Discard-Arm. An seine Stelle treten Wächter-Tests über
+`Enum.GetValues<FailureCategory>()`. Details in `todo.md`, TODO-16.
+
 Vier Werte: `Validation`, `BusinessRule`, `NotFound`, `Conflict`
 ([FailureCategory.cs](BuildingBlocks/src/BuildingBlocks.Application/Results/FailureCategory.cs)). Ein
 Autorisierungsfehler (403) hat keine Kategorie und landet im gRPC-Adapter im
@@ -554,6 +561,11 @@ Persistenzwelten braucht.
 ---
 
 # IMP-20, `DbContext` als DI-Schlüssel kollidiert mit dem Read/Write-Paar
+
+**Gelöst mit TODO-24 (2026-08-08).** Der nackte `DbContext`-Eintrag ist weg; ein interner
+`WriteDbContextAccessor` hält den Schreibkontext, `EfCoreRepository` nimmt ihn. Statt des
+vorgeschlagenen Marker-Interfaces, das jeder Service an seinem eigenen Kontexttyp hätte umsetzen
+müssen. Details in `todo.md`, TODO-24.
 
 ```csharp
 _services.TryAddScoped<DbContext>(static provider => provider.GetRequiredService<TContext>());

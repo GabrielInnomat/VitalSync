@@ -147,14 +147,14 @@ The complete host contract shrinks to: `AddBuildingBlocks(options => …)` plus 
 > a default-on flag that nobody sets is configuration surface without a purpose. The
 > accepted cost: a host that registers handlers outside the scanned assemblies now fails
 > at start instead of at the first request. No such host exists. Should a legitimate one
-> appear, optionality can come back deliberately � narrower than a global on/off switch.
+> appear, optionality can come back deliberately — narrower than a global on/off switch.
 
-> **Amendment (2026-08-06) � one contract for every start-up check.**
+> **Amendment (2026-08-06) — one contract for every start-up check.**
 > The checks introduced here and by ADR-0023/0030/0031 had each grown into its own
 > `IHostedService`, some registered conditionally, one of them reading the
 > `IServiceCollection` at composition time. They now share the internal
 > `IStartupCheck` contract (`StartupPhase Phase` + `void Run()`), and a single
-> `StartupCheckRunner` � the only hosted service Building Blocks registers � drives
+> `StartupCheckRunner` — the only hosted service Building Blocks registers — drives
 > them: `BeforeHostedServicesStart` checks in its `StartAsync`,
 > `AfterHostedServicesStarted` checks in its `StartedAsync`. The types are renamed
 > accordingly (`WolverineWiringStartupValidator` ? `WolverineRuntimeCheck`,
@@ -175,8 +175,8 @@ The complete host contract shrinks to: `AddBuildingBlocks(options => …)` plus 
 >
 > **Only the phase is load-bearing, not the registration order.** Every check is a pure
 > reader; none mutates state another one reads, so their relative sequence decides only
-> which message a broken host sees first. The one real ordering requirement �
-> `IntegrationEventSubscriptionCheck` must see Wolverine's compiled handler graph � is
+> which message a broken host sees first. The one real ordering requirement —
+> `IntegrationEventSubscriptionCheck` must see Wolverine's compiled handler graph — is
 > satisfied by the .NET host's three-pass start (all `StartAsync` complete before any
 > `StartedAsync` begins), not by a registration index. `StartupCheckRunnerTests` pins
 > that guarantee with a real host and a hosted service registered after the runner.

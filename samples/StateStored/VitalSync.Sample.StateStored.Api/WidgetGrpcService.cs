@@ -5,6 +5,7 @@ using ProtoBuf.Grpc;
 using VitalSync.Sample.StateStored.Application;
 using VitalSync.Sample.StateStored.Contracts;
 using VitalSync.Sample.StateStored.Domain;
+using static VitalSync.Sample.StateStored.Api.FailureStatusMapping;
 
 namespace VitalSync.Sample.StateStored.Api;
 
@@ -107,19 +108,4 @@ internal sealed class WidgetGrpcService(ISender sender) : IWidgetService
         Guid.TryParse(value, out var id)
             ? new WidgetId(id)
             : throw new RpcException(new Status(StatusCode.InvalidArgument, $"'{value}' is not a valid widget id."));
-
-    private static RpcException ToRpcException(Result result)
-    {
-        var failure = result.Failures[0];
-        var status = failure.Category switch
-        {
-            FailureCategory.Validation => StatusCode.InvalidArgument,
-            FailureCategory.NotFound => StatusCode.NotFound,
-            FailureCategory.Conflict => StatusCode.Aborted,
-            FailureCategory.BusinessRule => StatusCode.FailedPrecondition,
-            _ => StatusCode.Unknown,
-        };
-
-        return new RpcException(new Status(status, $"{failure.Code}: {failure.Message}"));
-    }
 }

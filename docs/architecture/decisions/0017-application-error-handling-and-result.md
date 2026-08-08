@@ -84,12 +84,31 @@ and gRPC map the same semantic categories independently.
 - **Include an `Unexpected` category** — rejected: it would invite wrapping bugs in
   `Result.Failure`; unexpected errors must remain exceptions handled globally.
 
-> **Amendment (2026-08-05) � the failure factory is named `Failed`.**
+> **Amendment (2026-08-05) — the failure factory is named `Failed`.**
 > The factory that builds a failed result was called `Failure`, which collided with
 > everything around it: the type `Failure`, the property `Failures`, and the property
 > `IsFailure` all live in the same namespace, so `static Result Failure(Failure failure)`
 > read as a tautology and `Result<T>` had to hide it with `static new`. It is now
 > `Result.Failed(...)` / `Result<T>.Failed(...)`; `Failure` remains the name of the error
-> **value**, `Failed` is what you **do** with it. Nothing else about this ADR changes �
+> **value**, `Failed` is what you **do** with it. Nothing else about this ADR changes —
 > the two channels, the four categories and the pipeline translation are untouched.
 > The rename is purely mechanical and the compiler finds every call site.
+
+> **Amendment (2026-08-08) — a fifth category, `Forbidden`; `Unexpected` stays rejected.**
+> A denied authorization is an expected outcome that a handler decides, so it belongs on the
+> `Result` channel like _not found_ and _conflict_ — it had no category and reached the
+> transport as the adapters' fallback status. `FailureCategory` therefore gains `Forbidden`
+> (with `Failure.Forbidden(...)`, mapped to gRPC `PermissionDenied`), and the list in this ADR
+> reads `Validation`, `BusinessRule`, `NotFound`, `Conflict`, `Forbidden`. **Nothing else
+> changes**, and in particular the rejection of `Unexpected` above stands: an unexpected error
+> remains an exception for the global handler, because degrading it to a `Result` is exactly
+> the second failure channel this ADR closes. `Unauthorized` (401) likewise stays out —
+> authentication is the host's business and never reaches this layer.
+>
+> Worth recording, because it was assumed otherwise: extending this enum is **not**
+> compiler-checked at the boundary and cannot be. A `switch` expression over an enum always
+> requires a discard arm (CS8509, since an enum can carry any `int`), and that arm silently
+> absorbs every value added later. The guarantee is therefore a pair of run-time guards —
+> each adapter's mapping is walked over `Enum.GetValues<FailureCategory>()` and must not fall
+> through, and every declared category must have a factory of its own name on `Failure`. A
+> future category is added by making those two tests pass.

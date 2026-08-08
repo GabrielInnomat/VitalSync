@@ -99,5 +99,5 @@ Blocks at all.**
 > restate it. The exchange name is now a host argument, VitalSync defines it once in
 > `VitalSync.ServiceDefaults`, and `vitalsync` no longer appears anywhere under
 > `BuildingBlocks/src`. The rule for future contributions: a product name in Building
-> Blocks is a defect, not a shortcut — if a value is deployment-specific, the host names
+> Blocks is a defect, not a shortcut â€” if a value is deployment-specific, the host names
 > it.

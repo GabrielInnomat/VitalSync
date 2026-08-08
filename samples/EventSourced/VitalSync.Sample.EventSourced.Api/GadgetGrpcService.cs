@@ -5,6 +5,7 @@ using ProtoBuf.Grpc;
 using VitalSync.Sample.EventSourced.Application;
 using VitalSync.Sample.EventSourced.Contracts;
 using VitalSync.Sample.EventSourced.Domain;
+using static VitalSync.Sample.EventSourced.Api.FailureStatusMapping;
 
 namespace VitalSync.Sample.EventSourced.Api;
 
@@ -68,19 +69,4 @@ internal sealed class GadgetGrpcService(ISender sender) : IGadgetService
         Guid.TryParse(value, out var id)
             ? new GadgetId(id)
             : throw new RpcException(new Status(StatusCode.InvalidArgument, $"'{value}' is not a valid gadget id."));
-
-    private static RpcException ToRpcException(Result result)
-    {
-        var failure = result.Failures[0];
-        var status = failure.Category switch
-        {
-            FailureCategory.Validation => StatusCode.InvalidArgument,
-            FailureCategory.NotFound => StatusCode.NotFound,
-            FailureCategory.Conflict => StatusCode.Aborted,
-            FailureCategory.BusinessRule => StatusCode.FailedPrecondition,
-            _ => StatusCode.Unknown,
-        };
-
-        return new RpcException(new Status(status, $"{failure.Code}: {failure.Message}"));
-    }
 }
