@@ -48,4 +48,40 @@ public sealed class FailureStatusMappingTests
         Assert.Equal(StatusCode.NotFound, exception.StatusCode);
         Assert.Equal("widget.not_found: No such widget.", exception.Status.Detail);
     }
+
+    [Fact]
+    public void ToRpcException_WithSeveralFailures_CarriesEachOneInTheTrailers()
+    {
+        var result = Result.Failed(
+        [
+            new Failure("widget.name.required", "The widget name must not be empty.", FailureCategory.Validation)
+            {
+                Target = "name",
+            },
+            new Failure("widget.part.quantity.positive", "The quantity must be greater than zero.", FailureCategory.Validation)
+            {
+                Target = "quantity",
+            },
+        ]);
+
+        var exception = FailureStatusMapping.ToRpcException(result);
+
+        Assert.Equal(StatusCode.InvalidArgument, exception.StatusCode);
+        Assert.Equal("2", exception.Trailers.GetValue(FailureTrailers.CountKey));
+        Assert.Equal("widget.name.required", exception.Trailers.GetValue("failure-0-code"));
+        Assert.Equal("name", exception.Trailers.GetValue("failure-0-target"));
+        Assert.Equal("quantity", exception.Trailers.GetValue("failure-1-target"));
+        Assert.Contains("The quantity must be greater than zero.", exception.Status.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ToRpcException_WithoutATarget_OmitsTheTrailer()
+    {
+        var result = Result.Failed(Failure.BusinessRule("widget.retired", "A retired widget cannot change."));
+
+        var exception = FailureStatusMapping.ToRpcException(result);
+
+        Assert.Null(exception.Trailers.GetValue("failure-0-target"));
+        Assert.Equal("1", exception.Trailers.GetValue(FailureTrailers.CountKey));
+    }
 }

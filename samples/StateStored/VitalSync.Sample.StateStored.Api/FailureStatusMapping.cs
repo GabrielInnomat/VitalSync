@@ -19,8 +19,8 @@ internal static class FailureStatusMapping
     {
         ArgumentNullException.ThrowIfNull(result);
 
-        var failure = result.Failures[0];
         return new RpcException(
-            new Status(ToStatusCode(failure.Category), $"{failure.Code}: {failure.Message}"));
+            new Status(ToStatusCode(result.Failures[0].Category), FailureTrailers.Describe(result.Failures)),
+            FailureTrailers.Build(result.Failures));
     }
 }

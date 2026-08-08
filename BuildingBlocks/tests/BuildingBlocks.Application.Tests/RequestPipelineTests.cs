@@ -52,7 +52,21 @@ public sealed class RequestPipelineTests
     {
         var pipeline = new RequestPipeline<Result>(_ => Task.FromResult(Result.Success()), Result.Failed);
 
-        Assert.Throws<ArgumentNullException>(() => pipeline.Failed(null!));
+        Assert.Throws<ArgumentNullException>(() => pipeline.Failed((Failure)null!));
+        Assert.Throws<ArgumentNullException>(() => pipeline.Failed((IReadOnlyList<Failure>)null!));
+    }
+
+    [Fact]
+    public void Failed_WithSeveralFailures_CarriesThemAll()
+    {
+        var pipeline = new RequestPipeline<Result>(_ => Task.FromResult(Result.Success()), Result.Failed);
+
+        var result = pipeline.Failed(
+            [Failure.Validation("a", "first"), Failure.Validation("b", "second")]);
+
+        Assert.Equal(2, result.Failures.Count);
+        Assert.Equal("first", result.Failures[0].Message);
+        Assert.Equal("second", result.Failures[1].Message);
     }
 
     [Fact]

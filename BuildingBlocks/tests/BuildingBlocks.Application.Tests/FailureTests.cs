@@ -15,6 +15,24 @@ public sealed class FailureTests
     }
 
     [Fact]
+    public void Constructor_WithoutATarget_LeavesItUnset()
+    {
+        var failure = new Failure("code", "message", FailureCategory.Validation);
+
+        Assert.Null(failure.Target);
+    }
+
+    [Fact]
+    public void Target_DistinguishesOtherwiseIdenticalFailures()
+    {
+        var name = new Failure("code", "message", FailureCategory.Validation) { Target = "name" };
+        var quantity = new Failure("code", "message", FailureCategory.Validation) { Target = "quantity" };
+
+        Assert.Equal("name", name.Target);
+        Assert.NotEqual(name, quantity);
+    }
+
+    [Fact]
     public void Constructor_WithNullCode_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() => new Failure(null!, "message", FailureCategory.Validation));

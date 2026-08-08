@@ -49,7 +49,7 @@ eine Entscheidung, keinen Code.
 | TODO-12 | Name der `Result`-Fehlerfactory                                | **P2** | gelöst            | hacky-3, IMP-27, IMP-39               |
 | TODO-13 | Wo lebt die Event-Identität?                                   | **P2** | gelöst            | IMP-41, IMP-11                        |
 | TODO-14 | Idempotenz-Bookkeeping über die Kontextgrenze                  | **P2** | teilweise         | IMP-11, WS-12                         |
-| TODO-15 | Mehrfachfehler und Feldvalidierung end-to-end                  | **P2** | offen             | IMP-16, IMP-17, hacky-12              |
+| TODO-15 | Mehrfachfehler und Feldvalidierung end-to-end                  | **P2** | gelöst            | IMP-16, IMP-17, hacky-12              |
 | TODO-16 | `FailureCategory` fehlt Autorisierung                          | **P2** | gelöst            | IMP-18                                |
 | TODO-17 | `RuleChecker` schluckt `null`                                  | **P2** | gelöst            | hacky-10, IMP-36                      |
 | TODO-18 | `AddBuildingBlocks` ist nicht idempotent                       | **P2** | gelöst            | hacky-9                               |
@@ -1015,7 +1015,7 @@ Muster kopiert wird.
 
 # TODO-15, Mehrfachfehler und Feldvalidierung end-to-end
 
-**P2 · offen · IMP-16 + IMP-17 + hacky-12**
+**P2 · gelöst · IMP-16 + IMP-17 + hacky-12**
 
 Drei Befunde auf derselben Kette, die nur gemeinsam Sinn ergeben:
 
@@ -1048,6 +1048,67 @@ public interface IRequestValidator<in TRequest>
 Fachliche Codes kommen von der Regel selbst (`IBusinessRule.Code` → `recipe.name_required`), nicht
 aus einer Konstante im Behavior. Alternative, falls das zu viel ist: Mehrfach-Failures aus
 `Result` streichen — dann ist die API wenigstens ehrlich.
+
+## Gelöst — die Kette sammelt jetzt durchgehend (2026-08-08)
+
+Alle drei Befunde sind geschlossen, aber nicht ganz so, wie der Vorschlag es vorsah.
+
+**Erzeugen.** Beide `params`-Überladungen von `RuleChecker` werten **jede** Regel aus und sammeln
+die gebrochenen; geworfen wird einmal am Ende. Beide Exceptions tragen
+`IReadOnlyList<RuleViolation> Violations` mit `RuleViolation(Code, Target, Message)`.
+`ExceptionToResultBehavior` erzeugt daraus **ein `Failure` pro Verstoss** statt eines pro
+Exception. `RequestPipeline<TResponse>.Failed` hat dafür eine Überladung mit
+`IReadOnlyList<Failure>` bekommen; die Einzelfehler-Überladung bleibt.
+
+Der Null-Guard steht jetzt **vor** der Auswertung und prüft das ganze Array. Sonst hinge es von
+der Position ab, ob ein `null` als `ArgumentNullException` sichtbar wird oder hinter gesammelten
+Domänenfehlern verschwindet.
+
+**Beschreiben.** `Failure` hat `Target` als `init`-Property. **Beide** Regelschnittstellen haben
+`Code` bekommen, `IDomainValidationRule` zusätzlich `Target`. Für einen Business-Rule-Verstoss
+ist `Target` immer `null` — eine Invariante ist eine Aussage über das Aggregat, nicht über ein
+Feld.
+
+**Korrektur im Verlauf, weil die erste Fassung genau daneben lag.** Zuerst hatte nur
+`IDomainValidationRule` einen `Code`, mit der Begründung „eine Invariante ist eine Aussage über
+das Aggregat, nicht über ein Feld". Dieses Argument trägt für `Target` und **nur** für `Target`:
+ein Code identifiziert die *Regel*, kein Feld. Die Folge war, dass weiterhin **alle**
+Business-Rule-Verstösse denselben technischen Code `domain.business_rule` trugen — exakt der
+Befund aus IMP-17, für die Validierung behoben und für Business Rules stehen gelassen. Der
+ursprüngliche Vorschlag hatte ausdrücklich *beide* Schnittstellen genannt. `IBusinessRule` hat
+`Code` deshalb nachträglich bekommen, `RuleViolation.Code` ist nicht mehr nullable, und der
+`?? defaultCode`-Fallback im Behavior ist entfallen.
+
+Die Message-only-Konstruktoren beider Exceptions führen keine Regel mit, brauchen aber einen
+Code — CA1032 erzwingt sie und ist nirgends abgeschaltet. Sie setzen darum eine
+`FallbackCode`-Konstante auf der Exception selbst; `ExceptionToResultBehavior.ValidationFailureCode`
+und `BusinessRuleFailureCode` sind seither nur noch Aliasse darauf, sodass es eine einzige Quelle
+für diese beiden Zeichenketten gibt.
+
+**Transportieren.** Beide gRPC-Adapter schreiben alle Failures in die **Trailer**
+(`failure-count`, `failure-{i}-code` / `-message` / `-target`, letzterer entfällt bei `null`); der
+Statuscode kommt weiterhin aus der Kategorie. Das ist eindeutig, weil die beiden Regelarten
+getrennt bleiben: pro Handler-Durchlauf fliegt höchstens eine Exception, also teilen sich alle
+Failures eines `Result` eine Kategorie. Trailer statt gRPC Rich Error Model, weil letzteres ein
+zusätzliches Paket und ein protobuf-`Any` bräuchte und die Samples code-first sind.
+
+**Abgelehnt: `IRequestValidator<TRequest>`.** Das Ziel ist Validierung *im Aggregat*. Ein zweiter
+Validierungskanal davor wäre ein zweiter Ort für dieselbe Regel — und die Regel im Aggregat müsste
+trotzdem bleiben, weil sie die Invariante ist. `Metadata` auf `Failure` wurde ebenfalls nicht
+gebaut: es gibt keinen Konsumenten, und ein `IReadOnlyDictionary<string, object?>` wäre über den
+Transport nicht darstellbar.
+
+**Folge für Regelautoren:** Regeln in einem `Check`-Aufruf müssen unabhängig sein, denn eine
+spätere Regel wird auch dann ausgewertet, wenn eine frühere bereits gescheitert ist. Hängt eine
+Regel von einer anderen ab, schreibt man **zwei aufeinanderfolgende `Check`-Aufrufe** — erst die
+Vorbedingungen, dann die abhängige Prüfung. Das ist Domain-Design, keine Framework-Eigenschaft.
+
+ADR-0009 und ADR-0017 haben je ein Amendment vom 2026-08-08.
+
+Tests: `RuleCheckerTests` (die beiden Short-Circuit-Tests umgedreht), neu `RuleViolationTests`,
+`FailureTranslationTests` um drei Mehrfachfehler-Fälle erweitert, beide
+`FailureStatusMappingTests` um die Trailer, `WidgetTests` um den End-to-End-Beleg, dass
+`AddPart("  ", 0)` **beide** Felder meldet.
 
 ---
 
@@ -1399,9 +1460,11 @@ Belegt durch vier neue Tests in `UnitOfWorkBehaviorTests`: EF-Pfad, Marten-Pfad,
 Constraint-Name, und eine Abgrenzung — eine **Foreign-Key**-Verletzung (SQLSTATE `23503`) wird
 weiterhin durchgereicht statt still zu einem `Conflict` zu werden.
 
-**Nicht** miterledigt und weiterhin an TODO-15 hängend: das Mapping des Constraint-Namens auf einen
-fachlichen Code. Der Aufrufer bekommt heute `persistence.unique_violation` plus den Constraint-Namen
-im Klartext.
+**Nicht** miterledigt: das Mapping des Constraint-Namens auf einen fachlichen Code. Der Aufrufer
+bekommt heute `persistence.unique_violation` plus den Constraint-Namen im Klartext. TODO-15 hat
+inzwischen `Failure.Target` und Mehrfachfehler gebracht, aber ausdrücklich **kein**
+Constraint-Namens-Mapping — das gehört pro Service in dessen eigenen Code und braucht ein erstes
+echtes Aggregat mit einem Unique-Index, das es noch nicht gibt.
 
 ---
 

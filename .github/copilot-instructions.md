@@ -184,8 +184,24 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 - **Business rules and domain validation** follow ADR-0009, and a `null` rule **throws**
   (amendment 2026-08-06). `RuleChecker` used to evaluate `rule?.IsBroken() == true`, so the
   validation layer fell silent in exactly the case it exists for: a factory returning `null`
-  meant "rule passed". All four overloads guard with `ArgumentNullException.ThrowIfNull`; the
-  `params` ones guard the array too. Short-circuiting is unchanged.
+  meant "rule passed". All four overloads guard with `ArgumentNullException.ThrowIfNull`.
+- **The `params` overloads collect, they do not short-circuit** (ADR-0009 amendment 2026-08-08).
+  Every rule is evaluated, the broken ones are gathered and **one** exception is thrown at the
+  end carrying `IReadOnlyList<RuleViolation> Violations` (`Code`, `Target`, `Message`). The
+  array's `null` guard therefore runs **before** the first rule, or whether a `null` surfaces as
+  an `ArgumentNullException` or vanishes behind collected domain errors would depend on its
+  position. Consequence for rule authors: **rules in one call must be independent** — where one
+  rule only makes sense after another passed, write two consecutive `Check` calls, which is what
+  `Gadget` already does. **Both** rule interfaces carry a `Code` — it identifies the *rule*, so a
+  client can react to that constraint rather than to "some business rule" — and only
+  `IDomainValidationRule` adds `string? Target` (the field name; `null` when the rule spans
+  several fields), because an invariant is a statement about the aggregate, not about a field.
+  `RuleViolation.Code` is therefore **not** nullable; the message-only constructors CA1032 forces
+  on both exceptions carry no rule and fill in the exception's own `public const FallbackCode`
+  (`domain.validation` / `domain.business_rule`), which
+  `ExceptionToResultBehavior.ValidationFailureCode`/`BusinessRuleFailureCode` merely alias. The
+  two kinds are never merged and never mixed in one call, so a handler invocation raises at most
+  one exception and **every `Failure` in a failed `Result` shares one category**.
 - Aggregates use an **aggregate state object** (ADR-0010).
 - **One aggregate authoring model** — every aggregate derives from the state-fold
   base `AggregateRoot<TKey, TState>` and mutates only via `RaiseEvent`; the
@@ -282,7 +298,13 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 - **Commands** return `Result` or `Result<T>` (a **create** returns the new typed id,
   e.g. `Result<RecipeId>`; **delete/void** returns `Result`). **Queries** return `Result<T>`.
 - Expected domain errors (`BusinessRuleViolationException`, `DomainValidationException`)
-  are **translated to `Result.Failed`** by an Application pipeline behavior; unexpected
+  are **translated to `Result.Failed`** by an Application pipeline behavior — **one `Failure`
+  per `RuleViolation`**, so a collected multi-field error arrives intact (ADR-0017 amendment
+  2026-08-08). `Failure` carries an optional `Target` (the field name), a behavior returns
+  several at once via `RequestPipeline<TResponse>.Failed(IReadOnlyList<Failure>)`, and each
+  gRPC adapter writes them all into the **trailers** (`failure-count`,
+  `failure-{i}-code`/`-message`/`-target`) while the status still comes from the shared
+  category. Unexpected
   errors bubble to a thin global handler (ADR-0017). `FailureCategory` is one of
   `Validation`, `BusinessRule`, `NotFound`, `Conflict`, `Forbidden` — transport status
   mapping is owned by the BFF/service host, never by `Application`. There is
@@ -309,7 +331,9 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   is why a short-circuiting behavior needs neither a generic constraint nor reflection — the
   reflection-based `FailureResults` is deleted. The factory is `Result.Failed(...)` /
   `Result<T>.Failed(...)`: `Failure` names the error **value**, never the factory
-  (ADR-0017 amendment 2026-08-05).
+  (ADR-0017 amendment 2026-08-05). Since the 2026-08-08 amendment the factory takes an
+  `IReadOnlyList<Failure>` and `Failed` has both overloads, so a behavior can short-circuit with
+  several failures at once.
 - **`AddBuildingBlocks` is called exactly once per host** and a second call **throws**
   (ADR-0027 amendment 2026-08-05). The `PipelineBehaviorRegistry`, the
   `WolverineWiringSettings` and the `DomainEventTypeRegistry` are one shared instance each;

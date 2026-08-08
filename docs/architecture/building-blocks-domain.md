@@ -483,6 +483,12 @@ Two distinct concepts, each with its own rule interface and exception:
 | Invariant / business rule | `IBusinessRule`         | `IsBroken()`  | `BusinessRuleViolationException` |
 | Input / domain validation | `IDomainValidationRule` | `IsInvalid()` | `DomainValidationException`      |
 
+**Both** interfaces carry a stable, machine-readable `Code` — the identifier of the rule itself,
+which is what lets a client react to *that* constraint instead of to "some business rule".
+`IDomainValidationRule` additionally carries a `Target`, the name of the field the rule is about,
+`null` for a rule spanning several fields. An invariant has no field, so `IBusinessRule`
+deliberately has no `Target`; that argument is about the field and does not extend to the code.
+
 `RuleChecker` evaluates them:
 
 ```csharp
@@ -490,12 +496,31 @@ RuleChecker.Check(new RecipeNameMustNotBeEmpty(name));
 RuleChecker.Check(rule1, rule2, rule3);
 ```
 
+**The `params` overloads evaluate every rule and collect the broken ones**, throwing once at the
+end. Both exceptions carry `IReadOnlyList<RuleViolation> Violations` — `RuleViolation(Code,
+Target, Message)`, where `Code` is never `null` — so a caller gets every field error in one round
+trip instead of one per request. The message-only constructors that CA1032 requires carry no rule
+and therefore fill in the exception's own `FallbackCode` constant. `Exception.Message` is the
+single message verbatim when there is one violation and the
+messages joined by `"; "` otherwise; structured access goes through `Violations`, never by
+parsing the message.
+
+Consequence for rule authors: **rules in one `Check` call must be independent**, because a later
+rule is evaluated even when an earlier one already failed. Where one rule only makes sense after
+another has passed, write **two consecutive `Check` calls** — a pre-condition pass, then the
+dependent pass. That staging is domain design, and it is what `Gadget` already does when a
+validation rule precedes a business rule.
+
+The two kinds are never mixed in one call: each overload takes one kind and throws its own
+exception. Therefore a handler invocation raises at most one exception, and every `Failure` in
+the resulting failed `Result` shares one category.
+
 **A `null` rule is a bug, not a satisfied rule.** Every overload guards its argument with
-`ArgumentNullException.ThrowIfNull`, and the `params` overloads guard the array as well. The
+`ArgumentNullException.ThrowIfNull`, and the `params` overloads guard the whole array **before**
+the first rule runs — otherwise whether a `null` surfaced as an `ArgumentNullException` or
+vanished behind collected domain errors would depend on its position in the argument list. The
 earlier `rule?.IsBroken() == true` kept guard clauses short at the price of the validation layer
-falling silent in exactly the case it exists for — a factory that accidentally returns `null` used
-to mean "rule passed". Short-circuiting is unchanged: the first broken rule throws and the
-remaining rules are never evaluated.
+falling silent in exactly the case it exists for.
 
 See [ADR-0009](./decisions/0009-business-rules-and-domain-validation.md).
 

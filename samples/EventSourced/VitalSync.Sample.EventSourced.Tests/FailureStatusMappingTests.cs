@@ -48,4 +48,38 @@ public sealed class FailureStatusMappingTests
         Assert.Equal(StatusCode.NotFound, exception.StatusCode);
         Assert.Equal("gadget.not_found: No such gadget.", exception.Status.Detail);
     }
+
+    [Fact]
+    public void ToRpcException_WithSeveralFailures_CarriesEachOneInTheTrailers()
+    {
+        var result = Result.Failed(
+        [
+            new Failure("gadget.name.required", "The gadget name must not be empty.", FailureCategory.Validation)
+            {
+                Target = "name",
+            },
+            new Failure("gadget.component.label.required", "The label must not be empty.", FailureCategory.Validation)
+            {
+                Target = "label",
+            },
+        ]);
+
+        var exception = FailureStatusMapping.ToRpcException(result);
+
+        Assert.Equal(StatusCode.InvalidArgument, exception.StatusCode);
+        Assert.Equal("2", exception.Trailers.GetValue(FailureTrailers.CountKey));
+        Assert.Equal("gadget.name.required", exception.Trailers.GetValue("failure-0-code"));
+        Assert.Equal("name", exception.Trailers.GetValue("failure-0-target"));
+        Assert.Equal("label", exception.Trailers.GetValue("failure-1-target"));
+    }
+
+    [Fact]
+    public void ToRpcException_WithoutATarget_OmitsTheTrailer()
+    {
+        var result = Result.Failed(Failure.BusinessRule("gadget.retired", "A retired gadget cannot change."));
+
+        var exception = FailureStatusMapping.ToRpcException(result);
+
+        Assert.Null(exception.Trailers.GetValue("failure-0-target"));
+    }
 }

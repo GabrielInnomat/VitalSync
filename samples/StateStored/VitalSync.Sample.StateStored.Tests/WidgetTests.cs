@@ -73,6 +73,31 @@ public sealed class WidgetTests
     }
 
     [Fact]
+    public void AddPart_WithAnEmptyLabelAndANonPositiveQuantity_ReportsBothFields()
+    {
+        var widget = Widget.Create(WidgetId.New(), "first");
+
+        var ex = Assert.Throws<DomainValidationException>(() => widget.AddPart("  ", 0));
+
+        Assert.Equal(2, ex.Violations.Count);
+        Assert.Equal("widget.part.label.required", ex.Violations[0].Code);
+        Assert.Equal("label", ex.Violations[0].Target);
+        Assert.Equal("widget.part.quantity.positive", ex.Violations[1].Code);
+        Assert.Equal("quantity", ex.Violations[1].Target);
+    }
+
+    [Fact]
+    public void AddPart_WithOnlyTheQuantityWrong_ReportsThatFieldAlone()
+    {
+        var widget = Widget.Create(WidgetId.New(), "first");
+
+        var ex = Assert.Throws<DomainValidationException>(() => widget.AddPart("bolt", 0));
+
+        var violation = Assert.Single(ex.Violations);
+        Assert.Equal("quantity", violation.Target);
+    }
+
+    [Fact]
     public void ChangePartQuantity_ReplacesOneChildAndKeepsItsIdentity()
     {
         var widget = Widget.Create(WidgetId.New(), "first");

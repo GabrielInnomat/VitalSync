@@ -112,7 +112,7 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
     private static RequestPipelineContinuation<TResponse> BuildPipeline<TRequest, TResponse>(
         TRequest request,
         RequestPipelineContinuation<TResponse> handler,
-        Func<Failure, TResponse> failed,
+        Func<IReadOnlyList<Failure>, TResponse> failed,
         IServiceProvider services)
     {
         var registry = services.GetService<PipelineBehaviorRegistry>();

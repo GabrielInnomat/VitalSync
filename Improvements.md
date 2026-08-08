@@ -28,8 +28,8 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-13 | Messaging-Konfiguration ohne Guard-Rails                                 | gelöst            |
 | IMP-14 | Constraint-Mismatch zwischen Repository-Vertrag und Implementierung      | gelöst            |
 | IMP-15 | Repository lädt Aggregate unvollständig                                  | gelöst            |
-| IMP-16 | Kein Validierungs-Behavior, Mehrfachfehler nicht erzeugbar               | teilweise         |
-| IMP-17 | `Failure` ohne Zielfeld und ohne fachliche Fehlercodes                   | offen             |
+| IMP-16 | Kein Validierungs-Behavior, Mehrfachfehler nicht erzeugbar               | gelöst            |
+| IMP-17 | `Failure` ohne Zielfeld und ohne fachliche Fehlercodes                   | gelöst            |
 | IMP-18 | `FailureCategory` fehlen Autorisierung und Unerwartet                    | teilweise gelöst  |
 | IMP-19 | Ein Assembly für EF Core, Marten, Wolverine und RabbitMQ                 | offen             |
 | IMP-20 | `DbContext` als DI-Schlüssel kollidiert mit dem Read/Write-Paar          | gelöst            |
@@ -473,6 +473,13 @@ public sealed class ValidationBehavior<TRequest, TResponse>(
 Hängt mit IMP-17 zusammen: ohne Zielfeld im `Failure` bleibt der gesammelte Fehlerbericht für ein
 Frontend unbrauchbar. Beide gemeinsam umsetzen.
 
+**Gelöst mit TODO-15 (2026-08-08), aber ohne `IRequestValidator`.** Mehrfachfehler sind jetzt
+erzeugbar — allerdings dort, wo die Regeln leben: `RuleChecker` sammelt in den
+`params`-Überladungen alle gebrochenen Regeln, und `ExceptionToResultBehavior` macht daraus **ein
+`Failure` pro Verstoss**. Ein Validierungs-Behavior *vor* dem Handler wurde bewusst nicht gebaut:
+es wäre ein zweiter Ort für dieselbe Regel, während die Regel im Aggregat als Invariante ohnehin
+bleiben müsste. Slot `200` bleibt für ein künftiges Behavior frei. Details in `todo.md`, TODO-15.
+
 ---
 
 # IMP-17, `Failure` ohne Zielfeld und ohne fachliche Fehlercodes
@@ -496,6 +503,16 @@ public sealed record Failure(string Code, string Message, FailureCategory Catego
 Für die Fehlercodes: `IBusinessRule`/`IDomainValidationRule` um ein `string Code { get; }` erweitern,
 das die Regel selbst liefert (`recipe.name_required`). `ExceptionToResultBehavior` reicht ihn dann
 durch, statt eine Konstante zu setzen — die Exception muss den Code dafür mitführen.
+
+**Gelöst mit TODO-15 (2026-08-08), mit einer Abweichung.** `Failure.Target` ist da, **beide**
+Regelschnittstellen liefern einen fachlichen `Code`, `IDomainValidationRule` zusätzlich ein
+`Target`, und die Exceptions führen die Verstösse als `IReadOnlyList<RuleViolation>` mit.
+`IBusinessRule` bekommt **kein** `Target` — eine Invariante ist eine Aussage über das Aggregat,
+nicht über ein Feld. (Zwischenzeitlich fehlte auch der `Code` bei `IBusinessRule`; das war eine
+ungeprüfte Übertragung des Target-Arguments und ist korrigiert — Details in `todo.md`.)
+**`Metadata` wurde nicht gebaut**: es gibt keinen Konsumenten, und ein
+`IReadOnlyDictionary<string, object?>` wäre über gRPC nicht darstellbar. Der Transport reicht
+stattdessen alle Failures in den Trailern durch. Details in `todo.md`, TODO-15.
 
 ---
 
@@ -830,7 +847,7 @@ catch (DbUpdateException exception) when (exception.InnerException is PostgresEx
 
 Der Constraint-Name gehört in die Meldung, sonst ist der Fehler im Log nicht zuzuordnen. Ein Mapping
 von Constraint-Namen auf fachliche Codes (`ux_recipes_name` → `recipe.name_taken`) gehört in den
-Service, nicht in die Building Blocks — hängt an IMP-17.
+Service, nicht in die Building Blocks — bleibt offen, siehe `todo.md`, TODO-22.
 
 ---
 

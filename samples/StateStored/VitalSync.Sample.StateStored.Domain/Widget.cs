@@ -32,8 +32,9 @@ public sealed class Widget : AggregateRoot<WidgetId, WidgetState>
 
     public WidgetPartId AddPart(string label, int quantity)
     {
-        RuleChecker.Check(new WidgetPartLabelMustNotBeEmpty(label));
-        RuleChecker.Check(new WidgetPartQuantityMustBePositive(quantity));
+        RuleChecker.Check(
+            new WidgetPartLabelMustNotBeEmpty(label),
+            new WidgetPartQuantityMustBePositive(quantity));
 
         var partId = WidgetPartId.New();
         RaiseEvent(new WidgetPartAdded(Id, partId, label, quantity));

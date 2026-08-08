@@ -26,6 +26,8 @@ public sealed record Failure
 
     public FailureCategory Category { get; }
 
+    public string? Target { get; init; }
+
     public static Failure Validation(string code, string message) => new(code, message, FailureCategory.Validation);
 
     public static Failure BusinessRule(string code, string message) => new(code, message, FailureCategory.BusinessRule);

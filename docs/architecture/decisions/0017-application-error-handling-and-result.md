@@ -112,3 +112,28 @@ and gRPC map the same semantic categories independently.
 > each adapter's mapping is walked over `Enum.GetValues<FailureCategory>()` and must not fall
 > through, and every declared category must have a factory of its own name on `Failure`. A
 > future category is added by making those two tests pass.
+
+> **Amendment (2026-08-08) — a failed result regularly carries several failures, and a failure may name a field.**
+> ADR-0009's amendment of the same date makes `RuleChecker`'s `params` overloads collect every
+> broken rule instead of stopping at the first, so a single domain exception now arrives with a
+> list of violations. `ExceptionToResultBehavior` maps **one `Failure` per violation** rather
+> than one per exception, and `RequestPipeline<TResponse>.Failed` gains an overload taking
+> `IReadOnlyList<Failure>` (the single-failure overload stays, and the dispatcher's factory is
+> now `Result.Failed(IReadOnlyList<Failure>)`). `Failure` gains an optional `Target`:
+> the name of the field the error is about, `null` when the error spans several fields or is an
+> invariant. The `Code` is always the **rule's own** — for a business rule too, since a code
+> identifies the constraint rather than a field. The behavior's `ValidationFailureCode` /
+> `BusinessRuleFailureCode` constants survive only as aliases of the exceptions' `FallbackCode`,
+> which applies to the message-only constructors CA1032 forces on both exceptions and which
+> carry no rule.
+>
+> The category question this raises has a clean answer, and it is a consequence of ADR-0009
+> keeping the two rule kinds separate: a handler invocation raises **at most one** exception, and
+> each exception belongs to exactly one category, so **every `Failure` in a failed `Result`
+> shares one category**. There is no precedence rule to invent at the boundary — the adapter reads
+> the category off the first failure and the status code is unambiguous. The remaining failures
+> are not lost: each adapter writes them all into the gRPC **trailers** (`failure-count` plus
+> `failure-{i}-code` / `-message` / `-target`, the target trailer omitted when `null`), so
+> a client can place every message next to the input that caused it. Trailers were chosen over the
+> gRPC Rich Error Model because the latter needs an extra package and a protobuf `Any`, and this
+> repository's samples are code-first.

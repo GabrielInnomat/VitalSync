@@ -5,9 +5,9 @@ namespace BuildingBlocks.Application.Cqrs;
 public sealed class RequestPipeline<TResponse>
 {
     private readonly RequestPipelineContinuation<TResponse> _continuation;
-    private readonly Func<Failure, TResponse> _failed;
+    private readonly Func<IReadOnlyList<Failure>, TResponse> _failed;
 
-    public RequestPipeline(RequestPipelineContinuation<TResponse> continuation, Func<Failure, TResponse> failed)
+    public RequestPipeline(RequestPipelineContinuation<TResponse> continuation, Func<IReadOnlyList<Failure>, TResponse> failed)
     {
         ArgumentNullException.ThrowIfNull(continuation);
         ArgumentNullException.ThrowIfNull(failed);
@@ -21,6 +21,12 @@ public sealed class RequestPipeline<TResponse>
     public TResponse Failed(Failure failure)
     {
         ArgumentNullException.ThrowIfNull(failure);
-        return _failed(failure);
+        return _failed([failure]);
+    }
+
+    public TResponse Failed(IReadOnlyList<Failure> failures)
+    {
+        ArgumentNullException.ThrowIfNull(failures);
+        return _failed(failures);
     }
 }

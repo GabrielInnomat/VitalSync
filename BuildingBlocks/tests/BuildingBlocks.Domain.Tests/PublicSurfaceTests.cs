@@ -32,6 +32,7 @@ public sealed class PublicSurfaceTests
         "BuildingBlocks.Domain.Rules.IBusinessRule",
         "BuildingBlocks.Domain.Rules.IDomainValidationRule",
         "BuildingBlocks.Domain.Rules.RuleChecker",
+        "BuildingBlocks.Domain.Rules.RuleViolation",
     ];
 
     [Fact]

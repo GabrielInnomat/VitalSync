@@ -259,7 +259,9 @@ Per [ADR-0017](./decisions/0017-application-error-handling-and-result.md):
 
 - The Domain **throws** `BusinessRuleViolationException` / `DomainValidationException`
   (ADR-0009). An **`ExceptionToResultBehavior`** (inside logging, outside the unit
-  of work) translates these into `Result.Failed`.
+  of work) translates these into `Result.Failed`, producing **one `Failure` per
+  `RuleViolation`** the exception carries — so a domain call that collected several
+  broken rules reports every one of them in a single response.
 - Handlers may also return `Result.Failed` directly for expected outcomes such as
   _not found_ or _conflict_.
 - **Unexpected** exceptions are **not** turned into `Result`; they bubble to a thin
@@ -278,9 +280,15 @@ Per [ADR-0017](./decisions/0017-application-error-handling-and-result.md):
 
 | Member     | Meaning                                                                                            |
 | ---------- | -------------------------------------------------------------------------------------------------- |
-| `Code`     | Stable, machine-readable string (e.g. `recipe.name_required`) for i18n / specific client handling. |
+| `Code`     | Stable, machine-readable string (e.g. `recipe.name_required`) for i18n / specific client handling. Comes from the rule that failed, for business rules as well as validation rules. |
 | `Message`  | Human-readable description.                                                                        |
 | `Category` | An `FailureCategory` value (below).                                                                |
+| `Target`   | Optional name of the field the failure is about; `null` for an invariant or a rule spanning several fields. |
+
+Because the two rule kinds are never mixed in one `RuleChecker` call (ADR-0009), a handler
+invocation raises at most one exception, so **every `Failure` in a failed `Result` shares one
+category** and the transport status stays unambiguous. A behavior returns several failures at
+once through `RequestPipeline<TResponse>.Failed(IReadOnlyList<Failure>)`.
 
 ### `FailureCategory`
 
