@@ -652,7 +652,7 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   `IntegrationEventDurabilityTests` (real broker) and `WolverineExtensionTests` (no Docker).
   Consequence to know: a queue's type is fixed at declaration, so a broker still holding a
   classic queue of the same name makes `AutoProvision` fail and the queue must be deleted.
-- **Publisher confirmations are on, and that closes the last metre** (TODO-48, 2026-08-07).
+- **Publisher confirmations are on, and that closes the last metre** (2026-08-07).
   A durable outbox deletes its row once Wolverine considers the envelope sent, and without
   confirmations "sent" means *in the socket*, not *in the broker* — a broker that discards
   the message afterwards tells nobody. RabbitMQ.Client 7 moved both switches onto
@@ -682,8 +682,8 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   default. Uncovered is a republication under a **new** envelope id, and that case is now
   **closed rather than deferred**: ADR-0036 decided the read-model rebuild against a replay,
   and the rebuild does not run through `DomainEventPublisher`, so nothing in this system
-  republishes an event under a fresh transport identity. The dedup table once planned as
-  TODO-14 part B is **not built**. `IIntegrationEvent.EventId` (ADR-0029) still has to stay
+  republishes an event under a fresh transport identity. The dedup table once planned for this
+  case is **not built**. `IIntegrationEvent.EventId` (ADR-0029) still has to stay
   stable per event — it costs nothing and is the groundwork should a context ever switch to
   event sourcing and replay a stream onto the broker. Until then **shared
   identity is the sanctioned route** — a consumer deriving its own aggregate adopts the

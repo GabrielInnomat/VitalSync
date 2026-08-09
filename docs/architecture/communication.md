@@ -58,7 +58,7 @@ That protection is time-boxed: handled rows are deleted after `DurabilitySetting
 
 **Shared identity covers the business case, and it is the sanctioned pattern.** A consumer that derives its own aggregate from a foreign event should adopt the foreign identity, as the walking skeleton's mirror does: `MirrorWidgetHandler` builds its `GadgetId` from the incoming `WidgetId` and returns success when the aggregate already exists. Re-processing then writes the same row twice instead of creating a second aggregate.
 
-What is **not** covered is a republication under a *new* transport identity — an outbox replay or an operational re-send. The stable business key for that case is `IIntegrationEvent.EventId` (ADR-0029), but nothing consumes it yet; a dedup table keyed by `EventId` is deliberately deferred until the replay question is decided (TODO-14 part B, hanging off TODO-21). Until then, do not write a consumer that depends on being called exactly once.
+What is **not** covered is a republication under a *new* transport identity — an outbox replay or an operational re-send. That case does not arise in this system: ADR-0036 rebuilds a state-stored read model from the current aggregate state rather than replaying events, and the rebuild never reaches `DomainEventPublisher`. A dedup table keyed by `IIntegrationEvent.EventId` (ADR-0029) is therefore **not built**; the id stays stable per event so the option survives should a context ever switch to event sourcing and replay a stream onto the broker. Until then, do not write a consumer that depends on being called exactly once.
 
 ### Broker topology
 

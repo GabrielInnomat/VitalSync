@@ -66,8 +66,8 @@ Wegwerf-Code abhängen. Beim Aufräumen wird genau ein Ordner gelöscht.
 | Ablage            | `samples/` als Wegwerf-Durchstich (nicht `src/Services/`)                                                                                    |
 | Persistenz        | **beide** — je ein Service für EF Core und Marten                                                                                            |
 | Migrationen       | eigener MigrationService-Worker, Api wartet per `WaitForCompletion`                                                                          |
-| Routing-Topologie | ein Topic-Exchange für die ganze Plattform; der Name kommt seit TODO-08 vom Host (`VitalSyncMessaging.IntegrationEventExchangeName` = `vitalsync.integration-events`) |
-| Topic-Namen       | explizites `[Topic("<kontext>.<event>")]` in kebab-case, **ohne** Startup-Validator (inzwischen gelöst: `[IntegrationEventTopic]` mit Publish-Fail-Fast und Präfix-Guard gegen den eigenen Kontextnamen, siehe WS-05 und WS-14)     |
+| Routing-Topologie | ein Topic-Exchange für die ganze Plattform; der Name kommt seit ADR-0023 vom Host (`VitalSyncMessaging.IntegrationEventExchangeName` = `vitalsync.integration-events`) |
+| Topic-Namen       | explizites `[Topic("<kontext>.<event>")]` in kebab-case, **ohne** Startup-Validator (inzwischen gelöst: `[IntegrationEventTopic]` mit Publish-Fail-Fast und Präfix-Guard gegen den eigenen Kontextnamen, siehe ADR-0023)     |
 | Umfang Messaging  | zuerst nur Publish-Seite; die Subscribe-Seite kam in Etappe 3 und liegt seither ebenfalls in BuildingBlocks (ADR-0023-Amendment)             |
 | gRPC              | code-first (ADR-0003) — die Bibliothekswahl (`protobuf-net.Grpc`) trifft der Sample faktisch für die Plattform und verdient später einen ADR |
 
@@ -319,7 +319,7 @@ weil sie ihre Hosts mit noch änderbarer Service-Collection bauen.
 > zweiten ADR-0027-Amendment selbst ab (`builder.AddBuildingBlocks(…)` auf
 > `IHostApplicationBuilder`) und holt sich den Connection String aus der bereits
 > getroffenen Auswahl. Der Host ruft jetzt **gar kein** `UseWolverine` mehr auf, und die
-> Write-Datenbank wird genau einmal benannt — das war zugleich TODO-06.
+> Write-Datenbank wird genau einmal benannt.
 
 Alle übrigen Kriterien wurden am laufenden System belegt: Zeilen in der Write-DB,
 acht `wolverine.*`-Tabellen in **derselben** Datenbank, Read-Modelle in der Read-DB,
@@ -417,9 +417,8 @@ Seite gar nicht betroffen: Marten speichert Events, es gibt keinen Schlüssel zu
 Eine Nebenwirkung, die man kennen muss: weil `MartenEventSourcedRepository` die
 Rehydrierung als „leeres Aggregat + Stream falten" umsetzt, ist der parameterlose
 Konstruktor **Pflicht**, nicht Kosmetik. Er war dafür ursprünglich per `new()`-Constraint
-öffentlich erzwungen — seit WS-02 gelöst ist, ist er privat und die Hülle kommt über
-`IReconstitutable<Gadget>.CreateEmpty()` (seit 2026-08-04: über die interne `AggregateFactory`,
-siehe Nachtrag bei WS-02).
+öffentlich erzwungen — seit ADR-0025 ist er privat und die Hülle kommt über
+die interne `AggregateFactory` (ADR-0025-Amendment 2026-08-04).
 
 ### Abnahmekriterien Etappe 2
 
@@ -451,7 +450,7 @@ belegt, dass der Exchange **existiert**. Hier wurde eine Probe-Queue mit `sample
 gebunden, ein Retire ausgelöst und die Nachricht aus der Queue gelesen — mit Routing
 Key, Correlation-Id und JSON-Payload. Das ist der erste echte Beleg, dass die
 Publish-Hälfte durchgängig funktioniert. (Die Topic-Präfixe der beiden Samples heißen seit
-TODO-08 `sample-state-stored` und `sample-event-sourced`; hier stehen sie im Wortlaut des
+ADR-0023 `sample-state-stored` und `sample-event-sourced`; hier stehen sie im Wortlaut des
 damaligen Laufs.)
 
 ### Befunde
@@ -479,11 +478,11 @@ damaligen Laufs.)
 - **Typisierte Schlüssel serialisieren ihre berechneten Member ins Event.** Im Store
   stand `"GadgetId": {"Value": "…", "IsEmpty": false}` — `IsEmpty` ist eine berechnete
   Eigenschaft und landete dauerhaft im Eventstrom. Harmlos beim Lesen, aber Events sind
-  unveränderlich: was einmal drinsteht, bleibt drin. Inzwischen gelöst (WS-09,
+  unveränderlich: was einmal drinsteht, bleibt drin. Inzwischen gelöst (
   ADR-0034): ein Schlüssel serialisiert als nackter Wert.
 - **Feldnamen im Event sind abgeleitet.** Kein einziges `[JsonPropertyName]` im Repository:
   der JSON-Name eines Feldes war der CLR-Property-Name, ein Rename deserialisiert gespeicherte
-  Events still auf `default`. Inzwischen gelöst (WS-18, ADR-0035): ein eingecheckter
+  Events still auf `default`. Inzwischen gelöst (ADR-0035): ein eingecheckter
   Schema-Snapshot pro Service macht den Rename rot.
 - **Integration Events gehen mit `delivery_mode: 1` an RabbitMQ**, also nicht persistent.
   Bis zur Übergabe schützt der Outbox; danach würde ein Broker-Neustart die Nachricht
@@ -524,7 +523,7 @@ Was Variante „Service verdrahtet selbst" gekostet hat:
   Exchange-Binding).
 - Den **Exchange-Namen als Literal**, weil BuildingBlocks seine Konstante `internal`
   hält — ein Konsument konnte den Wert, den er treffen muss, nicht referenzieren.
-  (Seit TODO-08 gibt es diese Konstante in BuildingBlocks gar nicht mehr: den Namen
+  (Seit ADR-0023 gibt es diese Konstante in BuildingBlocks gar nicht mehr: den Namen
   bestimmt der Host und reicht ihn an `UseWolverineMessaging` durch.)
 - **Abnahmekriterium 11 aus Etappe 2** (blankes `UseWolverine()`) war wieder weg.
 - Und der eigentliche Fehler (siehe unten) steckte trotzdem in BuildingBlocks, war für
@@ -600,7 +599,7 @@ falschen Stelle — die Tabelle existiert nämlich, sie bleibt nur leer.
 - **Ein Kontext bekommt seine eigenen Integration Events zurück.** `sample.*` matchte zur
   Zeit dieser Etappe auch `sample.gadget-retired`, das der Konsument selbst publizierte.
   Damals folgenlos (kein Handler), aber wer unter einem Präfix publiziert **und**
-  konsumiert, muss damit rechnen. **Inzwischen gelöst** (WS-13, TODO-08): Beide Samples
+  konsumiert, muss damit rechnen. **Inzwischen gelöst** (ADR-0023): Beide Samples
   haben eigene Kontextnamen (`sample-state-stored`, `sample-event-sourced`), jedes Event
   trägt seinen Absenderkontext im Header, ein eigenes Event wird vor dem Handler verworfen,
   und ein Handler auf den eigenen Kontext scheitert beim Start.
@@ -630,166 +629,24 @@ falschen Stelle — die Tabelle existiert nämlich, sie bleibt nur leer.
 
 ## 9. Offene Fragen und Risiken
 
-**Statusprüfung vom 2026-08-02:** Jeder Punkt wurde gegen den aktuellen Quellcode
-verifiziert. Die Struktur folgt [hacky.md](hacky.md) und [Improvements.md](Improvements.md);
-Überschneidungen sind beim jeweiligen Punkt vermerkt.
+**Dieser Abschnitt führt nur noch offene Punkte.** Gelöste wurden am 2026-08-09 entfernt; ihre
+Begründungen leben in den ADRs unter `docs/architecture/decisions/` und in den Tests weiter, die
+Versionsgeschichte hat den vollen Wortlaut. Jeder Punkt ist in [todo.md](todo.md) mit einer
+Priorität geführt.
 
-| Nr.   | Titel                                                          | Herkunft     | Status    |
-| ----- | -------------------------------------------------------------- | ------------ | --------- |
-| WS-01 | Optimistische Nebenläufigkeit im state-stored Pfad fehlt       | EF-Lösung    | gelöst    |
-| WS-02 | `Activator.CreateInstance(…, nonPublic: true)` als Vertrag     | EF-Lösung    | gelöst    |
-| WS-03 | Reihenfolge über Events hinweg ist durch nichts garantiert     | Schritt 3    | gelöst    |
-| WS-04 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`     | Schritt 3    | offen     |
-| WS-05 | Vergessenes `[Topic]` fällt nicht auf                          | Etappe 1     | gelöst    |
-| WS-06 | Fehlkonfiguration ist ungleich abgedeckt                       | Etappe 1     | gelöst |
-| WS-07 | Der gRPC-Vertrag liegt noch beim Service                       | Etappe 1     | offen     |
-| WS-08 | Integration Events sind nicht persistent                       | Etappe 2     | gelöst    |
-| WS-09 | Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom | Etappe 2     | gelöst    |
-| WS-10 | Marten-Nebenläufigkeit verdrahtet, aber im Sample unbelegt     | Etappe 2     | gelöst    |
-| WS-11 | Der Migrations-Worker ist asymmetrisch                         | Etappe 2     | offen     |
-| WS-12 | Kein Idempotenz-Bookkeeping über die Kontextgrenze             | Etappe 3     | teilweise |
-| WS-13 | Ein Kontext konsumiert seine eigenen Integration Events        | Etappe 3     | gelöst    |
-| WS-14 | Die Verbindung Vertrag → Konsument ist unbewacht               | Etappe 3     | gelöst    |
-| WS-15 | `ApplyEntityKeyConversions` erfasst keine Complex Types        | vorbestehend | offen     |
-| WS-16 | Keine CI-Pipeline                                              | vorbestehend | gelöst    |
-| WS-17 | Zeitbasierte Negativassertion im Sink-Test                     | vorbestehend | gelöst |
-| WS-18 | Feldnamen in Events sind abgeleitet, ein Rename zerstört still | Nachtrag WS-09 | gelöst  |
+| Nr.   | Titel                                                      | Herkunft     | TODO    |
+| ----- | ---------------------------------------------------------- | ------------ | ------- |
+| WS-04 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets` | Schritt 3    | TODO-35 |
+| WS-07 | Der gRPC-Vertrag liegt noch beim Service                   | Etappe 1     | TODO-36 |
+| WS-11 | Der Migrations-Worker ist asymmetrisch                     | Etappe 2     | TODO-27 |
+| WS-15 | `ApplyEntityKeyConversions` erfasst keine Complex Types    | vorbestehend | TODO-19 |
 
-**Erledigt (Commit `e44ae9b`, 2026-08-02):** Der produktive AppHost widersprach
-ADR-0021, weil er je _eine_ Datenbank pro Service anlegte (`nutritionDb`, `fitnessDb`).
-Er provisioniert jetzt für alle drei Kontexte ein Write/Read-Paar (`nutrition-write` /
-`nutrition-read` usw.) auf einem gemeinsamen Postgres-Server und übernimmt zugleich das
-Migrations-Muster des Durchstichs: pro Kontext ein MigrationService-Worker, die Api
-startet per `WaitForCompletion` danach
-([AppHost.cs:11-66](src/Aspire/VitalSync.AppHost/AppHost.cs:11)). Analytics ist damit
-erstmals als Service verdrahtet.
-
-Zwei Nachzügler aus demselben Commit — siehe [todo.md](todo.md), TODO-45 und TODO-46:
-
-- Nutrition- und Fitness-Api prüften weiterhin die **alten** Connection-Namen
-  (`nutritionDb`, `fitnessDb`). **Behoben:** beide prüfen jetzt ihr Write/Read-Paar, und
-  `AddNpgSqlReadinessCheck` wirft bei fehlender Verbindungszeichenfolge, statt still nie
-  healthy zu werden. Alle drei Services prüfen jetzt ihr Write/Read-Paar plus RabbitMQ.
-- Die drei MigrationService-Worker sind leere Hüllen (`Host.CreateApplicationBuilder`,
-  `Build()`, kein `Run()`); `WaitForCompletion` ist damit heute eine Zusage ohne Inhalt.
-  Bleibt bewusst offen, bis pro Kontext feststeht, wie dort gespeichert wird.
+Nachzügler aus Commit `e44ae9b`: die drei produktiven MigrationService-Worker sind leere Hüllen
+(`Host.CreateApplicationBuilder`, `Build()`, kein `Run()`), `WaitForCompletion` ist damit heute
+eine Zusage ohne Inhalt. Bleibt bewusst offen, bis pro Kontext feststeht, wie dort gespeichert
+wird — siehe [todo.md](todo.md), TODO-46.
 
 ---
-
-### WS-01, Optimistische Nebenläufigkeit im state-stored Pfad fehlt — **gelöst (2026-08-03)**
-
-Siehe [TODO-02](todo.md) und [ADR-0030](docs/architecture/decisions/0030-persisted-names-and-aggregate-version.md).
-Die Version lebt auf dem State und wird state-stored als `IsConcurrencyToken()` gemappt; ein
-verlorenes Update ist jetzt eine `DbUpdateConcurrencyException` und damit ein `Conflict`.
-
-Der event-sourced Pfad hängt mit erwarteter Streamversion an; der state-stored Pfad hat
-nichts Vergleichbares. Der Concurrency-Token säße jetzt am State — verifiziert existiert
-weder `RowVersion` noch `IsConcurrencyToken` irgendwo im Repository. Zwei gleichzeitige
-Kommandos auf dasselbe Aggregat überschreiben sich also stillschweigend; `UnitOfWorkBehavior`
-fängt zwar `DbUpdateConcurrencyException`, aber die wird nie geworfen, weil niemand einen
-Token konfiguriert.
-
-#### Lösungsvorschlag
-
-Die Version gehört an den State, nicht an das Aggregat — dann trägt sie zugleich die
-Sequenznummer aus WS-03:
-
-```csharp
-public interface IState<TSelf, out TKey>
-{
-    TKey Id { get; }
-    long Version { get; init; }
-    TSelf Apply(IDomainEvent domainEvent);
-}
-```
-
-Gemeinsam mit WS-03 und IMP-24 entscheiden — es ist dieselbe Zahl für drei Zwecke
-(Nebenläufigkeit, Projektions-Ordnung, Envelope-Metadatum).
-
----
-
-### WS-02, `Activator.CreateInstance(…, nonPublic: true)` als Vertrag
-
-Der EF-Pfad rehydriert über `Activator.CreateInstance(typeof(TAggregate), nonPublic: true)`
-([EfCoreRepository.cs:71](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/StateStored/EfCoreRepository.cs:71)),
-der Marten-Pfad über eine `new()`-Constraint
-([MartenEventSourcedRepository.cs:27](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EventSourced/MartenEventSourcedRepository.cs:27)).
-Zwei Wege für dieselbe Sache, und der zweite erzwingt einen **öffentlichen** parameterlosen
-Konstruktor am Aggregat — die Infrastruktur diktiert damit in die Domäne hinein, entgegen
-ADR-0025 („darf non-public sein").
-
-Siehe [hacky.md Nr. 5](hacky.md) und [Improvements.md IMP-14](Improvements.md).
-
-#### Lösung (2026-08-03)
-
-Weder der EF- noch der Marten-Weg — die offene Frage dieses Punkts („soll das so bleiben,
-oder bekommt `IRepository` eine `new()`-Beschränkung?") hatte eine dritte Antwort. Der
-Bedarf des Repositories — State-Typ und eine Instanz zum Hineinfalten — steht zur
-**Compile-Zeit** fest, also wird er dort ausgedrückt:
-
-```csharp
-public interface IReconstitutable<TSelf> where TSelf : IReconstitutable<TSelf>
-{
-    static abstract TSelf CreateEmpty();
-}
-```
-
-Explizit implementiert, Konstruktor privat. Ein `static abstract` Member ist nur über einen
-constraint-gebundenen Typparameter erreichbar — `new Gadget()`, `Gadget.CreateEmpty()` und der
-Weg über eine interface-typisierte Instanz sind alle drei Compile-Fehler (`CS1729`, `CS0117`,
-`CS0176`, empirisch geprüft). Die Constraint sitzt auf `IRepository`, also scheitert ein falsch
-zugeschnittenes Aggregat beim **Injizieren**, nicht im Container; der hier vorgeschlagene
-Startup-Check ist damit hinfällig. `Activator` und `new()` sind beide weg, beide Pfade sind
-identisch, und ADR-0025 stimmt wieder — Amendment vom 2026-08-03, zusammen mit ADR-0026.
-
-Siehe **TODO-10** (gelöst).
-
-**Nachtrag (2026-08-04):** Die dritte Antwort hat nicht gehalten — nicht fachlich, sondern
-ergonomisch: Interface in der Basisliste plus explizites `CreateEmpty` an **jedem** Aggregat war
-Zeremonie an genau dem Typ, den Domänenautoren am häufigsten anfassen. `IReconstitutable` ist
-gelöscht; die Hülle liefert eine interne, pro Typ gecachte `AggregateFactory` über den privaten
-parameterlosen Konstruktor, und der oben für hinfällig erklärte **Startup-Check existiert jetzt
-doch**: `AddBuildingBlocks` validiert die Konvention beim Registrieren über die
-`AddDomainEventsFrom`-Assemblies. Siehe ADR-0025-Amendment 2026-08-04.
-
----
-
-### WS-03, Reihenfolge über Events hinweg ist durch nichts garantiert — **gelöst (2026-08-03)**
-
-Siehe [TODO-02](todo.md). `IProjectionHandler.Handle` bekommt die `DomainEventMetadata` mit der
-Aggregat-Version; die Samples führen einen Wasserstand statt `RenameCount`.
-
-
-ADR-0022 verlangt „per-aggregate order-aware" Projektionen, aber der Handler bekommt ein
-nacktes `IDomainEvent` ohne Sequenznummer. Etappe 2 hat gezeigt, dass Event Sourcing das
-**nicht** löst: die Streamversion bleibt im Event Store, und `Version` ist am Aggregat
-explizit implementiert, also für die Domäne unsichtbar.
-
-Beide Samples behelfen sich mit `RenameCount` als fachlicher Ordnungsgröße
-([WidgetProjections.cs:62](samples/StateStored/VitalSync.Sample.StateStored.Infrastructure/Read/WidgetProjections.cs:62)).
-Das ist kein allgemeines Verfahren, und für ein Event ohne solche Größe (`GadgetRetired`)
-trägt es nur, weil der Zustandsübergang terminal ist.
-
-Deckungsgleich mit [Improvements.md IMP-24](Improvements.md).
-
-#### Lösungsvorschlag
-
-Die Sequenznummer in den Envelope legen, wo beide Persistenzstile sie füllen können:
-
-```csharp
-public sealed record DomainEventEnvelope(
-    string EventName, string Payload, Guid EventId,
-    string AggregateType, string AggregateId,
-    long Version,
-    DateTimeOffset OccurredAt);
-```
-
-Damit wird die geforderte Idempotenz erstmals implementierbar, ohne dass jeder Handler den
-Payload typspezifisch auspackt. Ist zugleich die Voraussetzung für die Partitionierung aus
-[Improvements.md IMP-25](Improvements.md).
-
----
-
 ### WS-04, `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`
 
 Das Design-Paket steht ohne `PrivateAssets` in beiden Sample-Infrastructure-Projekten
@@ -812,88 +669,6 @@ dotnet ef migrations add Xyz \
 
 Damit verschwindet die Design-Referenz aus dem Infrastructure-Projekt, das von anderen
 referenziert wird — die Ursache, nicht das Symptom.
-
----
-
-### WS-05, Vergessenes `[Topic]` fällt nicht auf
-
-Verifiziert: **in `BuildingBlocks/src` prüft nichts die `[Topic]`-Attribute.** Ein
-`IIntegrationEvent` ohne das Attribut bekommt von Wolverine einen aus dem CLR-Typnamen
-abgeleiteten Routing Key, landet unter einem Schlüssel, den kein Konsument gebunden hat,
-und verschwindet still — dieselbe Fehlerklasse, die für Command-Handler längst als
-Startfehler abgefangen wird.
-
-#### Lösungsvorschlag
-
-Ein Validator analog zum bestehenden `HandlerRegistrationCheck`, gespeist aus
-denselben gescannten Assemblies:
-
-```csharp
-internal sealed class IntegrationEventTopicStartupValidator(
-    IReadOnlyCollection<Assembly> scannedAssemblies) : IHostedService
-{
-}
-```
-
-Kleiner, abgeschlossener Fix mit hohem Nutzen: er schließt die letzte stille Lücke im
-Publish-Pfad. Sinnvollerweise zusammen mit WS-14 (Pattern-gegen-`[Topic]`-Abgleich), weil
-beide dieselbe Datenquelle brauchen.
-
-#### Auflösung (2026-08-03)
-
-Anders gelöst als vorgeschlagen, mit demselben Effekt: statt eines Startup-Validators
-liefert das ADR-0023-Amendment 2026-08-03 ein eigenes Attribut
-`[IntegrationEventTopic("<kontext>.<event>")]` in `BuildingBlocks.Application`, das sein
-Argument bei Konstruktion validiert (genau zwei kebab-case-Segmente). Der Routing-Key wird
-zentral von der Publishing-Regel aufgelöst
-(`PublishMessagesToRabbitMqExchange<IIntegrationEvent>`); ein Event **ohne** Attribut wirft
-beim Publish eine Exception mit Typname und Fix, statt still unter einem CLR-Schlüssel zu
-verschwinden — gepinnt durch `IntegrationEventRoutingTests`. Nebeneffekt: die
-WolverineFx-Referenz im Vertragspaket ist entfallen. Der Startup-Zeitpunkt bleibt offen für
-WS-14, das dieselbe Datenquelle bräuchte.
-
----
-
-### WS-06, Fehlkonfiguration ist ungleich abgedeckt
-
-**Teilweise.** Für Commands und Queries nageln `HandlerRegistrationTests` und
-`HandlerStartupValidationTests` Mehrdeutigkeit und fehlende Handler mit Exceptions fest —
-inklusive vier eigener Fixture-Assemblies. Für Projektionen und Mapper existiert nur der
-Happy Path.
-
-Bei **Projektionen** ist das zu Recht so: mehrere Handler pro Event und Events ganz ohne
-Projektion sind beide legitim, es gibt nichts zu verbieten. Bei **Mappern** nicht: ein
-registrierter Mapper ohne konfigurierten Transport bedeutet, dass jedes gemappte Event im
-`NullIntegrationEventSink` landet und nur eine Warning erzeugt.
-
-#### Lösungsvorschlag
-
-Nur die Mapper-Seite schließen — als Kompositionszeit-Prüfung, siehe
-[Improvements.md IMP-13](Improvements.md):
-
-```csharp
-if (mapperRegistriert && WolverineWiring.RabbitMqUri is null)
-    throw new InvalidOperationException(
-        "Integration-Event-Mapper registriert, aber kein Transport konfiguriert.");
-```
-
-Für Projektionen bewusst nichts tun, und die Begründung in `docs/architecture/*` festhalten, damit
-die Asymmetrie nicht später als Lücke missverstanden wird.
-
-#### Gelöst (2026-08-06)
-
-`IntegrationEventMapperCheck` schließt die Mapper-Seite, als **Startup-Check** statt als
-Kompositionszeit-Prüfung wie oben vorgeschlagen. Der Unterschied ist nicht kosmetisch: die
-Kompositionszeit-Variante liest die Wiring-Settings, der Startup-Check die aufgelöste
-`IIntegrationEventSinkFactory`. Nur die zweite Formulierung lässt einen Host durch, der seine
-Sink-Factory selbst stellt — was `IntegrationEventSinkDeliveryTests` tut, und was kein Fehler ist.
-Die Wiring-Variante hätte den Test rot gemacht und wäre damit zu streng gewesen für genau den
-Fall, den sie nicht meint.
-
-Die Projektionsseite bleibt wie begründet ungeprüft; die Begründung steht jetzt in
-`docs/architecture/cqrs-and-event-sourcing.md` (Abschnitt „One missing wire is an error, the other
-is not"), wie hier verlangt. Belegt durch `IntegrationEventMapperCheckTests`.
-
 ---
 
 ### WS-07, Der gRPC-Vertrag liegt noch beim Service
@@ -917,122 +692,6 @@ src/Services/Nutrition/VitalSync.Nutrition.Contracts/   ← gRPC-Interfaces + DT
 Nicht vorwegnehmen — die Entscheidung gehört an den Tag, an dem der BFF den ersten Service
 aufruft, und dann in einen ADR (zusammen mit der bisher nur faktisch getroffenen
 Bibliothekswahl `protobuf-net.Grpc`, siehe §2).
-
----
-
-### WS-08, Integration Events sind nicht persistent — **gelöst (2026-08-04)**
-
-Siehe [TODO-07](todo.md). Die Publishing-Regel bekommt `UseDurableOutbox()`, der Transport
-`UseQuorumQueues()`, Exchange und Subscriber-Queue werden ausdrücklich als `IsDurable`
-deklariert. Der Befund war zudem größer als beschrieben: ein gepufferter Sending-Endpoint
-schreibt **auch keine** Zeile nach `wolverine_outgoing_envelopes`, ein Prozessabsturz zwischen
-Commit und Broker-Bestätigung verlor die Nachricht also ebenfalls. Beides hängt an derselben
-Einstellung. Weil ein durabler Endpoint einen Message Store braucht, wirft
-`UseWolverineMessaging` ohne Persistenzwahl jetzt zur Kompositionszeit, statt still auf einen
-scheinbar durablen Host zu degradieren. Festgenagelt durch `IntegrationEventDurabilityTests`
-gegen einen echten Broker; Details im ADR-0023-Amendment 2026-08-04. Offen bleibt allein die
-Frage nach Publisher Confirms, als eigener Eintrag TODO-48.
-
-Verifiziert: nirgends in `BuildingBlocks/src` wird persistente Zustellung konfiguriert, die
-Nachrichten gehen mit `delivery_mode: 1` raus. Die Outbox schützt bis zur Übergabe an den
-Broker; **danach** verliert ein RabbitMQ-Neustart die Nachricht. Das untergräbt genau die
-Zusage, für die die Outbox gebaut wurde.
-
-#### Lösungsvorschlag
-
-```csharp
-options.Publish(publishing => publishing
-    .MessagesImplementing<IIntegrationEvent>()
-    .ToRabbitTopics(IntegrationEventExchangeName, exchange => exchange.Durable = true));
-```
-
-Dazu die Konsumentenseite mitentscheiden: Quorum-Queues überleben einen Broker-Neustart,
-klassische nicht. Beides gehört in denselben Schritt, sonst ist die Kette nur halb dicht.
-Messbarer Preis: persistente Zustellung kostet Durchsatz — für Integration Events die
-richtige Wahl, für den lokalen Domain-Event-Pfad irrelevant (der läuft über die DB).
-Anmerkung seit dem ADR-0023-Amendment 2026-08-03: die Publishing-Regel heißt inzwischen
-`PublishMessagesToRabbitMqExchange<IIntegrationEvent>`; die Durable-Einstellung gehört dann
-an deren Exchange-Konfiguration statt an `ToRabbitTopics`.
-
----
-
-### WS-09, Typisierte Schlüssel serialisieren `IsEmpty` in den Eventstrom — **gelöst (2026-08-06)**
-
-Siehe [TODO-26](todo.md) und
-[ADR-0034](docs/architecture/decisions/0034-typed-keys-serialize-as-bare-values.md).
-Ein `IEntityKey<TValue>` schreibt sich jetzt als **nackter Wert** (`"GadgetId": "8f3a…"`),
-in allen drei JSON-Pfaden, die Building Blocks besitzt: Marten-Eventstrom, Outbox-Payload
-und Integration-Event-Body. Marten serialisiert dafür mit System.Text.Json — ein
-`[JsonIgnore]` hätte genau dort nichts bewirkt, wo die unveränderlichen Daten liegen.
-
-`WidgetId`/`GadgetId` implementieren `IsEmpty` als berechnetes Member
-([WidgetId.cs:7](samples/StateStored/VitalSync.Sample.StateStored.Domain/WidgetId.cs:7));
-verifiziert existierte **kein einziges `[JsonIgnore]`** im Repository. Im Eventstrom stand
-damit `"GadgetId": {"Value": "…", "IsEmpty": false}`. Events sind unveränderlich — das war
-eine dauerhafte Entscheidung, die unbemerkt getroffen wurde.
-
-#### Ursprünglicher Lösungsvorschlag
-
-Nicht am Sample, sondern in BuildingBlocks lösen, sonst muss jeder Schlüsseltyp daran denken:
-
-```csharp
-public interface IEntityKey
-{
-    [JsonIgnore] bool IsEmpty { get; }
-}
-```
-
-Sauberer, aber aufwendiger: ein `JsonConverter` für `IEntityKey<TValue>`, der den Schlüssel
-als **nackten Wert** schreibt (`"GadgetId": "8f3a…"` statt eines Objekts). Das halbiert die
-Streamgröße und macht die Events von Hand lesbar — lohnt sich, solange noch keine
-produktiven Streams existieren. Danach ist es eine Event-Migration.
-
----
-
-### WS-18, Feldnamen in Events sind abgeleitet, ein Rename zerstört still — **gelöst (2026-08-06)**
-
-Bei der Umsetzung von WS-09 gefunden: ADR-0030 hat abgeleitete Namen auf **Typebene** abgeschafft,
-die **Feldebene** aber offen gelassen. Verifiziert existierte **kein einziges
-`[JsonPropertyName]`** im Repository, der JSON-Name eines Feldes war also der CLR-Property-Name.
-Ein Rename von `Titel` zu `Name` lässt gespeicherte Events still auf `default` deserialisieren —
-kein Fehler, kein Log, kein roter Test. Dieselbe Fehlerklasse wie WS-Nachbarn TODO-03 und TODO-04,
-beide P1.
-
-Gelöst mit einem **Snapshot statt eines Attributs pro Feld**: `PersistedSchema` rendert alle Domain-
-und Integration-Events einer Assembly deterministisch und vergleicht gegen ein eingechecktes
-`EventSchema.approved.txt`, das in **beiden** Samples liegt. Dazu erzwingt
-`AggregateStateModelCheck` jetzt auch auf der state-stored Seite einen explizit deklarierten
-Spaltennamen. Siehe [TODO-49](todo.md) und
-[ADR-0035](docs/architecture/decisions/0035-persisted-field-names-are-pinned-by-a-snapshot.md).
-
-Was der Durchstich hier gezeigt hat: eine Entscheidung, die auf Typebene sauber getroffen ist, kann
-eine Ebene tiefer unbemerkt weiterlaufen. Der Befund fiel nur auf, weil WS-09 den Eventstrom
-tatsächlich von Hand gelesen hat.
-
----
-
-### WS-10, Marten-Nebenläufigkeit verdrahtet, aber im Sample unbelegt
-
-**Gelöst mit TODO-25 (2026-08-07)** — `ConcurrencyConflictScenarioTests` in den Building Blocks
-belegt die Kette für **beide** Persistenzpfade bis zum Aufrufer. Der Test liegt bewusst nicht im
-Sample: die Übersetzung gehört den Building Blocks, das Sample würde sie nur nachspielen.
-
-Der Repository-Pfad hängt mit erwarteter Version an
-([MartenUnitOfWork.cs:54](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EventSourced/MartenUnitOfWork.cs:54)),
-und ein BuildingBlocks-Integrationstest deckt die Versionsarithmetik ab. Dass ein echter
-Konflikt als `FailureCategory.Conflict` beim **Aufrufer** ankommt, prüft aber kein
-Sample-Szenario: `MirrorWidgetTests` arbeitet mit einem gemockten `Failure.Conflict`
-([MirrorWidgetTests.cs:73](samples/EventSourced/VitalSync.Sample.EventSourced.Tests/MirrorWidgetTests.cs:73)),
-nicht mit einer echten Kollision.
-
-#### Lösungsvorschlag
-
-Ein Szenario-Test gegen den echten Stack (Testcontainers, wie die übrigen), der die
-komplette Übersetzungskette belegt.
-
-Das ist der Test, der die Kette Marten → `ConcurrencyException` → `UnitOfWorkBehavior` →
-`Result` als Ganzes absichert. Ohne ihn ist nur jedes Glied einzeln belegt.
-
 ---
 
 ### WS-11, Der Migrations-Worker ist asymmetrisch
@@ -1054,107 +713,6 @@ options.AutoCreateSchemaObjects = AutoCreate.None;
 
 Gehört in denselben ADR wie die Frage, wie Wolverine-Tabellen in Produktion entstehen —
 beide Stores haben dasselbe Muster und sollten dieselbe Antwort bekommen.
-
----
-
-### WS-12, Kein Idempotenz-Bookkeeping über die Kontextgrenze — **gelöst (2026-08-07)**
-
-Der Spiegel in Etappe 3 ist nur deshalb idempotent, weil das Gadget die Widget-Id übernimmt
-([MirrorWidget.cs:20](samples/EventSourced/VitalSync.Sample.EventSourced.Application/MirrorWidget.cs:20)).
-Für ein Spiegelbild ist das angemessen, aber kein allgemeines Verfahren: ein Kontext, der
-aus einem fremden Ereignis ein **eigenes** Aggregat mit eigener Identität ableitet, braucht
-echtes Bookkeeping über verarbeitete `EventId`s. Das gibt es heute nicht — die `EventId` am
-Integration Event existiert seit [IMP-11](Improvements.md) (gelöst via ADR-0029) inzwischen,
-über die man Buch führen könnte.
-
-#### Was die Umsetzung korrigiert hat
-
-Der Befund war zur Hälfte falsch. **Wolverines durable Inbox dedupliziert längst** — die
-Listener-Queue läuft mit `UseDurableInbox()`, und der Primärschlüssel auf
-`wolverine_incoming_envelopes.id` lässt einen zweiten `INSERT` derselben Envelope-Id auflaufen
-(PostgreSQL `23505`); die Nachricht wird dann quittiert, ohne einen Handler zu starten. Die
-Envelope-Id überlebt die Leitung als AMQP-`MessageId`. Nack, Requeue, Consumer-Crash vor dem Ack,
-Broker-Reconnect und der Outbox-Retry des Senders waren also nie ungeschützt.
-
-Ungeschützt war etwas anderes, und zwar auf die hier übliche stille Art: der Schutz **verfiel nach
-fünf Minuten**, weil `DurabilitySettings.KeepAfterMessageHandling` auf dem Framework-Default stand.
-Wolverine nennt diese Zeilen selbst „*records to use in idempotency checking*". Die Idempotenzzusage
-des Systems hing an einer Frist, die niemand entschieden hatte — dasselbe Muster wie WS-09
-(`IsEmpty` im Eventstrom) und WS-18 (abgeleitete Feldnamen).
-
-**Teil A ist umgesetzt:** das Fenster steht jetzt auf 7 Tage, angewendet genau dann, wenn eine
-Persistenzstrategie gewählt wurde, und ein Test hält fest, dass der Wert beweisbar nicht der
-Framework-Default ist. Damit ist der praxisnächste Fall gedeckt: ein Operator spielt Stunden später
-eine Nachricht aus der Dead-Letter-Queue zurück.
-
-**Teil B — fachliche Dedup über `EventId` — ist bewusst vertagt** an TODO-21, siehe
-[TODO-14](todo.md). Ungedeckt bleibt nur die Republikation mit **neuer** Transportidentität, und die
-entsteht praktisch erst durch ein Replay, über das TODO-21 noch nicht entschieden hat. Bis dahin
-gilt unverändert: geteilte Identität ist der sanktionierte Idempotenz-Weg — seit diesem Nachtrag
-auch so in `docs/architecture/communication.md` festgehalten, damit der Sonderfall des Spiegels
-nicht als allgemeines Muster kopiert wird.
-
-#### Nachtrag (2026-08-07): Teil B wird nicht gebaut
-
-TODO-21 hat entschieden — **gegen** ein Replay. ADR-0036 baut ein state-stored Read-Modell aus dem
-aktuellen Aggregatzustand neu auf und läuft dabei bewusst nicht über `DomainEventPublisher`, kann
-also nichts auf den Broker spielen. Die Republikation mit neuer Envelope-Id, die Teil B allein
-abgedeckt hätte, entsteht in diesem System damit gar nicht.
-
-`processed_integration_events` entfällt. Die `EventId`-Zusage aus ADR-0029 bleibt trotzdem stehen:
-sie kostet nichts und wäre die Grundlage, falls ein Kontext später auf Event Sourcing wechselt und
-ein Stream-Replay tatsächlich auf den Broker geht. Dann ist die obige Analyse unverändert gültig.
-
----
-
-### WS-13, Ein Kontext konsumiert seine eigenen Integration Events
-
-**Gelöst** (ADR-0023-Amendment 2026-08-05, TODO-08).
-
-Bindet ein Service ein Topic-Pattern, das auch seine eigenen Routing Keys matcht, bekommt er
-seine eigenen Events zugestellt. Folgenlos, solange kein Handler existiert — aber die
-Folgenlosigkeit beruht auf der Abwesenheit von Code, nicht auf einer Regel.
-
-Jetzt gilt die Regel: `UseWolverineMessaging` verlangt den eigenen Kontextnamen, jedes
-publizierte Event trägt den Header `buildingblocks.source-context`, und eine
-Consumer-Middleware verwirft ein Event, dessen Quelle der konsumierende Kontext selbst ist.
-Ein Handler auf ein Event des eigenen Kontexts scheitert beim Start — beides zusammen macht
-die Unterdrückung beweisbar verlustfrei. Gepinnt durch
-`IntegrationEventSubscriptionValidationTests`.
-
-#### Ursprünglicher Lösungsvorschlag
-
-Absenderkennung setzen und beim Konsumieren auswerten.
-
-Setzt voraus, dass ein Kontext seinen eigenen Namen kennt — heute nirgends hinterlegt.
-Kleiner Zusatz zu `BuildingBlocksOptions` (`options.ContextName = "nutrition"`), der
-nebenbei WS-05 und WS-14 nützt: aus ihm ließe sich das `[Topic]`-Präfix validieren.
-
----
-
-### WS-14, Die Verbindung Vertrag → Konsument ist unbewacht
-
-**Gelöst** (ADR-0023-Amendment 2026-08-05, TODO-08). `SubscriptionDiscoveryTests` fängt die
-vergessene Consumer-Assembly ab
-([SubscriptionDiscoveryTests.cs:19,36](samples/EventSourced/VitalSync.Sample.EventSourced.Tests/SubscriptionDiscoveryTests.cs:19)),
-und beim Start prüft Building Blocks zusätzlich, dass jedes vom Consumer-Assembly behandelte
-Integration Event von mindestens einem gebundenen Pattern getroffen wird — sonst scheitert der
-Host mit Typ, Topic und den gebundenen Pattern.
-
-Die Prüfrichtung wurde gegenüber dem Vorschlag unten **umgedreht**, und damit wurde aus der
-geplanten Warnung ein harter Fehler: „publiziert jemand auf mein Pattern?" ist lokal nicht
-entscheidbar, „bekomme ich, wofür ich einen Handler habe?" schon. Die Gegenrichtung bleibt
-absichtlich ungeprüft — auf einen noch nicht existierenden Upstream-Kontext zu binden ist
-legitim.
-
-#### Ursprünglicher Lösungsvorschlag
-
-Gemeinsam mit WS-05 lösen, beide brauchen dieselbe Quelle.
-
-Wichtig: als **Warnung statt Fehler** ausführen, wenn ein Service bewusst auf einen noch
-nicht existierenden Upstream-Kontext bindet — sonst blockiert die Prüfung genau die
-Reihenfolge, in der man Kontexte normalerweise baut.
-
 ---
 
 ### WS-15, `ApplyEntityKeyConversions` erfasst keine Complex Types
@@ -1202,60 +760,6 @@ ist der Weg durch ADR-0031 (`OwnsMany`, `ToJson()`) und ADR-0025
 (kein Complex Type für den State) belegt, und Owned Types sind eigene Entity-Types, also bereits
 erfasst. Read-seitig sind die Modelle flach. Der Fix bleibt eine Zeile und gehört in den Moment,
 in dem das erste eingebettete Value Object mit typisiertem Schlüssel auftaucht.
-
----
-
-### WS-16, Keine CI-Pipeline — **gelöst (2026-08-03)**
-
-Verifiziert: `.github/workflows/` existiert und ist **leer**. Es gibt also keinen
-automatischen Build, keinen Testlauf und keine Prüfung der „warnings as errors"-Zusage aus
-`Directory.Build.props`.
-
-> **Umgesetzt** als `.github/workflows/build.yml`, mit einem Schritt mehr als hier
-> vorgeschlagen: Der Workflow startet zusätzlich den Samples-AppHost und lässt die
-> Smoke-Tests gegen das laufende System laufen. Das ist der Testtyp, der die Befunde aus §3
-> überhaupt erst sichtbar gemacht hat — Build und Unit-Tests waren dabei durchgehend grün.
-> Details in [todo.md](todo.md), TODO-09.
-
-#### Lösungsvorschlag
-
-```yaml
-- run: dotnet build --configuration Release
-- run: dotnet test --configuration Release
-  env:
-    VITALSYNC_REQUIRE_CONTAINERS: "1"
-```
-
-Die Umgebungsvariable ist der Punkt, an dem es sonst schiefgeht: ohne sie überspringen die
-Testcontainers-Tests kommentarlos und der Lauf ist trotzdem grün — die Pipeline würde also
-genau die Tests nicht ausführen, für die sie am wertvollsten ist. GitHub-Runner haben Docker
-vorinstalliert, die Voraussetzung ist also erfüllt.
-
----
-
-### WS-17, Zeitbasierte Negativassertion im Sink-Test
-
-**Gelöst.** `IntegrationEventSinkDeliveryTests` ruft inzwischen die Produktionsmethode
-auf statt die Verdrahtung nachzubauen, und beide Hälften des Negativtests hängen seit
-2026-08-07 an Signalen: die Vorbedingung an einem `TaskCompletionSource` im
-`SinkProbeCrashSwitch` (das war der einzige über Wochen rote CI-Test), die Negativassertion an
-einem **Sentinel** — ein zweiter, gesunder Envelope, auf dessen Zustellung deterministisch
-gewartet wird. Geprüft wird jetzt „genau der Sentinel kam an, das Crash-Event nicht" statt
-„innerhalb von 250 ms kam nichts". In `DeadLetterTests` ist der Puffer ersatzlos entfallen, weil
-die Dead-Letter-Ankunft bereits der terminale Zustand ist.
-
-Die Sample-Smoke-Tests waren ein Fehlbefund: ihre `Task.Delay`-Stellen sind Polling-Intervalle
-mit Deadline, also die korrekte Bauform. Der tatsächliche Defekt dort war
-`RenamingTheMirroredGadget_DoesNotTravelBack`, der ohne jeden Anker prüfte und deshalb per
-Konstruktion nie fehlschlagen konnte; er hat jetzt einen Sentinel über den Vorwärtspfad.
-
-Der Drain-Puffer und die Publish-Schleifen in `IntegrationEventSubscriptionValidationTests` bleiben
-bewusst stehen. Der Test ist nicht rein zeitbasiert, sondern verankert seine Negativassertion an
-einer `control`-Nachricht; und die Schleife ist ein Retry gegen eine reproduzierte
-Zustellunsicherheit, kein Zeitpuffer. Zwei Umbauversuche auf einmaliges Publish — einer davon mit
-durablem Sending-Endpoint über den Produktionspfad — sind am 2026-08-07 empirisch gescheitert.
-Details in `todo.md`, TODO-37.
-
 ---
 
 ## 10. Konventionen, die beim Anlegen neuer Ordner beißen

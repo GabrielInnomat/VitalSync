@@ -557,9 +557,11 @@ A small cluster of classes, using Marten as a **raw stream store**:
   **7 days** whenever a persistence strategy was selected — without a message store
   there are no inbox rows to keep. Seven days covers a weekend plus the time an
   operator needs to replay a message out of the dead-letter queue. What this does
-  **not** cover is a republication under a *new* envelope id; the business key for
-  that is `IIntegrationEvent.EventId`, and a dedup table keyed by it is deferred
-  until the replay question is decided (TODO-14 part B).
+  **not** cover is a republication under a *new* envelope id — a case that does not
+  arise here: ADR-0036 derives a state-stored read model from the current aggregate
+  state instead of replaying events, and that rebuild never reaches
+  `DomainEventPublisher`. A dedup table keyed by `IIntegrationEvent.EventId` is
+  therefore **not built**; the id stays stable per event so the option survives.
 
 ### Runtime code generation
 
@@ -640,7 +642,7 @@ services.AddBuildingBlocks(options =>
   discovering two *different* handlers for the same command or query throws at
   registration (naming both types) rather than letting the container silently pick
   one. A `ReflectionTypeLoadException` while scanning is rewrapped into a clear
-  `InvalidOperationException` (usually a missing package reference) (IMP-05).
+  `InvalidOperationException` (usually a missing package reference).
 - **Startup handler validation always runs**: `AddBuildingBlocks` registers a
   hosted service that, when the host starts, resolves the handler for every
   `ICommand`/`ICommand<>`/`IQuery<>` implementation found in the scanned
@@ -650,7 +652,7 @@ services.AddBuildingBlocks(options =>
   it off (ADR-0027 amendment 2026-08-05): every one of these checks exists because
   the failure it catches is otherwise silent, so an opt-out would only restore a
   silent failure. The check runs only inside a real host (`IHostedService`), so
-  bare service providers in unit tests are unaffected (IMP-05).
+  bare service providers in unit tests are unaffected.
 
 **Every host whose selection flows through the outbox must additionally run
 Wolverine** — and since the ADR-0027 amendment of 2026-08-03 the host does not
@@ -894,13 +896,12 @@ compile and both read the same in a call site, which is precisely the problem.
 The four Wolverine wiring extensions are `ApplyBuildingBlocksIdempotencyWindow`,
 `ApplyBuildingBlocksDomainEventRouting`, `ApplyBuildingBlocksMessagingDefaults`, and
 `ApplyBuildingBlocksSubscription` — plural, matching the assembly. **ADR-0023 and ADR-0027
-name them in the singular**, and were deliberately left untouched when they were renamed
-(todo.md, TODO-43).
+name them in the singular**, and were deliberately left untouched when they were renamed.
 
 That is the general rule, not an exception: **a code name in an ADR is historical.** An ADR
 records a decision together with the vocabulary that existed when it was accepted; it is not
 reference documentation and is not kept name-current. ADR-0027 has named
-`ApplyBuildingBlockEfCoreOutbox` — a method deleted in TODO-06 — for some time already. When
+`ApplyBuildingBlockEfCoreOutbox` — a method since deleted — for some time already. When
 a name in an ADR does not resolve, this file, `WalkingSkeleton.md`, and the two instruction
 files are the ones that are kept current; look there.
 
