@@ -382,11 +382,14 @@ models live in a context's dedicated **[read database](#write-database--read-dat
 event-sourced and state-stored contexts by replaying/handling the context's
 **domain events** after the write commits (via a
 [projection handler](#projection-handler)). They are **derived and rebuildable**: a
-read database can be dropped and reconstructed by replaying events (ES) or
-re-running projections over the write side. See
-[ADR-0021](./architecture/decisions/0021-write-read-database-pair-per-context.md)
+read database can be dropped and reconstructed — an event-sourced context replays its
+stream, a state-stored context derives the read model again from the **current aggregate
+state** through an [`IReadModelRebuilder`](#read-model-rebuilder), which is why every
+field of a state-stored read model must be a function of that state. See
+[ADR-0021](./architecture/decisions/0021-write-read-database-pair-per-context.md),
+[ADR-0022](./architecture/decisions/0022-event-driven-read-models.md)
 and
-[ADR-0022](./architecture/decisions/0022-event-driven-read-models.md).
+[ADR-0036](./architecture/decisions/0036-state-stored-read-model-rebuild.md).
 
 ### Projection handler
 
@@ -427,6 +430,19 @@ supplied by [reconstitution](#reconstitution). A
 events exist. A [child entity](#child-entity-entitytkey-tstate) reaches the same
 `RaiseEvent` through the root's channel, so both paths behave identically for
 child-raised events.
+
+### Read model rebuilder
+
+A service-owned type implementing `IReadModelRebuilder<TAggregate, TKey>`
+(`BuildingBlocks.Application.ReadModels`). It sits **next to** a context's projection
+handlers, not instead of them: the handlers keep the read model current from domain
+events, the rebuilder reconstructs it from scratch out of the current aggregate state
+when a projection bug or a new field makes that necessary.
+`ReadModelRebuildRunner<TContext>` drives it — clear once, then stream every aggregate
+state out of the write database and hand the rehydrated aggregates to the rebuilders. A
+rebuild is invoked explicitly (by the migration worker), takes the read model offline
+while it runs, and publishes no integration events. See
+[ADR-0036](./architecture/decisions/0036-state-stored-read-model-rebuild.md).
 
 ### Reconstitution
 

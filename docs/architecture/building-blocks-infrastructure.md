@@ -40,7 +40,7 @@ Building Block allowed to reference third-party packages.
   and accepts a `CancellationToken`.
 - **`internal` unless something outside genuinely needs the type.** A host consumes
   Infrastructure through DI, so an implementation registered in the container has no
-  reason to be visible. The public surface is exactly four types plus the handful that
+  reason to be visible. The public surface is exactly six types plus the handful that
   Wolverine's runtime code generation forces open (see below), and
   `PublicSurfaceTests` fails the build if it grows.
 
@@ -55,6 +55,7 @@ Everything else is `internal`, with `InternalsVisibleTo` for the test assembly.
 | `BuildingBlocksOptions`           | the configuration surface passed to it                            |
 | `EntityKeyModelBuilderExtensions` | `ApplyEntityKeyConversions`, called from a host's `DbContext`     |
 | `PersistedSchema`                 | the event-schema snapshot, called from a service's tests (ADR-0035) |
+| `ReadModelRebuildRunner<TContext>`| the read-model rebuild driver, constructed by a migration worker (ADR-0036) |
 
 Seven further types are public **only** because Wolverine generates C# at runtime and
 the generated code names them: `DomainEventEnvelope`, `DomainEventEnvelopeHandler`,
@@ -75,6 +76,7 @@ capability. The folder is the namespace.
 | `Dispatching/`                     | DI-based `ISender` implementation + pipeline behaviors              |
 | `Persistence/`                     | shared: aggregate reconstitution, tracking base, envelope factory, typed-key conversion for EF Core and JSON |
 | `Persistence/StateStored/`         | EF Core write path — repository, unit of work, tracker, state graph |
+| `ReadModels/`                      | the read-model rebuild runner — host-invoked, therefore public and outside `Persistence/` |
 | `Persistence/EventSourced/`        | Marten write path — repository, unit of work, tracker               |
 | `Messaging/DomainEvents/`          | in-context events: publisher, projection runner, type registry, serializer, handler |
 | `Messaging/IntegrationEvents/`     | the cross-context contract: topics, sink, source context, filter    |

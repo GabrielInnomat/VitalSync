@@ -5,6 +5,7 @@ using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using BuildingBlocks.Infrastructure.Persistence;
 using BuildingBlocks.Infrastructure.Persistence.EventSourced;
 using BuildingBlocks.Infrastructure.Persistence.StateStored;
+using BuildingBlocks.Infrastructure.ReadModels;
 using JasperFx.Events;
 using Marten;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,7 @@ internal sealed class PersistenceRegistrar(IServiceCollection services, Wolverin
             new WriteDbContextAccessor(provider.GetRequiredService<TContext>()));
         services.TryAddScoped<EfCoreAggregateTracker>();
         services.TryAddSingleton<DomainEventEnvelopeFactory>();
+        services.TryAddSingleton<ReadModelRebuildRunner<TContext>>();
         services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork<TContext>>();
         services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
         services.TryAddEnumerable(

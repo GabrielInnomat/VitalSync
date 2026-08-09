@@ -114,3 +114,10 @@ a snapshotted state is persisted as JSON.
   rename tolerance, which nobody uses, but that the stream key is a validated kebab-case *format*
   where a derived conversion has edge cases, and that it carries the highest migration cost of any
   name in the system — it appears in every stream key and on every envelope.
+
+## Amendment (2026-08-07) — the read-model exclusion is now genuinely covered
+
+Read models were excluded from the snapshot as "derived and rebuildable". On the event-sourced path
+that was true from the start; on the state-stored path it was an assumption, because nothing could
+re-derive a read model after the outbox row was gone. ADR-0036 supplies that missing tool, so the
+exclusion now rests on a mechanism rather than on an intention.

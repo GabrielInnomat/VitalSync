@@ -131,8 +131,35 @@ receives carries the aggregate's `Version`, so the handler keeps that number on 
 read model and ignores any event at or below it ([ADR-0030](./decisions/0030-persisted-names-and-aggregate-version.md)).
 Read models are **domain-shaped and owned by each service** — not
 a Building Block; Infrastructure ships only the plumbing (Publisher, outbox,
-dispatch loop, projection runner, transport). Read models are **rebuildable** by
-replaying events (ES) or re-running projections over the write side.
+dispatch loop, projection runner, transport). Read models are **rebuildable**, but by
+different means per path: an event-sourced context replays its Marten stream, while a
+state-stored context has no surviving event history — its outbox row is deleted once
+delivered — and instead derives the read model again from the **current aggregate state**
+([ADR-0036](./decisions/0036-state-stored-read-model-rebuild.md)).
+
+### Rebuilding a state-stored read model
+
+The live path is unchanged: a domain event goes through the outbox to the projection
+handlers. Next to it sits a second, **explicitly invoked** path.
+
+- A read model implements `IReadModelRebuilder<TAggregate, TKey>` (`ClearAsync` plus
+  `RebuildAsync(aggregate)`) alongside its projection handlers. Several rebuilders per
+  aggregate are allowed — one per read model.
+- `ReadModelRebuildRunner<TContext>` clears once, streams every aggregate state out of the
+  write database, rehydrates each aggregate and hands it to the rebuilders in batches. It
+  is invoked by the context's migration worker behind a configuration switch, never
+  automatically, and it throws when no rebuilder is registered.
+- **Every field of a state-stored read model must be a function of the current aggregate
+  state.** A rebuilder writes absolute values (`PartCount = parts.Count`), never
+  increments. A field that needs history belongs in an event-sourced context.
+- The handover back to live traffic needs nothing new: the rebuilder writes the aggregate's
+  current `Version`, and the watermark check in every handler discards what is already
+  contained.
+- The rebuild does not run through `DomainEventPublisher`, so it publishes no integration
+  events.
+- **A parity test is mandatory** where a context has both: one aggregate's events through
+  the live projections, the same aggregate's final state through the rebuilders, both rows
+  identical.
 
 ### One missing wire is an error, the other is not
 

@@ -12,7 +12,8 @@ Zusammenführung der drei Befunddokumente, Stand 2026-08-02:
 | Nachtrag AppHost `e44ae9b` (TODO-45, TODO-46) | 2        | 2           |
 | Nachtrag WS-08 (TODO-48)                      | 1        | 1           |
 | Nachtrag ADR-0034-Folge (TODO-49)             | 1        | 1           |
-| **Summe geführt**                             |          | **47**      |
+| Nachtrag ADR-0036-Folge (TODO-50)             | 1        | 1           |
+| **Summe geführt**                             |          | **48**      |
 
 Die 14 in `Improvements.md` als gelöst verifizierten Punkte wurden nicht übernomen.
 
@@ -48,14 +49,14 @@ eine Entscheidung, keinen Code.
 | TODO-11 | Optionalität von `IUnitOfWork`                                 | **P2** | gelöst            | IMP-07, hacky-11, IMP-46              |
 | TODO-12 | Name der `Result`-Fehlerfactory                                | **P2** | gelöst            | hacky-3, IMP-27, IMP-39               |
 | TODO-13 | Wo lebt die Event-Identität?                                   | **P2** | gelöst            | IMP-41, IMP-11                        |
-| TODO-14 | Idempotenz-Bookkeeping über die Kontextgrenze                  | **P2** | teilweise         | IMP-11, WS-12                         |
+| TODO-14 | Idempotenz-Bookkeeping über die Kontextgrenze                  | **P2** | gelöst            | IMP-11, WS-12                         |
 | TODO-15 | Mehrfachfehler und Feldvalidierung end-to-end                  | **P2** | gelöst            | IMP-16, IMP-17, hacky-12              |
 | TODO-16 | `FailureCategory` fehlt Autorisierung                          | **P2** | gelöst            | IMP-18                                |
 | TODO-17 | `RuleChecker` schluckt `null`                                  | **P2** | gelöst            | hacky-10, IMP-36                      |
 | TODO-18 | `AddBuildingBlocks` ist nicht idempotent                       | **P2** | gelöst            | hacky-9                               |
 | TODO-19 | `ApplyEntityKeyConversions` scannt und mappt zu viel           | **P2** | teilweise         | hacky-4, WS-15                        |
 | TODO-20 | Global sequentielle Domain-Event-Queue                         | **P2** | offen             | hacky-13, IMP-25                      |
-| TODO-21 | Read-Modelle im state-stored Pfad nicht wiederaufbaubar        | **P2** | offen             | IMP-31                                |
+| TODO-21 | Read-Modelle im state-stored Pfad nicht wiederaufbaubar        | **P2** | gelöst            | IMP-31, ADR-0036                      |
 | TODO-22 | Unique-Constraint-Verletzungen werden nicht übersetzt          | **P2** | gelöst            | IMP-29                                |
 | TODO-23 | Keine Tracing-Instrumentierung der CQRS-Pipeline               | **P2** | gelöst            | IMP-30                                |
 | TODO-24 | `DbContext` als DI-Schlüssel                                   | **P2** | gelöst            | IMP-20                                |
@@ -84,6 +85,7 @@ eine Entscheidung, keinen Code.
 | TODO-47 | Kind-Entitäten haben kein Verhalten                            | **P2** | gelöst            | ADR-0031 Folgearbeit                  |
 | TODO-48 | Publisher Confirms sind unbelegt                                | **P2** | gelöst            | WS-08 Nachtrag                        |
 | TODO-49 | Feldnamen in Events sind abgeleitet, ein Rename zerstört still | **P1** | gelöst            | ADR-0034-Folge                        |
+| TODO-50 | Kein Read-Modell-Rebuild im event-sourced Pfad                 | **P3** | offen             | ADR-0036-Folge                        |
 
 ---
 
@@ -1011,6 +1013,25 @@ Bis dahin gilt unverändert: **geteilte Identität ist der sanktionierte Idempot
 in `docs/architecture/communication.md`, damit der Sonderfall des Spiegels nicht als allgemeines
 Muster kopiert wird.
 
+## Teil B geschlossen (2026-08-07) — wird nicht gebaut
+
+TODO-21 ist entschieden, und zwar **gegen** ein Replay: ADR-0036 baut ein state-stored Read-Modell
+aus dem aktuellen Aggregatzustand neu auf, nicht aus einer Ereignishistorie. Der Rebuild läuft
+bewusst **nicht** über `DomainEventPublisher` und kann deshalb nichts auf den Broker spielen. Damit
+entsteht die Republikation mit neuer Envelope-Id, die Teil B allein abgedeckt hätte, in diesem
+System schlicht nicht.
+
+`processed_integration_events` wird also nicht gebaut. Die Zusage aus ADR-0029 — `EventId` pro
+Ereignis stabil, nie pro Aufruf neu — **bleibt trotzdem bestehen**: sie kostet nichts, ist die
+einzige fachliche Identität eines Integration Events und wäre die Grundlage, falls doch einmal ein
+Betriebseingriff ein Ereignis erneut versendet. Sie ist ab jetzt eine Vorsichtsmaßnahme statt eines
+Versprechens an einen geplanten Konsumenten.
+
+Wieder aufzumachen ist Teil B, wenn ein Kontext auf Event Sourcing wechselt **und** ein
+Stream-Replay auf den Broker geht — dann gilt die ursprüngliche Analyse unverändert.
+
+Damit ist TODO-14 vollständig: Teil A umgesetzt, Teil B mit Begründung geschlossen.
+
 ---
 
 # TODO-15, Mehrfachfehler und Feldvalidierung end-to-end
@@ -1401,6 +1422,48 @@ fachliche Dedup beim Konsumenten spielt jedem nachgelagerten Kontext seine Histo
 ein. Fällt sie dagegen für „Rebuild aus dem aktuellen Zustand", bleibt Teil B dauerhaft unnötig und
 sollte gestrichen werden — zusammen mit der `EventId`-Zusage aus ADR-0029, auf die sich dann
 niemand verlässt.
+
+## Gelöst (2026-08-07) — Rebuild aus dem aktuellen Zustand, ADR-0036
+
+Entschieden wurde gegen den oben empfohlenen Vorschlag. Ein Domain-Event-Journal baut Event Sourcing
+im state-stored Pfad nach, ohne dessen Nutzen zu ziehen: Speicher und Retention werden zu Dauerlasten,
+und ein Replay spielt Ereignisse wieder auf den Broker — für eine rein lokale Reparatur.
+
+Ebenfalls verworfen wurde die dritte Variante, den Live-Pfad selbst auf Zustandsnachladen umzustellen.
+Sie hätte eine einzige Ableitung ergeben, aber das Domain Event für Projektionen entwertet und Leselast
+auf die Write-DB gelegt — um eine Divergenz zu verhindern, die ein Test ohnehin fängt.
+
+Umgesetzt: **der Live-Pfad bleibt unangetastet ereignisbasiert, daneben tritt ein zweiter, explizit
+aufgerufener Pfad, der aus dem aktuellen Aggregatzustand neu ableitet.**
+
+- `IReadModelRebuilder<TAggregate, TKey>` in `BuildingBlocks.Application.ReadModels`, mit `ClearAsync`
+  und `RebuildAsync(aggregate)`. Multi-Handler-Vertrag: mehrere Read-Modelle pro Aggregat sind erlaubt.
+- `ReadModelRebuildRunner<TContext>` in `…Infrastructure.ReadModels`: einmal leeren, dann
+  die Zustände aus der Write-DB streamen (`AsNoTracking`), über `AggregateFactory` +
+  `IStateOwner.Restore` rehydrieren und in Stapeln zu 500 an die Rebuilder geben. Wirft, wenn kein
+  Rebuilder registriert ist.
+- Der Übergang Rebuild → Live brauchte **nichts Neues**: der Rebuilder schreibt die aktuelle `Version`
+  als Watermark, die bestehende Prüfung `existing.Version < metadata.Version` erledigt den Rest.
+- Der Rebuild läuft **nicht** über `DomainEventPublisher`, veröffentlicht also keine Integration
+  Events.
+
+**Die harte Regel, die daraus folgt:** jedes Feld eines state-stored Read-Modells muss eine Funktion
+des aktuellen Aggregatzustands sein. Ein Feld, das Historie aggregiert („Umbenennungen letzten Monat"),
+gehört nicht dorthin — dafür braucht der Kontext Event Sourcing (ADR-0012-Nachtrag).
+
+**Damit erledigen sich beide Nachträge oben:**
+
+- Der ADR-0035-Nachtrag ist wahr geworden: ein Read-Modell ist jetzt wirklich wegwerfbar und braucht
+  keinen Snapshot.
+- **TODO-14 Teil B bleibt gegenstandslos** und wird geschlossen: es entsteht kein Replay, also keine
+  Republikation mit neuer Transportidentität.
+
+**Nicht gelöst und bewusst offen:** der event-sourced Pfad hat mit dem Marten-Stream zwar die Quelle
+für einen Rebuild, aber kein Werkzeug — kein Gegenstück zum Runner. Siehe **TODO-50**.
+
+Getestet: Paritätstest (dasselbe Aggregat durch beide Pfade, identische Zeile),
+Runner-Integrationstest gegen Postgres (Clear genau einmal, alle Aggregate mit korrekter Version,
+Wiederholbarkeit, Wurf ohne Rebuilder), inkrementelles Weiterlaufen nach dem Rebuild.
 
 ---
 
@@ -2528,6 +2591,17 @@ Beim ersten echten Aggregat des jeweiligen Kontexts nachziehen, nicht vorher: de
 den `DbContext`, den es noch nicht gibt. Bis dahin gilt die Zusage `WaitForCompletion` als
 unbelegt und gehört hier vermerkt statt im AppHost still vorausgesetzt.
 
+## Nachtrag (2026-08-07): der Worker hat eine zweite Aufgabe bekommen
+
+ADR-0036 gibt dem MigrationService-Worker den natürlichen Platz für den Read-Modell-Rebuild — er hat
+beide `DbContext`e ohnehin und läuft vor der Api. Der Sample-Worker macht es vor
+([StateStored MigrationService Program.cs](samples/StateStored/VitalSync.Sample.StateStored.MigrationService/Program.cs)):
+nach beiden `MigrateAsync` und hinter dem Schalter `ReadModels:Rebuild` läuft
+`ReadModelRebuildRunner<WidgetWriteDbContext>`.
+
+Der Runner ist deshalb `public` und generisch über den Kontext: ein Worker ohne `AddBuildingBlocks`
+kann ihn selbst instanziieren. Wer dieses TODO umsetzt, zieht das Muster mit.
+
 ---
 
 # TODO-47, Kind-Entitäten haben kein Verhalten
@@ -2768,3 +2842,35 @@ gegen die echten Baselines, und
 6. **TODO-45** ist erledigt; **TODO-46** kommt erst mit dem ersten Aggregat des jeweiligen
    Kontexts — vorher ist nicht entschieden, wie dort gespeichert wird, und ein Migrations-Worker
    ohne `DbContext` wäre geraten.
+
+---
+
+# TODO-50, Kein Read-Modell-Rebuild im event-sourced Pfad
+
+**P3 · offen · Folgearbeit zu ADR-0036**
+
+ADR-0036 hat den state-stored Pfad wiederaufbaubar gemacht. Der event-sourced Pfad hat mit dem
+Marten-Stream zwar seit jeher die **Quelle** für einen Rebuild — das war das Argument, warum
+ADR-0022 die Wiederaufbaubarkeit überhaupt zusagen konnte — aber kein **Werkzeug**: es gibt kein
+Gegenstück zu `ReadModelRebuildRunner`. Wer heute nach einem Projektions-Bugfix ein
+event-sourced Read-Modell reparieren will, schreibt das Ablaufen des Streams von Hand.
+
+Das ist deutlich weniger dringend als TODO-21 es war, denn hier geht nichts verloren: die Daten
+liegen im Stream, es fehlt nur die Bequemlichkeit. Deshalb P3.
+
+## Lösungsvorschlag
+
+Ein `EventStreamRebuildRunner`, der die Streams eines Aggregattyps über `IDocumentStore`
+aufzählt und jedes Ereignis mit seinen `DomainEventMetadata` durch den bestehenden
+`ProjectionRunner` schickt. Damit ist es **derselbe** Ableitungspfad wie live, es braucht also
+keinen Paritätstest wie im state-stored Fall, und die Watermark-Prüfung in den Handlern trägt
+unverändert.
+
+Zwei Punkte sind vor der Umsetzung zu klären:
+
+1. **Der Runner darf nicht über `DomainEventPublisher` laufen**, sonst spielt ein Rebuild
+   Integration Events erneut auf den Broker — genau der Fall, den ADR-0036 vermieden hat und der
+   TODO-14 Teil B wieder aufmachen würde. Der Publisher koppelt Projektion und Integration-Publikation
+   heute aber (**TODO-29**); die Entkopplung dort ist die saubere Voraussetzung.
+2. **Streams eines Aggregattyps aufzählen** ist in Marten nicht kostenlos, wenn der Stream-Typ nicht
+   indiziert ist. Vor der Umsetzung prüfen, ob `mt_streams` dafür ausreicht.

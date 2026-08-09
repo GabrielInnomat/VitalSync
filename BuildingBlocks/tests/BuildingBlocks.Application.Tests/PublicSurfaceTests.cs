@@ -26,6 +26,7 @@ public sealed class PublicSurfaceTests
         "BuildingBlocks.Application.IntegrationEvents.IntegrationEventTopicAttribute",
         "BuildingBlocks.Application.Persistence.IRepository`2",
         "BuildingBlocks.Application.Persistence.IUnitOfWork",
+        "BuildingBlocks.Application.ReadModels.IReadModelRebuilder`2",
         "BuildingBlocks.Application.Results.Failure",
         "BuildingBlocks.Application.Results.FailureCategory",
         "BuildingBlocks.Application.Results.Result",

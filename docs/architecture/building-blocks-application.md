@@ -31,8 +31,9 @@ BuildingBlocks.Application/
 ├── Results/            Result, Result<T>, Failure, FailureCategory
 ├── Persistence/        IRepository, IUnitOfWork
 ├── DomainEvents/       DomainEventMetadata, IProjectionHandler, IDomainEventPublisher
-└── IntegrationEvents/  IIntegrationEvent, IIntegrationEventMapper, IIntegrationEventSink,
-                        IntegrationEventTopicAttribute
+├── IntegrationEvents/  IIntegrationEvent, IIntegrationEventMapper, IIntegrationEventSink,
+│                       IntegrationEventTopicAttribute
+└── ReadModels/         IReadModelRebuilder
 ```
 
 The root namespace is **empty on purpose**. Domain events and integration events are split into
@@ -224,6 +225,33 @@ public interface IProjectionHandler<in TDomainEvent>
   publisher, so it can keep the last processed `Version` per aggregate on its
   read model and ignore anything at or below that watermark (ADR-0030) — that is
   how ADR-0022's "per-aggregate order-aware" requirement is met.
+
+### Read-model rebuilders
+
+```csharp
+public interface IReadModelRebuilder<in TAggregate, TKey>
+    where TAggregate : class, IAggregateRoot<TKey>
+    where TKey : struct, IEntityKey, IEquatable<TKey>
+{
+    Task ClearAsync(CancellationToken ct);
+
+    Task RebuildAsync(TAggregate aggregate, CancellationToken ct);
+}
+```
+
+- Implemented **per service**, next to that service's projection handlers, and only for
+  **state-stored** contexts: an event-sourced context still has its stream (ADR-0036).
+- It is a **multi-handler** contract — a context may register one rebuilder per read model
+  for the same aggregate, and `AddHandlersFrom` registers them all.
+- `RebuildAsync` receives the aggregate, not an event. **Every field it writes must be a
+  function of the current aggregate state** — absolute values (`PartCount = parts.Count`),
+  never increments. A field that needs history does not belong in a state-stored read
+  model.
+- Writing the aggregate's current `Version` onto the read model is what lets live traffic
+  continue incrementally afterwards, through the same watermark check the projection
+  handlers already use.
+- Infrastructure supplies the driver, `ReadModelRebuildRunner<TContext>`; the service
+  supplies only the two methods above.
 
 ### Integration events
 

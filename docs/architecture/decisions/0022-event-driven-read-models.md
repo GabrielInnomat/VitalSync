@@ -160,3 +160,16 @@ source of truth. Read models are disposable; the write side is authoritative.
   broker load for data that never leaves the context. Rejected — **in-context**
   projections use **domain** events directly; RabbitMQ is reserved for genuine
   **cross-context** communication (ADR-0004).
+
+## Amendment (2026-08-07) — rebuildability holds on both paths, by different means
+
+The rebuildability promise above was only true for the event-sourced path. In a state-stored
+context the outbox row is deleted once delivered, so after the flush no replayable record of a
+domain event survives and a buggy projection produced a read model nobody could repair.
+
+ADR-0036 closes that gap **without** introducing a replay: the live path stays event-based and
+unchanged, and a second, explicitly invoked path (`IReadModelRebuilder` plus
+`ReadModelRebuildRunner`) derives the read model from the **current aggregate state**. The
+consequence for read-model design is a hard rule: **every field of a state-stored read model must be
+a function of the current aggregate state**. A field that needs history belongs in an event-sourced
+context.

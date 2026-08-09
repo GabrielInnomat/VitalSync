@@ -43,7 +43,7 @@ einen überholten Zwischenstand. Testlauf zum Prüfzeitpunkt: **199 bestanden, 1
 | IMP-28 | Kein `IClock` im Container                                               | gelöst            |
 | IMP-29 | Unique-Constraint-Verletzungen werden nicht übersetzt                    | gelöst            |
 | IMP-30 | Keine Tracing-Instrumentierung der CQRS-Pipeline                         | gelöst            |
-| IMP-31 | Read-Modelle im state-stored Pfad sind nicht wiederaufbaubar             | offen             |
+| IMP-31 | Read-Modelle im state-stored Pfad sind nicht wiederaufbaubar             | gelöst            |
 | IMP-32 | Keine Batch- oder Bulk-Fähigkeit                                         | offen             |
 | IMP-33 | Keine Saga- oder Process-Manager-Abstraktion                             | offen             |
 | IMP-34 | `Result` hat keine Kombinatoren                                          | offen             |
@@ -902,6 +902,28 @@ B) Rebuild-aus-Zustand: pro Read-Modell eine Projektion, die aus dem aktuellen W
 
 Empfehlung A, weil es die ADR-0022-Zusage tatsächlich einlöst und den in ADR-0025 versprochenen Wechsel
 state-stored ↔ event-sourced vorbereitet. Braucht eine ADR.
+
+## Gelöst (2026-08-07) — Weg B, mit korrigierter Begründung, ADR-0036
+
+Entschieden wurde **gegen** die Empfehlung A. Ein Journal baut Event Sourcing nach, ohne dessen Nutzen
+zu ziehen: Speicher und Retention werden Dauerlasten, und ein Replay spielt Ereignisse wieder auf den
+Broker — für eine rein lokale Reparatur. Die ADR-0022-Zusage wird jetzt auf beiden Pfaden eingelöst,
+nur mit unterschiedlichen Mitteln.
+
+Der Einwand gegen B oben ist zur Hälfte falsch und zur Hälfte richtig, und beide Hälften sind jetzt
+adressiert:
+
+- „**ein zweiter Codepfad pro Read-Modell**" stimmt, ist aber kein Ausschlussgrund. Die befürchtete
+  Divergenz zwischen Ereignispfad und Rebuild-Pfad ist durch einen **Paritätstest** fangbar: dasselbe
+  Aggregat durch beide Pfade, identische Zeile — sonst rot in der CI.
+- „**nicht geeignet für Modelle, die Historie aggregieren**" stimmt uneingeschränkt und ist jetzt
+  eine ausdrückliche Regel statt eines Nachteils: jedes Feld eines state-stored Read-Modells muss eine
+  Funktion des aktuellen Aggregatzustands sein. Wer Historie braucht, wechselt den Kontext auf Event
+  Sourcing (ADR-0012-Nachtrag) — mit der bekannten Einschränkung, dass die Historie erst ab dem
+  Wechsel beginnt.
+
+Umgesetzt als `IReadModelRebuilder<TAggregate, TKey>` plus `ReadModelRebuildRunner<TContext>`; der
+Live-Pfad bleibt unangetastet. Details in `todo.md` bei TODO-21.
 
 ---
 

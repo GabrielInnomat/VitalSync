@@ -52,3 +52,15 @@ Supporting changes:
 - **Keep the unified base (ADR-0011):** rejected — it forces event-sourcing mechanics onto every aggregate and leaks a storage vocabulary into the domain, defeating selective event sourcing.
 - **One base with opt-in `TState`/`Apply` machinery:** less discoverable; the presence or absence of event modeling becomes a runtime convention rather than a clear type choice.
 - **Drive the split by storage (an "EF aggregate" vs an "ES aggregate"):** rejected — that is Decision B and must not live in the domain; it would re-introduce the exact leak this ADR removes.
+
+## Amendment (2026-08-07) — event sourcing is the answer for history, not for rebuildability
+
+Two questions were previously conflated. **Rebuildability** — repairing a read model after a
+projection bug, or filling a newly added read-model field — no longer requires event sourcing:
+ADR-0036 derives a state-stored read model from the current aggregate state. **History** — any
+question about *how* an aggregate reached its current state — still does, and switching a context to
+event sourcing is the sanctioned way to get it.
+
+The known limitation is that the history then begins **at the switch**: the events before it were
+never stored, so a switch made for a historical requirement answers that requirement only going
+forward.

@@ -37,6 +37,7 @@ It depends **only** on `Domain`, and — like `Domain` — it references **no** 
 - the **unit of work**;
 - **generic repositories** for EF Core and for the **Marten-based event store** (see [ADR-0019](./decisions/0019-event-store-technology-marten.md));
 - **domain event dispatching** and the outbox-backed **Publisher** with its projection runner (see [ADR-0022](./decisions/0022-event-driven-read-models.md));
+- the **read-model rebuild runner** for state-stored contexts (see [ADR-0036](./decisions/0036-state-stored-read-model-rebuild.md));
 - **integration event dispatching**;
 - the **Wolverine**-based messaging transport on top of **RabbitMQ** (see [ADR-0023](./decisions/0023-wolverine-messaging-transport.md));
 - the DI-based CQRS **dispatcher** and **pipeline behaviors** that implement the `Application` contracts.

@@ -254,7 +254,7 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 - **Folder = namespace in `Domain` and `Application`, and the namespaces are contract.**
   `Domain` is cut into `Aggregates/`, `Entities/`, `Events/`, `Naming/`, `Rules/` (`IClock`
   stays in the root); `Application` into `Cqrs/`, `Results/`, `Persistence/`, `DomainEvents/`,
-  `IntegrationEvents/` (root empty). Domain and integration events are **deliberately not**
+  `IntegrationEvents/`, `ReadModels/` (root empty). Domain and integration events are **deliberately not**
   one `Events/` folder — that line is the bounded-context boundary. Unlike `Infrastructure`,
   where nearly everything is `internal` and the namespaces are invisible, every type here is
   `public`: moving a file changes each exported type's `FullName` and breaks every consumer,
@@ -357,7 +357,8 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   visible. Exactly four types are public API — `ServiceCollectionExtensions`,
   `HostApplicationBuilderExtensions`, `BuildingBlocksOptions`,
   `EntityKeyModelBuilderExtensions` — plus `PersistedSchema`, public because a service's
-  **tests** call it (ADR-0035). Seven more are public **only** because Wolverine
+  **tests** call it (ADR-0035), and `ReadModelRebuildRunner<TContext>`, public because a
+  migration worker constructs it without the full wiring (ADR-0036). Seven more are public **only** because Wolverine
   generates C# into another assembly and names them (`DomainEventEnvelope`,
   `DomainEventEnvelopeHandler`, `DomainEventEnvelopeSerializer`, `DomainEventTypeRegistry`,
   `IIntegrationEventSinkFactory`, `IntegrationEventSourceContext`,
@@ -373,7 +374,10 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   `DependencyInjection/Wiring/`, while `Messaging/DomainEvents/` (publisher, projection
   runner, envelope) and
   `Messaging/IntegrationEvents/` hold what runs per message. Start-up checks live in
-  `DependencyInjection/Validation/`.
+  `DependencyInjection/Validation/`. **Nothing under `Persistence.*` is public** —
+  `PublicSurfaceTests.NoInfrastructureImplementationIsPublic` fails on it — so a type the
+  host itself constructs lives outside that tree even when it is persistence-adjacent:
+  `PersistedSchema` in `Schema/`, `ReadModelRebuildRunner<TContext>` in `ReadModels/`.
 - **`ApplyEntityKeyConversions` converts, it never discovers** (ADR-0033). EF Core's discovery
   never finds an `IEntityKey<T>` property ("not a supported primitive type"), and the helper used
   to compensate with a CLR scan plus `AddProperty` — a helper that wrote to the model and could
@@ -554,7 +558,27 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 - **Read models are owned by each service, not a Building Block** — the service owns
   its read-model schema, projection handlers, and queries; Infrastructure ships only
   the plumbing (Publisher, outbox, dispatch loop, projection runner, transport). Read
-  models are **derived and rebuildable** by replaying events / re-running projections.
+  models are **derived and rebuildable**, but by different means per path (ADR-0036).
+- **A state-stored read model is rebuilt from the current state, not from a replay**
+  (ADR-0036). An event-sourced context replays its Marten stream; a state-stored context
+  has no surviving history — its outbox row is deleted once delivered — so it derives the
+  read model again from the **current aggregate state**. The live event-based path is
+  **unchanged**; the rebuild is a second, explicitly invoked path:
+  `IReadModelRebuilder<TAggregate, TKey>` (`ClearAsync` + `RebuildAsync(aggregate)`, a
+  **multi-handler** contract, one rebuilder per read model) implemented per service, driven by
+  `ReadModelRebuildRunner<TContext>`, which clears once and then streams every aggregate state
+  out of the write database in batches. It is invoked by the context's migration worker behind a
+  configuration switch, never automatically, and **throws** when no rebuilder is registered —
+  a rebuild that projects nothing would report success over an empty read model. Three
+  consequences to know: **every field must be a function of the current aggregate state** (write
+  absolute values, never increments — a field that needs history belongs in an event-sourced
+  context); the handover back to live traffic needs nothing new, because the rebuilder writes the
+  aggregate's current `Version` and the existing watermark check discards what is already
+  contained; and the rebuild does **not** run through `DomainEventPublisher`, so it publishes no
+  integration events and produces no cross-context replay. A **parity test is mandatory** where a
+  context has both — one aggregate's events through the live projections, the same aggregate's
+  final state through the rebuilders, both rows identical. That test is the whole reason two
+  derivation paths are acceptable.
 - **In-context** projections use **domain** events directly; **integration** events
   (RabbitMQ) are the **only** cross-context signal — never read another context's
   database.
@@ -656,10 +680,13 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   `DurabilitySettings.KeepAfterMessageHandling`, default five minutes, so the guarantee
   expired silently; `ApplyBuildingBlocksIdempotencyWindow` sets it to **7 days** whenever a
   persistence strategy was selected, and a test pins that the value is not the framework
-  default. Still uncovered on purpose: a republication under a **new** envelope id (outbox
-  replay, operational re-send, future event replay). The business key for that is
-  `IIntegrationEvent.EventId` (ADR-0029) and a dedup table keyed by it is **deferred** to
-  TODO-14 part B, which hangs off the replay decision in TODO-21. Until then **shared
+  default. Uncovered is a republication under a **new** envelope id, and that case is now
+  **closed rather than deferred**: ADR-0036 decided the read-model rebuild against a replay,
+  and the rebuild does not run through `DomainEventPublisher`, so nothing in this system
+  republishes an event under a fresh transport identity. The dedup table once planned as
+  TODO-14 part B is **not built**. `IIntegrationEvent.EventId` (ADR-0029) still has to stay
+  stable per event — it costs nothing and is the groundwork should a context ever switch to
+  event sourcing and replay a stream onto the broker. Until then **shared
   identity is the sanctioned route** — a consumer deriving its own aggregate adopts the
   foreign id, the way `MirrorWidgetHandler` does. Never write a consumer that assumes
   exactly-once.

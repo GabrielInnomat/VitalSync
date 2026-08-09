@@ -11,6 +11,7 @@ public sealed class PublicSurfaceTests
         "BuildingBlocks.Infrastructure.DependencyInjection.HostApplicationBuilderExtensions",
         "BuildingBlocks.Infrastructure.DependencyInjection.ServiceCollectionExtensions",
         "BuildingBlocks.Infrastructure.Persistence.EntityKeyModelBuilderExtensions",
+        "BuildingBlocks.Infrastructure.ReadModels.ReadModelRebuildRunner`1",
     ];
 
     private static readonly string[] IntendedTestingApi =

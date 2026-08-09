@@ -1057,7 +1057,7 @@ beide Stores haben dasselbe Muster und sollten dieselbe Antwort bekommen.
 
 ---
 
-### WS-12, Kein Idempotenz-Bookkeeping über die Kontextgrenze — **teilweise gelöst (2026-08-06)**
+### WS-12, Kein Idempotenz-Bookkeeping über die Kontextgrenze — **gelöst (2026-08-07)**
 
 Der Spiegel in Etappe 3 ist nur deshalb idempotent, weil das Gadget die Widget-Id übernimmt
 ([MirrorWidget.cs:20](samples/EventSourced/VitalSync.Sample.EventSourced.Application/MirrorWidget.cs:20)).
@@ -1093,6 +1093,17 @@ entsteht praktisch erst durch ein Replay, über das TODO-21 noch nicht entschied
 gilt unverändert: geteilte Identität ist der sanktionierte Idempotenz-Weg — seit diesem Nachtrag
 auch so in `docs/architecture/communication.md` festgehalten, damit der Sonderfall des Spiegels
 nicht als allgemeines Muster kopiert wird.
+
+#### Nachtrag (2026-08-07): Teil B wird nicht gebaut
+
+TODO-21 hat entschieden — **gegen** ein Replay. ADR-0036 baut ein state-stored Read-Modell aus dem
+aktuellen Aggregatzustand neu auf und läuft dabei bewusst nicht über `DomainEventPublisher`, kann
+also nichts auf den Broker spielen. Die Republikation mit neuer Envelope-Id, die Teil B allein
+abgedeckt hätte, entsteht in diesem System damit gar nicht.
+
+`processed_integration_events` entfällt. Die `EventId`-Zusage aus ADR-0029 bleibt trotzdem stehen:
+sie kostet nichts und wäre die Grundlage, falls ein Kontext später auf Event Sourcing wechselt und
+ein Stream-Replay tatsächlich auf den Broker geht. Dann ist die obige Analyse unverändert gültig.
 
 ---
 

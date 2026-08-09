@@ -2,6 +2,7 @@ using System.Reflection;
 using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Application.DomainEvents;
 using BuildingBlocks.Application.IntegrationEvents;
+using BuildingBlocks.Application.ReadModels;
 using BuildingBlocks.Infrastructure.Dispatching;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -20,6 +21,7 @@ internal sealed class HandlerRegistrar(IServiceCollection services, PipelineBeha
     private static readonly Type[] MultiHandlerInterfaceDefinitions =
     [
         typeof(IProjectionHandler<>),
+        typeof(IReadModelRebuilder<,>),
     ];
 
     private readonly Dictionary<Type, Type> _singleHandlers = [];
