@@ -38,6 +38,37 @@ public sealed class IntegrationEventRoutingTests(PostgreSqlFixture postgres, Rab
     }
 
     [Fact]
+    public async Task ABoundTopicPattern_FiltersInsteadOfForwardingEveryTopic()
+    {
+        Assert.SkipUnless(postgres.Available, postgres.SkipReason);
+        Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
+
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var host = await StartHostAsync();
+
+        var matching = TestMessaging.UniqueQueueName("routing-matching");
+        var unmatched = TestMessaging.UniqueQueueName("routing-unmatched");
+
+        await using var broker = await BrokerProbe.ConnectAsync(rabbit.ConnectionUri, cancellationToken);
+        await broker.BindQueueAsync(matching, TestMessaging.ExchangeName, "probe.*", cancellationToken);
+        await broker.BindQueueAsync(unmatched, TestMessaging.ExchangeName, "other.*", cancellationToken);
+
+        await host.Services.GetRequiredService<IMessageBus>()
+            .PublishAsync(new RoutingProbeIntegrationEvent(Guid.NewGuid().ToString()));
+
+        await host.Services.GetRequiredService<RoutingProbeSignal>()
+            .Received.WaitAsync(DeliveryTimeout, cancellationToken);
+
+        Assert.Equal(1u, await broker.MessageCountAsync(matching, cancellationToken));
+        Assert.Equal(0u, await broker.MessageCountAsync(unmatched, cancellationToken));
+
+        await broker.DeleteQueueAsync(matching, cancellationToken);
+        await broker.DeleteQueueAsync(unmatched, cancellationToken);
+
+        await host.StopAsync(cancellationToken);
+    }
+
+    [Fact]
     public async Task DomainEventEnvelope_IsNotRoutedToThePlatformExchange()
     {
         Assert.SkipUnless(postgres.Available, postgres.SkipReason);

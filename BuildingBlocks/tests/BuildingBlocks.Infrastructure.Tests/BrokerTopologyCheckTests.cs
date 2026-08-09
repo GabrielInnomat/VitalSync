@@ -2,6 +2,7 @@ using BuildingBlocks.Infrastructure.DependencyInjection;
 using DeadLetterFixture;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using RabbitMQ.Client.Exceptions;
 using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.Tests;
@@ -63,6 +64,58 @@ public sealed class BrokerTopologyCheckTests(PostgreSqlFixture postgres, RabbitM
 
         using var consumer = await StartAsync(exchangeName, queueName, InfrastructureProvisioning.Never);
         await consumer.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task TheProvisioner_BindsTheSubscriptionQueue_InsteadOfOnlyDeclaringIt()
+    {
+        Assert.SkipUnless(postgres.Available, postgres.SkipReason);
+        Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
+
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var exchangeName = TestMessaging.UniqueExchangeName("binding");
+        var queueName = TestMessaging.UniqueQueueName("binding");
+
+        using (var provisioner = await StartAsync(exchangeName, queueName, InfrastructureProvisioning.AtStartup))
+        {
+            await provisioner.StopAsync(cancellationToken);
+        }
+
+        await using var broker = await BrokerProbe.ConnectAsync(rabbit.ConnectionUri, cancellationToken);
+
+        await broker.PublishAsync(
+            exchangeName,
+            $"{TestMessaging.UpstreamContextName}.binding-probe",
+            cancellationToken);
+        Assert.Equal(1u, await broker.MessageCountAsync(queueName, cancellationToken));
+
+        await broker.PublishAsync(exchangeName, "elsewhere.binding-probe", cancellationToken);
+        Assert.Equal(1u, await broker.MessageCountAsync(queueName, cancellationToken));
+    }
+
+    [Fact]
+    public async Task TheProvisioner_DeclaresATopicExchange_EvenWhenItOnlyPublishes()
+    {
+        Assert.SkipUnless(postgres.Available, postgres.SkipReason);
+        Assert.SkipUnless(rabbit.Available, rabbit.SkipReason);
+
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var exchangeName = TestMessaging.UniqueExchangeName("exchange-type");
+
+        using (var provisioner = await StartAsync(exchangeName, queueName: null, InfrastructureProvisioning.AtStartup))
+        {
+            await provisioner.StopAsync(cancellationToken);
+        }
+
+        await using (var matching = await BrokerProbe.ConnectAsync(rabbit.ConnectionUri, cancellationToken))
+        {
+            await matching.RedeclareExchangeAsync(exchangeName, "topic", cancellationToken);
+        }
+
+        await using var mismatched = await BrokerProbe.ConnectAsync(rabbit.ConnectionUri, cancellationToken);
+
+        await Assert.ThrowsAsync<OperationInterruptedException>(() =>
+            mismatched.RedeclareExchangeAsync(exchangeName, "fanout", cancellationToken));
     }
 
     private async Task<IHost> StartAsync(

@@ -492,7 +492,15 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   Wolverine reads it only inside the `DeclareAsync` that `AutoProvision` guards, so setting
   it read like a guarantee while a missing exchange let the host start and every publish
   return successfully into the void. Hence a check of ours, pinned against a real broker by
-  `BrokerTopologyCheckTests`. An integration test
+  `BrokerTopologyCheckTests`. The check asks only whether the exchange and the queue **exist**; two
+  properties one level below are pinned by tests instead. A queue that exists but is not **bound** loses every message just as silently, and no
+  start-up check can ask AMQP about a binding without creating it (`queue.bind` provisions), so
+  `BrokerTopologyCheckTests` asserts it with a raw publish and a message count. And the platform
+  exchange must be **topic**: nothing sets the type — `DeclareExchange` carries only
+  `IsDurable` and setting the type there has no effect, because the topic-routing overload of
+  `PublishMessagesToRabbitMqExchange` wins. Swap that rule for a plain
+  `PublishAllMessages().ToRabbitExchange(...)` and the exchange silently becomes a fanout, which
+  makes every binding a catch-all; that mutation takes 11 tests red today. An integration test
   that owns its own container **is** that container's provisioning host and must select
   `AtStartup`.
 

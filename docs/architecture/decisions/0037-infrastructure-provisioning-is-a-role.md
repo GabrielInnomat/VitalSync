@@ -205,3 +205,36 @@ The general lesson, and the reason this is recorded rather than quietly fixed: a
 that is only *read* on a code path the same configuration disables is indistinguishable from a
 working guarantee until something is actually missing. A test asserting the flag's value — which the
 first implementation had — confirms nothing. Assert the behaviour against the real dependency.
+
+## Amendment (2026-08-09) — existence is not enough: bindings and the exchange type
+
+The check above asks whether the exchange and the queue *exist*. Two properties one level below
+decide just as silently whether a message arrives, and neither was covered.
+
+A queue can exist without being **bound** to the exchange. The publish then succeeds, the exchange
+routes to nothing, and the consumer sits idle — indistinguishable from an upstream context that has
+not published yet, which is the same failure mode this ADR was written against. It is not made a
+start-up check: AMQP offers no passive binding declare, `queue.bind` *creates* the binding, so a
+checking host would provision and break the rule this ADR sets. The Management HTTP API could
+answer it, but only by adding a broker plugin, a second port and separate credentials to every
+service. Since queue name and pattern reach both hosts through the same shared wiring method, the
+risk is not configuration drift but Wolverine behaving differently than assumed — a vendor
+behaviour, which belongs in an integration test against a real broker rather than in a check on
+every start. `BrokerTopologyCheckTests` therefore publishes a raw message with a matching routing
+key after the provisioner has stopped and asserts the queue's message count rises, and that a
+non-matching key leaves it.
+
+The platform exchange must be a **topic** exchange, and nothing in the wiring says so:
+`DeclareExchange` sets only `IsDurable`, and the type follows implicitly from the topic-routing
+overload of `PublishMessagesToRabbitMqExchange`. A `fanout` exchange ignores routing keys, so
+every binding becomes a catch-all and each context receives every other context's events — dropped
+without a handler, again silently. Setting the type explicitly on `DeclareExchange` has no effect
+(measured: the publish rule wins), so the property is pinned where it is decided: a publisher-only
+provisioning host must leave behind an exchange that a passive redeclare as `topic` accepts and as
+`fanout` rejects with `PRECONDITION_FAILED`.
+
+Both were verified by mutation rather than by assertion alone — replacing the publish rule with a
+plain `PublishAllMessages().ToRabbitExchange(...)` turns the exchange into a fanout and takes 11
+tests red. This is the same discipline the previous amendment arrived at, applied one level deeper:
+after finding one green test that pinned nothing, a new test is worth only what it costs a
+deliberate regression to survive it.
