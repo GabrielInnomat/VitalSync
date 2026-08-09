@@ -100,27 +100,27 @@ public sealed class StartupCheckRunnerTests
     private static IHostedLifecycleService CreateRunner(params IStartupCheck[] checks) =>
         new StartupCheckRunner(checks);
 
-    private sealed class RecordingCheck(StartupPhase phase) : IStartupCheck
+    private sealed class RecordingCheck(StartupPhase phase) : SynchronousStartupCheck
     {
         public int Runs { get; private set; }
 
-        public StartupPhase Phase => phase;
+        public override StartupPhase Phase => phase;
 
-        public void Run() => Runs++;
+        protected override void Run() => Runs++;
     }
 
-    private sealed class CallbackCheck(StartupPhase phase, Action onRun) : IStartupCheck
+    private sealed class CallbackCheck(StartupPhase phase, Action onRun) : SynchronousStartupCheck
     {
-        public StartupPhase Phase => phase;
+        public override StartupPhase Phase => phase;
 
-        public void Run() => onRun();
+        protected override void Run() => onRun();
     }
 
-    private sealed class ThrowingCheck : IStartupCheck
+    private sealed class ThrowingCheck : SynchronousStartupCheck
     {
-        public StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
+        public override StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 
-        public void Run() => throw new InvalidOperationException("boom");
+        protected override void Run() => throw new InvalidOperationException("boom");
     }
 
     private sealed class CallbackHostedService(Action onStart) : IHostedService

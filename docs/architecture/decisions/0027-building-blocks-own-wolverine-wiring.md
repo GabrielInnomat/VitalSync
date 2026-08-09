@@ -4,6 +4,7 @@
 - **Date:** 2026-07-31
 - **Amended:** 2026-08-01 (one exception for the EF Core outbox — see the note below)
 - **Amended:** 2026-08-03 (Building Blocks owns the `UseWolverine` call; the exception no longer reaches the host)
+- **Amended:** 2026-08-09 (a start-up check is async, and the runner also drives a provisioning step — see ADR-0037)
 
 ## Context
 
@@ -180,6 +181,25 @@ The complete host contract shrinks to: `AddBuildingBlocks(options => …)` plus 
 > satisfied by the .NET host's three-pass start (all `StartAsync` complete before any
 > `StartedAsync` begins), not by a registration index. `StartupCheckRunnerTests` pins
 > that guarantee with a real host and a hosted service registered after the runner.
+
+> **Amendment (2026-08-09) — the contract is `RunAsync`, and the runner drives one
+> non-check.**
+> ADR-0037 needs two things the synchronous contract above cannot express. First, a check
+> that asks infrastructure whether it exists does real I/O: `InfrastructurePresenceCheck`
+> calls `IMessageStoreAdmin.AssertStorageExistsAsync`. `IStartupCheck.Run()` therefore
+> becomes `Task RunAsync(CancellationToken)`, and the runner awaits it in both phases.
+> The six existing checks stay synchronous and say so by deriving from the new
+> `SynchronousStartupCheck`, which implements the async member over a `protected abstract
+> void Run()` — a body returning `Task.CompletedTask` per check would trip `IDE0046` six
+> times and hide which checks actually wait on something.
+>
+> Second, the runner now also drives `MartenSchemaProvisioner`, which **writes**. That
+> contradicts "every check is a pure reader" above, and the ordering rule survives it for
+> a narrow reason: it is the only writer, it runs in `BeforeHostedServicesStart`, and no
+> check in that phase reads what it creates (`InfrastructurePresenceCheck` runs in the
+> later phase and returns early on exactly the hosts that provision). Adding a second
+> writer would break that argument and needs a real ordering mechanism, not another
+> `IStartupCheck`.
 
 > **Amendment (2026-08-05) — `AddBuildingBlocks` is called exactly once, and a behavior
 > without an order is a registration error.**

@@ -14,7 +14,9 @@ var migrations = builder.AddProject<Projects.VitalSync_Sample_StateStored_Migrat
     .WithReference(writeDb)
     .WaitFor(writeDb)
     .WithReference(readDb)
-    .WaitFor(readDb);
+    .WaitFor(readDb)
+    .WithReference(messaging)
+    .WaitFor(messaging);
 
 builder.AddProject<Projects.VitalSync_Sample_StateStored_Api>("statestored-api")
     .WithReference(writeDb)
@@ -29,8 +31,12 @@ var eventSourcedReadDb = postgres.AddDatabase("eventsourced-read", "eventsourced
 
 var eventSourcedMigrations = builder
     .AddProject<Projects.VitalSync_Sample_EventSourced_MigrationService>("eventsourced-migrations")
+    .WithReference(eventSourcedWriteDb)
+    .WaitFor(eventSourcedWriteDb)
     .WithReference(eventSourcedReadDb)
-    .WaitFor(eventSourcedReadDb);
+    .WaitFor(eventSourcedReadDb)
+    .WithReference(messaging)
+    .WaitFor(messaging);
 
 builder.AddProject<Projects.VitalSync_Sample_EventSourced_Api>("eventsourced-api")
     .WithReference(eventSourcedWriteDb)

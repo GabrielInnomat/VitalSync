@@ -287,6 +287,19 @@ Der Worker migriert und **beendet sich**, statt den Host laufen zu lassen: `Wait
 hängt daran, und ein Fehlschlag muss als Exit-Code ungleich null sichtbar werden — deshalb
 darf die Exception aus `Main` herauslaufen.
 
+#### Nachtrag (2026-08-09): der Worker legt jetzt auch Schema und Topologie an
+
+Mit ADR-0037 ist Provisionierung eine Rolle. Beide Sample-Worker rufen dieselbe
+Kontext-Erweiterung wie ihr Service auf, nur mit
+`InfrastructureProvisioning.AtStartup`, starten den Host (Marten-Schema,
+Wolverine-Tabellen, Exchange und Queue entstehen dabei), fahren danach die
+EF-Migrationen für Write- und Read-Kontext und stoppen wieder. Die Apis laufen mit
+`Never` und scheitern beim Start, wenn etwas fehlt. Zwei Folgen für den AppHost:
+`eventsourced-migrations` braucht jetzt `eventsourced-write` **und** `messaging`, und
+`WaitForCompletion` ist auf beiden Pfaden inhaltlich gedeckt statt nur formal.
+Nicht empirisch belegt: der Ende-zu-Ende-Lauf des Samples-AppHost gelang lokal nicht
+(Aspire startete die Projektprozesse nicht) — abgesichert ist das derzeit allein durch CI.
+
 ### Schritt 4 — ursprüngliche Planung
 
 - Worker registriert beide `DbContext`e **direkt** per `AddDbContext`, **nicht** über
@@ -638,13 +651,14 @@ Priorität geführt.
 | ----- | ---------------------------------------------------------- | ------------ | ------- |
 | WS-04 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets` | Schritt 3    | TODO-35 |
 | WS-07 | Der gRPC-Vertrag liegt noch beim Service                   | Etappe 1     | TODO-36 |
-| WS-11 | Der Migrations-Worker ist asymmetrisch                     | Etappe 2     | TODO-27 |
 | WS-15 | `ApplyEntityKeyConversions` erfasst keine Complex Types    | vorbestehend | TODO-19 |
 
 Nachzügler aus Commit `e44ae9b`: die drei produktiven MigrationService-Worker sind leere Hüllen
 (`Host.CreateApplicationBuilder`, `Build()`, kein `Run()`), `WaitForCompletion` ist damit heute
 eine Zusage ohne Inhalt. Bleibt bewusst offen, bis pro Kontext feststeht, wie dort gespeichert
-wird — siehe [todo.md](todo.md), TODO-46.
+wird — siehe [todo.md](todo.md), TODO-46. Seit ADR-0037 hängt daran ein zweiter Auftrag: dieser
+Worker ist der einzige Host seines Kontexts, der provisionieren darf, also
+`InfrastructureProvisioning.AtStartup` wählt.
 
 ---
 ### WS-04, `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`
@@ -692,27 +706,6 @@ src/Services/Nutrition/VitalSync.Nutrition.Contracts/   ← gRPC-Interfaces + DT
 Nicht vorwegnehmen — die Entscheidung gehört an den Tag, an dem der BFF den ersten Service
 aufruft, und dann in einen ADR (zusammen mit der bisher nur faktisch getroffenen
 Bibliothekswahl `protobuf-net.Grpc`, siehe §2).
----
-
-### WS-11, Der Migrations-Worker ist asymmetrisch
-
-Verifiziert: der event-sourced MigrationService migriert **nur** den Read-Kontext
-([Program.cs:21-22](samples/EventSourced/VitalSync.Sample.EventSourced.MigrationService/Program.cs:21)).
-Die Write-Seite baut ihr Schema zur Laufzeit selbst — Marten und Wolverine tun das beide.
-Praktisch unauffällig, aber es heißt, dass eine Produktionsdatenbank ihr Schema beim ersten
-Start eines neuen Deployments ändert, ohne dass jemand es freigegeben hat.
-
-#### Lösungsvorschlag
-
-Für den Sample nichts ändern — das Verhalten ist Marten-Standard und hier korrekt
-dokumentiert. Für den ersten echten event-sourced Service die Entscheidung bewusst treffen:
-
-```csharp
-options.AutoCreateSchemaObjects = AutoCreate.None;
-```
-
-Gehört in denselben ADR wie die Frage, wie Wolverine-Tabellen in Produktion entstehen —
-beide Stores haben dasselbe Muster und sollten dieselbe Antwort bekommen.
 ---
 
 ### WS-15, `ApplyEntityKeyConversions` erfasst keine Complex Types

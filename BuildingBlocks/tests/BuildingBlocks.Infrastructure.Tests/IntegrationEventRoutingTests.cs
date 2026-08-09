@@ -78,7 +78,8 @@ public sealed class IntegrationEventRoutingTests(PostgreSqlFixture postgres, Rab
                 services.AddBuildingBlocks(options =>
                 {
                     options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
-                    options.UseMartenEventSourcing(postgres.ConnectionString);
+                    options.UseMartenEventSourcing(postgres.ConnectionString)
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup);
                     options.UseWolverineMessaging(rabbit.ConnectionUri, TestMessaging.ExchangeName, TestMessaging.ContextName);
                 });
                 services.AddSingleton<RoutingProbeSignal>();

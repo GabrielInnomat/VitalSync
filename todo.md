@@ -20,10 +20,9 @@ Priorität.
 | **P3** | Sinnvoll, aber ohne akuten Druck. Beim nächsten Anfassen der Stelle.                     |
 | **P4** | Kosmetik und Konsistenz. Aufräum-Commit.                                                 |
 
-**Alle P1 sind erledigt.** Von den verbliebenen P2 warten drei ausdrücklich auf einen Auslöser:
+**Alle P1 sind erledigt.** Die verbliebenen P2 warten alle ausdrücklich auf einen Auslöser:
 TODO-19 auf das erste Read-Modell mit eingebettetem Value Object, TODO-20 auf die erste
-Lastmessung, TODO-46 auf das erste echte Aggregat. Damit ist TODO-27 der einzige offene P2, der
-heute entscheidbar ist.
+Lastmessung, TODO-46 auf das erste echte Aggregat.
 
 ## Übersicht
 
@@ -31,7 +30,6 @@ heute entscheidbar ist.
 | ------- | -------------------------------------------------------------- | ------ | --------- | ----------------- |
 | TODO-19 | `ApplyEntityKeyConversions` erfasst keine Complex Types        | **P2** | teilweise | hacky-4, WS-15    |
 | TODO-20 | Global sequentielle Domain-Event-Queue                         | **P2** | offen     | hacky-13, IMP-25  |
-| TODO-27 | Schema-Erzeugung zur Laufzeit in Produktion                    | **P2** | offen     | WS-11             |
 | TODO-46 | Die MigrationService-Worker sind leere Hüllen                  | **P2** | offen     | AppHost `e44ae9b` |
 | TODO-29 | `DomainEventPublisher` koppelt Projektion und Publikation      | **P3** | offen     | IMP-26            |
 | TODO-30 | `IIntegrationEventMapper` ist untypisiert                      | **P3** | offen     | IMP-12            |
@@ -92,44 +90,6 @@ dafür ist also erfüllt.
 
 Vor der ersten Lastmessung nicht anfassen — hier steht es, damit die Entscheidung bewusst fällt
 statt als Default stehen zu bleiben.
-
----
-
-# TODO-27, Schema-Erzeugung zur Laufzeit in Produktion
-
-**P2 · offen · WS-11**
-
-Der event-sourced MigrationService migriert **nur** den Read-Kontext
-([Program.cs:21-22](samples/EventSourced/VitalSync.Sample.EventSourced.MigrationService/Program.cs:21)).
-Die Write-Seite baut ihr Schema zur Laufzeit selbst — Marten und Wolverine tun das beide. Im
-Sample unauffällig; in Produktion heißt es, dass eine Datenbank ihr Schema beim ersten Start eines
-neuen Deployments ändert, ohne dass jemand es freigegeben hat.
-
-## Lösungsvorschlag
-
-```csharp
-options.AutoCreateSchemaObjects = AutoCreate.None;
-```
-
-Gehört in denselben ADR wie die Frage, wie die Wolverine-Tabellen in Produktion entstehen — beide
-Stores haben dasselbe Muster und sollten dieselbe Antwort bekommen. Spätestens beim ersten echten
-event-sourced Service fällig.
-
-## Nachtrag (2026-08-06): `AutoProvision` gehört hierher
-
-`ApplyBuildingBlocksMessagingDefaults` ruft `UseRabbitMq(...).AutoProvision()`
-auf, legt also Exchange, Queues und Bindings beim Start selbst an, wenn sie fehlen. Das ist
-dieselbe Klasse wie die beiden Punkte oben, nur auf dem Broker statt in der Datenbank: eine
-Komponente ändert beim ersten Start eines neuen Deployments fremde Infrastruktur, ohne Freigabe.
-
-Der Broker hat dabei sogar den unangenehmeren Fall — der Typ einer Queue steht bei der Deklaration
-fest. Hält der Broker noch eine klassische Queue desselben Namens, scheitert `AutoProvision` und
-die Queue muss von Hand gelöscht werden (ADR-0023, Nachtrag 2026-08-04). Ein Deployment, das
-Infrastruktur anlegen darf, kann sie also auch blockieren.
-
-Die drei Fälle brauchen **eine** Antwort, nicht drei: wer legt Schema und Topologie an, wann, und
-was macht der Service, wenn er sie beim Start nicht vorfindet. Kandidat ist der jeweilige
-MigrationService-Worker (TODO-46), der die Datenbanken ohnehin schon migriert.
 
 ---
 
@@ -395,6 +355,18 @@ nach beiden `MigrateAsync` und hinter dem Schalter `ReadModels:Rebuild` läuft
 
 Der Runner ist deshalb `public` und generisch über den Kontext: ein Worker ohne `AddBuildingBlocks`
 kann ihn selbst instanziieren. Wer dieses TODO umsetzt, zieht das Muster mit.
+
+## Nachtrag (2026-08-09): „ohne `AddBuildingBlocks`" gilt nicht mehr
+
+ADR-0037 macht den Worker zum einzigen Host seines Kontexts, der Schema, Message-Store und
+Broker-Topologie anlegen darf. Damit braucht er die volle Wiring — und zwar **dieselbe
+Kontext-Erweiterungsmethode wie sein Service**, nur mit
+`InfrastructureProvisioning.AtStartup`, damit die beiden sich über Verbindungszeichenfolge,
+Kontextnamen und Event-Assembly nicht widersprechen können. Beide Sample-Worker zeigen die
+Reihenfolge: Erweiterung mit `AtStartup` → `StartAsync` → `MigrateAsync` für Write- und
+Read-Kontext → optionaler Rebuild → `StopAsync`. Der Absatz oben, der `AddBuildingBlocks`
+ausdrücklich ausschließt, ist damit überholt; er bleibt stehen, weil er die ursprüngliche
+Erwartung dokumentiert.
 
 ---
 

@@ -4,5 +4,5 @@ internal interface IStartupCheck
 {
     StartupPhase Phase { get; }
 
-    void Run();
+    Task RunAsync(CancellationToken cancellationToken);
 }

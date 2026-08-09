@@ -149,7 +149,8 @@ public sealed class IntegrationEventDurabilityTests(PostgreSqlFixture postgres, 
                 services.AddBuildingBlocks(options =>
                 {
                     options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
-                    options.UseMartenEventSourcing(postgres.ConnectionString);
+                    options.UseMartenEventSourcing(postgres.ConnectionString)
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup);
                     options.UseWolverineMessaging(rabbit.ConnectionUri, TestMessaging.ExchangeName, TestMessaging.ContextName);
                     options.SubscribeToIntegrationEvents(
                         _subscriberQueueName,

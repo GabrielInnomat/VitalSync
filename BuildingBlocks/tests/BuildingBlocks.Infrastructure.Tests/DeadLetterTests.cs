@@ -186,7 +186,8 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
                 services.AddBuildingBlocks(options =>
                 {
                     options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
-                    options.UseMartenEventSourcing(postgres.ConnectionString);
+                    options.UseMartenEventSourcing(postgres.ConnectionString)
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup);
                     options.UseWolverineMessaging(rabbit.ConnectionUri, exchangeName, TestMessaging.ContextName);
                     options.SubscribeToIntegrationEvents(
                         queueName,

@@ -15,11 +15,12 @@ public sealed class IntegrationEventMapperCheckTests
     private static readonly Uri RabbitMqUri = new("amqp://localhost:5672");
 
     [Fact]
-    public void MapperWithoutATransport_FailsNamingTheMapper()
+    public async Task MapperWithoutATransport_FailsNamingTheMapper()
     {
         using var provider = BuildProvider(options => options.AddHandlersFrom(typeof(RegistrationMapper).Assembly));
 
-        var exception = Assert.Throws<InvalidOperationException>(() => Check(provider).Run());
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => Check(provider).RunAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains(nameof(RegistrationMapper), exception.Message, StringComparison.Ordinal);
         Assert.Contains(
@@ -29,33 +30,33 @@ public sealed class IntegrationEventMapperCheckTests
     }
 
     [Fact]
-    public void NoMapper_Passes()
+    public async Task NoMapper_Passes()
     {
         using var provider = BuildProvider(_ => { });
 
-        Check(provider).Run();
+        await Check(provider).RunAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public void MapperWithATransport_Passes()
+    public async Task MapperWithATransport_Passes()
     {
         using var provider = BuildProvider(options => options
             .AddHandlersFrom(typeof(RegistrationMapper).Assembly)
             .UseMartenEventSourcing(ConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
 
-        Check(provider).Run();
+        await Check(provider).RunAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public void MapperAndAHostSuppliedSinkFactory_Passes()
+    public async Task MapperAndAHostSuppliedSinkFactory_Passes()
     {
         using var provider = BuildProvider(
             options => options.AddHandlersFrom(typeof(RegistrationMapper).Assembly),
             services => services.Replace(ServiceDescriptor.Singleton<IIntegrationEventSinkFactory>(
                 new WolverineIntegrationEventSinkFactory(TestMessaging.ContextName))));
 
-        Check(provider).Run();
+        await Check(provider).RunAsync(TestContext.Current.CancellationToken);
     }
 
     private static IStartupCheck Check(ServiceProvider provider) =>

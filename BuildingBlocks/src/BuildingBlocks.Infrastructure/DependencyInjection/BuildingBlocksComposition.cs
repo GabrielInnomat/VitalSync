@@ -2,6 +2,7 @@ using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Application.DomainEvents;
 using BuildingBlocks.Application.Persistence;
 using BuildingBlocks.Domain;
+using BuildingBlocks.Infrastructure.DependencyInjection.Provisioning;
 using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Dispatching;
@@ -155,6 +156,9 @@ internal static class BuildingBlocksComposition
         services.AddSingleton<IStartupCheck>(provider =>
             new HandlerRegistrationCheck(provider, options.ScannedAssemblies));
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, WolverineRuntimeCheck>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, MartenSchemaProvisioner>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, BrokerTopologyCheck>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, InfrastructurePresenceCheck>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, IntegrationEventSubscriptionCheck>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, IntegrationEventMapperCheck>());
         services.AddSingleton<IStartupCheck>(provider => new UnitOfWorkPresenceCheck(

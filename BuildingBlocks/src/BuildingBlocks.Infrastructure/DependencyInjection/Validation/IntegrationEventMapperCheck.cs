@@ -4,11 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
-internal sealed class IntegrationEventMapperCheck(IServiceProvider serviceProvider) : IStartupCheck
+internal sealed class IntegrationEventMapperCheck(IServiceProvider serviceProvider) : SynchronousStartupCheck
 {
-    public StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
+    public override StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 
-    public void Run()
+    protected override void Run()
     {
         if (serviceProvider.GetService<IIntegrationEventSinkFactory>() is not NullIntegrationEventSinkFactory)
         {

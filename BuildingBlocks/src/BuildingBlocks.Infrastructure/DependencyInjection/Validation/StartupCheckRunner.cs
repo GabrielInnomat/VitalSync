@@ -4,17 +4,11 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
 internal sealed class StartupCheckRunner(IEnumerable<IStartupCheck> checks) : IHostedLifecycleService
 {
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        Run(StartupPhase.BeforeHostedServicesStart);
-        return Task.CompletedTask;
-    }
+    public Task StartAsync(CancellationToken cancellationToken) =>
+        RunAsync(StartupPhase.BeforeHostedServicesStart, cancellationToken);
 
-    public Task StartedAsync(CancellationToken cancellationToken)
-    {
-        Run(StartupPhase.AfterHostedServicesStarted);
-        return Task.CompletedTask;
-    }
+    public Task StartedAsync(CancellationToken cancellationToken) =>
+        RunAsync(StartupPhase.AfterHostedServicesStarted, cancellationToken);
 
     public Task StartingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
@@ -24,13 +18,13 @@ internal sealed class StartupCheckRunner(IEnumerable<IStartupCheck> checks) : IH
 
     public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    private void Run(StartupPhase phase)
+    private async Task RunAsync(StartupPhase phase, CancellationToken cancellationToken)
     {
         foreach (var check in checks)
         {
             if (check.Phase == phase)
             {
-                check.Run();
+                await check.RunAsync(cancellationToken).ConfigureAwait(false);
             }
         }
     }

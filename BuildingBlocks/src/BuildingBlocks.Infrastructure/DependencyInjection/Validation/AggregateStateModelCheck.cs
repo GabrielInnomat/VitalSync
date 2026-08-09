@@ -6,12 +6,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
-internal sealed class AggregateStateModelCheck<TContext>(IServiceProvider serviceProvider) : IStartupCheck
+internal sealed class AggregateStateModelCheck<TContext>(IServiceProvider serviceProvider) : SynchronousStartupCheck
     where TContext : DbContext
 {
-    public StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
+    public override StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 
-    public void Run()
+    protected override void Run()
     {
         using var scope = serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<TContext>();

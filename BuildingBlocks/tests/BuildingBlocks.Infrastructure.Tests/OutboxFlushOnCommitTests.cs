@@ -32,7 +32,8 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
                 services.AddBuildingBlocks(options =>
                 {
                     options.AddDomainEventsFrom(typeof(FlushCounterCreated).Assembly);
-                    options.UseMartenEventSourcing(fixture.ConnectionString);
+                    options.UseMartenEventSourcing(fixture.ConnectionString)
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup);
                 });
                 services.AddScoped<ICommandHandler<CreateFlushCounter>, CreateFlushCounterHandler>();
                 services.AddScoped<IProjectionHandler<FlushCounterCreated>, FlushCounterProjection>();
@@ -70,7 +71,8 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
             options =>
             {
                 options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
-                options.UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString);
+                options.UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString)
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup);
             },
             ConfigureFlushOnlyDurability);
 

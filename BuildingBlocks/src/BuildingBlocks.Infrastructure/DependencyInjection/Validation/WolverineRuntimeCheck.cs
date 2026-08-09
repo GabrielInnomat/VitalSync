@@ -6,11 +6,11 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
 internal sealed class WolverineRuntimeCheck(
     IServiceProvider serviceProvider,
-    WolverineWiringSettings settings) : IStartupCheck
+    WolverineWiringSettings settings) : SynchronousStartupCheck
 {
-    public StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
+    public override StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 
-    public void Run()
+    protected override void Run()
     {
         if (!settings.RequiresWolverine)
         {

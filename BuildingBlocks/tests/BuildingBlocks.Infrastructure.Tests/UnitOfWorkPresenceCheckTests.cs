@@ -12,36 +12,37 @@ namespace BuildingBlocks.Infrastructure.Tests;
 public sealed class UnitOfWorkPresenceCheckTests
 {
     [Fact]
-    public void NoPersistenceAndScannedCommands_FailsNamingTheCommands()
+    public async Task NoPersistenceAndScannedCommands_FailsNamingTheCommands()
     {
         using var provider = BuildProvider(options => options.AddHandlersFrom(typeof(RegistrationCommand).Assembly));
 
-        var exception = Assert.Throws<InvalidOperationException>(() => Check(provider).Run());
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => Check(provider).RunAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains(nameof(RegistrationCommand), exception.Message, StringComparison.Ordinal);
         Assert.Contains(nameof(BuildingBlocksOptions.UseNoPersistence), exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void NoPersistenceAndNoScannedCommands_Passes()
+    public async Task NoPersistenceAndNoScannedCommands_Passes()
     {
         using var provider = BuildProvider(_ => { });
 
-        Check(provider).Run();
+        await Check(provider).RunAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public void HostRegisteredUnitOfWork_Passes()
+    public async Task HostRegisteredUnitOfWork_Passes()
     {
         using var provider = BuildProvider(
             options => options.AddHandlersFrom(typeof(RegistrationCommand).Assembly),
             services => services.AddScoped<IUnitOfWork, ProbeUnitOfWork>());
 
-        Check(provider).Run();
+        await Check(provider).RunAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public void UnitOfWorkRegisteredAfterBuildingBlocks_Passes()
+    public async Task UnitOfWorkRegisteredAfterBuildingBlocks_Passes()
     {
         var services = new ServiceCollection();
         services.AddFakeLogging();
@@ -50,17 +51,17 @@ public sealed class UnitOfWorkPresenceCheckTests
 
         using var provider = services.BuildServiceProvider();
 
-        Check(provider).Run();
+        await Check(provider).RunAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public void UseNoPersistence_PassesAndLogsTheDeliberateChoice()
+    public async Task UseNoPersistence_PassesAndLogsTheDeliberateChoice()
     {
         using var provider = BuildProvider(options => options
             .AddHandlersFrom(typeof(RegistrationCommand).Assembly)
             .UseNoPersistence());
 
-        Check(provider).Run();
+        await Check(provider).RunAsync(TestContext.Current.CancellationToken);
 
         Assert.Contains(
             provider.GetRequiredService<FakeLogCollector>().GetSnapshot(),

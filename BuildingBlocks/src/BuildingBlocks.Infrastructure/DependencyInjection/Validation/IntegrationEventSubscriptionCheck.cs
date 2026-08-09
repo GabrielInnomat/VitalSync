@@ -8,11 +8,11 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
 internal sealed class IntegrationEventSubscriptionCheck(
     IServiceProvider serviceProvider,
-    WolverineWiringSettings settings) : IStartupCheck
+    WolverineWiringSettings settings) : SynchronousStartupCheck
 {
-    public StartupPhase Phase => StartupPhase.AfterHostedServicesStarted;
+    public override StartupPhase Phase => StartupPhase.AfterHostedServicesStarted;
 
-    public void Run()
+    protected override void Run()
     {
         if (settings.Messaging is not { } messaging || settings.Subscription is not { } subscription)
         {

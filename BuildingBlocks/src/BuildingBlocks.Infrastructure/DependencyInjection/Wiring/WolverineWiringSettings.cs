@@ -8,8 +8,14 @@ internal sealed class WolverineWiringSettings
 
     public IntegrationEventSubscription? Subscription { get; private set; }
 
+    public InfrastructureProvisioning Provisioning { get; private set; } = InfrastructureProvisioning.Never;
+
+    public bool ProvisionsInfrastructure => Provisioning == InfrastructureProvisioning.AtStartup;
+
     public bool RequiresWolverine =>
         Persistence.IsSelected || Messaging is not null || Subscription is not null;
+
+    public void SelectProvisioning(InfrastructureProvisioning provisioning) => Provisioning = provisioning;
 
     public void SelectPersistence(PersistenceChoice choice)
     {

@@ -33,6 +33,7 @@ public sealed class ConcurrencyConflictScenarioTests(PostgreSqlFixture fixture)
             options => options
                 .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
                 .UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString)
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
                 .AddPipelineBehavior(typeof(CompetingWriteBehavior<,>), InsideTheUnitOfWork),
             ConfigureSoloDurability);
 
@@ -89,6 +90,7 @@ public sealed class ConcurrencyConflictScenarioTests(PostgreSqlFixture fixture)
             options => options
                 .AddDomainEventsFrom(typeof(TallyOpened).Assembly)
                 .UseMartenEventSourcing(fixture.ConnectionString)
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
                 .AddPipelineBehavior(typeof(CompetingWriteBehavior<,>), InsideTheUnitOfWork),
             ConfigureSoloDurability);
 

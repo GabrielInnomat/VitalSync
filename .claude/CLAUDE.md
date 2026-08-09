@@ -355,7 +355,8 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   through DI, so an implementation registered in the container has no reason to be
   visible. Exactly four types are public API — `ServiceCollectionExtensions`,
   `HostApplicationBuilderExtensions`, `BuildingBlocksOptions`,
-  `EntityKeyModelBuilderExtensions` — plus `PersistedSchema`, public because a service's
+  `EntityKeyModelBuilderExtensions` — plus `InfrastructureProvisioning`, public because it
+  is an argument a host passes (ADR-0037), `PersistedSchema`, public because a service's
   **tests** call it (ADR-0035), and `ReadModelRebuildRunner<TContext>`, public because a
   migration worker constructs it without the full wiring (ADR-0036). Seven more are public **only** because Wolverine
   generates C# into another assembly and names them (`DomainEventEnvelope`,
@@ -459,7 +460,11 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   registration work inside the matching phase, not at the end of the method.
 - **A start-up check is an `IStartupCheck`, never its own hosted service.** One
   `StartupCheckRunner` drives them all: `BeforeHostedServicesStart` checks run in its
-  `StartAsync`, `AfterHostedServicesStarted` checks in its `StartedAsync`. Only the
+  `StartAsync`, `AfterHostedServicesStarted` checks in its `StartedAsync`. The contract is
+  `Task RunAsync(CancellationToken)`; a check that does no I/O derives from
+  `SynchronousStartupCheck` and overrides `void Run()` instead — six bodies returning
+  `Task.CompletedTask` trip `IDE0046` and hide which checks actually wait on something.
+  Only the
   **phase** matters — the checks are pure readers, so their relative order decides only
   which message a broken host sees first, and the .NET host's three-pass start
   guarantees every `StartAsync` finishes before any `StartedAsync` begins. That is why
@@ -467,7 +472,28 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   depending on a registration index. A check **registers unconditionally and guards
   itself** (early return when its capability was not selected) rather than being
   registered conditionally, and it probes the **built container**
-  (`IServiceProviderIsService`), not the `IServiceCollection`.
+  (`IServiceProviderIsService`), not the `IServiceCollection`. The one exception to
+  "pure reader" is `MartenSchemaProvisioner` (ADR-0037), which writes; it is the **only**
+  writer and a second one would need a real ordering mechanism instead.
+- **Creating infrastructure is a role, not a start-up side effect** (ADR-0037).
+  `options.ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)` is selected by
+  **exactly one host per bounded context** — the MigrationService worker, through the same
+  context extension method its service uses, so the two cannot disagree about a connection
+  string, a context name or an event assembly. Every other host keeps the default `Never`:
+  Marten runs `AutoCreate.None`, Wolverine's `AutoBuildMessageStorageOnStartup` is `None`,
+  the RabbitMQ topology is not declared at all, and two checks fail the start instead:
+  `InfrastructurePresenceCheck` (`AfterHostedServicesStarted`) for the message store's
+  tables, `BrokerTopologyCheck` (`BeforeHostedServicesStart`) for the exchange and the
+  subscriber queue. One value, not three flags — the only sensible combinations are all-on
+  and all-off. Two traps: `AddResourceSetupOnStartup` is **deliberately not used** (it opens
+  RabbitMQ channels concurrently with Wolverine's own start and hits a null-channel
+  dereference in `RabbitMqListener.CreateAsync`), and **`DeclarePassive` does nothing** —
+  Wolverine reads it only inside the `DeclareAsync` that `AutoProvision` guards, so setting
+  it read like a guarantee while a missing exchange let the host start and every publish
+  return successfully into the void. Hence a check of ours, pinned against a real broker by
+  `BrokerTopologyCheckTests`. An integration test
+  that owns its own container **is** that container's provisioning host and must select
+  `AtStartup`.
 
 ## Persistence & event sourcing (from accepted ADRs)
 
@@ -651,7 +677,8 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   options lambda, so the call order does not matter. Pinned by
   `IntegrationEventDurabilityTests` (real broker) and `WolverineExtensionTests` (no Docker).
   Consequence to know: a queue's type is fixed at declaration, so a broker still holding a
-  classic queue of the same name makes `AutoProvision` fail and the queue must be deleted.
+  classic queue of the same name makes `AutoProvision` fail and the queue must be deleted —
+  and since ADR-0037 only the provisioning host calls `AutoProvision` at all.
 - **Publisher confirmations are on, and that closes the last metre** (2026-08-07).
   A durable outbox deletes its row once Wolverine considers the envelope sent, and without
   confirmations "sent" means *in the socket*, not *in the broker* — a broker that discards

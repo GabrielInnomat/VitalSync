@@ -16,7 +16,8 @@ public sealed class EntityKeyEventStreamFormatTests(PostgreSqlFixture fixture)
         var services = new ServiceCollection();
         services.AddBuildingBlocks(options => options
             .AddDomainEventsFrom(typeof(FlushCounterCreated).Assembly)
-            .UseMartenEventSourcing(fixture.ConnectionString));
+            .UseMartenEventSourcing(fixture.ConnectionString)
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup));
 
         await using var provider = services.BuildServiceProvider();
         var store = provider.GetRequiredService<IDocumentStore>();

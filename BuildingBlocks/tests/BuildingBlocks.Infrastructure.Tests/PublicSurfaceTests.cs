@@ -9,6 +9,7 @@ public sealed class PublicSurfaceTests
     [
         "BuildingBlocks.Infrastructure.DependencyInjection.BuildingBlocksOptions",
         "BuildingBlocks.Infrastructure.DependencyInjection.HostApplicationBuilderExtensions",
+        "BuildingBlocks.Infrastructure.DependencyInjection.InfrastructureProvisioning",
         "BuildingBlocks.Infrastructure.DependencyInjection.ServiceCollectionExtensions",
         "BuildingBlocks.Infrastructure.Persistence.EntityKeyModelBuilderExtensions",
         "BuildingBlocks.Infrastructure.ReadModels.ReadModelRebuildRunner`1",
@@ -85,6 +86,7 @@ public sealed class PublicSurfaceTests
     {
         var fields = typeof(ServiceCollectionExtensions).Assembly
             .GetExportedTypes()
+            .Where(type => !type.IsEnum)
             .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
             .Where(field => !field.IsLiteral)
             .Select(field => $"{field.DeclaringType?.FullName}.{field.Name}")

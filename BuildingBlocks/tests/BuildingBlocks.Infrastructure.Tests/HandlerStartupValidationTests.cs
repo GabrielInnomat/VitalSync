@@ -10,33 +10,35 @@ namespace BuildingBlocks.Infrastructure.Tests;
 public sealed class HandlerStartupValidationTests
 {
     [Fact]
-    public void StartupValidation_AllHandlersRegistered_Passes()
+    public async Task StartupValidation_AllHandlersRegistered_Passes()
     {
         using var provider = BuildProvider(options =>
             options.AddHandlersFrom(typeof(RegistrationCommand).Assembly));
 
-        GetValidator(provider).Run();
+        await GetValidator(provider).RunAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public void StartupValidation_CommandAndQueryWithoutHandlers_FailsNamingEveryRequestType()
+    public async Task StartupValidation_CommandAndQueryWithoutHandlers_FailsNamingEveryRequestType()
     {
         using var provider = BuildProvider(options =>
             options.AddHandlersFrom(typeof(OrphanCommand).Assembly));
 
-        var exception = Assert.Throws<InvalidOperationException>(() => GetValidator(provider).Run());
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => GetValidator(provider).RunAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains(nameof(OrphanCommand), exception.Message, StringComparison.Ordinal);
         Assert.Contains(nameof(OrphanQuery), exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void StartupValidation_RequestTypeWithMultipleResultContracts_FailsNamingTypeAndContracts()
+    public async Task StartupValidation_RequestTypeWithMultipleResultContracts_FailsNamingTypeAndContracts()
     {
         using var provider = BuildProvider(options =>
             options.AddHandlersFrom(typeof(AmbiguousQuery).Assembly));
 
-        var exception = Assert.Throws<InvalidOperationException>(() => GetValidator(provider).Run());
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => GetValidator(provider).RunAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains(nameof(AmbiguousQuery), exception.Message, StringComparison.Ordinal);
         Assert.Contains("IQuery<Int32>", exception.Message, StringComparison.Ordinal);

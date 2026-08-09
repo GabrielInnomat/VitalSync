@@ -12,11 +12,11 @@ internal sealed partial class UnitOfWorkPresenceCheck(
     IServiceProvider serviceProvider,
     WolverineWiringSettings wiring,
     IReadOnlyCollection<Assembly> scannedAssemblies,
-    ILogger<UnitOfWorkPresenceCheck> logger) : IStartupCheck
+    ILogger<UnitOfWorkPresenceCheck> logger) : SynchronousStartupCheck
 {
-    public StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
+    public override StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 
-    public void Run()
+    protected override void Run()
     {
         if (wiring.Persistence.IsSelected)
         {

@@ -6,6 +6,7 @@ using BuildingBlocks.Infrastructure.Persistence;
 using BuildingBlocks.Infrastructure.Persistence.EventSourced;
 using BuildingBlocks.Infrastructure.Persistence.StateStored;
 using BuildingBlocks.Infrastructure.ReadModels;
+using JasperFx;
 using JasperFx.Events;
 using Marten;
 using Microsoft.EntityFrameworkCore;
@@ -50,6 +51,9 @@ internal sealed class PersistenceRegistrar(IServiceCollection services, Wolverin
         {
             var storeOptions = new StoreOptions();
             storeOptions.Connection(connectionString);
+            storeOptions.AutoCreateSchemaObjects = wiring.ProvisionsInfrastructure
+                ? AutoCreate.CreateOrUpdate
+                : AutoCreate.None;
             storeOptions.Events.StreamIdentity = StreamIdentity.AsString;
             storeOptions.UseSystemTextJsonForSerialization(EntityKeyJsonOptions.Create());
 

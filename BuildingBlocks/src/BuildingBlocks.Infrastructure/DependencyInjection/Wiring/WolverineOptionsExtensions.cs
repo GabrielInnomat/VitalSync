@@ -5,6 +5,7 @@ using BuildingBlocks.Application.IntegrationEvents;
 using BuildingBlocks.Domain.Rules;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
+using JasperFx;
 using Npgsql;
 using Wolverine;
 using Wolverine.ErrorHandling;
@@ -42,6 +43,19 @@ internal static class WolverineOptionsExtensions
         return options;
     }
 
+    public static WolverineOptions ApplyBuildingBlocksMessageStorageProvisioning(
+        this WolverineOptions options,
+        bool provisionInfrastructure)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        options.AutoBuildMessageStorageOnStartup = provisionInfrastructure
+            ? AutoCreate.CreateOrUpdate
+            : AutoCreate.None;
+
+        return options;
+    }
+
     public static WolverineOptions ApplyBuildingBlocksDomainEventRouting(this WolverineOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -63,20 +77,26 @@ internal static class WolverineOptionsExtensions
 
     public static WolverineOptions ApplyBuildingBlocksMessagingDefaults(
         this WolverineOptions options,
-        MessagingSettings messaging)
+        MessagingSettings messaging,
+        bool provisionInfrastructure)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(messaging);
 
-        options.UseRabbitMq(messaging.RabbitMqUri)
-            .AutoProvision()
+        var transport = options.UseRabbitMq(messaging.RabbitMqUri)
             .UseQuorumQueues()
             .ConfigureChannelCreation(channel =>
             {
                 channel.PublisherConfirmationsEnabled = true;
                 channel.PublisherConfirmationTrackingEnabled = true;
-            })
-            .DeclareExchange(messaging.ExchangeName, exchange => exchange.IsDurable = true);
+            });
+
+        if (provisionInfrastructure)
+        {
+            transport.AutoProvision();
+        }
+
+        transport.DeclareExchange(messaging.ExchangeName, exchange => exchange.IsDurable = true);
 
         options.PublishMessagesToRabbitMqExchange<IIntegrationEvent>(
                 messaging.ExchangeName,

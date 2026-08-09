@@ -784,9 +784,16 @@ internal interface IStartupCheck
 {
     StartupPhase Phase { get; }
 
-    void Run();
+    Task RunAsync(CancellationToken cancellationToken);
 }
 ```
+
+Most checks do no I/O at all. Those derive from `SynchronousStartupCheck`, which implements
+the async member over a `protected abstract void Run()` — six bodies returning
+`Task.CompletedTask` would trip `IDE0046` under warnings-as-errors and, worse, hide which
+checks actually wait on something. Only a check that genuinely reaches out —
+`InfrastructurePresenceCheck` asking the message store whether its tables exist —
+implements `IStartupCheck` directly.
 
 A single `StartupCheckRunner` — the only `IHostedLifecycleService` Building Blocks
 registers — resolves `IEnumerable<IStartupCheck>` and runs the
@@ -801,9 +808,12 @@ registers — resolves `IEnumerable<IStartupCheck>` and runs the
 | `UnitOfWorkPresenceCheck`          | before   | commands are scanned, nothing commits them, and nobody said so  |
 | `IntegrationEventSubscriptionCheck`| after    | a handled integration event matches no bound pattern, or is own |
 | `IntegrationEventMapperCheck`      | before   | mappers are registered and every event they produce would reach the null sink |
+| `InfrastructurePresenceCheck`      | after    | the host does not provision and the message store's tables are missing |
+| `BrokerTopologyCheck`              | before   | the host does not provision and the exchange or the subscriber queue is missing |
 
 **Only the phase is load-bearing, not the registration order.** The checks are pure
-readers — none mutates state another one reads — so their relative sequence decides
+readers — with the single exception of `MartenSchemaProvisioner` below, none mutates
+state another one reads — so their relative sequence decides
 only which message a broken host sees first. What *is* guaranteed, and what
 `IntegrationEventSubscriptionCheck` depends on, is the .NET host's three-pass start:
 every `StartAsync` completes before any `StartedAsync` begins. Wolverine compiles its
@@ -831,6 +841,58 @@ Two consequences for authoring:
 
 A new check is a new `IStartupCheck` plus one `TryAddEnumerable` line — never another
 hosted service.
+
+### Provisioning is a role, not a start-up side effect
+
+ADR-0037 turns "create the schema, the message-store tables and the broker topology" into
+a selected role: `options.ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)`.
+Exactly one host per bounded context — the migration worker — selects it; every other host
+keeps the default `Never` and fails at start when what it needs is missing.
+
+One value drives three settings, because the three effects are one decision:
+
+| Component         | `Never`                                              | `AtStartup`                 |
+| ----------------- | ---------------------------------------------------- | --------------------------- |
+| Marten            | `AutoCreateSchemaObjects = AutoCreate.None`          | `AutoCreate.CreateOrUpdate` |
+| Wolverine storage | `AutoBuildMessageStorageOnStartup = AutoCreate.None` | `AutoCreate.CreateOrUpdate` |
+| RabbitMQ          | nothing is declared                                  | `AutoProvision()`           |
+
+Wolverine's two switches act at its own start, but Marten applies a configured change
+lazily on first use, so `AtStartup` adds one step of our own: `MartenSchemaProvisioner` in
+`DependencyInjection/Provisioning/`, an `IStartupCheck` in the `BeforeHostedServicesStart`
+phase calling `ApplyAllConfiguredChangesToDatabaseAsync`. It is the **only** writer among
+the start-up steps, which is what keeps "the phase is load-bearing, not the order" true —
+a second writer would need a real ordering mechanism instead.
+
+With provisioning off, a missing prerequisite must fail the start rather than the first
+request, and two checks cover the two stores:
+
+- `InfrastructurePresenceCheck` (`AfterHostedServicesStarted`) asserts Wolverine's message
+  storage exists.
+- `BrokerTopologyCheck` (`BeforeHostedServicesStart`) declares the exchange and the
+  subscriber queue passively on a connection of its own.
+
+Three traps worth knowing:
+
+- **`AddResourceSetupOnStartup` is deliberately not used**, although it looks like exactly
+  this feature. It runs as a hosted service concurrently with Wolverine's own start and
+  opens RabbitMQ channels while Wolverine is opening its own; Wolverine 6.23 dereferences a
+  channel that can be null at that moment (`RabbitMqListener.CreateAsync`) and a dozen
+  messaging tests fail with a bare `NullReferenceException`.
+- **`DeclarePassive` on an exchange does nothing here**, which is why `BrokerTopologyCheck`
+  exists (ADR-0037 amendment). Wolverine reads that flag inside `DeclareAsync`, and both
+  `RabbitMqExchange.InitializeAsync` and `RabbitMqQueue.InitializeAsync` reach it only
+  under `if (_parent.AutoProvision …)`. With provisioning off nothing is declared at all,
+  so setting the flag was dead code that read like a guarantee. Measured: a missing queue
+  failed the start with a bare AMQP 404, and a **missing exchange let the host start and
+  every publish return successfully while nothing arrived**.
+- **A test that asserts the flag confirms nothing.** The first implementation had exactly
+  such a test and it was green throughout. Broker behaviour is pinned against a real
+  broker in `BrokerTopologyCheckTests`.
+
+An integration test that owns its own PostgreSQL or RabbitMQ container **is** the
+provisioning host for that container and must say so — every container-backed test host
+here selects `AtStartup` right after its persistence call.
 
 ### Committing nothing is a choice, not a default
 

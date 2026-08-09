@@ -108,7 +108,8 @@ public sealed class EfCoreAggregateRoundTripTests(PostgreSqlFixture fixture)
         builder.AddBuildingBlocks(
             options => options
                 .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
-                .UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString),
+                .UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString)
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup),
             wolverine =>
             {
                 wolverine.Durability.Mode = DurabilityMode.Solo;

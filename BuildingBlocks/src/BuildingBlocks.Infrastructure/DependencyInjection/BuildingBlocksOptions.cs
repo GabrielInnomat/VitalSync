@@ -20,12 +20,14 @@ public sealed class BuildingBlocksOptions
     private readonly HandlerRegistrar _handlers;
     private readonly PersistenceRegistrar _persistence;
     private readonly MessagingRegistrar _messaging;
+    private readonly ProvisioningRegistrar _provisioning;
 
     internal BuildingBlocksOptions(IServiceCollection services, PipelineBehaviorRegistry behaviorRegistry)
     {
         _handlers = new HandlerRegistrar(services, behaviorRegistry);
         _persistence = new PersistenceRegistrar(services, WolverineWiring);
         _messaging = new MessagingRegistrar(services, WolverineWiring);
+        _provisioning = new ProvisioningRegistrar(WolverineWiring);
     }
 
     internal WolverineWiringSettings WolverineWiring { get; } = new();
@@ -105,6 +107,17 @@ public sealed class BuildingBlocksOptions
         ArgumentNullException.ThrowIfNull(topicPatterns);
 
         _messaging.Subscribe(queueName, consumerAssembly, topicPatterns);
+        return this;
+    }
+
+    public BuildingBlocksOptions ProvisionInfrastructure(InfrastructureProvisioning provisioning)
+    {
+        if (!Enum.IsDefined(provisioning))
+        {
+            throw new ArgumentOutOfRangeException(nameof(provisioning), provisioning, null);
+        }
+
+        _provisioning.Select(provisioning);
         return this;
     }
 }

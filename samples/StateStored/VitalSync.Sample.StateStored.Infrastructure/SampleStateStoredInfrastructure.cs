@@ -19,7 +19,8 @@ public static class SampleStateStoredInfrastructure
         string writeConnectionString,
         string readConnectionString,
         Uri rabbitMqUri,
-        string exchangeName)
+        string exchangeName,
+        InfrastructureProvisioning provisioning = InfrastructureProvisioning.Never)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
@@ -32,6 +33,7 @@ public static class SampleStateStoredInfrastructure
             options.AddDomainEventsFrom(typeof(Widget).Assembly);
             options.UseEfCorePersistence<WidgetWriteDbContext>(writeConnectionString);
             options.UseWolverineMessaging(rabbitMqUri, exchangeName, ContextName);
+            options.ProvisionInfrastructure(provisioning);
         });
 
         services.AddDbContext<WidgetReadDbContext>(builder => builder.UseNpgsql(readConnectionString));

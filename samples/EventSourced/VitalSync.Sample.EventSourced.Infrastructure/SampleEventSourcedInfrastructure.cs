@@ -18,7 +18,8 @@ public static class SampleEventSourcedInfrastructure
         string writeConnectionString,
         string readConnectionString,
         Uri rabbitMqUri,
-        string exchangeName)
+        string exchangeName,
+        InfrastructureProvisioning provisioning = InfrastructureProvisioning.Never)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
@@ -32,6 +33,7 @@ public static class SampleEventSourcedInfrastructure
 
             options.UseMartenEventSourcing(writeConnectionString);
             options.UseWolverineMessaging(rabbitMqUri, exchangeName, ContextName);
+            options.ProvisionInfrastructure(provisioning);
 
             options.SubscribeToIntegrationEvents(
                 "eventsourced.integration-events",

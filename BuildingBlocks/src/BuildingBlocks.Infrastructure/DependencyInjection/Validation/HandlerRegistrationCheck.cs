@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
-internal sealed class HandlerRegistrationCheck : IStartupCheck
+internal sealed class HandlerRegistrationCheck : SynchronousStartupCheck
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IReadOnlyCollection<Assembly> _scannedAssemblies;
@@ -17,9 +17,9 @@ internal sealed class HandlerRegistrationCheck : IStartupCheck
         _scannedAssemblies = scannedAssemblies;
     }
 
-    public StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
+    public override StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 
-    public void Run()
+    protected override void Run()
     {
         var missing = new List<string>();
         var ambiguous = new List<string>();

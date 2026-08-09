@@ -180,7 +180,8 @@ public sealed class EfCoreChildCollectionTests(PostgreSqlFixture fixture)
         builder.AddBuildingBlocks(
             options => options
                 .AddDomainEventsFrom(typeof(BasketOpened).Assembly)
-                .UseEfCorePersistence<LooseContext>(fixture.ConnectionString),
+                .UseEfCorePersistence<LooseContext>(fixture.ConnectionString)
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup),
             wolverine =>
             {
                 wolverine.Durability.Mode = DurabilityMode.Solo;
@@ -206,7 +207,8 @@ public sealed class EfCoreChildCollectionTests(PostgreSqlFixture fixture)
         builder.AddBuildingBlocks(
             options => options
                 .AddDomainEventsFrom(typeof(BasketOpened).Assembly)
-                .UseEfCorePersistence<DerivedNameContext>(fixture.ConnectionString),
+                .UseEfCorePersistence<DerivedNameContext>(fixture.ConnectionString)
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup),
             wolverine =>
             {
                 wolverine.Durability.Mode = DurabilityMode.Solo;
@@ -446,7 +448,8 @@ public sealed class EfCoreChildCollectionTests(PostgreSqlFixture fixture)
         builder.AddBuildingBlocks(
             options => options
                 .AddDomainEventsFrom(typeof(BasketOpened).Assembly)
-                .UseEfCorePersistence<BasketContext>(fixture.ConnectionString),
+                .UseEfCorePersistence<BasketContext>(fixture.ConnectionString)
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup),
             wolverine =>
             {
                 wolverine.Durability.Mode = DurabilityMode.Solo;

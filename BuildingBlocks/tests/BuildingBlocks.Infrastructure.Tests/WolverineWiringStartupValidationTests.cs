@@ -12,32 +12,33 @@ public sealed class WolverineWiringStartupValidationTests
     private const string ConnectionString = "Host=localhost;Database=test;Username=test;******";
 
     [Fact]
-    public void PersistenceSelected_WithoutWolverine_FailsAtStartupNamingUseWolverine()
+    public async Task PersistenceSelected_WithoutWolverine_FailsAtStartupNamingUseWolverine()
     {
         using var provider = BuildProvider(options =>
             options.UseEfCorePersistence<TestDbContext>(ConnectionString));
 
-        var exception = Assert.Throws<InvalidOperationException>(() => GetValidator(provider).Run());
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => GetValidator(provider).RunAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("UseWolverine", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PersistenceSelected_WithWolverineRuntime_Passes()
+    public async Task PersistenceSelected_WithWolverineRuntime_Passes()
     {
         using var provider = BuildProvider(
             options => options.UseEfCorePersistence<TestDbContext>(ConnectionString),
             services => services.AddSingleton(Substitute.For<IWolverineRuntime>()));
 
-        GetValidator(provider).Run();
+        await GetValidator(provider).RunAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public void NoWolverineCapabilitySelected_TheCheckPassesWithoutARuntime()
+    public async Task NoWolverineCapabilitySelected_TheCheckPassesWithoutARuntime()
     {
         using var provider = BuildProvider(_ => { });
 
-        GetValidator(provider).Run();
+        await GetValidator(provider).RunAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
