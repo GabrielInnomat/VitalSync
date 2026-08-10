@@ -39,7 +39,6 @@ Lastmessung, TODO-46 auf das erste echte Aggregat.
 | TODO-35 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets` | **P3** | offen     | WS-04             |
 | TODO-36 | Der gRPC-Vertrag liegt noch beim Service                   | **P3** | offen     | WS-07             |
 | TODO-39 | Keine Saga- oder Process-Manager-Abstraktion               | **P3** | offen     | IMP-33            |
-| TODO-50 | Kein Read-Modell-Rebuild im event-sourced Pfad             | **P3** | offen     | ADR-0036-Folge    |
 | TODO-41 | Wirkungslose Varianz-Modifikatoren                         | **P4** | offen     | IMP-43            |
 
 ---
@@ -110,10 +109,12 @@ Diese drei Zusagen sind die Abnahmekriterien; jede muss durch einen eigenen Test
 
 Aus Anforderung 2 folgen zwei Punkte, die zu diesem TODO gehören:
 
-- **a) Der Rebuild existiert bisher nur für state-stored Kontexte.** `IReadModelRebuilder`,
-  `ReadModelRebuildRunner<TContext>` und der Widget-Rebuilder sind vorhanden; für event-sourced
-  Kontexte nennt ADR-0036 den Stream-Replay, aber es gibt keinen Runner, keinen Gadget-Rebuilder und
-  keinen Paritätstest. Anforderung 2 stützt sich sonst auf ein Netz, das nur die halbe Plattform hat.
+- **a) Der Rebuild existiert bisher nur für state-stored Kontexte.** ✅ **Erledigt.**
+  `EventSourcedReadModelRebuildRunner` folded die Marten-Streams über denselben
+  `IReadModelRebuilder`-Kontrakt; `ReadModelRebuildWriter` teilen sich beide Runner. Der alte
+  `ReadModelRebuildRunner<TContext>` heisst jetzt `StateStoredReadModelRebuildRunner<TContext>`.
+  Gadget-Rebuilder, Migration-Worker-Schalter und Paritätstest sind vorhanden; ADR-0036 hat ein
+  Amendment.
 - **b) Ein Projektionsfehler wird nach dem Umbau leise.** Heute fällt er auf, weil nichts mehr
   publiziert wird; danach läuft alles weiter und nur die Dead-Letter-Queue füllt sich. Ohne
   Sichtbarkeit entsteht ein stilles Loch im Read Model, das erst auffällt, wenn jemand die falsche
@@ -417,7 +418,7 @@ ADR-0036 gibt dem MigrationService-Worker den natürlichen Platz für den Read-M
 beide `DbContext`e ohnehin und läuft vor der Api. Der Sample-Worker macht es vor
 ([StateStored MigrationService Program.cs](samples/StateStored/VitalSync.Sample.StateStored.MigrationService/Program.cs)):
 nach beiden `MigrateAsync` und hinter dem Schalter `ReadModels:Rebuild` läuft
-`ReadModelRebuildRunner<WidgetWriteDbContext>`.
+`StateStoredReadModelRebuildRunner<WidgetWriteDbContext>`.
 
 Der Runner ist deshalb `public` und generisch über den Kontext: ein Worker ohne `AddBuildingBlocks`
 kann ihn selbst instanziieren. Wer dieses TODO umsetzt, zieht das Muster mit.
@@ -433,36 +434,3 @@ Reihenfolge: Erweiterung mit `AtStartup` → `StartAsync` → `MigrateAsync` fü
 Read-Kontext → optionaler Rebuild → `StopAsync`. Der Absatz oben, der `AddBuildingBlocks`
 ausdrücklich ausschließt, ist damit überholt; er bleibt stehen, weil er die ursprüngliche
 Erwartung dokumentiert.
-
----
-
-# TODO-50, Kein Read-Modell-Rebuild im event-sourced Pfad
-
-**P3 · offen · Folgearbeit zu ADR-0036**
-
-ADR-0036 hat den state-stored Pfad wiederaufbaubar gemacht. Der event-sourced Pfad hat mit dem
-Marten-Stream zwar seit jeher die **Quelle** für einen Rebuild — das war das Argument, warum
-ADR-0022 die Wiederaufbaubarkeit überhaupt zusagen konnte — aber kein **Werkzeug**: es gibt kein
-Gegenstück zu `ReadModelRebuildRunner`. Wer heute nach einem Projektions-Bugfix ein
-event-sourced Read-Modell reparieren will, schreibt das Ablaufen des Streams von Hand.
-
-Das ist deutlich weniger dringend als im state-stored Pfad, denn hier geht nichts verloren: die Daten
-liegen im Stream, es fehlt nur die Bequemlichkeit. Deshalb P3.
-
-## Lösungsvorschlag
-
-Ein `EventStreamRebuildRunner`, der die Streams eines Aggregattyps über `IDocumentStore`
-aufzählt und jedes Ereignis mit seinen `DomainEventMetadata` durch den bestehenden
-`ProjectionRunner` schickt. Damit ist es **derselbe** Ableitungspfad wie live, es braucht also
-keinen Paritätstest wie im state-stored Fall, und die Watermark-Prüfung in den Handlern trägt
-unverändert.
-
-Zwei Punkte sind vor der Umsetzung zu klären:
-
-1. **Der Runner darf nicht über `DomainEventPublisher` laufen**, sonst spielt ein Rebuild
-   Integration Events erneut auf den Broker — genau der Fall, den ADR-0036 vermieden hat und der
-   die fachliche Dedup über `IIntegrationEvent.EventId` erst nötig machen würde, die es bewusst
-   nicht gibt (ADR-0023, Nachtrag 2026-08-06). Der Publisher koppelt Projektion und Publikation
-   heute aber (**TODO-29**); die Entkopplung dort ist die saubere Voraussetzung.
-2. **Streams eines Aggregattyps aufzählen** ist in Marten nicht kostenlos, wenn der Stream-Typ nicht
-   indiziert ist. Vor der Umsetzung prüfen, ob `mt_streams` dafür ausreicht.

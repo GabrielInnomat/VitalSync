@@ -250,8 +250,9 @@ public interface IReadModelRebuilder<in TAggregate, TKey>
 - Writing the aggregate's current `Version` onto the read model is what lets live traffic
   continue incrementally afterwards, through the same watermark check the projection
   handlers already use.
-- Infrastructure supplies the driver, `ReadModelRebuildRunner<TContext>`; the service
-  supplies only the two methods above.
+- Infrastructure supplies the driver — `StateStoredReadModelRebuildRunner<TContext>` for an
+  EF Core context, `EventSourcedReadModelRebuildRunner` for a Marten one; the service
+  supplies only the two methods above, unchanged either way.
 
 ### Integration events
 

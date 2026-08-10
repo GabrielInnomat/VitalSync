@@ -1,5 +1,8 @@
+using BuildingBlocks.Application.ReadModels;
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.ReadModels;
 using Microsoft.EntityFrameworkCore;
+using VitalSync.Sample.EventSourced.Domain;
 using VitalSync.Sample.EventSourced.Infrastructure;
 using VitalSync.Sample.EventSourced.Infrastructure.Read;
 using VitalSync.ServiceDefaults;
@@ -14,6 +17,8 @@ builder.AddSampleEventSourcedInfrastructure(
     VitalSyncMessaging.IntegrationEventExchangeName,
     InfrastructureProvisioning.AtStartup);
 
+builder.Services.AddScoped<IReadModelRebuilder<Gadget, GadgetId>, GadgetReadModelRebuilder>();
+
 var host = builder.Build();
 
 await host.StartAsync().ConfigureAwait(false);
@@ -22,6 +27,12 @@ using (var scope = host.Services.CreateScope())
 {
     await scope.ServiceProvider.GetRequiredService<GadgetReadDbContext>()
         .Database.MigrateAsync().ConfigureAwait(false);
+}
+
+if (builder.Configuration.GetValue<bool>("ReadModels:Rebuild"))
+{
+    await host.Services.GetRequiredService<EventSourcedReadModelRebuildRunner>()
+        .RebuildAsync<Gadget, GadgetId>(CancellationToken.None).ConfigureAwait(false);
 }
 
 await host.StopAsync().ConfigureAwait(false);

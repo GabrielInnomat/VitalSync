@@ -357,8 +357,9 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   `HostApplicationBuilderExtensions`, `BuildingBlocksOptions`,
   `EntityKeyModelBuilderExtensions` — plus `InfrastructureProvisioning`, public because it
   is an argument a host passes (ADR-0037), `PersistedSchema`, public because a service's
-  **tests** call it (ADR-0035), and `ReadModelRebuildRunner<TContext>`, public because a
-  migration worker constructs it without the full wiring (ADR-0036). Seven more are public **only** because Wolverine
+  **tests** call it (ADR-0035), and the two read-model rebuild runners
+  (`StateStoredReadModelRebuildRunner<TContext>`, `EventSourcedReadModelRebuildRunner`), public because a
+  migration worker constructs one without the full wiring (ADR-0036). Seven more are public **only** because Wolverine
   generates C# into another assembly and names them (`DomainEventEnvelope`,
   `DomainEventEnvelopeHandler`, `DomainEventEnvelopeSerializer`, `DomainEventTypeRegistry`,
   `IIntegrationEventSinkFactory`, `IntegrationEventSourceContext`,
@@ -377,7 +378,7 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   `DependencyInjection/Validation/`. **Nothing under `Persistence.*` is public** —
   `PublicSurfaceTests.NoInfrastructureImplementationIsPublic` fails on it — so a type the
   host itself constructs lives outside that tree even when it is persistence-adjacent:
-  `PersistedSchema` in `Schema/`, `ReadModelRebuildRunner<TContext>` in `ReadModels/`.
+  `PersistedSchema` in `Schema/`, both rebuild runners in `ReadModels/`.
 - **`ApplyEntityKeyConversions` converts, it never discovers** (ADR-0033). EF Core's discovery
   never finds an `IEntityKey<T>` property ("not a supported primitive type"), and the helper used
   to compensate with a CLR scan plus `AddProperty` — a helper that wrote to the model and could
@@ -599,19 +600,24 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   **unchanged**; the rebuild is a second, explicitly invoked path:
   `IReadModelRebuilder<TAggregate, TKey>` (`ClearAsync` + `RebuildAsync(aggregate)`, a
   **multi-handler** contract, one rebuilder per read model) implemented per service, driven by
-  `ReadModelRebuildRunner<TContext>`, which clears once and then streams every aggregate state
-  out of the write database in batches. It is invoked by the context's migration worker behind a
+  one of **two** runners. `StateStoredReadModelRebuildRunner<TContext>` clears once and then streams
+  every aggregate state out of the write database in batches; `EventSourcedReadModelRebuildRunner`
+  does the same from Marten, collecting the distinct stream keys under the aggregate's
+  `[AggregateName]` prefix and folding each stream through `LoadFromHistory` (ADR-0036 amendment
+  2026-08-10). The **contract does not change with the path** — both share the internal
+  `ReadModelRebuildWriter`, so a service writes one `IReadModelRebuilder` and nothing else. A runner
+  is invoked by the context's migration worker behind a
   configuration switch, never automatically, and **throws** when no rebuilder is registered —
   a rebuild that projects nothing would report success over an empty read model. Three
   consequences to know: **every field must be a function of the current aggregate state** (write
   absolute values, never increments — a field that needs history belongs in an event-sourced
   context); the handover back to live traffic needs nothing new, because the rebuilder writes the
   aggregate's current `Version` and the existing watermark check discards what is already
-  contained; and the rebuild does **not** run through `DomainEventPublisher`, so it publishes no
+  contained; and the rebuild does **not** run through the integration-event publisher, so it publishes no
   integration events and produces no cross-context replay. A **parity test is mandatory** where a
   context has both — one aggregate's events through the live projections, the same aggregate's
   final state through the rebuilders, both rows identical. That test is the whole reason two
-  derivation paths are acceptable.
+  derivation paths are acceptable, and **both samples now carry one**.
 - **In-context** projections use **domain** events directly; **integration** events
   (RabbitMQ) are the **only** cross-context signal — never read another context's
   database.

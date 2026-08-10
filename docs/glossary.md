@@ -436,12 +436,13 @@ child-raised events.
 A service-owned type implementing `IReadModelRebuilder<TAggregate, TKey>`
 (`BuildingBlocks.Application.ReadModels`). It sits **next to** a context's projection
 handlers, not instead of them: the handlers keep the read model current from domain
-events, the rebuilder reconstructs it from scratch out of the current aggregate state
-when a projection bug or a new field makes that necessary.
-`ReadModelRebuildRunner<TContext>` drives it — clear once, then stream every aggregate
-state out of the write database and hand the rehydrated aggregates to the rebuilders. A
-rebuild is invoked explicitly (by the migration worker), takes the read model offline
-while it runs, and publishes no integration events. See
+events, the rebuilder reconstructs it from scratch when a projection bug or a new field
+makes that necessary. One of two runners drives it, depending on the persistence path:
+`StateStoredReadModelRebuildRunner<TContext>` streams the aggregate states out of the write
+database, `EventSourcedReadModelRebuildRunner` folds each Marten stream through
+`LoadFromHistory`. Both clear once and hand the rehydrated aggregates to the same
+rebuilder contract. A rebuild is invoked explicitly (by the migration worker), takes the
+read model offline while it runs, and publishes no integration events. See
 [ADR-0036](./architecture/decisions/0036-state-stored-read-model-rebuild.md).
 
 ### Reconstitution

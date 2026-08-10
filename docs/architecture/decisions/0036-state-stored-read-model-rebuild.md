@@ -45,7 +45,7 @@ state-stored read model from the current aggregate state.**
 - `IReadModelRebuilder<TAggregate, TKey>` (in `BuildingBlocks.Application.ReadModels`) has
   `ClearAsync` and `RebuildAsync(aggregate)`. It is a **multi-handler** contract: a context may
   register several rebuilders for the same aggregate, one per read model.
-- `ReadModelRebuildRunner<TContext>` (in `BuildingBlocks.Infrastructure.ReadModels`)
+- `StateStoredReadModelRebuildRunner<TContext>` (in `BuildingBlocks.Infrastructure.ReadModels`)
   clears once, then streams the aggregate states out of the write `DbContext` with `AsNoTracking`,
   rehydrates each one through `AggregateFactory` plus `IStateOwner.Restore`, and hands the
   aggregates to the rebuilders in batches of 500, each batch in its own scope. It is registered by
@@ -92,3 +92,42 @@ state-stored read model from the current aggregate state.**
   retention obligation; a replay drags TODO-14 part B into scope.
 - **Deriving the live path from state** — devalues the domain event for projections and moves read
   load onto the write database, to avoid a divergence a test already catches.
+
+## Amendment (2026-08-10): the event-sourced path gets the same tool
+
+`EventSourcedReadModelRebuildRunner` closes the gap the consequences above left open, and it does
+so **without a second contract**: `IReadModelRebuilder<TAggregate, TKey>` is unchanged, and both
+runners share the internal `ReadModelRebuildWriter`, which owns rebuilder resolution, the
+"no rebuilder registered" throw, and the batching. Only the **source** differs, and that is the
+whole point of the two paths:
+
+- The state-stored runner reads the current state out of the write `DbContext`.
+- The event-sourced runner asks Marten for the distinct stream keys carrying the aggregate's
+  `[AggregateName]` prefix (`gadget/`), fetches each stream and folds it through the aggregate's own
+  `LoadFromHistory` — the same rehydration `MartenEventSourcedRepository` performs, so a rebuilt
+  aggregate is indistinguishable from a loaded one.
+
+Two properties follow and are pinned by tests:
+
+- **A rebuilt aggregate carries no uncommitted domain events.** The fold is a replay, not a
+  command, so nothing is published and the rebuild stays as free of side effects as the
+  state-stored one.
+- **The stream-key prefix isolates aggregates by name, not by CLR type.** The separator in
+  `EntityKeyFormatter.GetStreamKey` is `/`, which kebab-case names cannot contain, so
+  `rebuild-probe/` never matches `rebuild-probe-neighbour/`. That is a persistence contract, not an
+  implementation detail — renaming an `[AggregateName]` still breaks a rebuild exactly as ADR-0030
+  says it breaks everything else.
+
+The former `ReadModelRebuildRunner<TContext>` is renamed to `StateStoredReadModelRebuildRunner<TContext>`.
+Once two runners exist, the unqualified name would suggest one is *the* runner and the other a special
+case, when they are peers. The parity-test requirement now applies to both samples:
+`GadgetReadModelRebuildTests` mirrors `WidgetReadModelRebuildTests`.
+
+**Rejected here: replaying the stream through `ProjectionRunner`.** It looks cheaper — the same
+derivation path as live traffic, so no parity test would be needed — but it buys that by making the
+event-sourced rebuild a different *shape* of operation than the state-stored one. It has no place
+to clear the read model first, so it would still need a second contract for that; a service with
+one context of each kind would then write two unrelated kinds of rebuild code; and the "same path"
+argument is weaker than it sounds, because a replay through the live handlers hits the watermark
+guard on a row it just wrote. One contract on both paths, paid for with one parity test per sample,
+is the better trade.

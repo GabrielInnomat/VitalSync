@@ -55,7 +55,8 @@ Everything else is `internal`, with `InternalsVisibleTo` for the test assembly.
 | `BuildingBlocksOptions`           | the configuration surface passed to it                            |
 | `EntityKeyModelBuilderExtensions` | `ApplyEntityKeyConversions`, called from a host's `DbContext`     |
 | `PersistedSchema`                 | the event-schema snapshot, called from a service's tests (ADR-0035) |
-| `ReadModelRebuildRunner<TContext>`| the read-model rebuild driver, constructed by a migration worker (ADR-0036) |
+| `StateStoredReadModelRebuildRunner<TContext>`| the read-model rebuild driver for a state-stored context, constructed by a migration worker (ADR-0036) |
+| `EventSourcedReadModelRebuildRunner`| the same driver for an event-sourced context, folding Marten streams (ADR-0036) |
 
 Seven further types are public **only** because Wolverine generates C# at runtime and
 the generated code names them: `DomainEventEnvelope`, `DomainEventEnvelopeHandler`,

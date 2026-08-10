@@ -84,7 +84,7 @@ public sealed class ReadModelRebuildRunnerTests(PostgreSqlFixture fixture)
     }
 
     private static Task RunRebuildAsync(IHost host) =>
-        host.Services.GetRequiredService<ReadModelRebuildRunner<FlushProbeContext>>()
+        host.Services.GetRequiredService<StateStoredReadModelRebuildRunner<FlushProbeContext>>()
             .RebuildAsync<FlushProbe, FlushProbeId, FlushProbeState>(TestContext.Current.CancellationToken);
 
     private static async Task SendAsync(IHost host, ICommand command)

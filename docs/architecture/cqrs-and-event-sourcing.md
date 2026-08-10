@@ -137,26 +137,31 @@ state-stored context has no surviving event history — its outbox row is delete
 delivered — and instead derives the read model again from the **current aggregate state**
 ([ADR-0036](./decisions/0036-state-stored-read-model-rebuild.md)).
 
-### Rebuilding a state-stored read model
+### Rebuilding a read model
 
 The live path is unchanged: a domain event goes through the outbox to the projection
 handlers. Next to it sits a second, **explicitly invoked** path.
 
 - A read model implements `IReadModelRebuilder<TAggregate, TKey>` (`ClearAsync` plus
   `RebuildAsync(aggregate)`) alongside its projection handlers. Several rebuilders per
-  aggregate are allowed — one per read model.
-- `ReadModelRebuildRunner<TContext>` clears once, streams every aggregate state out of the
+  aggregate are allowed — one per read model. **The contract is the same on both
+  persistence paths**; only the source of the aggregate differs.
+- `StateStoredReadModelRebuildRunner<TContext>` clears once, streams every aggregate state out of the
   write database, rehydrates each aggregate and hands it to the rebuilders in batches. It
   is invoked by the context's migration worker behind a configuration switch, never
   automatically, and it throws when no rebuilder is registered.
+- `EventSourcedReadModelRebuildRunner` does the same for a Marten context: it collects the
+  distinct stream keys under the aggregate's `[AggregateName]` prefix, fetches each stream
+  and folds it through `LoadFromHistory`. A rebuilt aggregate is indistinguishable from a
+  loaded one and carries no uncommitted domain events.
 - **Every field of a state-stored read model must be a function of the current aggregate
   state.** A rebuilder writes absolute values (`PartCount = parts.Count`), never
   increments. A field that needs history belongs in an event-sourced context.
 - The handover back to live traffic needs nothing new: the rebuilder writes the aggregate's
   current `Version`, and the watermark check in every handler discards what is already
   contained.
-- The rebuild does not run through `DomainEventPublisher`, so it publishes no integration
-  events.
+- The rebuild does not run through the integration-event publisher, so it publishes no
+  integration events.
 - **A parity test is mandatory** where a context has both: one aggregate's events through
   the live projections, the same aggregate's final state through the rebuilders, both rows
   identical.

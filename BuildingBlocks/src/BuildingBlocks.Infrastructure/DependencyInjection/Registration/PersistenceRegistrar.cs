@@ -36,7 +36,7 @@ internal sealed class PersistenceRegistrar(IServiceCollection services, Wolverin
             new WriteDbContextAccessor(provider.GetRequiredService<TContext>()));
         services.TryAddScoped<EfCoreAggregateTracker>();
         services.TryAddSingleton<DomainEventEnvelopeFactory>();
-        services.TryAddSingleton<ReadModelRebuildRunner<TContext>>();
+        services.TryAddSingleton<StateStoredReadModelRebuildRunner<TContext>>();
         services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork<TContext>>();
         services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
         services.TryAddEnumerable(
@@ -70,6 +70,7 @@ internal sealed class PersistenceRegistrar(IServiceCollection services, Wolverin
 
         services.TryAddScoped<MartenAggregateTracker>();
         services.TryAddSingleton<DomainEventEnvelopeFactory>();
+        services.TryAddSingleton<EventSourcedReadModelRebuildRunner>();
         services.TryAddScoped<IUnitOfWork, MartenUnitOfWork>();
         services.TryAddScoped(typeof(IRepository<,>), typeof(MartenEventSourcedRepository<,>));
     }

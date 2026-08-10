@@ -21,6 +21,9 @@ internal static class EntityKeyFormatter
     public static string GetStreamKey(string aggregateName, string keyValue) =>
         string.Create(CultureInfo.InvariantCulture, $"{aggregateName}/{keyValue}");
 
+    public static string GetStreamKeyPrefix(string aggregateName) =>
+        string.Create(CultureInfo.InvariantCulture, $"{aggregateName}/");
+
     private static string ReadAggregateName(Type aggregateType) =>
         aggregateType.GetCustomAttribute<AggregateNameAttribute>(inherit: false)?.Name
         ?? throw new InvalidOperationException(

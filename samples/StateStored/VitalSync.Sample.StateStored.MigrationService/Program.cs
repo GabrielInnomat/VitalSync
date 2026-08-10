@@ -1,4 +1,4 @@
-using BuildingBlocks.Application.ReadModels;
+﻿using BuildingBlocks.Application.ReadModels;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.ReadModels;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +19,7 @@ builder.AddSampleStateStoredInfrastructure(
     InfrastructureProvisioning.AtStartup);
 
 builder.Services.AddScoped<IReadModelRebuilder<Widget, WidgetId>, WidgetReadModelRebuilder>();
-builder.Services.AddSingleton<ReadModelRebuildRunner<WidgetWriteDbContext>>();
+builder.Services.AddSingleton<StateStoredReadModelRebuildRunner<WidgetWriteDbContext>>();
 
 var host = builder.Build();
 
@@ -36,7 +36,7 @@ using (var scope = host.Services.CreateScope())
 
 if (builder.Configuration.GetValue<bool>("ReadModels:Rebuild"))
 {
-    await host.Services.GetRequiredService<ReadModelRebuildRunner<WidgetWriteDbContext>>()
+    await host.Services.GetRequiredService<StateStoredReadModelRebuildRunner<WidgetWriteDbContext>>()
         .RebuildAsync<Widget, WidgetId, WidgetState>(CancellationToken.None).ConfigureAwait(false);
 }
 
