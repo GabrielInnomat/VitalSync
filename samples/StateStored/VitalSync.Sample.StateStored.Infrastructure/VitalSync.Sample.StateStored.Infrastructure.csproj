@@ -1,9 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-  </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\src\BuildingBlocks.Infrastructure\BuildingBlocks.Infrastructure.csproj" />
     <ProjectReference Include="..\..\VitalSync.Sample.Contracts\VitalSync.Sample.Contracts.csproj" />
