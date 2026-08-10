@@ -34,11 +34,9 @@ Lastmessung, TODO-46 auf das erste echte Aggregat.
 | TODO-30 | `IIntegrationEventMapper` ist untypisiert                  | **P3** | offen     | IMP-12            |
 | TODO-31 | `Result` hat keine Kombinatoren                            | **P3** | offen     | IMP-34            |
 | TODO-33 | Ein Assembly für alle Persistenz-Pakete                    | **P3** | offen     | IMP-19            |
-| TODO-34 | Keine zentrale Paketverwaltung                             | **P3** | offen     | IMP-47            |
 | TODO-35 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets` | **P3** | offen     | WS-04             |
-| TODO-36 | Der gRPC-Vertrag liegt noch beim Service                   | **P3** | offen     | WS-07             |
+| TODO-36 | Der gRPC-Vertrag liegt noch beim Service                    | **P3** | offen     | WS-07             |
 | TODO-39 | Keine Saga- oder Process-Manager-Abstraktion               | **P3** | offen     | IMP-33            |
-| TODO-41 | Wirkungslose Varianz-Modifikatoren                         | **P4** | offen     | IMP-43            |
 
 ---
 
@@ -162,31 +160,6 @@ der beiden Persistenzwelten braucht. Vorher ist der Aufwand höher als der Gewin
 
 ---
 
-# TODO-34, Keine zentrale Paketverwaltung
-
-**P3 · offen · IMP-47**
-
-Verifiziert: kein `Directory.Packages.props`. Versionen stehen einzeln in den `.csproj`-Dateien;
-`xunit.v3` etwa ist an sechs Stellen mit `3.2.2` gepflegt. Ein übersehenes Projekt
-erzeugt eine Laufzeit-Bindungsdiskrepanz statt eines Build-Fehlers.
-
-## Lösungsvorschlag
-
-```xml
-<Project>
-  <PropertyGroup><ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally></PropertyGroup>
-  <ItemGroup>
-    <PackageVersion Include="Marten" Version="9.20.1" />
-    <PackageVersion Include="WolverineFx.RabbitMQ" Version="6.23.0" />
-  </ItemGroup>
-</Project>
-```
-
-Rein mechanisch, keine Verhaltensänderung, bei 34 Projekten schon spürbar. Guter Kandidat für den
-nächsten Aufräum-Commit — sinnvollerweise gebündelt mit TODO-41.
-
----
-
 # TODO-35, `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`
 
 **P3 · offen · WS-04**
@@ -248,27 +221,6 @@ Message-Infrastruktur, die hier schon konfiguriert ist.
 Die Entscheidung, die eine ADR braucht: ob Wolverine damit vom reinen Transport (ADR-0015/0023)
 zum Prozess-Host aufgewertet wird. Das ist eine bewusste Aufweichung der bisherigen Abgrenzung —
 **vor** der ersten Saga klären, nicht danach.
-
----
-
-# TODO-41, Wirkungslose Varianz-Modifikatoren
-
-**P4 · offen (teilweise gegenstandslos) · IMP-43**
-
-> Nachtrag 2026-08-03: `IState<TSelf, out TKey>` gibt es nicht mehr — der State ist mit ADR-0030
-> die Record-Basis `AggregateState<TSelf, TKey>`, und Klassen kennen keine Varianz. Dieser eine
-> Modifikator ist damit weg; die übrigen vier stehen weiterhin offen.
-
-`IEntity<out TKey>`, `IAggregateRoot<out TKey>`, `IEventSourcedAggregateRoot<out TKey>`,
-`IState<TSelf, out TKey>`, `IRepository<TAggregate, in TKey>` — alle mit
-`where TKey : struct, IEntityKey`. Varianz gilt nur für Referenztypen; bei einer
-`struct`-Constraint ist der Modifikator wirkungslos und suggeriert eine Flexibilität, die es nicht
-gibt.
-
-## Lösungsvorschlag
-
-Ersatzlos streichen. Rein mechanisch, kein Verhaltensunterschied, kein Breaking Change — der
-Compiler akzeptiert exakt dieselben Verwendungen.
 
 ---
 

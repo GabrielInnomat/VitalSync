@@ -26,6 +26,8 @@ Prerequisites: the .NET SDK pinned in `global.json` (`10.0.302`, `rollForward: l
 
 Global build settings (`Directory.Build.props`) apply solution-wide: nullable + implicit usings enabled, `latest-all` analysis level, and **warnings treated as errors**. Respect `.editorconfig` at each level: the root one, plus exactly **two** project-level ones under `BuildingBlocks/src` — `BuildingBlocks.Domain` relaxes `CA1033` (`IDomainEventOwner`/`IStateOwner` are implemented *explicitly* on purpose, ADR-0007) and `BuildingBlocks.Application` relaxes `CA1000` (`Result<T>` needs static factories) — plus one for the test projects. **`BuildingBlocks.Infrastructure` has none and needs none**: it carries the full analyzer set unrelaxed, and it should stay that way — a new suppression there is a smell worth arguing about first. Test-only analyzer relaxations that no `.editorconfig` covers live in the test `.csproj` as `NoWarn`.
 
+Package versions are managed centrally in `Directory.Packages.props` (`ManagePackageVersionsCentrally` plus `CentralPackageTransitivePinningEnabled`): a `.csproj` carries `<PackageReference Include="..." />` with **no `Version`** attribute, and a new package needs a `<PackageVersion>` entry there first — otherwise restore fails (NU1010) instead of silently drifting. Do not reintroduce a per-project `Version`; that is exactly the drift the file removes (`NSubstitute` once sat at 5.3.0 in one test project and 6.0.0 in two others). Two version numbers stay outside it because NuGet cannot manage them: the SDK pin in `global.json` and `Aspire.AppHost.Sdk` in each AppHost's `<Project Sdk="...">` attribute.
+
 ## Repository map
 
 ```text
@@ -825,7 +827,7 @@ Index: `docs/architecture/decisions/README.md`.
 5. Add or update tests (mirror the project structure).
 6. Write **no comments** — not in `*.cs`, `*.csproj`, workflow YAML, or the code examples in `*.md` (ADR-0028); delete any comment you come across.
 7. If a change affects architecture, add or update an ADR using the template in `docs/architecture/decisions/README.md`.
-8. Match existing style; respect `.editorconfig` and `Directory.Build.props`.
+8. Match existing style; respect `.editorconfig`, `Directory.Build.props` and `Directory.Packages.props`.
 9. **Always work on `main` branch** — never work on separate branches, and never ask which branch to use; `main` is always the target.
 10. Always update the instruction files in `.github/*.md` and `.claude/*.md` if you discover a gap or ambiguity in the guidance.
 11. If you are unsure about a decision, **always ask a human** — Copilot is not the arbiter of architecture or domain rules.

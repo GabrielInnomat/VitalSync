@@ -1,6 +1,6 @@
 namespace BuildingBlocks.Domain.Entities;
 
-public interface IEntity<out TKey>
+public interface IEntity<TKey>
     where TKey : struct, IEntityKey, IEquatable<TKey>
 {
     TKey Id { get; }

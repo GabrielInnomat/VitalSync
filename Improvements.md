@@ -20,8 +20,6 @@ auslöst. Überschneidungen mit [hacky.md](hacky.md) sind beim jeweiligen Punkt 
 | IMP-33 | Keine Saga- oder Process-Manager-Abstraktion                   | offen     | TODO-39 |
 | IMP-34 | `Result` hat keine Kombinatoren                                | offen     | TODO-31 |
 | IMP-39 | `Result`-API: implizite Konvertierungen und werfendes `Value`  | teilweise | TODO-31 |
-| IMP-43 | Wirkungslose Varianz-Modifikatoren                             | offen     | TODO-41 |
-| IMP-47 | Keine zentrale Paketverwaltung                                 | offen     | TODO-34 |
 
 ---
 
@@ -190,49 +188,3 @@ und die Reflection darüber ist mit ihr entfallen
 
 Punkt 1 mit einem Test absichern statt umbauen. Punkt 2 durch `Match` entschärfen, ohne `Value` zu
 entfernen — das ist dieselbe Arbeit wie IMP-34, und beide gehören deshalb in TODO-31.
-
-# IMP-43, Wirkungslose Varianz-Modifikatoren
-
-Verifiziert unverändert: `IEntity<out TKey>`, `IAggregateRoot<out TKey>`,
-`IEventSourcedAggregateRoot<out TKey>`, `IState<TSelf, out TKey>` und
-`IRepository<TAggregate, in TKey>` — alle mit `where TKey : struct, IEntityKey`. Varianz gilt nur für
-Referenztypen; bei einer `struct`-Constraint ist der Modifikator wirkungslos. Er suggeriert eine
-Flexibilität, die es nicht gibt.
-
-## Lösungsvorschlag
-
-Ersatzlos streichen:
-
-```csharp
-public interface IEntity<TKey> where TKey : struct, IEntityKey
-```
-
-Rein mechanisch, kein Verhaltensunterschied, kein Breaking Change für Aufrufer — der Compiler
-akzeptiert exakt dieselben Verwendungen. Gute Aufräumarbeit für den nächsten Durchgang durch die
-Domain-Verträge.
-
----
-
-# IMP-47, Keine zentrale Paketverwaltung
-
-Verifiziert: kein `Directory.Packages.props` im Repository. Versionen stehen einzeln in den
-`.csproj`-Dateien; `xunit.v3` etwa ist an sechs Stellen mit `3.2.2` gepflegt. Ein
-Upgrade erfordert, jede Datei zu finden — und ein übersehenes Projekt erzeugt eine
-Laufzeit-Bindungsdiskrepanz statt eines Build-Fehlers.
-
-## Lösungsvorschlag
-
-```xml
-<Project>
-  <PropertyGroup>
-    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageVersion Include="Marten" Version="9.20.1" />
-    <PackageVersion Include="WolverineFx.RabbitMQ" Version="6.23.0" />
-  </ItemGroup>
-</Project>
-```
-
-In den `.csproj` entfällt dann jedes `Version="…"`. Rein mechanisch, keine Verhaltensänderung, und mit
-aktuell 34 Projekten schon spürbar. Guter Kandidat für den nächsten Aufräum-Commit.

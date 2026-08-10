@@ -3,7 +3,7 @@ using BuildingBlocks.Domain.Entities;
 
 namespace BuildingBlocks.Application.Persistence;
 
-public interface IRepository<TAggregate, in TKey>
+public interface IRepository<TAggregate, TKey>
     where TAggregate : class, IAggregateRoot<TKey>
     where TKey : struct, IEntityKey, IEquatable<TKey>
 {
