@@ -6,17 +6,13 @@ using VitalSync.Sample.StateStored.Domain;
 
 namespace VitalSync.Sample.StateStored.Infrastructure.Integration;
 
-public sealed class WidgetIntegrationEventMapper : IIntegrationEventMapper
+public sealed class WidgetIntegrationEventMapper : IIntegrationEventMapper<WidgetCreated>
 {
-    public IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent, DomainEventMetadata metadata)
+    public IReadOnlyCollection<IIntegrationEvent> Map(WidgetCreated domainEvent, DomainEventMetadata metadata)
     {
+        ArgumentNullException.ThrowIfNull(domainEvent);
         ArgumentNullException.ThrowIfNull(metadata);
 
-        return domainEvent switch
-        {
-            WidgetCreated created =>
-                [new WidgetCreatedIntegrationEvent(created.WidgetId.Value, created.Name, metadata.EventId, metadata.OccurredAt)],
-            _ => [],
-        };
+        return [new WidgetCreatedIntegrationEvent(domainEvent.WidgetId.Value, domainEvent.Name, metadata.EventId, metadata.OccurredAt)];
     }
 }

@@ -32,7 +32,7 @@ public sealed class RegistrationProjectionHandler : IProjectionHandler<Registrat
         Task.CompletedTask;
 }
 
-public sealed class RegistrationMapper : IIntegrationEventMapper
+public sealed class RegistrationMapper : IIntegrationEventMapper<RegistrationEvent>
 {
-    public IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent, DomainEventMetadata metadata) => [];
+    public IReadOnlyCollection<IIntegrationEvent> Map(RegistrationEvent domainEvent, DomainEventMetadata metadata) => [];
 }

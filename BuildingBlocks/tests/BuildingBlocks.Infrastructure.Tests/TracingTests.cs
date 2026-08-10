@@ -163,7 +163,7 @@ public sealed class TracingTests
 
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddScoped<IIntegrationEventMapper, TracedMapper>();
+        services.AddScoped<IIntegrationEventMapper<TracedDomainEvent>, TracedMapper>();
         services.AddBuildingBlocks(_ => { });
 
         await using var provider = services.BuildServiceProvider();
@@ -256,9 +256,9 @@ public sealed class TracingTests
             Task.CompletedTask;
     }
 
-    private sealed class TracedMapper : IIntegrationEventMapper
+    private sealed class TracedMapper : IIntegrationEventMapper<TracedDomainEvent>
     {
-        public IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent, DomainEventMetadata metadata) =>
+        public IReadOnlyCollection<IIntegrationEvent> Map(TracedDomainEvent domainEvent, DomainEventMetadata metadata) =>
             [new TracedIntegrationEvent(), new TracedIntegrationEvent()];
     }
 

@@ -8,17 +8,13 @@ namespace VitalSync.Sample.EventSourced.Infrastructure.Integration;
 [IntegrationEventTopic("sample-event-sourced.gadget-retired")]
 public sealed record GadgetRetiredIntegrationEvent(Guid GadgetId, string Reason, Guid EventId, DateTimeOffset OccurredAt) : IIntegrationEvent;
 
-public sealed class GadgetIntegrationEventMapper : IIntegrationEventMapper
+public sealed class GadgetIntegrationEventMapper : IIntegrationEventMapper<GadgetRetired>
 {
-    public IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent, DomainEventMetadata metadata)
+    public IReadOnlyCollection<IIntegrationEvent> Map(GadgetRetired domainEvent, DomainEventMetadata metadata)
     {
+        ArgumentNullException.ThrowIfNull(domainEvent);
         ArgumentNullException.ThrowIfNull(metadata);
 
-        return domainEvent switch
-        {
-            GadgetRetired retired =>
-                [new GadgetRetiredIntegrationEvent(retired.GadgetId.Value, retired.Reason, metadata.EventId, metadata.OccurredAt)],
-            _ => [],
-        };
+        return [new GadgetRetiredIntegrationEvent(domainEvent.GadgetId.Value, domainEvent.Reason, metadata.EventId, metadata.OccurredAt)];
     }
 }

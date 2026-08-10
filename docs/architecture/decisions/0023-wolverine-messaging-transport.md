@@ -322,6 +322,24 @@ everything else from ADR-0004 intact.
 > that cannot be read off the code, whereas "this host publishes nothing" is simply the
 > absence of a mapper.
 
+> **The mapper contract is typed (amendment 2026-08-11).** `IIntegrationEventMapper` was
+> untyped — `Map(IDomainEvent, DomainEventMetadata)` — so every registered mapper ran for
+> every domain event and filtered itself with a `switch` whose `_ => []` arm silently
+> swallowed a missing case. Its neighbour `IProjectionHandler<in TDomainEvent>` was typed
+> from the start; two functionally analogous concepts were designed in opposite directions.
+> The contract is now `IIntegrationEventMapper<in TDomainEvent> where TDomainEvent : IDomainEvent`,
+> registered through the same `MultiHandlerInterfaceDefinitions` path, and resolved by a
+> `MapperRunner` — the twin of `ProjectionRunner`, with the same cached invoker. Which
+> events leave the context is readable from the type signature instead of hidden in a
+> `switch`.
+>
+> One consequence for `IntegrationEventMapperCheck`: an open generic cannot be resolved, so
+> the check closes `IIntegrationEventMapper<>` over every type in the `DomainEventTypeRegistry`
+> and probes the container for each. A mapper therefore only becomes visible to the check
+> once its domain event's assembly was named by `AddDomainEventsFrom` — which is no
+> restriction in practice, since an unregistered domain event can neither be persisted nor
+> published ([ADR-0030](./0030-persisted-names-and-aggregate-version.md)).
+
 > **Retries are graded by failure class (amendment 2026-08-06).** The original policy was
 > a single rule — retry every exception three times with a 100 ms / 500 ms / 2 s cooldown,
 > then dead-letter — which treats two opposite failure classes identically and serves

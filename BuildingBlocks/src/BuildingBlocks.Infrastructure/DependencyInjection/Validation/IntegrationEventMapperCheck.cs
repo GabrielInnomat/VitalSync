@@ -1,10 +1,13 @@
 using BuildingBlocks.Application.IntegrationEvents;
+using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
-internal sealed class IntegrationEventMapperCheck(IServiceProvider serviceProvider) : SynchronousStartupCheck
+internal sealed class IntegrationEventMapperCheck(
+    IServiceProvider serviceProvider,
+    DomainEventTypeRegistry domainEventTypes) : SynchronousStartupCheck
 {
     public override StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 
@@ -16,9 +19,12 @@ internal sealed class IntegrationEventMapperCheck(IServiceProvider serviceProvid
         }
 
         using var scope = serviceProvider.CreateScope();
-        var mappers = scope.ServiceProvider
-            .GetServices<IIntegrationEventMapper>()
-            .Select(mapper => $"'{mapper.GetType()}'")
+        var mappers = domainEventTypes.NamesByType.Keys
+            .SelectMany(domainEventType => scope.ServiceProvider.GetServices(
+                typeof(IIntegrationEventMapper<>).MakeGenericType(domainEventType)))
+            .Select(mapper => $"'{mapper!.GetType()}'")
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
             .ToList();
 
         if (mappers.Count == 0)

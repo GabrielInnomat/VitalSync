@@ -13,45 +13,11 @@ auslöst. Überschneidungen mit [hacky.md](hacky.md) sind beim jeweiligen Punkt 
 
 | Nr.    | Titel                                                          | Status    | TODO    |
 | ------ | -------------------------------------------------------------- | --------- | ------- |
-| IMP-12 | `IIntegrationEventMapper` ist untypisiert                      | offen     | TODO-30 |
 | IMP-19 | Ein Assembly für EF Core, Marten, Wolverine und RabbitMQ       | offen     | TODO-33 |
 | IMP-25 | `Sequential()` auf einer einzigen Queue für alle Domain Events | offen     | TODO-20 |
-| IMP-32 | Keine Batch- oder Bulk-Fähigkeit                               | offen     | TODO-38 |
 | IMP-33 | Keine Saga- oder Process-Manager-Abstraktion                   | offen     | TODO-39 |
 | IMP-34 | `Result` hat keine Kombinatoren                                | offen     | TODO-31 |
 | IMP-39 | `Result`-API: implizite Konvertierungen und werfendes `Value`  | teilweise | TODO-31 |
-
----
-
-# IMP-12, `IIntegrationEventMapper` ist untypisiert
-
-```csharp
-IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent);
-```
-
-Jeder Mapper wird für **jedes** Domain Event aufgerufen und muss selbst per `switch` filtern — während
-das benachbarte `IProjectionHandler<in TDomainEvent>` typisiert ist und vom `ProjectionRunner` gezielt
-aufgelöst wird. Zwei funktional analoge Konzepte, gegensätzlich entworfen.
-
-[IIntegrationEventMapper.cs](BuildingBlocks/src/BuildingBlocks.Application/IntegrationEvents/IIntegrationEventMapper.cs),
-Aufruf in [DomainEventPublisher.cs:34-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/DomainEventPublisher.cs:34).
-
-## Lösungsvorschlag
-
-Symmetrisch zum Projektionshandler typisieren und wie dort über einen gecachten Invoker auflösen:
-
-```csharp
-public interface IIntegrationEventMapper<in TDomainEvent>
-    where TDomainEvent : IDomainEvent
-{
-    IReadOnlyCollection<IIntegrationEvent> Map(TDomainEvent domainEvent);
-}
-```
-
-`AddHandlersFrom` registriert sie dann über denselben `MultiHandlerInterfaceDefinitions`-Pfad wie
-`IProjectionHandler<>`; im `DomainEventPublisher` ersetzt ein `MapperRunner` (Zwilling des `ProjectionRunner`)
-die Schleife über alle Mapper. Nebeneffekt: der `_ => []`-Default-Arm in jedem Mapper entfällt, und
-„welche Events verlassen diesen Kontext" wird an der Typsignatur ablesbar statt im `switch` versteckt.
 
 ---
 
@@ -106,8 +72,6 @@ Vor der ersten Lastmessung nicht anfassen. Hier festgehalten, damit die Entschei
 nicht als Default stehen bleibt.
 
 ---
-
-# IMP-32, Keine Batch- oder Bulk-Fähigkeit
 
 # IMP-33, Keine Saga- oder Process-Manager-Abstraktion
 

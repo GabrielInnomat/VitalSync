@@ -71,6 +71,7 @@ public sealed class IntegrationEventMapperCheckTests
         services.AddBuildingBlocks(options =>
         {
             options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
+            options.AddDomainEventsFrom(typeof(RegistrationEvent).Assembly);
             configure(options);
         });
         configureServices?.Invoke(services);

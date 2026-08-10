@@ -33,7 +33,7 @@ public sealed class SampleRegistrationTests
         Assert.IsType<Infrastructure.Read.WidgetPartRemovedProjection>(
             scope.ServiceProvider.GetRequiredService<IProjectionHandler<WidgetPartRemoved>>());
 
-        var mapper = Assert.Single(scope.ServiceProvider.GetServices<IIntegrationEventMapper>());
+        var mapper = Assert.Single(scope.ServiceProvider.GetServices<IIntegrationEventMapper<WidgetCreated>>());
         Assert.IsType<Infrastructure.Integration.WidgetIntegrationEventMapper>(mapper);
     }
 

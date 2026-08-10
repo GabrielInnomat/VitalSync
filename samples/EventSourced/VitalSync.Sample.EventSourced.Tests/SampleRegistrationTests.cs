@@ -27,7 +27,7 @@ public sealed class SampleRegistrationTests
         Assert.IsType<Infrastructure.Read.GadgetRetiredProjection>(
             scope.ServiceProvider.GetRequiredService<IProjectionHandler<GadgetRetired>>());
 
-        var mapper = Assert.Single(scope.ServiceProvider.GetServices<IIntegrationEventMapper>());
+        var mapper = Assert.Single(scope.ServiceProvider.GetServices<IIntegrationEventMapper<GadgetRetired>>());
         Assert.IsType<Infrastructure.Integration.GadgetIntegrationEventMapper>(mapper);
     }
 

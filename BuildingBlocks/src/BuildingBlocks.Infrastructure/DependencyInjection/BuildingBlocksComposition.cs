@@ -149,6 +149,7 @@ internal static class BuildingBlocksComposition
         options.AddPipelineBehavior(typeof(UnitOfWorkBehavior<,>), BuildingBlocksOptions.UnitOfWorkBehaviorOrder);
 
         services.TryAddScoped<ProjectionRunner>();
+        services.TryAddScoped<MapperRunner>();
         services.TryAddScoped<IIntegrationEventPublisher, IntegrationEventPublisher>();
         services.TryAddScoped<IUnitOfWork, NullUnitOfWork>();
 

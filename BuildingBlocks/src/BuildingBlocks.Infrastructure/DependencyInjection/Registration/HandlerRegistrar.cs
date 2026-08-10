@@ -21,6 +21,7 @@ internal sealed class HandlerRegistrar(IServiceCollection services, PipelineBeha
     private static readonly Type[] MultiHandlerInterfaceDefinitions =
     [
         typeof(IProjectionHandler<>),
+        typeof(IIntegrationEventMapper<>),
         typeof(IReadModelRebuilder<,>),
     ];
 
@@ -87,11 +88,7 @@ internal sealed class HandlerRegistrar(IServiceCollection services, PipelineBeha
     {
         foreach (var contract in type.GetInterfaces())
         {
-            if (contract == typeof(IIntegrationEventMapper))
-            {
-                services.TryAddEnumerable(ServiceDescriptor.Scoped(typeof(IIntegrationEventMapper), type));
-            }
-            else if (contract.IsGenericType
+            if (contract.IsGenericType
                 && Array.IndexOf(MultiHandlerInterfaceDefinitions, contract.GetGenericTypeDefinition()) >= 0)
             {
                 services.TryAddEnumerable(ServiceDescriptor.Scoped(contract, type));

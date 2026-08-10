@@ -6,10 +6,8 @@ using BuildingBlocks.Infrastructure.Telemetry;
 
 namespace BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 
-internal sealed class IntegrationEventPublisher(IEnumerable<IIntegrationEventMapper> mappers) : IIntegrationEventPublisher
+internal sealed class IntegrationEventPublisher(MapperRunner mapperRunner) : IIntegrationEventPublisher
 {
-    private readonly IIntegrationEventMapper[] _mappers = [.. mappers];
-
     public async Task PublishAsync(IDomainEvent domainEvent, DomainEventMetadata metadata, IIntegrationEventSink integrationEventSink, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
@@ -47,22 +45,10 @@ internal sealed class IntegrationEventPublisher(IEnumerable<IIntegrationEventMap
         }
     }
 
-    private async Task<int> DispatchAsync(
+    private Task<int> DispatchAsync(
         IDomainEvent domainEvent,
         DomainEventMetadata metadata,
         IIntegrationEventSink integrationEventSink,
         CancellationToken cancellationToken)
-    {
-        var published = 0;
-        foreach (var mapper in _mappers)
-        {
-            foreach (var integrationEvent in mapper.Map(domainEvent, metadata))
-            {
-                await integrationEventSink.PublishAsync(integrationEvent, cancellationToken).ConfigureAwait(false);
-                published++;
-            }
-        }
-
-        return published;
-    }
+        => mapperRunner.RunAsync(domainEvent, metadata, integrationEventSink, cancellationToken);
 }

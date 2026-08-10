@@ -87,8 +87,8 @@ public sealed class IntegrationEventSinkDeliveryTests
                 services.Replace(
                     ServiceDescriptor.Singleton<IIntegrationEventSinkFactory>(
                         new WolverineIntegrationEventSinkFactory(TestMessaging.ContextName)));
-                services.AddSingleton<IIntegrationEventMapper, SinkProbeMapper>();
-                services.AddSingleton<IIntegrationEventMapper, SinkProbeCrashingMapper>();
+                services.AddSingleton<IIntegrationEventMapper<SinkProbeDomainEvent>, SinkProbeMapper>();
+                services.AddSingleton<IIntegrationEventMapper<SinkProbeDomainEvent>, SinkProbeCrashingMapper>();
                 services.AddSingleton<SinkProbeRecorder>();
                 services.AddSingleton<SinkProbeCrashSwitch>();
             })
@@ -152,21 +152,20 @@ public sealed class SinkProbeCrashSwitch
     public void Trip() => _tripped.TrySetResult();
 }
 
-public sealed class SinkProbeMapper : IIntegrationEventMapper
+public sealed class SinkProbeMapper : IIntegrationEventMapper<SinkProbeDomainEvent>
 {
-    public IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent, DomainEventMetadata metadata)
+    public IReadOnlyCollection<IIntegrationEvent> Map(SinkProbeDomainEvent domainEvent, DomainEventMetadata metadata)
     {
+        ArgumentNullException.ThrowIfNull(domainEvent);
         ArgumentNullException.ThrowIfNull(metadata);
 
-        return domainEvent is SinkProbeDomainEvent probe
-            ? [new SinkProbeIntegrationEvent(probe.Name, metadata.EventId, metadata.OccurredAt)]
-            : [];
+        return [new SinkProbeIntegrationEvent(domainEvent.Name, metadata.EventId, metadata.OccurredAt)];
     }
 }
 
-public sealed class SinkProbeCrashingMapper(SinkProbeCrashSwitch crashSwitch) : IIntegrationEventMapper
+public sealed class SinkProbeCrashingMapper(SinkProbeCrashSwitch crashSwitch) : IIntegrationEventMapper<SinkProbeDomainEvent>
 {
-    public IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent, DomainEventMetadata metadata)
+    public IReadOnlyCollection<IIntegrationEvent> Map(SinkProbeDomainEvent domainEvent, DomainEventMetadata metadata)
     {
         if (!crashSwitch.Enabled)
         {

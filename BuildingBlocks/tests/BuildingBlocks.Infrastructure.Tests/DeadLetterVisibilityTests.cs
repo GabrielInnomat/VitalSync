@@ -143,7 +143,7 @@ public sealed class DeadLetterVisibilityTests(PostgreSqlFixture postgres, Rabbit
                 services.AddScoped<ICommandHandler<StartIsolationProbe>, StartIsolationProbeHandler>();
                 services.AddScoped<IProjectionHandler<IsolationProbeStarted>>(
                     provider => new IsolationProjection(provider.GetRequiredService<IsolationSignal>(), projectionThrows));
-                services.AddScoped<IIntegrationEventMapper>(
+                services.AddScoped<IIntegrationEventMapper<IsolationProbeStarted>>(
                     provider => new IsolationMapper(provider.GetRequiredService<IsolationSignal>(), throws: false));
             })
             .UseWolverine(options => options.Durability.Mode = DurabilityMode.Solo)

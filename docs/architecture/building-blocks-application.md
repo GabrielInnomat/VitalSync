@@ -31,7 +31,7 @@ BuildingBlocks.Application/
 ├── Results/            Result, Result<T>, Failure, FailureCategory
 ├── Persistence/        IRepository, IUnitOfWork
 ├── DomainEvents/       DomainEventMetadata, IProjectionHandler, IDomainEventPublisher
-├── IntegrationEvents/  IIntegrationEvent, IIntegrationEventMapper, IIntegrationEventSink,
+├── IntegrationEvents/  IIntegrationEvent, IIntegrationEventMapper<>, IIntegrationEventSink,
 │                       IntegrationEventTopicAttribute
 └── ReadModels/         IReadModelRebuilder
 ```
@@ -263,9 +263,10 @@ public interface IIntegrationEvent
     DateTimeOffset OccurredAt { get; }
 }
 
-public interface IIntegrationEventMapper
+public interface IIntegrationEventMapper<in TDomainEvent>
+    where TDomainEvent : IDomainEvent
 {
-    IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent, DomainEventMetadata metadata);
+    IReadOnlyCollection<IIntegrationEvent> Map(TDomainEvent domainEvent, DomainEventMetadata metadata);
 }
 ```
 
@@ -275,10 +276,12 @@ public interface IIntegrationEventMapper
   **carry their identity on the event** (ADR-0029): there is no envelope a
   foreign consumer knows about, so `EventId`/`OccurredAt` are part of the
   published contract and give consumers a stable handle for deduplication.
-- `IIntegrationEventMapper` is implemented **per service** (the translation maps
-  themselves never live in the Building Blocks): it selects which domain events
-  leave the context and what shape they take, returning an empty collection for
-  events without cross-context significance. Mappers populate the integration
+- `IIntegrationEventMapper<TDomainEvent>` is implemented **per service** (the
+  translation maps themselves never live in the Building Blocks) and is
+  **typed**, symmetric to `IProjectionHandler<TDomainEvent>`: which domain events
+  leave the context is readable from the type signature instead of hidden in a
+  `switch`, and the `MapperRunner` resolves only the mappers for the event at
+  hand. Mappers populate the integration
   event's identity from the supplied `DomainEventMetadata` — never a fresh Guid
   per invocation, or redeliveries break deduplication.
 

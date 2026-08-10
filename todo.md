@@ -31,7 +31,6 @@ Lastmessung, TODO-46 auf das erste echte Aggregat.
 | TODO-19 | `ApplyEntityKeyConversions` erfasst keine Complex Types    | **P2** | teilweise | hacky-4, WS-15    |
 | TODO-20 | Global sequentielle Domain-Event-Queue                     | **P2** | offen     | hacky-13, IMP-25  |
 | TODO-46 | Die MigrationService-Worker sind leere Hüllen              | **P2** | offen     | AppHost `e44ae9b` |
-| TODO-30 | `IIntegrationEventMapper` ist untypisiert                  | **P3** | offen     | IMP-12            |
 | TODO-31 | `Result` hat keine Kombinatoren                            | **P3** | offen     | IMP-34            |
 | TODO-33 | Ein Assembly für alle Persistenz-Pakete                    | **P3** | offen     | IMP-19            |
 | TODO-35 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets` | **P3** | offen     | WS-04             |
@@ -85,32 +84,6 @@ dafür ist also erfüllt.
 
 Vor der ersten Lastmessung nicht anfassen — hier steht es, damit die Entscheidung bewusst fällt
 statt als Default stehen zu bleiben.
-
----
-
-# TODO-30, `IIntegrationEventMapper` ist untypisiert
-
-**P3 · offen · IMP-12**
-
-`IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent)` — jeder Mapper wird für
-**jedes** Domain Event aufgerufen und muss selbst per `switch` filtern, während das benachbarte
-`IProjectionHandler<in TDomainEvent>` typisiert ist und gezielt aufgelöst wird. Zwei funktional
-analoge Konzepte, gegensätzlich entworfen.
-
-## Lösungsvorschlag
-
-```csharp
-public interface IIntegrationEventMapper<in TDomainEvent>
-    where TDomainEvent : IDomainEvent
-{
-    IReadOnlyCollection<IIntegrationEvent> Map(TDomainEvent domainEvent);
-}
-```
-
-Registrierung über denselben `MultiHandlerInterfaceDefinitions`-Pfad wie `IProjectionHandler<>`,
-im `DomainEventPublisher` ein `MapperRunner` als Zwilling des `ProjectionRunner`. Nebeneffekt: der
-`_ => []`-Default-Arm entfällt, und „welche Events verlassen diesen Kontext" wird an der
-Typsignatur ablesbar statt im `switch` versteckt.
 
 ---
 

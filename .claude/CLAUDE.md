@@ -282,7 +282,7 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   dropped with no route and no error. Only rename methods that implement one of our contracts.
 - **Handler registration** via `BuildingBlocksOptions.AddHandlersFrom(assembly)` is
   idempotent for multi-handler contracts (`IProjectionHandler<>`,
-  `IIntegrationEventMapper`) and enforces **exactly one** handler per command/query —
+  `IIntegrationEventMapper<>`) and enforces **exactly one** handler per command/query —
   two different handlers for the same `ICommand`/`IQuery` throw at registration, not
   at request time. **Startup handler validation is on by default**: a hosted service
   registered by `AddBuildingBlocks` verifies at host start that every command/query
@@ -772,6 +772,18 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   of a mapper — so the remedy is to delete the dead mapper, and adding the opt-out is
   refused. The mirror case, a **domain event with no projection handler**, stays unchecked
   on purpose: several handlers and no handler are both legitimate.
+- **The mapper contract is typed** (ADR-0023 amendment 2026-08-11).
+  `IIntegrationEventMapper<in TDomainEvent>` is the twin of `IProjectionHandler<in TDomainEvent>`:
+  registered through the same `MultiHandlerInterfaceDefinitions` path and resolved by
+  `MapperRunner`, the twin of `ProjectionRunner` with the same cached invoker. The untyped
+  predecessor ran every mapper for every domain event and filtered with a `switch` whose
+  `_ => []` arm swallowed a missing case silently — which events leave the context is now
+  readable from the type signature. Consequence for `IntegrationEventMapperCheck`: an open
+  generic cannot be resolved, so the check closes `IIntegrationEventMapper<>` over every type
+  in the `DomainEventTypeRegistry` and probes the container for each — a mapper is therefore
+  only visible to it once its domain event's assembly was named by `AddDomainEventsFrom`,
+  which is no restriction, since an unregistered domain event can neither be persisted nor
+  published.
 - **Snapshotting is deferred** but additive: a Marten snapshot is a separate document
   and the event schema is unchanged, so snapshots can be added per context later with
   **no event migration**.

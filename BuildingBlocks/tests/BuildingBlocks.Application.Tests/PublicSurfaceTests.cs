@@ -20,7 +20,7 @@ public sealed class PublicSurfaceTests
         "BuildingBlocks.Application.DomainEvents.DomainEventMetadata",
         "BuildingBlocks.Application.DomainEvents.IProjectionHandler`1",
         "BuildingBlocks.Application.IntegrationEvents.IIntegrationEvent",
-        "BuildingBlocks.Application.IntegrationEvents.IIntegrationEventMapper",
+        "BuildingBlocks.Application.IntegrationEvents.IIntegrationEventMapper`1",
         "BuildingBlocks.Application.IntegrationEvents.IIntegrationEventPublisher",
         "BuildingBlocks.Application.IntegrationEvents.IIntegrationEventSink",
         "BuildingBlocks.Application.IntegrationEvents.IntegrationEventTopicAttribute",

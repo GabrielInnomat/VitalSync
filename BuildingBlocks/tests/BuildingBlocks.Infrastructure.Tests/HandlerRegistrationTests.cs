@@ -18,7 +18,7 @@ public sealed class HandlerRegistrationTests
         Assert.Single(provider.GetServices<ICommandHandler<RegistrationCommand>>());
         Assert.Single(provider.GetServices<IQueryHandler<RegistrationQuery, int>>());
         Assert.Single(provider.GetServices<IProjectionHandler<RegistrationEvent>>());
-        Assert.Contains(provider.GetServices<IIntegrationEventMapper>(), mapper => mapper is RegistrationMapper);
+        Assert.Contains(provider.GetServices<IIntegrationEventMapper<RegistrationEvent>>(), mapper => mapper is RegistrationMapper);
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public sealed class HandlerRegistrationTests
     {
         using var provider = BuildProvider(handlerScans: 2);
 
-        Assert.Single(provider.GetServices<IIntegrationEventMapper>(), mapper => mapper is RegistrationMapper);
+        Assert.Single(provider.GetServices<IIntegrationEventMapper<RegistrationEvent>>(), mapper => mapper is RegistrationMapper);
     }
 
     [Fact]

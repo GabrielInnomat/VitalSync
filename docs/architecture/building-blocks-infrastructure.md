@@ -636,7 +636,7 @@ services.AddBuildingBlocks(options =>
   during implementation; the registration responsibilities above are
   normative.
 - `AddHandlersFrom` is **idempotent for multi-handler contracts**
-  (`IProjectionHandler<>`, `IIntegrationEventMapper`): scanning the same assembly
+  (`IProjectionHandler<>`, `IIntegrationEventMapper<>`): scanning the same assembly
   twice never registers a projection or mapper twice, so a projection runs at most
   once per event, while two *different* handlers for the same event both stay
   registered. For **single-handler contracts** (`ICommandHandler<>`,

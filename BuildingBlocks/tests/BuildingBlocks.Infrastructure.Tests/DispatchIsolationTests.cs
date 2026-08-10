@@ -162,7 +162,7 @@ public sealed class DispatchIsolationTests(PostgreSqlFixture postgres, RabbitMqF
                 services.AddScoped<ICommandHandler<StartIsolationProbe>, StartIsolationProbeHandler>();
                 services.AddScoped<IProjectionHandler<IsolationProbeStarted>>(
                     provider => new IsolationProjection(provider.GetRequiredService<IsolationSignal>(), projectionThrows));
-                services.AddScoped<IIntegrationEventMapper>(
+                services.AddScoped<IIntegrationEventMapper<IsolationProbeStarted>>(
                     provider => new IsolationMapper(provider.GetRequiredService<IsolationSignal>(), mapperThrows));
             })
             .UseWolverine(options => options.Durability.Mode = DurabilityMode.Solo)
@@ -230,16 +230,12 @@ public sealed class IsolationProjection(IsolationSignal signal, bool throws)
     }
 }
 
-public sealed class IsolationMapper(IsolationSignal signal, bool throws) : IIntegrationEventMapper
+public sealed class IsolationMapper(IsolationSignal signal, bool throws) : IIntegrationEventMapper<IsolationProbeStarted>
 {
-    public IReadOnlyCollection<IIntegrationEvent> Map(IDomainEvent domainEvent, DomainEventMetadata metadata)
+    public IReadOnlyCollection<IIntegrationEvent> Map(IsolationProbeStarted domainEvent, DomainEventMetadata metadata)
     {
+        ArgumentNullException.ThrowIfNull(domainEvent);
         ArgumentNullException.ThrowIfNull(metadata);
-
-        if (domainEvent is not IsolationProbeStarted started)
-        {
-            return [];
-        }
 
         if (throws)
         {
@@ -247,7 +243,7 @@ public sealed class IsolationMapper(IsolationSignal signal, bool throws) : IInte
             throw new InvalidOperationException("The integration event mapper fails on purpose.");
         }
 
-        return [new IsolationProbeIntegrationEvent(metadata.EventId, metadata.OccurredAt, started.ProbeId.Value)];
+        return [new IsolationProbeIntegrationEvent(metadata.EventId, metadata.OccurredAt, domainEvent.ProbeId.Value)];
     }
 }
 
