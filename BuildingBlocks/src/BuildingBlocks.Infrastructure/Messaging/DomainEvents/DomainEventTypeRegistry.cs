@@ -76,7 +76,7 @@ public sealed class DomainEventTypeRegistry
             ?? throw new InvalidOperationException(
                 $"The domain event '{domainEventType}' has no [EventName]. The name is written into every outbox " +
                 "row and every event stream, so it is a persistence contract and must be chosen deliberately " +
-                "instead of following the CLR type name (ADR-0030).");
+                "instead of following the CLR type name.");
 
         if (_namesByType.TryGetValue(domainEventType, out var existingName))
         {

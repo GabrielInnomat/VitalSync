@@ -118,7 +118,7 @@ internal static class AggregateStateGraph
         keyProperty.GetGetter().GetClrValue(child)
         ?? throw new NotSupportedException(
             $"The child '{keyProperty.DeclaringType.ClrType.Name}' carries no value for its key property "
-            + $"'{keyProperty.Name}'. A child of an aggregate has its own identity (ADR-0031).");
+            + $"'{keyProperty.Name}'. A child of an aggregate has its own identity.");
 
     private static void EnsureTrackableCollections(IEntityType entityType, object state)
     {
@@ -154,7 +154,7 @@ internal static class AggregateStateGraph
         null => throw new NotSupportedException(
             $"The collection '{Describe(navigation)}' is null. EF Core adds and removes child entities " +
             "through the collection instance itself, so a child collection must never be null: build an " +
-            "empty collection to express 'no children' (ADR-0031)."),
+            "empty collection to express 'no children'."),
         _ when IsWritable(value) => (IEnumerable)value,
         _ => throw new NotSupportedException(
             $"The collection '{Describe(navigation)}' is read-only or fixed-size ('{value.GetType().Name}'). " +

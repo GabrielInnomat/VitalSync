@@ -110,7 +110,7 @@ internal static class PersistedSchemaRenderer
             var name = persistedType.GetCustomAttribute<EventNameAttribute>(inherit: false)?.Name
                 ?? throw new InvalidOperationException(
                     $"The domain event '{persistedType}' has no [EventName] and therefore has no persisted name " +
-                    "to snapshot (ADR-0030).");
+                    "to snapshot.");
 
             return $"domain-event {name}";
         }
@@ -118,7 +118,7 @@ internal static class PersistedSchemaRenderer
         var topic = persistedType.GetCustomAttribute<IntegrationEventTopicAttribute>(inherit: false)?.Topic
             ?? throw new InvalidOperationException(
                 $"The integration event '{persistedType}' has no [IntegrationEventTopic] and therefore has no " +
-                "published routing key to snapshot (ADR-0023).");
+                "published routing key to snapshot.");
 
         return $"integration-event {topic}";
     }

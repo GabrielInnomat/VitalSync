@@ -29,7 +29,7 @@ internal static class EntityKeyFormatter
         ?? throw new InvalidOperationException(
             $"The aggregate '{aggregateType}' has no [AggregateName]. The name prefixes every event stream and " +
             "travels on every domain event envelope, so it is a persistence contract and must be chosen " +
-            "deliberately instead of following the CLR type name (ADR-0030).");
+            "deliberately instead of following the CLR type name.");
 
     private static object ReadKeyValue(object key)
     {

@@ -92,7 +92,7 @@ public sealed class ArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "Building Blocks must stay independent of VitalSync (ADR-0018): the product name may not appear "
+            "Building Blocks must stay independent of VitalSync: the product name may not appear "
             + $"under BuildingBlocks/src. Offending files: {string.Join(", ", offenders)}");
     }
 

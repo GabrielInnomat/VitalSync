@@ -76,7 +76,7 @@ internal static class BuildingBlocksComposition
             throw new InvalidOperationException(
                 "SubscribeToIntegrationEvents was selected without UseWolverineMessaging. Subscribing declares a " +
                 "queue on the RabbitMQ broker and binds it to the platform exchange, so the transport must be " +
-                "configured as well (ADR-0023).");
+                "configured as well.");
         }
 
         if (wiring.Messaging is not null && !wiring.Persistence.IsSelected)
@@ -84,7 +84,7 @@ internal static class BuildingBlocksComposition
             throw new InvalidOperationException(
                 "UseWolverineMessaging was selected without a persistence strategy. Integration events are sent " +
                 "through a durable endpoint so that they survive a broker restart and a crash between commit and " +
-                "broker acknowledgement (ADR-0022/0023), and a durable endpoint needs Wolverine's message store. " +
+                "broker acknowledgement, and a durable endpoint needs Wolverine's message store. " +
                 "Without one the host would look durable and silently not be. Select UseEfCorePersistence<TContext>" +
                 "(writeConnectionString) or UseMartenEventSourcing(writeConnectionString) as well.");
         }

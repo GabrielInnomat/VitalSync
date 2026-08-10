@@ -46,7 +46,7 @@ public static class PersistedSchema
             $"The persisted event schema no longer matches its approved snapshot '{approvedFilePath}'. Field names " +
             "are written into every event body, and a stored event whose field is no longer found deserializes to " +
             "the type's default without an error, a log entry or a failing test, so the change is caught here or " +
-            "not at all (ADR-0035). Compare the rendering in " +
+            "not at all. Compare the rendering in " +
             $"'{receivedFilePath}': a field that was only added stays readable, so approve the new snapshot; a field " +
             "that was renamed, removed or retyped does not, so leave the event untouched and introduce a successor " +
             "under a new [EventName] instead." + Environment.NewLine + Environment.NewLine +

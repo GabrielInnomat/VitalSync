@@ -36,7 +36,7 @@ internal sealed class AggregateStateModelCheck<TContext>(IServiceProvider servic
                 "with that aggregate, so it maps as an owned type (OwnsOne/OwnsMany, optionally ToJson). EF Core " +
                 "loads owned children with their owner and reconciles them against their key when the state is " +
                 "replaced; a navigation to an independent entity type is loaded by neither and is silently lost " +
-                $"on commit (ADR-0031): {string.Join("; ", offenders)}.");
+                $"on commit: {string.Join("; ", offenders)}.");
         }
 
         if (keyless.Count > 0)
@@ -45,14 +45,14 @@ internal sealed class AggregateStateModelCheck<TContext>(IServiceProvider servic
                 "Aggregate state mapping validation failed at startup. A child of an aggregate has its own "
                 + "identity, so an owned collection declares that identity as its key (HasKey) with a single, "
                 + "non-shadow property. Without it the commit cannot match a replaced child against the tracked "
-                + $"one and would rewrite rows instead of updating them (ADR-0031): {string.Join("; ", keyless)}.");
+                + $"one and would rewrite rows instead of updating them: {string.Join("; ", keyless)}.");
         }
 
         if (derivedNames.Count > 0)
         {
             throw new InvalidOperationException(
                 "Aggregate state mapping validation failed at startup. A stored field name is a persistence "
-                + "contract, so it is declared and never derived from the CLR property name (ADR-0030/0035). "
+                + "contract, so it is declared and never derived from the CLR property name. "
                 + "Without an explicit HasColumnName a rename of the property renames the column, which turns a "
                 + "pure refactoring into a destructive migration; with one it costs nothing. Declare a name for: "
                 + $"{string.Join("; ", derivedNames)}.");

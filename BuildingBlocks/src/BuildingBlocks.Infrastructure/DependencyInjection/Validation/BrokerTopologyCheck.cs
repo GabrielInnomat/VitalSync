@@ -69,7 +69,7 @@ internal sealed class BrokerTopologyCheck(WolverineWiringSettings settings) : IS
         throw new InvalidOperationException(
             $"This host does not provision infrastructure, and {complaint}. Run the context's migration worker — " +
             "the one host that selects ProvisionInfrastructure(InfrastructureProvisioning.AtStartup) — before " +
-            "starting this one (ADR-0037).",
+            "starting this one.",
             failure);
     }
 }

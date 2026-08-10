@@ -51,7 +51,7 @@ public sealed class AggregateConventionTests
         {
             Assert.True(
                 aggregate.GetCustomAttribute<AggregateNameAttribute>(inherit: false) is not null,
-                $"'{aggregate}' needs an [AggregateName]; the class name is not a persistence contract (ADR-0030).");
+                $"'{aggregate}' needs an [AggregateName]; the class name is not a persistence contract.");
         }
     }
 
@@ -67,7 +67,7 @@ public sealed class AggregateConventionTests
         {
             Assert.True(
                 domainEvent.GetCustomAttribute<EventNameAttribute>(inherit: false) is not null,
-                $"'{domainEvent}' needs an [EventName]; the class name is not a persistence contract (ADR-0030).");
+                $"'{domainEvent}' needs an [EventName]; the class name is not a persistence contract.");
         }
     }
 
@@ -82,7 +82,7 @@ public sealed class AggregateConventionTests
             Assert.True(
                 child.GetConstructors().Length == 0,
                 $"'{child}' exposes a public constructor, so a child hull can be built without its root and would "
-                + "have no channel to raise through (ADR-0032). Keep the constructor internal.");
+                + "have no channel to raise through. Keep the constructor internal.");
         }
     }
 

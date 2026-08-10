@@ -90,8 +90,8 @@ public sealed class DeadLetterTests(PostgreSqlFixture postgres, RabbitMqFixture 
         {
             Assert.False(
                 await IsInTheDeadLetterQueueAsync(name),
-                "A transient failure must stay on the queue for redelivery instead of being dead-lettered "
-                + "(ADR-0023 amendment): a database failover outlasts any cooldown ladder, and the 7-day "
+                "A transient failure must stay on the queue for redelivery instead of being dead-lettered: "
+                + "a database failover outlasts any cooldown ladder, and the 7-day "
                 + "idempotency window is what makes the redelivery safe.");
 
             await Task.Delay(500, TestContext.Current.CancellationToken);
