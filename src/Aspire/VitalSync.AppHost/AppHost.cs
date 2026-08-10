@@ -21,19 +21,25 @@ var nutritionMigrationService = builder.AddProject<Projects.VitalSync_Nutrition_
     .WithReference(nutritionWrite)
     .WaitFor(nutritionWrite)
     .WithReference(nutritionRead)
-    .WaitFor(nutritionRead);
+    .WaitFor(nutritionRead)
+    .WithReference(messaging)
+    .WaitFor(messaging);
 
 var fitnessMigrationService = builder.AddProject<Projects.VitalSync_Fitness_MigrationService>("fitness-migration-service")
     .WithReference(fitnessWrite)
     .WaitFor(fitnessWrite)
     .WithReference(fitnessRead)
-    .WaitFor(fitnessRead);
+    .WaitFor(fitnessRead)
+    .WithReference(messaging)
+    .WaitFor(messaging);
 
 var analyticsMigrationService = builder.AddProject<Projects.VitalSync_Analytics_MigrationService>("analytics-migration-service")
     .WithReference(analyticsWrite)
     .WaitFor(analyticsWrite)
     .WithReference(analyticsRead)
-    .WaitFor(analyticsRead);
+    .WaitFor(analyticsRead)
+    .WithReference(messaging)
+    .WaitFor(messaging);
 
 var nutritionService = builder.AddProject<Projects.VitalSync_Nutrition_Api>("nutrition-service")
     .WithReference(nutritionRead)
