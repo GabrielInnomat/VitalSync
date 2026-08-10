@@ -79,8 +79,9 @@ capability. The folder is the namespace.
 | `Persistence/StateStored/`         | EF Core write path — repository, unit of work, tracker, state graph |
 | `ReadModels/`                      | the read-model rebuild runner — host-invoked, therefore public and outside `Persistence/` |
 | `Persistence/EventSourced/`        | Marten write path — repository, unit of work, tracker               |
-| `Messaging/DomainEvents/`          | in-context events: publisher, projection runner, type registry, serializer, handler |
+| `Messaging/DomainEvents/`          | in-context events: publisher, projection runner, type registry, serializer, both envelope handlers |
 | `Messaging/IntegrationEvents/`     | the cross-context contract: topics, sink, source context, filter    |
+| `Diagnostics/`                     | the dead-letter health check — the only place a lost projection is recorded (ADR-0022 amendment) |
 | `Time/`                            | `IClock` implementation on top of `TimeProvider`                    |
 | `Telemetry/`                       | the `ActivitySource` and the tag names the three instrumented paths use |
 | `DependencyInjection/`             | entry points, options, and the composition root                     |

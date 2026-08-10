@@ -10,8 +10,6 @@ internal abstract record PersistenceChoice
 
     public static PersistenceChoice NoPersistence { get; } = new NoPersistenceSelected();
 
-    public static PersistenceChoice Marten { get; } = new MartenEventStore();
-
     public abstract string Description { get; }
 
     public bool IsChosen => this is not NoneSelected;
@@ -21,6 +19,15 @@ internal abstract record PersistenceChoice
     public bool IsDeliberatelyWithoutPersistence => this is NoPersistenceSelected;
 
     public string? EfCoreWriteConnectionString => (this as EfCoreWriteDatabase)?.ConnectionString;
+
+    public string? WriteConnectionString => this switch
+    {
+        EfCoreWriteDatabase efCore => efCore.ConnectionString,
+        MartenEventStore marten => marten.ConnectionString,
+        _ => null,
+    };
+
+    public static PersistenceChoice Marten(string connectionString) => new MartenEventStore(connectionString);
 
     public static PersistenceChoice EfCore(string connectionString) => new EfCoreWriteDatabase(connectionString);
 
@@ -34,7 +41,7 @@ internal abstract record PersistenceChoice
         public override string Description => "UseNoPersistence";
     }
 
-    private sealed record MartenEventStore : PersistenceChoice
+    private sealed record MartenEventStore(string ConnectionString) : PersistenceChoice
     {
         public override string Description => "UseMartenEventSourcing";
     }

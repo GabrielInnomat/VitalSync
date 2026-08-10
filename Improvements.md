@@ -16,7 +16,6 @@ auslöst. Überschneidungen mit [hacky.md](hacky.md) sind beim jeweiligen Punkt 
 | IMP-12 | `IIntegrationEventMapper` ist untypisiert                      | offen     | TODO-30 |
 | IMP-19 | Ein Assembly für EF Core, Marten, Wolverine und RabbitMQ       | offen     | TODO-33 |
 | IMP-25 | `Sequential()` auf einer einzigen Queue für alle Domain Events | offen     | TODO-20 |
-| IMP-26 | `DomainEventPublisher` koppelt Projektion und Publikation      | offen     | TODO-29 |
 | IMP-32 | Keine Batch- oder Bulk-Fähigkeit                               | offen     | TODO-38 |
 | IMP-33 | Keine Saga- oder Process-Manager-Abstraktion                   | offen     | TODO-39 |
 | IMP-34 | `Result` hat keine Kombinatoren                                | offen     | TODO-31 |
@@ -107,31 +106,6 @@ dafür ist also erfüllt.
 
 Vor der ersten Lastmessung nicht anfassen. Hier festgehalten, damit die Entscheidung bewusst fällt und
 nicht als Default stehen bleibt.
-
----
-
-# IMP-26, `DomainEventPublisher` koppelt Projektion und Integration-Event-Publikation
-
-```csharp
-await projectionRunner.RunAsync(domainEvent, metadata, cancellationToken);
-foreach (var mapper in _mappers) { foreach (...) await sink.PublishAsync(...); }
-```
-
-([DomainEventPublisher.cs:52-71](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/DomainEventPublisher.cs:52))
-
-Zwei Belange in einem Wolverine-Handler, also ein gemeinsames Retry-Schicksal, bei
-unterschiedlicher Absicherung: eine Projektion schreibt sofort und bleibt bei einem späteren Fehler
-stehen, Integration Events werden gestaget und bei einem Fehler verworfen. Wirft ein Mapper, laufen
-bei der Redelivery alle Projektionen erneut; wirft eine Projektion, verlässt das Integration Event
-den Kontext nie und ein lokaler Read-Model-Bug blockiert die gesamte Cross-Context-Kommunikation.
-
-## Lösungsvorschlag
-
-Die Projektion aus dem Envelope-Handler herauslösen und als eigene lokale Nachricht mit eigener
-Inbox-Zeile, eigenem Retry und eigener DLQ zustellen; die Integration Events bleiben im
-Envelope-Handler. Kostet eine zusätzliche Zustellung pro Event und lässt die Outbox-Zusage der
-Write-Seite unberührt. Details, verworfene Alternativen und die verbleibende Voraussetzung
-(Watermark-Konvention) in TODO-29.
 
 ---
 

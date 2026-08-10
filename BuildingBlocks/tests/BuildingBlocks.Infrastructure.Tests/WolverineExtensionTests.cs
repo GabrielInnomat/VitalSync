@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
@@ -119,7 +119,7 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithDomainEventRouting_RoutesTheEnvelopeToTheLocalQueue()
     {
-        var options = ConfigureOptions(Settings(settings => settings.SelectPersistence(PersistenceChoice.Marten)));
+        var options = ConfigureOptions(Settings(settings => settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString))));
 
         var endpoints = options.Transports.SelectMany(transport => transport.Endpoints());
 
@@ -136,7 +136,7 @@ public sealed class WolverineExtensionTests
             .UseWolverine(options =>
             {
                 new BuildingBlocksWolverineExtension(
-                    Settings(settings => settings.SelectPersistence(PersistenceChoice.Marten)))
+                    Settings(settings => settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString))))
                     .Configure(options);
                 options.Discovery.IncludeAssembly(typeof(WolverineExtensionTests).Assembly);
             })
@@ -291,7 +291,7 @@ public sealed class WolverineExtensionTests
     public void Configure_WithPersistence_WidensTheInboxIdempotencyWindow()
     {
         var options = ConfigureOptions(Settings(settings =>
-            settings.SelectPersistence(PersistenceChoice.Marten)));
+            settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString))));
 
         Assert.Equal(TimeSpan.FromDays(7), options.Durability.KeepAfterMessageHandling);
     }

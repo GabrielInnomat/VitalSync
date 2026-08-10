@@ -31,7 +31,6 @@ Lastmessung, TODO-46 auf das erste echte Aggregat.
 | TODO-19 | `ApplyEntityKeyConversions` erfasst keine Complex Types    | **P2** | teilweise | hacky-4, WS-15    |
 | TODO-20 | Global sequentielle Domain-Event-Queue                     | **P2** | offen     | hacky-13, IMP-25  |
 | TODO-46 | Die MigrationService-Worker sind leere Hüllen              | **P2** | offen     | AppHost `e44ae9b` |
-| TODO-29 | `DomainEventPublisher` koppelt Projektion und Publikation  | **P3** | offen     | IMP-26            |
 | TODO-30 | `IIntegrationEventMapper` ist untypisiert                  | **P3** | offen     | IMP-12            |
 | TODO-31 | `Result` hat keine Kombinatoren                            | **P3** | offen     | IMP-34            |
 | TODO-33 | Ein Assembly für alle Persistenz-Pakete                    | **P3** | offen     | IMP-19            |
@@ -88,117 +87,6 @@ dafür ist also erfüllt.
 
 Vor der ersten Lastmessung nicht anfassen — hier steht es, damit die Entscheidung bewusst fällt
 statt als Default stehen zu bleiben.
-
----
-
-# TODO-29, `DomainEventPublisher` koppelt Projektion und Integration-Publikation
-
-**P3 · offen · IMP-26**
-
-## Anforderungen (abgenommen 2026-08-09)
-
-Diese drei Zusagen sind die Abnahmekriterien; jede muss durch einen eigenen Test belegt sein.
-
-1. **Scheitert der Commit der Write-Seite, findet weder eine Projektion noch ein Integration Event
-   statt.** Das ist die härteste der drei und heute bereits strukturell erfüllt.
-2. **Scheitert eine Projektion — etwa wegen eines Bugs —, wird das Integration Event trotzdem
-   versendet.** Read Models sind nach dem Bugfix wiederherstellbar, ein nicht versendetes Integration
-   Event ist es nicht. Deshalb wird das Nicht-Wiederherstellbare priorisiert.
-3. **Projektion und Integration-Publikation werden getrennt behandelt**, hängen aber beide daran, dass
-   der Write-Commit erfolgreich war.
-
-Aus Anforderung 2 folgen zwei Punkte, die zu diesem TODO gehören:
-
-- **a) Der Rebuild existiert bisher nur für state-stored Kontexte.** ✅ **Erledigt.**
-  `EventSourcedReadModelRebuildRunner` folded die Marten-Streams über denselben
-  `IReadModelRebuilder`-Kontrakt; `ReadModelRebuildWriter` teilen sich beide Runner. Der alte
-  `ReadModelRebuildRunner<TContext>` heisst jetzt `StateStoredReadModelRebuildRunner<TContext>`.
-  Gadget-Rebuilder, Migration-Worker-Schalter und Paritätstest sind vorhanden; ADR-0036 hat ein
-  Amendment.
-- **b) Ein Projektionsfehler wird nach dem Umbau leise.** Heute fällt er auf, weil nichts mehr
-  publiziert wird; danach läuft alles weiter und nur die Dead-Letter-Queue füllt sich. Ohne
-  Sichtbarkeit entsteht ein stilles Loch im Read Model, das erst auffällt, wenn jemand die falsche
-  Zahl sieht.
-
-## Ausgangslage
-
-`DomainEventPublisher.DispatchAsync` erledigt zwei Belange in einem Wolverine-Handler
-([DomainEventPublisher.cs:52-71](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/DomainEventPublisher.cs:52)):
-erst laufen alle `IProjectionHandler`, dann publizieren alle `IIntegrationEventMapper`. Ein Handler
-heißt ein Retry-Schicksal — entweder gilt der ganze Handler als erfolgreich, oder der ganze wird
-wiederholt.
-
-Die beiden Seiten sind dabei unterschiedlich abgesichert. Eine Projektion schreibt sofort mit
-eigenem `SaveChangesAsync` in die Read-DB und bleibt bei einem späteren Fehler stehen. Integration
-Events werden dagegen im `IMessageContext` des Handlers gestaget und erst am Handler-Ende
-abgesendet; bei einem Fehler werden sie verworfen. Gemessen (Sonde, 2026-08-09): wirft ein Mapper
-nach einem erfolgreichen `sink.PublishAsync`, erreichen **0** Events den Broker; die Positivkontrolle
-liefert **1**. **Kernaussage: beide Belange teilen ein Retry-Schicksal, aber nur einer von beiden
-lässt sich zurückrollen.**
-
-Daraus folgen zwei Schadensfälle:
-
-1. **Ein Mapper wirft** — die Projektionen haben bereits geschrieben und laufen bei der Redelivery
-   erneut, obwohl sie fehlerfrei waren. Nur ein Risiko: die Watermark-Konvention fängt es ab.
-2. **Eine Projektion wirft** — das Integration Event wird verworfen, dreimal retryt und
-   dead-lettered. Ein Bug in der **eigenen** Read-DB verhindert dauerhaft, dass andere Kontexte von
-   einer längst committeten Änderung erfahren. Das ist der echte Schaden und der Grund für
-   Anforderung 2: der Blast Radius eines lokalen Fehlers ist plattformweit.
-
-Unberührt von alldem ist die Write-Seite: der `DomainEventEnvelope` wird in derselben Transaktion
-wie die Aggregatdaten in die Outbox geschrieben (`EfCoreUnitOfWork`, `MartenUnitOfWork`). Scheitert
-der Commit, existiert keine Outbox-Zeile, der Envelope wird nie zugestellt und weder Projektion noch
-Integration Event finden statt — Anforderung 1 ist damit erfüllt, weil sie **vor** dem Handler liegt
-und nicht in ihm.
-
-## Lösungsvorschlag
-
-**Die Projektion aus dem Envelope-Handler herauslösen, die Integration Events darin belassen.** Der
-Envelope-Handler mappt und publiziert wie bisher und staget zusätzlich eine lokale Nachricht für die
-Projektion; diese läuft in einem eigenen Handler mit eigener Inbox-Zeile, eigenem Retry und eigener
-DLQ.
-
-- Anforderung 2 ist erfüllt: die Projektion scheitert in ihrer eigenen DLQ, das Integration Event ist
-  bereits draußen.
-- Schadensfall 1 wird besser als heute: wirft ein Mapper, wird auch die gestagete Projektionsnachricht
-  verworfen — die Projektion hat also noch nie gelaufen und läuft nach dem Retry genau einmal. Der
-  heutige Doppellauf entfällt.
-- Anforderung 1 bleibt: beide Seiten hängen weiterhin an der einen Outbox-Zeile, die nur bei
-  erfolgreichem Commit existiert.
-- Kosten: **eine** zusätzliche Zustellung pro Domain Event, nicht zwei.
-
-Bewusst verworfen wurde **ein Handler mit getrennter Fehlerbehandlung** (die frühere Empfehlung
-dieses Punktes). Sie trägt nicht: „getrennt behandeln" kann in einer Transaktion nur heißen, einen
-der beiden Fehler zu schlucken. Wird der Projektionsfehler geschluckt, gilt der Handler als
-erfolgreich, es gibt keinen Retry und das Read Model bleibt dauerhaft falsch. Wird der Mapper-Fehler
-geschluckt, wird das Staging committed und ein weiterer Fehler publiziert das Event ein zweites Mal.
-Ebenfalls verworfen wurde die **volle Zwei-Nachrichten-Variante** — sie kostet zwei zusätzliche
-Zustellungen statt einer und bringt darüber hinaus nichts.
-
-Zu akzeptieren ist eine Reihenfolgeumkehr: das Integration Event verlässt den Kontext, bevor dessen
-eigenes Read Model aktuell ist. Das ist unkritisch, weil Kontexte einander nie synchron abfragen und
-Read Models laut ADR-0022 ohnehin eventual consistent sind.
-
-## Watermark-Konvention
-
-Die Watermark (`existing.Version < metadata.Version`) wird von Building Blocks nicht erzwungen — der
-Handler schreibt in eine Read-DB, die dem Service gehört. Vorhanden sind bereits die Regel in
-ADR-0030 und acht Redelivery-Tests in den Samples (StateStored fünf, EventSourced drei) sowie
-`OutboxFlushOnCommitTests`, das die `Version` genau dort prüft, wo der Handler sie konsumiert.
-
-Entschieden: **dokumentieren statt erzwingen.** Ein Start-Check gegen mehrere Handler pro Domain
-Event wäre falsch-positiv per Konstruktion, weil der Container nicht weiß, welche Read-Model-Zeile
-ein Handler schreibt; ein zentraler Watermark-Zwang in Building Blocks bräuchte Zugriff auf die
-Read-DB, die laut ADR-0022 dem Service gehört, und würde den Stand in einer anderen Transaktion als
-den Handler schreiben — das Problem wäre verlagert, nicht beseitigt. Nachzuziehen ist deshalb nur:
-
-- ein Principles-Eintrag in `testing-strategy.md`, der den Redelivery-Test je Projektionshandler zur
-  Pflicht macht,
-- eine Regel in beiden Instruktionsdateien zu der bislang unbenannten Falle: die Watermark sitzt auf
-  der **Read-Model-Zeile**, nicht auf dem Handler, also gilt je Zeile genau ein Projektionshandler
-  pro Domain Event. Schreiben zwei Handler desselben Events dieselbe Zeile, setzt der erste die
-  Version hoch und der zweite überspringt sich selbst — schon beim ersten regulären Lauf, nicht erst
-  bei einer Redelivery.
 
 ---
 

@@ -45,7 +45,7 @@ internal sealed class PersistenceRegistrar(IServiceCollection services, Wolverin
 
     public void UseMarten(string connectionString)
     {
-        wiring.SelectPersistence(PersistenceChoice.Marten);
+        wiring.SelectPersistence(PersistenceChoice.Marten(connectionString));
 
         services.AddMarten(serviceProvider =>
         {

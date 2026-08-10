@@ -1,4 +1,4 @@
-using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
+﻿using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
@@ -14,10 +14,25 @@ public sealed class PersistenceChoiceTests
     }
 
     [Fact]
-    public void Marten_IsSelectedButCarriesNoEfCoreConnectionString()
+    public void Marten_IsSelectedAndCarriesItsWriteConnectionStringButNotTheEfCoreOne()
     {
-        Assert.True(PersistenceChoice.Marten.IsSelected);
-        Assert.Null(PersistenceChoice.Marten.EfCoreWriteConnectionString);
+        var choice = PersistenceChoice.Marten(ConnectionString);
+
+        Assert.True(choice.IsSelected);
+        Assert.Equal(ConnectionString, choice.WriteConnectionString);
+        Assert.Null(choice.EfCoreWriteConnectionString);
+    }
+
+    [Fact]
+    public void TwoMartenChoicesOverDifferentDatabases_Throw()
+    {
+        var settings = new WolverineWiringSettings();
+        settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString));
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => settings.SelectPersistence(PersistenceChoice.Marten("Host=elsewhere")));
+
+        Assert.Contains("twice with different arguments", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -64,7 +79,7 @@ public sealed class PersistenceChoiceTests
     public void NoPersistenceAfterAStrategy_Throws()
     {
         var settings = new WolverineWiringSettings();
-        settings.SelectPersistence(PersistenceChoice.Marten);
+        settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString));
 
         var exception = Assert.Throws<InvalidOperationException>(
             () => settings.SelectPersistence(PersistenceChoice.NoPersistence));
@@ -91,7 +106,7 @@ public sealed class PersistenceChoiceTests
         efCore.SelectPersistence(PersistenceChoice.EfCore(ConnectionString));
 
         var marten = new WolverineWiringSettings();
-        marten.SelectPersistence(PersistenceChoice.Marten);
+        marten.SelectPersistence(PersistenceChoice.Marten(ConnectionString));
 
         Assert.False(new WolverineWiringSettings().RequiresWolverine);
         Assert.True(efCore.RequiresWolverine);

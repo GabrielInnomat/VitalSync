@@ -590,6 +590,16 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   the `DomainEventMetadata`, so a handler keeps the last processed `Version` per aggregate on
   its read model and ignores anything at or below that watermark (ADR-0030); an event below the
   watermark is dropped, not field-merged. Reads are **eventually consistent** with writes.
+- **Projection and integration-event publication are two queues, not one handler** (ADR-0022
+  amendment 2026-08-10). `DomainEventEnvelope` carries only the integration-event step; its
+  handler publishes and then forwards a `ProjectionEnvelope` to a second local queue that runs
+  the projections. Both are `.Sequential()` with `UseDurableInbox()` and both start from the same
+  outbox flush, so per-aggregate order, crash safety and "nothing escapes an uncommitted write"
+  are unchanged. The order is deliberate — the **non-recoverable** step goes first: a read model
+  can be rebuilt (ADR-0036), an integration event that was never sent cannot. Hence the three
+  commitments pinned by `DispatchIsolationTests`: an uncommitted command produces neither; a
+  failing projection does **not** stop the integration event; a failing mapper **does** stop the
+  projection, because it fails before the forward. Never merge the two back into one handler.
 - **Read models are owned by each service, not a Building Block** — the service owns
   its read-model schema, projection handlers, and queries; Infrastructure ships only
   the plumbing (Publisher, outbox, dispatch loop, projection runner, transport). Read
@@ -665,8 +675,24 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   **silently discards** a message with no route, and a message whose consumer was never
   discovered is marked handled and dropped without a retry or a dead letter — both
   failures are invisible. A consumer that keeps throwing is retried three times and the message
-  then goes to Wolverine's `wolverine-dead-letter-queue` **on the broker** — not to the
-  `wolverine_dead_letters` table in the write database, which stays empty (`DeadLetterTests`).
+  then goes to Wolverine's `wolverine-dead-letter-queue` **on the broker** (`DeadLetterTests`).
+- **Where a dead letter lands depends on the endpoint, and both places exist.** An
+  **integration event** arrives over a RabbitMQ listener, so giving up on it moves it to the
+  broker queue above. A **projection envelope** travels on a *local* queue, which has no broker
+  endpoint at all, so giving up on it writes a row into the `wolverine_dead_letters` table in the
+  write database. The write-database table is therefore **not** empty by design — that was true
+  only while every dead letter came from a broker listener. Since ADR-0022's amendment split the
+  projection onto its own queue, that table is the only place a lost projection is recorded, which
+  is why `DeadLetterHealthCheck` watches it (`DeadLetterVisibilityTests`).
+- **A dead-lettered projection is visible as a `Degraded` health check**, never as an unhealthy
+  one. `AddBuildingBlocks` registers `building-blocks-dead-letters` (tag `dead-letters`) whenever a
+  persistence strategy was selected; it counts `wolverine_dead_letters` capped at 1000 and reports
+  `Degraded` with the count. Degraded maps to HTTP 200, so the check is visible in `/health` and in
+  the Aspire dashboard **without** kicking the service out of readiness — which is the point: the
+  host still serves every request correctly, it is the read model that is missing a change. Do not
+  "upgrade" it to `Unhealthy`: that returns 503, and Aspire would restart or drain a host whose
+  only problem is a stale read model, turning a wrong number into an outage. A missing table also
+  reports `Degraded`, because a check that cannot see failures must not report health.
 - **Retries are graded by failure class** (ADR-0023 amendment 2026-08-06). Three rules, first
   match wins. **Hopeless** (`JsonException`, `DomainValidationException`,
   `BusinessRuleViolationException`) is dead-lettered on the **first** attempt — it never

@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-07-26
 - **Amended:** 2026-07-31 (integration-event publication is bound to the handler's message context — see the note below)
+- **Amended:** 2026-08-10 (projection and integration-event publication are separate queues, and a lost projection is visible — see the amendment at the end)
 
 ## Context
 
@@ -173,3 +174,63 @@ unchanged, and a second, explicitly invoked path (`IReadModelRebuilder` plus
 consequence for read-model design is a hard rule: **every field of a state-stored read model must be
 a function of the current aggregate state**. A field that needs history belongs in an event-sourced
 context.
+
+## Amendment (2026-08-10) - the two consumers are split, and giving up on one is visible
+
+Both concerns above - updating the in-context read model and publishing integration events - ran
+in **one** Wolverine handler over one envelope. That coupled two things the business treats
+differently. A projection handler that threw took the whole envelope down, so the integration
+event was never published either; downstream contexts stayed unaware of a fact that had already
+been committed. The two failures are not equally bad: a read model is derived and rebuildable
+(ADR-0036), an integration event that was never sent is not recoverable from anywhere.
+
+`DomainEventEnvelope` therefore now carries **only** the integration-event step. Its handler
+publishes, and then forwards a `ProjectionEnvelope` to a second local queue whose handler runs
+the projections. Both queues are `.Sequential()` with `UseDurableInbox()`, so per-aggregate
+order and crash safety are unchanged, and both still start from the same outbox flush - neither
+runs unless the write transaction committed. The ordering is deliberate: the non-recoverable
+step goes first.
+
+Three commitments follow, and each has a test in `DispatchIsolationTests`:
+
+1. A command that does not commit produces **neither** a projection **nor** an integration event.
+2. A failing projection does **not** stop the integration event.
+3. A failing integration-event mapper **does** stop the projection, because it fails before the
+   forward.
+
+### The cost this amendment pays for
+
+Splitting the queues makes a projection failure **quiet**. Before, it was loud by accident: nothing
+was published, so the gap surfaced downstream. Now the host keeps working and only a dead letter
+records the loss - and the loss is real, because the read model silently misses that change until
+someone rebuilds it.
+
+Where that dead letter lands is not where it lands for a consumer. An integration event arrives
+over a RabbitMQ listener, so Wolverine moves it to `wolverine-dead-letter-queue` on the broker. A
+projection envelope travels on a **local** queue, which has no broker endpoint, so it is written to
+the `wolverine_dead_letters` table in the write database. That table was previously empty by
+design; it no longer is, and it is the only place a lost projection is recorded.
+
+`AddBuildingBlocks` therefore registers the health check `building-blocks-dead-letters` (tag
+`dead-letters`) whenever a persistence strategy was selected. It counts that table, capped at
+1000 rows so the query cannot become expensive, and reports **`Degraded`** with the count.
+
+`Degraded` rather than `Unhealthy` is the load-bearing choice. `Unhealthy` maps to HTTP 503,
+which would take the host out of readiness: Aspire would restart or drain it and the BFF would stop
+routing to it, turning "a read model is stale" into an outage - while restarting fixes nothing,
+because the dead letter is durable and the row is still there afterwards. `Degraded` maps to 200,
+so the host keeps serving while the condition is plainly visible in `/health` and on the Aspire
+dashboard. A **missing** table also reports `Degraded`: a check that cannot see failures must not
+report health.
+
+### Rejected alternatives
+
+- **Log the dead letter and rely on log alerts.** A log line is an event, and this is a *state* -
+  the read model stays wrong until someone acts. A health check keeps saying so until the table is
+  empty, and it needs no external alerting rule to be configured correctly.
+- **Retry the projection forever instead of dead-lettering.** The failure this protects against is
+  a projection **bug**, which no retry ladder fixes; an unbounded retry would spin on every
+  redelivery and bury the broker in noise while the read model stays wrong anyway.
+- **Keep one queue and publish the integration event even when the projection throws.** That is the
+  same coupling with an exception carved into it, and it would still lose the projection silently
+  while making the handler's contract depend on the order of two unrelated steps.

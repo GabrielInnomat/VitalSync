@@ -1,4 +1,4 @@
-using BuildingBlocks.Infrastructure.DependencyInjection;
+﻿using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using Marten;
@@ -42,7 +42,7 @@ public sealed class InfrastructureProvisioningTests
     [Fact]
     public void WithoutProvisioning_TheMessageStorageIsNotBuiltAtStartup()
     {
-        var options = ConfigureOptions(Settings(settings => settings.SelectPersistence(PersistenceChoice.Marten)));
+        var options = ConfigureOptions(Settings(settings => settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString))));
 
         Assert.Equal(JasperFx.AutoCreate.None, options.AutoBuildMessageStorageOnStartup);
     }
@@ -52,7 +52,7 @@ public sealed class InfrastructureProvisioningTests
     {
         var options = ConfigureOptions(Settings(settings =>
         {
-            settings.SelectPersistence(PersistenceChoice.Marten);
+            settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString));
             settings.SelectProvisioning(InfrastructureProvisioning.AtStartup);
         }));
 
