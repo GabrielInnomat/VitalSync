@@ -5,10 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\src\BuildingBlocks.Infrastructure\BuildingBlocks.Infrastructure.csproj" />
     <ProjectReference Include="..\..\VitalSync.Sample.Contracts\VitalSync.Sample.Contracts.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Application\VitalSync.Sample.EventSourced.Application.csproj" />

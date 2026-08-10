@@ -788,6 +788,20 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   and the event schema is unchanged, so snapshots can be added per context later with
   **no event migration**.
 - **A service host registers through the host-builder overload** `builder.AddBuildingBlocks(options => …, configureWolverine?)` (ADR-0027 amendment 2026-08-03) and calls **no `UseWolverine` at all** — Building Blocks issues it, and applies the EF Core outbox from the write connection string the host already named in `UseEfCorePersistence`. **The write database is named exactly once**; the earlier requirement to repeat it in the host's own `UseWolverine(...)` is gone, and with it the silent failure of outbox and aggregates landing in different databases. Wolverine permits only one `UseWolverine`, so host-specific transport settings go in the optional `configureWolverine` callback. This is the **only** way to get the EF Core outbox — the former public `UseBuildingBlocksEfCorePersistence(cs)` is deleted, so no host can point the message store at a second database. The `IServiceCollection` overload still serves handlers, Marten, and messaging for hosts that wire Wolverine themselves; a **state-stored** host must use the builder overload.
+- **`Microsoft.EntityFrameworkCore.Design` belongs to the MigrationService, not to Infrastructure.**
+  Infrastructure is referenced by the Api, the MigrationService and the tests, so a design-time
+  package placed there travels into all of them; the worker is a leaf host. Declare it with
+  `PrivateAssets="all"` and **no** `IncludeAssets` — the widely copied
+  `IncludeAssets="runtime;build;native;contentfiles;analyzers"` drops `compile`, and the
+  `IDesignTimeDbContextFactory` implementations stop compiling. (The older claim that
+  `PrivateAssets` severs the edge to `EntityFrameworkCore.Relational` is wrong: Relational
+  arrives through `Npgsql.EntityFrameworkCore.PostgreSQL` out of `BuildingBlocks.Infrastructure`.)
+  Migrations stay in Infrastructure, so scaffolding names both projects — `--project` on
+  Infrastructure, `--startup-project` on the MigrationService. The factories live in the worker
+  and stay `internal` (EF Core finds them by reflection; `public` trips `CA1515`) and they are
+  **required**, because `dotnet ef` otherwise builds the worker's host, which reads Aspire
+  connection strings that do not exist at design time. Each sample's `DesignTimePackageTests`
+  fails once the package reappears in Infrastructure or loses `PrivateAssets`.
 - PostgreSQL is provisioned as a first-party **.NET Aspire** resource.
 
 ADRs are immutable once accepted; to change a decision, add a superseding ADR.

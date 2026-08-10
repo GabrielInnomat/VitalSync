@@ -80,6 +80,34 @@ The event store and the state-stored store **never co-locate in the same
 database**, even on the same server, so they can move and scale independently. See
 [ADR-0020](./decisions/0020-postgresql-for-state-stored-contexts.md).
 
+### Migrations and the design-time package
+
+`Microsoft.EntityFrameworkCore.Design` belongs to the context's **MigrationService**,
+never to its Infrastructure project. Infrastructure is referenced by the Api, the
+MigrationService and the tests, so a design-time package placed there travels into
+every one of them; the MigrationService is a leaf host, and only the Aspire AppHost
+references it. The package is declared with `PrivateAssets="all"` and **without**
+`IncludeAssets` — the frequently copied `IncludeAssets="runtime;build;native;contentfiles;analyzers"`
+drops `compile` and the `IDesignTimeDbContextFactory` implementations then stop
+compiling.
+
+The migrations themselves stay in Infrastructure, next to the `DbContext` they
+describe, so scaffolding names both projects:
+
+```bash
+dotnet ef migrations add AddSomething --context WidgetWriteDbContext \
+  --project         samples/StateStored/VitalSync.Sample.StateStored.Infrastructure \
+  --startup-project samples/StateStored/VitalSync.Sample.StateStored.MigrationService \
+  --output-dir      Migrations/Write
+```
+
+The `IDesignTimeDbContextFactory` implementations live in the MigrationService and
+stay `internal` — EF Core discovers them by reflection, and a `public` type in a
+worker trips `CA1515`. They are **required**: without one, `dotnet ef` builds the
+worker's own host, which reads its connection strings from Aspire configuration
+that does not exist at design time. Each sample carries a `DesignTimePackageTests`
+that fails once the package reappears in Infrastructure or loses `PrivateAssets`.
+
 ## Event store technology
 
 When a context is event-sourced, its events are persisted in **Marten on

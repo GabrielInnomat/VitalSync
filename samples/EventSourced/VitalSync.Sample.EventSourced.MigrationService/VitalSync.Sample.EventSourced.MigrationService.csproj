@@ -5,6 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\src\Aspire\VitalSync.ServiceDefaults\VitalSync.ServiceDefaults.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Infrastructure\VitalSync.Sample.EventSourced.Infrastructure.csproj" />
   </ItemGroup>

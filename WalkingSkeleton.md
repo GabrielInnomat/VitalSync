@@ -9,7 +9,6 @@ Priorität geführt.
 
 | Nr.   | Titel                                                      | Herkunft     | TODO    |
 | ----- | ---------------------------------------------------------- | ------------ | ------- |
-| WS-04 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets` | Schritt 3    | TODO-35 |
 | WS-07 | Der gRPC-Vertrag liegt noch beim Service                   | Etappe 1     | TODO-36 |
 | WS-15 | `ApplyEntityKeyConversions` erfasst keine Complex Types    | vorbestehend | TODO-19 |
 
@@ -19,31 +18,6 @@ eine Zusage ohne Inhalt. Bleibt bewusst offen, bis pro Kontext feststeht, wie do
 wird — siehe [todo.md](todo.md), TODO-46. Seit ADR-0037 hängt daran ein zweiter Auftrag: dieser
 Worker ist der einzige Host seines Kontexts, der provisionieren darf, also
 `InfrastructureProvisioning.AtStartup` wählt.
-
----
-
-### WS-04, `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`
-
-Das Design-Paket steht ohne `PrivateAssets` in beiden Sample-Infrastructure-Projekten
-([StateStored](samples/StateStored/VitalSync.Sample.StateStored.Infrastructure/VitalSync.Sample.StateStored.Infrastructure.csproj),
-[EventSourced](samples/EventSourced/VitalSync.Sample.EventSourced.Infrastructure/VitalSync.Sample.EventSourced.Infrastructure.csproj)).
-Mit `PrivateAssets="all"` kappt es die transitive Kante zu `EntityFrameworkCore.Relational`,
-und Konsumenten scheitern zur Laufzeit mit `FileNotFoundException` — die Standardempfehlung
-für Design-Pakete ist hier also aktiv falsch, was niemand erwartet.
-
-#### Lösungsvorschlag
-
-Die Design-Time-Factories dorthin verschieben, wo das Paket ohnehin hingehört, und den
-MigrationService als Startup-Projekt scaffolden:
-
-```bash
-dotnet ef migrations add Xyz \
-  --project    samples/StateStored/VitalSync.Sample.StateStored.Infrastructure \
-  --startup-project samples/StateStored/VitalSync.Sample.StateStored.MigrationService
-```
-
-Damit verschwindet die Design-Referenz aus dem Infrastructure-Projekt, das von anderen
-referenziert wird — die Ursache, nicht das Symptom.
 
 ---
 

@@ -33,7 +33,6 @@ Lastmessung, TODO-46 auf das erste echte Aggregat.
 | TODO-46 | Die MigrationService-Worker sind leere Hüllen              | **P2** | offen     | AppHost `e44ae9b` |
 | TODO-31 | `Result` hat keine Kombinatoren                            | **P3** | offen     | IMP-34            |
 | TODO-33 | Ein Assembly für alle Persistenz-Pakete                    | **P3** | offen     | IMP-19            |
-| TODO-35 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets` | **P3** | offen     | WS-04             |
 | TODO-36 | Der gRPC-Vertrag liegt noch beim Service                    | **P3** | offen     | WS-07             |
 | TODO-39 | Keine Saga- oder Process-Manager-Abstraktion               | **P3** | offen     | IMP-33            |
 
@@ -130,31 +129,6 @@ BuildingBlocks.Infrastructure.Wolverine  → Envelope, Handler, Sink, Wolverine-
 Der Schnitt ist durch die Ordnerstruktur bereits vorgezeichnet, es wäre eine reine
 Projektverschiebung. **Auslöser für die Umsetzung:** der erste Produktions-Service, der nur eine
 der beiden Persistenzwelten braucht. Vorher ist der Aufwand höher als der Gewinn.
-
----
-
-# TODO-35, `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`
-
-**P3 · offen · WS-04**
-
-Das Design-Paket steht ohne `PrivateAssets` in beiden Sample-Infrastructure-Projekten. Mit
-`PrivateAssets="all"` kappt es die transitive Kante zu `EntityFrameworkCore.Relational`, und
-Konsumenten scheitern zur Laufzeit mit `FileNotFoundException` — die Standardempfehlung für
-Design-Pakete ist hier also aktiv falsch, was niemand erwartet.
-
-## Lösungsvorschlag
-
-Die Design-Time-Factories dorthin verschieben, wo das Paket hingehört, und den MigrationService als
-Startup-Projekt scaffolden:
-
-```bash
-dotnet ef migrations add Xyz \
-  --project samples/StateStored/VitalSync.Sample.StateStored.Infrastructure \
-  --startup-project samples/StateStored/VitalSync.Sample.StateStored.MigrationService
-```
-
-Damit verschwindet die Design-Referenz aus dem Projekt, das von anderen referenziert wird — die
-Ursache, nicht das Symptom.
 
 ---
 
