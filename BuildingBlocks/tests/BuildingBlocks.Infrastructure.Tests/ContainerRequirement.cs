@@ -2,27 +2,34 @@ namespace BuildingBlocks.Infrastructure.Tests;
 
 public static class ContainerRequirement
 {
-    public const string EnvironmentVariable = "VITALSYNC_REQUIRE_CONTAINERS";
+    public const string EnvironmentVariable = "GAWECODES_REQUIRE_CONTAINERS";
 
-    public static bool ContainersRequired
-    {
-        get
-        {
-            var value = Environment.GetEnvironmentVariable(EnvironmentVariable);
-            return !string.IsNullOrWhiteSpace(value)
-                && !string.Equals(value, "0", StringComparison.Ordinal)
-                && !string.Equals(value, "false", StringComparison.OrdinalIgnoreCase);
-        }
-    }
+    public const string LegacyEnvironmentVariable = "VITALSYNC_REQUIRE_CONTAINERS";
+
+    private static readonly string[] RecognizedVariables = [EnvironmentVariable, LegacyEnvironmentVariable];
+
+    public static bool ContainersRequired => RequiringVariable() is not null;
 
     public static void ThrowIfRequired(string containerName, Exception failure)
     {
-        if (ContainersRequired)
+        var variable = RequiringVariable();
+
+        if (variable is not null)
         {
             throw new InvalidOperationException(
-                $"The {containerName} Testcontainer could not be started and {EnvironmentVariable} is set, " +
+                $"The {containerName} Testcontainer could not be started and {variable} is set, " +
                 "so this run must not silently skip the tests that depend on it.",
                 failure);
         }
     }
+
+    private static string? RequiringVariable() => RequiringVariable(Environment.GetEnvironmentVariable);
+
+    internal static string? RequiringVariable(Func<string, string?> read) =>
+        Array.Find(RecognizedVariables, name => IsEnabled(read(name)));
+
+    private static bool IsEnabled(string? value) =>
+        !string.IsNullOrWhiteSpace(value)
+        && !string.Equals(value, "0", StringComparison.Ordinal)
+        && !string.Equals(value, "false", StringComparison.OrdinalIgnoreCase);
 }

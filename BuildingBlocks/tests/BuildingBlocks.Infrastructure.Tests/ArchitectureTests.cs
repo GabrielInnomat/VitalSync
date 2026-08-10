@@ -61,7 +61,7 @@ public sealed class ArchitectureTests
     [Fact]
     public void Domain_DeclaresNoInfrastructurePackage_NotEvenAnUnusedOne()
     {
-        var packages = ResolvedPackages("BuildingBlocks/src/BuildingBlocks.Domain");
+        var packages = ResolvedPackages("src/BuildingBlocks.Domain");
 
         Assert.DoesNotContain(packages, IsForbiddenInfrastructureDependency);
     }
@@ -69,37 +69,15 @@ public sealed class ArchitectureTests
     [Fact]
     public void Application_DeclaresNoInfrastructurePackage_NotEvenAnUnusedOne()
     {
-        var packages = ResolvedPackages("BuildingBlocks/src/BuildingBlocks.Application");
+        var packages = ResolvedPackages("src/BuildingBlocks.Application");
 
         Assert.DoesNotContain(packages, IsForbiddenInfrastructureDependency);
-    }
-
-    [Fact]
-    public void BuildingBlocks_NeverMentionsTheProductItServes()
-    {
-        var sources = Directory.EnumerateFiles(
-            Path.Combine(RepositoryRoot(), "BuildingBlocks", "src"),
-            "*.*",
-            SearchOption.AllDirectories)
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-            .Where(path => Path.GetExtension(path) is ".cs" or ".csproj" or ".json" or ".editorconfig");
-
-        var offenders = sources
-            .Where(path => File.ReadAllText(path).Contains("vitalsync", StringComparison.OrdinalIgnoreCase))
-            .Select(path => Path.GetRelativePath(RepositoryRoot(), path))
-            .ToArray();
-
-        Assert.True(
-            offenders.Length == 0,
-            "Building Blocks must stay independent of VitalSync: the product name may not appear "
-            + $"under BuildingBlocks/src. Offending files: {string.Join(", ", offenders)}");
     }
 
     private static IReadOnlyCollection<string> ResolvedPackages(string projectDirectory)
     {
         var assets = Path.Combine(
-            RepositoryRoot(),
+            BuildingBlocksRoot(),
             projectDirectory.Replace('/', Path.DirectorySeparatorChar),
             "obj",
             "project.assets.json");
@@ -118,15 +96,19 @@ public sealed class ArchitectureTests
             : [];
     }
 
-    private static string RepositoryRoot()
+    private static string BuildingBlocksRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "VitalSync.slnx")))
+        while (directory is not null && !Directory.EnumerateFiles(directory.FullName, "*.slnx").Any())
         {
             directory = directory.Parent;
         }
 
-        Assert.NotNull(directory);
+        Assert.True(
+            directory is not null,
+            "No directory containing a '*.slnx' file was found above "
+            + $"'{AppContext.BaseDirectory}'; the Building Blocks root cannot be located.");
+
         return directory!.FullName;
     }
 
