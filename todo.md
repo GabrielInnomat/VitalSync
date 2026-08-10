@@ -21,14 +21,13 @@ Priorität.
 | **P3** | Sinnvoll, aber ohne akuten Druck. Beim nächsten Anfassen der Stelle.                     |
 | **P4** | Kosmetik und Konsistenz. Aufräum-Commit.                                                 |
 
-**Alle P1 sind erledigt.** Der verbliebene P2 wartet ausdrücklich auf einen Auslöser:
-TODO-46 auf das erste echte Aggregat.
+**Alle P1 und P2 sind erledigt.** Die verbliebenen P3 warten jeweils auf einen Auslöser: TODO-33
+und TODO-36 auf den ersten echten Service, TODO-39 auf die erste Saga.
 
 ## Übersicht
 
 | Nr.     | Titel                                                      | Prio   | Status    | Quellen           |
 | ------- | ---------------------------------------------------------- | ------ | --------- | ----------------- |
-| TODO-46 | Die MigrationService-Worker sind leere Hüllen              | **P2** | offen     | AppHost `e44ae9b` |
 | TODO-33 | Ein Assembly für alle Persistenz-Pakete                    | **P3** | offen     | IMP-19            |
 | TODO-36 | Der gRPC-Vertrag liegt noch beim Service                    | **P3** | offen     | WS-07             |
 | TODO-39 | Keine Saga- oder Process-Manager-Abstraktion               | **P3** | offen     | IMP-33            |
@@ -94,56 +93,3 @@ Message-Infrastruktur, die hier schon konfiguriert ist.
 Die Entscheidung, die eine ADR braucht: ob Wolverine damit vom reinen Transport (ADR-0015/0023)
 zum Prozess-Host aufgewertet wird. Das ist eine bewusste Aufweichung der bisherigen Abgrenzung —
 **vor** der ersten Saga klären, nicht danach.
-
----
-
-# TODO-46, Die MigrationService-Worker sind leere Hüllen
-
-**P2 · offen · AppHost `e44ae9b`**
-
-```csharp
-var builder = Host.CreateApplicationBuilder(args);
-builder.AddServiceDefaults();
-builder.Build();
-```
-
-([Nutrition MigrationService Program.cs](src/Services/Nutrition/VitalSync.Nutrition.MigrationService/Program.cs),
-identisch für Fitness und Analytics)
-
-Der Prozess endet sofort mit Exit-Code 0, also ist `WaitForCompletion` im AppHost erfüllt und die
-Api startet — gegen leere Datenbanken. Solange es keine Aggregate gibt, fällt das nicht auf;
-sobald der erste `DbContext` existiert, ist es ein Start gegen fehlende Tabellen.
-
-Erwartet wird das Muster aus dem Durchstich
-([WalkingSkeleton.md §Schritt 4](WalkingSkeleton.md)): ein `BackgroundService`, der migriert und
-danach `IHostApplicationLifetime.StopApplication()` ruft, ohne `AddBuildingBlocks` — der Worker
-braucht weder Wolverine noch Outbox noch Dispatcher.
-
-## Lösungsvorschlag
-
-Beim ersten echten Aggregat des jeweiligen Kontexts nachziehen, nicht vorher: der Worker braucht
-den `DbContext`, den es noch nicht gibt. Bis dahin gilt die Zusage `WaitForCompletion` als
-unbelegt und gehört hier vermerkt statt im AppHost still vorausgesetzt.
-
-## Nachtrag (2026-08-07): der Worker hat eine zweite Aufgabe bekommen
-
-ADR-0036 gibt dem MigrationService-Worker den natürlichen Platz für den Read-Modell-Rebuild — er hat
-beide `DbContext`e ohnehin und läuft vor der Api. Der Sample-Worker macht es vor
-([StateStored MigrationService Program.cs](samples/StateStored/VitalSync.Sample.StateStored.MigrationService/Program.cs)):
-nach beiden `MigrateAsync` und hinter dem Schalter `ReadModels:Rebuild` läuft
-`StateStoredReadModelRebuildRunner<WidgetWriteDbContext>`.
-
-Der Runner ist deshalb `public` und generisch über den Kontext: ein Worker ohne `AddBuildingBlocks`
-kann ihn selbst instanziieren. Wer dieses TODO umsetzt, zieht das Muster mit.
-
-## Nachtrag (2026-08-09): „ohne `AddBuildingBlocks`" gilt nicht mehr
-
-ADR-0037 macht den Worker zum einzigen Host seines Kontexts, der Schema, Message-Store und
-Broker-Topologie anlegen darf. Damit braucht er die volle Wiring — und zwar **dieselbe
-Kontext-Erweiterungsmethode wie sein Service**, nur mit
-`InfrastructureProvisioning.AtStartup`, damit die beiden sich über Verbindungszeichenfolge,
-Kontextnamen und Event-Assembly nicht widersprechen können. Beide Sample-Worker zeigen die
-Reihenfolge: Erweiterung mit `AtStartup` → `StartAsync` → `MigrateAsync` für Write- und
-Read-Kontext → optionaler Rebuild → `StopAsync`. Der Absatz oben, der `AddBuildingBlocks`
-ausdrücklich ausschließt, ist damit überholt; er bleibt stehen, weil er die ursprüngliche
-Erwartung dokumentiert.

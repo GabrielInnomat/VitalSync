@@ -11,13 +11,6 @@ Priorität geführt.
 | ----- | ---------------------------------------------------------- | ------------ | ------- |
 | WS-07 | Der gRPC-Vertrag liegt noch beim Service                   | Etappe 1     | TODO-36 |
 
-Nachzügler aus Commit `e44ae9b`: die drei produktiven MigrationService-Worker sind leere Hüllen
-(`Host.CreateApplicationBuilder`, `Build()`, kein `Run()`), `WaitForCompletion` ist damit heute
-eine Zusage ohne Inhalt. Bleibt bewusst offen, bis pro Kontext feststeht, wie dort gespeichert
-wird — siehe [todo.md](todo.md), TODO-46. Seit ADR-0037 hängt daran ein zweiter Auftrag: dieser
-Worker ist der einzige Host seines Kontexts, der provisionieren darf, also
-`InfrastructureProvisioning.AtStartup` wählt.
-
 ---
 
 ### WS-07, Der gRPC-Vertrag liegt noch beim Service
