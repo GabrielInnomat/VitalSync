@@ -7,17 +7,14 @@ Begründungen leben in den ADRs unter `docs/architecture/decisions/`, in den Ins
 und in den Tests weiter. Die Versionsgeschichte hat den vollen Wortlaut.
 
 Jeder Punkt ist in [todo.md](todo.md) mit einer Priorität geführt; dort steht auch, was ihn
-auslöst. Überschneidungen mit [hacky.md](hacky.md) sind beim jeweiligen Punkt vermerkt.
+auslöst.
 
 ## Status
 
 | Nr.    | Titel                                                          | Status    | TODO    |
 | ------ | -------------------------------------------------------------- | --------- | ------- |
 | IMP-19 | Ein Assembly für EF Core, Marten, Wolverine und RabbitMQ       | offen     | TODO-33 |
-| IMP-25 | `Sequential()` auf einer einzigen Queue für alle Domain Events | offen     | TODO-20 |
 | IMP-33 | Keine Saga- oder Process-Manager-Abstraktion                   | offen     | TODO-39 |
-| IMP-34 | `Result` hat keine Kombinatoren                                | offen     | TODO-31 |
-| IMP-39 | `Result`-API: implizite Konvertierungen und werfendes `Value`  | teilweise | TODO-31 |
 
 ---
 
@@ -47,32 +44,6 @@ Persistenzwelten braucht.
 
 ---
 
-# IMP-25, `Sequential()` auf einer einzigen Queue für alle Domain Events
-
-Unverändert offen — identisch mit [hacky.md Nr. 13](hacky.md).
-
-```csharp
-options.PublishMessage<DomainEventEnvelope>()
-    .ToLocalQueue(DomainEventLocalQueueName).Sequential().UseDurableInbox();
-```
-
-([WolverineOptionsExtensions.cs:77-80](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/Wiring/WolverineOptionsExtensions.cs:77))
-
-Sämtliche Domain Events eines Service laufen durch eine strikt sequentielle Queue, um eine
-**pro-Aggregat**-Ordnungsgarantie zu erkaufen. Global serialisieren für eine lokale Zusage: der
-Durchsatz eines Service ist damit auf ein Event zur Zeit gedeckelt.
-
-## Lösungsvorschlag
-
-Nach Aggregat-Id partitionieren — gleiche Garantie, parallel über verschiedene Aggregate. Der
-`DomainEventEnvelope` führt `AggregateName`/`AggregateId` seit ADR-0030 mit, die Voraussetzung
-dafür ist also erfüllt.
-
-Vor der ersten Lastmessung nicht anfassen. Hier festgehalten, damit die Entscheidung bewusst fällt und
-nicht als Default stehen bleibt.
-
----
-
 # IMP-33, Keine Saga- oder Process-Manager-Abstraktion
 
 Abgedeckt sind: eingehender Command, eingehende Query, eingetroffenes Event. Nicht abgedeckt: alles mit
@@ -99,56 +70,3 @@ public sealed class DailyAnalyticsSaga : Saga
 Die Entscheidung, die eine ADR braucht: ob Wolverine damit vom reinen Transport (ADR-0015/0023) zum
 Prozess-Host aufgewertet wird. Das ist eine bewusste Aufweichung der bisherigen Abgrenzung — vor der
 ersten Saga klären, nicht danach.
-
----
-
-# IMP-34, `Result` hat keine Kombinatoren
-
-Kein `Map`, `Bind`, `Match`, `Tap`, `Ensure`. Jeder mehrstufige Handler schreibt dieselbe
-`if (x is null) return Failure...`-Treppe.
-
-## Lösungsvorschlag
-
-Sparsam beginnen — drei Kombinatoren decken den Großteil ab, ohne den Handler-Code in eine
-Fluent-Kette zu zwingen:
-
-```csharp
-public static Result<TOut> Map<TIn, TOut>(this Result<TIn> result, Func<TIn, TOut> map) =>
-    result.IsSuccess ? Result.Success(map(result.Value)) : Result<TOut>.Failure(result.Failures);
-
-public static async Task<Result<TOut>> Bind<TIn, TOut>(
-    this Result<TIn> result, Func<TIn, Task<Result<TOut>>> bind) =>
-    result.IsSuccess ? await bind(result.Value) : Result<TOut>.Failure(result.Failures);
-
-public static TOut Match<TIn, TOut>(
-    this Result<TIn> result, Func<TIn, TOut> onSuccess, Func<IReadOnlyList<Failure>, TOut> onFailure) =>
-    result.IsSuccess ? onSuccess(result.Value) : onFailure(result.Failures);
-```
-
-`Match` ist der wertvollste — er ersetzt die `IsSuccess ? … : throw ToRpcException(…)`-Zeilen in jedem
-gRPC-Adapter. Als Extensions in `BuildingBlocks.Application`, damit `Result` selbst schlank bleibt.
-
----
-
-# IMP-39, `Result`-API: implizite Konvertierungen und werfendes `Value`
-
-**Teilweise gelöst (2026-08-05).** Die Namenskollision ist weg: die Factory heißt `Failed(...)`
-([ADR-0017-Amendment](docs/architecture/decisions/0017-application-error-handling-and-result.md)),
-und die Reflection darüber ist mit ihr entfallen
-([ADR-0015-Amendment](docs/architecture/decisions/0015-hand-rolled-cqrs-mediator.md)). Das
-`static new` in `ResultOfT` besteht fort, ist jetzt aber folgenlos.
-
-**Offen bleiben zwei Punkte:**
-
-1. **Zwei implizite Konvertierungen** auf `Result<TResult>` (aus `TResult` und aus `Failure`) — für
-   `TResult = Failure` wären sie mehrdeutig; heute nur theoretisch, aber unbewacht.
-2. **`Value` wirft** bei einem fehlgeschlagenen Result, statt den Fehler im Typsystem sichtbar zu
-   machen.
-
-[Result.cs](BuildingBlocks/src/BuildingBlocks.Application/Results/Result.cs),
-[ResultOfT.cs](BuildingBlocks/src/BuildingBlocks.Application/Results/ResultOfT.cs)
-
-## Lösungsvorschlag
-
-Punkt 1 mit einem Test absichern statt umbauen. Punkt 2 durch `Match` entschärfen, ohne `Value` zu
-entfernen — das ist dieselbe Arbeit wie IMP-34, und beide gehören deshalb in TODO-31.

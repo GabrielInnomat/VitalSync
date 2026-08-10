@@ -54,7 +54,7 @@ Ein typisierter Schlüssel innerhalb eines Complex Type bekäme keinen Konverter
 scheiterte damit erst beim Migrieren gegen PostgreSQL, nicht beim Modellaufbau.
 
 Der Scan hat unabhängig davon ein zweites Problem: er läuft über CLR- statt Model-Properties
-und **legt dabei Properties im Modell an**, siehe [hacky.md Nr. 4](hacky.md). Beide Punkte
+und **legt dabei Properties im Modell an**. Beide Punkte
 betreffen dieselbe Schleife und gehören in einen Fix.
 
 #### Lösungsvorschlag

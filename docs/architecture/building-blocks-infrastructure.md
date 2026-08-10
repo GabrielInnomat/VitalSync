@@ -444,10 +444,13 @@ A small cluster of classes, using Marten as a **raw stream store**:
       communication.
 - Delivery is **at-least-once**: a failed dispatch is retried by Wolverine's
   own outbox, not by any custom drain loop.
-- The envelope is routed to a durable, strictly sequential local queue, so a
-  single aggregate's events cannot be reordered relative to one another by a
-  crash-triggered redelivery (applied automatically by the registered
-  Wolverine extension, see §7 / ADR-0027).
+- The envelope is routed to a durable local queue that is **partitioned by
+  aggregate** (`PartitionProcessingByGroupId`, group id
+  `"{AggregateName}/{AggregateId}"`), so a single aggregate's events cannot be
+  reordered relative to one another by a crash-triggered redelivery, while
+  different aggregates are processed in parallel (applied automatically by the
+  registered Wolverine extension, see §7 / ADR-0027). The guarantee holds per
+  **process**: a local queue lives in one host.
 
 ## 5. Projection runner (domain-event dispatching)
 
@@ -461,7 +464,7 @@ A small cluster of classes, using Marten as a **raw stream store**:
       event-sourced and state-stored aggregates, which do not all have a
       meaningful stream position.
     - **Per-aggregate ordering** is guaranteed by the messaging transport's
-      sequential local queue (§4), not by the runner itself.
+      partitioned local queue (§4), not by the runner itself.
 - Read models themselves are **not** part of this package — they are
   domain-shaped and belong to each service (ADR-0022). Infrastructure ships
   plumbing only.
@@ -537,9 +540,10 @@ A small cluster of classes, using Marten as a **raw stream store**:
   With tracking on, `BasicPublishAsync` raises a `PublishException` on a `nack` or a
   `basic.return`, so the failure surfaces where the retry policies already are and
   the outbox row survives. The price is a broker round trip per message — measured at
-  roughly 1 150 msg/s against ~62 500 without, sequential single sends. That is not
-  the bottleneck: domain events already pass through a `.Sequential()` queue
-  (TODO-20), which caps throughput harder. Pinned by
+  roughly 1 150 msg/s against ~62 500 without, sequential single sends. Since
+  ADR-0022's 2026-08-11 amendment the domain-event queues are partitioned per
+  aggregate rather than globally serialised, so this round trip is now a real
+  per-message cost rather than one hidden behind a harder cap. Pinned by
   `Configure_WithBrokerUri_EnablesPublisherConfirmationsAndTheirTracking`, which
   first asserts that a fresh `WolverineRabbitMqChannelOptions` has both flags off —
   without that anchor the test would quietly become worthless the day Wolverine

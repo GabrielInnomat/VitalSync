@@ -138,10 +138,11 @@ ignores anything at or below that watermark.
 - The watermark rule changes projection semantics: an event at or below the watermark is
   **ignored**, where the previous per-field merge would still have applied disjoint fields.
   That is correct under the current transport, which delivers per-aggregate in order
-  (ADR-0022, sequential local queue) and only ever *redelivers*; it would not be correct under
+  (ADR-0022, partitioned local queue) and only ever *redelivers*; it would not be correct under
   genuinely unordered delivery.
-- TODO-20 (partitioning the domain event queue by aggregate instead of serialising it globally)
-  becomes possible — the envelope now carries the aggregate identity it needs.
+- Partitioning the domain event queue by aggregate instead of serialising it globally
+  becomes possible — the envelope now carries the aggregate identity it needs. Done in
+  ADR-0022's 2026-08-11 amendment.
 - Existing sample data is orphaned (streams move from `Gadget/…` to `gadget/…`). Deliberate and
   free today; the whole point of doing this before the first real service.
 

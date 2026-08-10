@@ -3,12 +3,15 @@ using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Dispatching;
+using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Wolverine;
+using Wolverine.Configuration;
 using Wolverine.RabbitMQ;
 using Wolverine.RabbitMQ.Internal;
+using BuildingBlocksWiring = BuildingBlocks.Infrastructure.DependencyInjection.Wiring.WolverineOptionsExtensions;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
@@ -126,6 +129,21 @@ public sealed class WolverineExtensionTests
         Assert.Contains(
             endpoints,
             endpoint => endpoint.Uri.ToString().Contains("building-blocks-domain-events", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void PartitionKey_CombinesTheAggregateNameAndItsIdentity()
+    {
+        var envelope = new DomainEventEnvelope(
+            "widget-created-v1",
+            "{}",
+            Guid.NewGuid(),
+            "widget",
+            "8f3a",
+            1,
+            DateTimeOffset.UtcNow);
+
+        Assert.Equal("widget/8f3a", BuildingBlocksWiring.PartitionKeyFor(envelope));
     }
 
     [Fact]

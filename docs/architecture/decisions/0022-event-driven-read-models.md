@@ -186,7 +186,7 @@ been committed. The two failures are not equally bad: a read model is derived an
 
 `DomainEventEnvelope` therefore now carries **only** the integration-event step. Its handler
 publishes, and then forwards a `ProjectionEnvelope` to a second local queue whose handler runs
-the projections. Both queues are `.Sequential()` with `UseDurableInbox()`, so per-aggregate
+the projections. Both queues carry `UseDurableInbox()` and are ordered per aggregate, so per-aggregate
 order and crash safety are unchanged, and both still start from the same outbox flush - neither
 runs unless the write transaction committed. The ordering is deliberate: the non-recoverable
 step goes first.
@@ -234,3 +234,63 @@ report health.
 - **Keep one queue and publish the integration event even when the projection throws.** That is the
   same coupling with an exception carved into it, and it would still lose the projection silently
   while making the handler's contract depend on the order of two unrelated steps.
+
+## Amendment (2026-08-11) - the queues are partitioned per aggregate, not serialised globally
+
+Both local queues used `.Sequential()`. That bought a **per-aggregate** ordering guarantee by
+serialising **every** domain event of the whole service: throughput was capped at one event at a
+time, for a promise that only ever concerned one aggregate at a time.
+
+Both queues now use `PartitionProcessingByGroupId(PartitionSlots.Five)`, with the group id supplied
+by `options.MessagePartitioning.ByMessage<...>` as `"{AggregateName}/{AggregateId}"` - both fields
+travel on the envelope since ADR-0030. Wolverine keeps messages of one group id off each other
+while letting different group ids run at the same time, so the guarantee is unchanged and the
+global cap is gone.
+
+Three properties were verified against a real message store rather than assumed
+(`DomainEventPartitioningBehaviourTests`):
+
+1. **Within one group, a message in a retry cooldown is not overtaken.** The slot blocks for the
+   cooldown instead of moving on. This is what makes the ordering guarantee survive the retry
+   ladder, and it was measured, not read from the documentation - had the queue moved on, a later
+   event would have advanced the read-model watermark past the waiting one and the retry would have
+   been discarded on success.
+2. **Across groups, messages are handled concurrently.**
+3. **The wiring itself is partitioned.** Asserted on a started host, because Wolverine applies
+   listener configuration during bootstrapping - at configuration time `GroupShardingSlotNumber` is
+   still `null`, so a check against `WolverineOptions` alone would pass no matter what was
+   configured.
+
+### The slot count is a constant, not a setting
+
+`PartitionSlots.Five` is fixed in `WolverineOptionsExtensions`. Changing it remaps aggregates onto
+slots, so two processes running different slot counts can handle the same aggregate at the same
+time - a rolling restart would then reorder events and the watermark would drop the loser silently.
+Changing this number requires a drain, which is precisely the operation a configuration knob invites
+an operator to skip.
+
+### What this does not fix
+
+The guarantee is per **process**, exactly as it was with `.Sequential()`: a local queue lives in one
+host. With more than one instance of a bounded context, two hosts process their own commits
+concurrently and per-aggregate order across them is not guaranteed. That gap is pre-existing and
+orthogonal - partitioning neither widens nor closes it.
+
+It is also unreachable today, and that was measured rather than assumed: property 1 above shows a
+retry cooldown blocks its slot, so within one process no event ever passes a waiting predecessor.
+Every path that could drop an event silently therefore needs a second host.
+
+**Running more than one instance of a bounded context requires a gap detection first.** This is a
+named precondition of scaling out, not an open improvement, because the read-model watermark
+*discards* an out-of-order event rather than merging it (ADR-0030) and the sample projections write
+increments - a discarded event is permanently wrong, not briefly stale. Three things are already
+known about that work, so the decision does not start from scratch:
+
+- The detection belongs in the **dispatch path** (`ProjectionRunner`), never in the read-model
+  watermark. A domain event with no projection handler is legitimate and produces a perfectly
+  healthy version gap; a check on the watermark would raise false alarms on it.
+- It needs a **per-aggregate progress record**, and where that lives is the open design question:
+  Building Blocks deliberately has no access to the read database, and the ADR-0036 rebuild would
+  have to reset it along with the read model.
+- Visibility follows `DeadLetterHealthCheck`: `Degraded`, never `Unhealthy` - a stale read model is
+  not an outage - with the existing rebuild as the repair.

@@ -1,7 +1,8 @@
 # TODO — konsolidierte Arbeitsliste
 
-Zusammenführung der Befunde aus [hacky.md](hacky.md), [Improvements.md](Improvements.md) und
-[WalkingSkeleton.md](WalkingSkeleton.md) §9.
+Zusammenführung der Befunde aus der Code-Analyse (ehemals `hacky.md`, seit dem Abarbeiten
+aller Punkte entfernt — die Versionsgeschichte hat den Wortlaut), [Improvements.md](Improvements.md)
+und [WalkingSkeleton.md](WalkingSkeleton.md) §9.
 
 **Diese Liste führt nur noch offene Arbeit.** Gelöste Punkte wurden am 2026-08-09 entfernt; ihre
 Begründungen leben dort weiter, wo sie beim Arbeiten auffallen — in den ADRs unter
@@ -21,17 +22,15 @@ Priorität.
 | **P4** | Kosmetik und Konsistenz. Aufräum-Commit.                                                 |
 
 **Alle P1 sind erledigt.** Die verbliebenen P2 warten alle ausdrücklich auf einen Auslöser:
-TODO-19 auf das erste Read-Modell mit eingebettetem Value Object, TODO-20 auf die erste
-Lastmessung, TODO-46 auf das erste echte Aggregat.
+TODO-19 auf das erste Read-Modell mit eingebettetem Value Object, TODO-46 auf das erste echte
+Aggregat.
 
 ## Übersicht
 
 | Nr.     | Titel                                                      | Prio   | Status    | Quellen           |
 | ------- | ---------------------------------------------------------- | ------ | --------- | ----------------- |
 | TODO-19 | `ApplyEntityKeyConversions` erfasst keine Complex Types    | **P2** | teilweise | hacky-4, WS-15    |
-| TODO-20 | Global sequentielle Domain-Event-Queue                     | **P2** | offen     | hacky-13, IMP-25  |
 | TODO-46 | Die MigrationService-Worker sind leere Hüllen              | **P2** | offen     | AppHost `e44ae9b` |
-| TODO-31 | `Result` hat keine Kombinatoren                            | **P3** | offen     | IMP-34            |
 | TODO-33 | Ein Assembly für alle Persistenz-Pakete                    | **P3** | offen     | IMP-19            |
 | TODO-36 | Der gRPC-Vertrag liegt noch beim Service                    | **P3** | offen     | WS-07             |
 | TODO-39 | Keine Saga- oder Process-Manager-Abstraktion               | **P3** | offen     | IMP-33            |
@@ -57,55 +56,6 @@ damit von der Schleife bereits erfasst. Auf der **Read**-Seite sind die Modelle 
 Der Fix wäre eine Zeile (`entityType.GetComplexProperties()` mit `complex.ComplexType`
 nachziehen) und gehört in den Moment, in dem das erste Read-Modell ein eingebettetes Value Object
 mit typisiertem Schlüssel bekommt — vorher wäre es ungedeckter Code mit einem konstruierten Test.
-
----
-
-# TODO-20, Global sequentielle Domain-Event-Queue
-
-**P2 · offen · hacky-13 + IMP-25**
-
-```csharp
-options.PublishMessage<DomainEventEnvelope>()
-    .ToLocalQueue(DomainEventLocalQueueName).Sequential().UseDurableInbox();
-```
-
-([WolverineOptionsExtensions.cs:77-80](BuildingBlocks/src/BuildingBlocks.Infrastructure/DependencyInjection/Wiring/WolverineOptionsExtensions.cs:77))
-
-Sämtliche Domain Events eines Service laufen durch eine strikt sequentielle Queue, um eine
-**pro-Aggregat**-Ordnungsgarantie zu erkaufen. Global serialisieren für eine lokale Zusage: der
-Durchsatz ist auf ein Event zur Zeit gedeckelt.
-
-## Lösungsvorschlag
-
-Nach Aggregat-Id partitionieren — gleiche Garantie, parallel über verschiedene Aggregate. Der
-`DomainEventEnvelope` führt `AggregateName`/`AggregateId` seit ADR-0030 mit, die Voraussetzung
-dafür ist also erfüllt.
-
-Vor der ersten Lastmessung nicht anfassen — hier steht es, damit die Entscheidung bewusst fällt
-statt als Default stehen zu bleiben.
-
----
-
-# TODO-31, `Result` hat keine Kombinatoren
-
-**P3 · offen · IMP-34**
-
-Kein `Map`, `Bind`, `Match`, `Tap`, `Ensure`. Jeder mehrstufige Handler schreibt dieselbe
-`if (x is null) return Failure...`-Treppe.
-
-## Lösungsvorschlag
-
-Sparsam beginnen — `Match` ist der wertvollste, er ersetzt die
-`IsSuccess ? … : throw ToRpcException(…)`-Zeilen in jedem gRPC-Adapter:
-
-```csharp
-public static TOut Match<TIn, TOut>(
-    this Result<TIn> result, Func<TIn, TOut> onSuccess, Func<IReadOnlyList<Failure>, TOut> onFailure) =>
-    result.IsSuccess ? onSuccess(result.Value) : onFailure(result.Failures);
-```
-
-Dazu `Map` und `Bind`. Als Extensions in `BuildingBlocks.Application`, damit `Result` selbst
-schlank bleibt.
 
 ---
 

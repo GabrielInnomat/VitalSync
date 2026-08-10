@@ -595,13 +595,36 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
 - **Projection and integration-event publication are two queues, not one handler** (ADR-0022
   amendment 2026-08-10). `DomainEventEnvelope` carries only the integration-event step; its
   handler publishes and then forwards a `ProjectionEnvelope` to a second local queue that runs
-  the projections. Both are `.Sequential()` with `UseDurableInbox()` and both start from the same
+  the projections. Both carry `UseDurableInbox()`, both are partitioned per aggregate and both start from the same
   outbox flush, so per-aggregate order, crash safety and "nothing escapes an uncommitted write"
   are unchanged. The order is deliberate — the **non-recoverable** step goes first: a read model
   can be rebuilt (ADR-0036), an integration event that was never sent cannot. Hence the three
   commitments pinned by `DispatchIsolationTests`: an uncommitted command produces neither; a
   failing projection does **not** stop the integration event; a failing mapper **does** stop the
   projection, because it fails before the forward. Never merge the two back into one handler.
+- **The domain-event queues are partitioned per aggregate, not serialised globally** (ADR-0022
+  amendment 2026-08-11). Both local queues use `PartitionProcessingByGroupId(PartitionSlots.Five)`
+  with the group id `"{AggregateName}/{AggregateId}"`, supplied by
+  `options.MessagePartitioning.ByMessage<...>`. The former `.Sequential()` bought a
+  **per-aggregate** promise by serialising **every** event of the whole service. Three properties
+  are pinned by `DomainEventPartitioningBehaviourTests` against a real message store: within one
+  group a message in a retry cooldown is **not** overtaken (the slot blocks for the cooldown —
+  measured, not assumed; had it moved on, a later event would advance the read-model watermark past
+  the waiting one and the successful retry would be discarded), across groups messages run
+  concurrently, and the wiring itself is partitioned. That last test **must** boot a host: Wolverine
+  applies listener configuration during bootstrapping, so `GroupShardingSlotNumber` is still
+  `null` on a merely configured `WolverineOptions` and a check there would pass no matter what.
+  The slot count is a **constant, never a setting** — changing it remaps aggregates onto slots, so
+  two processes running different counts handle one aggregate at the same time and a rolling restart
+  reorders events silently; changing it requires a drain, which is exactly what a config knob invites
+  an operator to skip. And the guarantee is per **process**, exactly as it was before: with more than
+  one instance of a context, per-aggregate order across hosts is not guaranteed. That gap is
+  pre-existing and orthogonal — partitioning neither widens nor closes it — and it is unreachable
+  in a single process, because the cooldown blocks its slot. ADR-0022 therefore names a **gap
+  detection as a precondition of running a second instance**: the watermark discards rather than
+  merges, and projections write increments, so a dropped event is permanently wrong. The detection
+  belongs in the dispatch path (`ProjectionRunner`), never in the read-model watermark — a domain
+  event with no projection handler produces a legitimate version gap and would raise false alarms.
 - **Read models are owned by each service, not a Building Block** — the service owns
   its read-model schema, projection handlers, and queries; Infrastructure ships only
   the plumbing (Publisher, outbox, dispatch loop, projection runner, transport). Read
@@ -734,8 +757,9 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   tracking on, `BasicPublishAsync` raises a `PublishException` on a `nack` or `basic.return`,
   so the failure surfaces where the retry policies already are and the outbox row survives.
   The price is a broker round trip per message (measured: ~1 150 msg/s versus ~62 500
-  without, sequential single sends) and it is not the bottleneck — domain events already pass
-  through a `.Sequential()` queue, which caps throughput harder. The pinning test asserts
+  without, sequential single sends). Since the domain-event queues are partitioned per
+  aggregate rather than globally serialised, this is a real per-message cost and no longer
+  hidden behind a harder cap. The pinning test asserts
   first that a fresh `WolverineRabbitMqChannelOptions` has both flags **off**; without that
   anchor it would quietly become worthless the day Wolverine changes its own default.
 - **Consumer idempotency has two halves, and only one is built here** (ADR-0023 amendment

@@ -8,6 +8,7 @@ using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 using JasperFx;
 using Npgsql;
 using Wolverine;
+using Wolverine.Configuration;
 using Wolverine.ErrorHandling;
 using Wolverine.RabbitMQ;
 
@@ -18,6 +19,8 @@ internal static class WolverineOptionsExtensions
     public const string DomainEventLocalQueueName = "building-blocks-domain-events";
 
     public const string ProjectionLocalQueueName = "building-blocks-projections";
+
+    public const PartitionSlots DomainEventPartitionSlots = PartitionSlots.Five;
 
     public static readonly TimeSpan IdempotencyWindow = TimeSpan.FromDays(7);
 
@@ -70,17 +73,27 @@ internal static class WolverineOptionsExtensions
 
         options.CodeGeneration.AlwaysUseServiceLocationFor<ISender>();
 
+        options.MessagePartitioning.ByMessage<DomainEventEnvelope>(PartitionKeyFor);
+        options.MessagePartitioning.ByMessage<ProjectionEnvelope>(projection => PartitionKeyFor(projection.Event));
+
         options.PublishMessage<DomainEventEnvelope>()
             .ToLocalQueue(DomainEventLocalQueueName)
-            .Sequential()
+            .PartitionProcessingByGroupId(DomainEventPartitionSlots)
             .UseDurableInbox();
 
         options.PublishMessage<ProjectionEnvelope>()
             .ToLocalQueue(ProjectionLocalQueueName)
-            .Sequential()
+            .PartitionProcessingByGroupId(DomainEventPartitionSlots)
             .UseDurableInbox();
 
         return options;
+    }
+
+    public static string PartitionKeyFor(DomainEventEnvelope envelope)
+    {
+        ArgumentNullException.ThrowIfNull(envelope);
+
+        return $"{envelope.AggregateName}/{envelope.AggregateId}";
     }
 
     public static WolverineOptions ApplyBuildingBlocksMessagingDefaults(
