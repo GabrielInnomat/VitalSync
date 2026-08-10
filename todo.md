@@ -22,14 +22,13 @@ Priorität.
 | **P4** | Kosmetik und Konsistenz. Aufräum-Commit.                                                 |
 
 **Alle P1 und P2 sind erledigt.** Die verbliebenen P3 warten jeweils auf einen Auslöser: TODO-33
-und TODO-36 auf den ersten echten Service, TODO-39 auf die erste Saga.
+auf den ersten echten Service, TODO-39 auf die erste Saga.
 
 ## Übersicht
 
 | Nr.     | Titel                                                      | Prio   | Status    | Quellen           |
 | ------- | ---------------------------------------------------------- | ------ | --------- | ----------------- |
 | TODO-33 | Ein Assembly für alle Persistenz-Pakete                    | **P3** | offen     | IMP-19            |
-| TODO-36 | Der gRPC-Vertrag liegt noch beim Service                    | **P3** | offen     | WS-07             |
 | TODO-39 | Keine Saga- oder Process-Manager-Abstraktion               | **P3** | offen     | IMP-33            |
 
 ---
@@ -54,26 +53,6 @@ BuildingBlocks.Infrastructure.Wolverine  → Envelope, Handler, Sink, Wolverine-
 Der Schnitt ist durch die Ordnerstruktur bereits vorgezeichnet, es wäre eine reine
 Projektverschiebung. **Auslöser für die Umsetzung:** der erste Produktions-Service, der nur eine
 der beiden Persistenzwelten braucht. Vorher ist der Aufwand höher als der Gewinn.
-
----
-
-# TODO-36, Der gRPC-Vertrag liegt noch beim Service
-
-**P3 · offen · WS-07**
-
-`VitalSync.Sample.StateStored.Contracts` ist die richtige Struktur, aber der BFF konsumiert heute
-noch nichts ([Program.cs](src/Bff/VitalSync.Bff/Program.cs) hat nur Controller). Für das
-Integration Event ist die Frage mit Etappe 3 beantwortet (`VitalSync.Sample.Contracts`), für den
-gRPC-Vertrag nicht.
-
-## Lösungsvorschlag
-
-Dieselbe Antwort wie beim Integration Event, sobald der zweite Konsument existiert: ein eigenes
-Contracts-Projekt pro Bounded Context, das Service **und** BFF referenzieren.
-
-Nicht vorwegnehmen — die Entscheidung gehört an den Tag, an dem der BFF den ersten Service
-aufruft, und dann in einen ADR, zusammen mit der bisher nur faktisch getroffenen Bibliothekswahl
-`protobuf-net.Grpc`.
 
 ---
 
