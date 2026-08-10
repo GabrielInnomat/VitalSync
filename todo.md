@@ -21,41 +21,17 @@ Priorität.
 | **P3** | Sinnvoll, aber ohne akuten Druck. Beim nächsten Anfassen der Stelle.                     |
 | **P4** | Kosmetik und Konsistenz. Aufräum-Commit.                                                 |
 
-**Alle P1 sind erledigt.** Die verbliebenen P2 warten alle ausdrücklich auf einen Auslöser:
-TODO-19 auf das erste Read-Modell mit eingebettetem Value Object, TODO-46 auf das erste echte
-Aggregat.
+**Alle P1 sind erledigt.** Der verbliebene P2 wartet ausdrücklich auf einen Auslöser:
+TODO-46 auf das erste echte Aggregat.
 
 ## Übersicht
 
 | Nr.     | Titel                                                      | Prio   | Status    | Quellen           |
 | ------- | ---------------------------------------------------------- | ------ | --------- | ----------------- |
-| TODO-19 | `ApplyEntityKeyConversions` erfasst keine Complex Types    | **P2** | teilweise | hacky-4, WS-15    |
 | TODO-46 | Die MigrationService-Worker sind leere Hüllen              | **P2** | offen     | AppHost `e44ae9b` |
 | TODO-33 | Ein Assembly für alle Persistenz-Pakete                    | **P3** | offen     | IMP-19            |
 | TODO-36 | Der gRPC-Vertrag liegt noch beim Service                    | **P3** | offen     | WS-07             |
 | TODO-39 | Keine Saga- oder Process-Manager-Abstraktion               | **P3** | offen     | IMP-33            |
-
----
-
-# TODO-19, `ApplyEntityKeyConversions` erfasst keine Complex Types
-
-**P2 · teilweise · hacky-4 + WS-15**
-
-Der ursprüngliche Befund hatte zwei Hälften. Die erste — der Scan legte Properties im Modell an
-und machte so jede berechnete oder `Ignore()`-te Property zur Spalte — ist mit ADR-0033 gelöst,
-indem der Discovery-Zweig ersatzlos entfernt wurde.
-
-## Offen: Complex Types (WS-15)
-
-Bewusst **nicht** miterledigt, weil heute kein Anwendungsfall existiert: `ComplexProperty` kommt
-im gesamten Repo nicht vor. Auf der **Write**-Seite ist der Weg für Kinder eines Aggregats durch
-ADR-0031 auf `OwnsMany` (+ `ToJson()` für identitätslose Werte) festgelegt, und ADR-0025 schließt
-Complex Types für den State selbst ausdrücklich aus. Owned Types sind eigene Entity-Types und
-damit von der Schleife bereits erfasst. Auf der **Read**-Seite sind die Modelle heute flach.
-
-Der Fix wäre eine Zeile (`entityType.GetComplexProperties()` mit `complex.ComplexType`
-nachziehen) und gehört in den Moment, in dem das erste Read-Modell ein eingebettetes Value Object
-mit typisiertem Schlüssel bekommt — vorher wäre es ungedeckter Code mit einem konstruierten Test.
 
 ---
 

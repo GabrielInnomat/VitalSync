@@ -45,6 +45,38 @@ public sealed class EntityKeyConversionTests
     }
 
     [Fact]
+    public void ApplyEntityKeyConversions_ConfiguresConverterForComplexTypeKeys()
+    {
+        using var context = new SampleContext();
+
+        var converter = context.Model
+            .FindEntityType(typeof(SummaryRow))!
+            .FindComplexProperty(nameof(SummaryRow.Author))!
+            .ComplexType
+            .FindProperty(nameof(AuthorInfo.UserId))!
+            .GetValueConverter();
+
+        Assert.IsType<EntityKeyValueConverter<RecipeId, int>>(converter);
+    }
+
+    [Fact]
+    public void ApplyEntityKeyConversions_ConfiguresConverterForNestedComplexTypeKeys()
+    {
+        using var context = new SampleContext();
+
+        var converter = context.Model
+            .FindEntityType(typeof(SummaryRow))!
+            .FindComplexProperty(nameof(SummaryRow.Author))!
+            .ComplexType
+            .FindComplexProperty(nameof(AuthorInfo.Audit))!
+            .ComplexType
+            .FindProperty(nameof(AuditInfo.ChangedBy))!
+            .GetValueConverter();
+
+        Assert.IsType<EntityKeyValueConverter<RecipeId, int>>(converter);
+    }
+
+    [Fact]
     public void ApplyEntityKeyConversions_LeavesAlreadyConfiguredPropertiesUntouched()
     {
         using var context = new SampleContext();
@@ -85,6 +117,8 @@ public sealed class EntityKeyConversionTests
 
         public DbSet<TaggedRow> Tagged => Set<TaggedRow>();
 
+        public DbSet<SummaryRow> Summaries => Set<SummaryRow>();
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
             optionsBuilder.UseNpgsql("Host=localhost;Database=sample");
 
@@ -101,6 +135,20 @@ public sealed class EntityKeyConversionTests
                     steps.HasKey(step => step.Id);
                     steps.Property(step => step.Id);
                     steps.Property(step => step.Label);
+                });
+            });
+
+            modelBuilder.Entity<SummaryRow>(entity =>
+            {
+                entity.HasKey(row => row.Id);
+
+                entity.ComplexProperty(row => row.Author, author =>
+                {
+                    author.Property(info => info.UserId);
+                    author.Property(info => info.Name);
+
+                    author.ComplexProperty(info => info.Audit, audit =>
+                        audit.Property(info => info.ChangedBy));
                 });
             });
 
@@ -154,6 +202,27 @@ public sealed class EntityKeyConversionTests
         public RecipeId IgnoredReference { get; set; }
 
         public RecipeId ComputedReference => new(Reference.Value + 1);
+    }
+
+    private sealed class SummaryRow
+    {
+        public int Id { get; set; }
+
+        public AuthorInfo Author { get; set; } = new();
+    }
+
+    private sealed class AuthorInfo
+    {
+        public RecipeId UserId { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+
+        public AuditInfo Audit { get; set; } = new();
+    }
+
+    private sealed class AuditInfo
+    {
+        public RecipeId ChangedBy { get; set; }
     }
 
     private sealed class CustomReferenceConverter() : ValueConverter<RecipeId, int>(

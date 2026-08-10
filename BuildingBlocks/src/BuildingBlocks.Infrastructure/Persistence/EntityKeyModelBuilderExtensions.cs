@@ -16,13 +16,23 @@ public static class EntityKeyModelBuilderExtensions
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            foreach (var property in entityType.GetProperties())
-            {
-                ApplyConverter(property);
-            }
+            ApplyConverters(entityType);
         }
 
         return modelBuilder;
+    }
+
+    private static void ApplyConverters(IMutableTypeBase type)
+    {
+        foreach (var property in type.GetProperties())
+        {
+            ApplyConverter(property);
+        }
+
+        foreach (var complexProperty in type.GetComplexProperties())
+        {
+            ApplyConverters(complexProperty.ComplexType);
+        }
     }
 
     private static void ApplyConverter(IMutableProperty property)

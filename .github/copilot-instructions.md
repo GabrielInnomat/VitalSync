@@ -391,7 +391,11 @@ Bounded-context decomposition is iterative — see `docs/architecture/domain-mod
   which every context here already does anyway for column names, `IsRequired` and
   `IsConcurrencyToken`. Forget one and EF Core fails at model build, naming the property and both
   remedies — loud, not silent. Owned types were never affected (separate entity types, configured
-  via `OwnsMany`). Complex types stay out of scope: no `ComplexProperty` exists in the repo.
+  via `OwnsMany`). **Complex types are covered** (ADR-0033 amendment 2026-08-10): the walk recurses
+  over `GetComplexProperties()` through `IMutableTypeBase`, which both entity and complex types
+  implement, so an inlined value object — nested or not — gets its converters too. Explicit mapping
+  still applies inside it, and a **collection** of complex types stays out of scope: it maps to JSON
+  and goes through ADR-0034's converters instead.
 - **A typed key serializes as its bare value** (ADR-0034). `IsEmpty` is a computed domain
   predicate, but to a serializer it is an ordinary property, so a key used to reach three
   append-only or contractual stores as `{"Value":"8f3a…","IsEmpty":false}` — the Marten event

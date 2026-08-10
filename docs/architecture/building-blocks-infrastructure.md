@@ -140,8 +140,10 @@ names, `IsRequired` and `IsConcurrencyToken`. Forget one and EF Core fails when 
 built, naming the property, its type and both remedies; `EntityKeyConversionTests` pins that
 failure alongside the owned-type case.
 
-Complex types are out of scope: `ComplexProperty` appears nowhere in the repository, write-side
-children are owned types by ADR-0031, and read models are flat. See WS-15.
+Complex types are covered by the same walk (ADR-0033 amendment): the helper recurses through
+`GetComplexProperties()`, so a typed key inside an inlined value object — and inside a nested one —
+gets its converter like any other. Explicit mapping still applies within the complex type, and a
+collection of complex types is out of scope because it travels as JSON (ADR-0034).
 
 ### A typed key serializes as its bare value
 

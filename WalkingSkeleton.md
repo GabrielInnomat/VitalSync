@@ -10,7 +10,6 @@ Priorität geführt.
 | Nr.   | Titel                                                      | Herkunft     | TODO    |
 | ----- | ---------------------------------------------------------- | ------------ | ------- |
 | WS-07 | Der gRPC-Vertrag liegt noch beim Service                   | Etappe 1     | TODO-36 |
-| WS-15 | `ApplyEntityKeyConversions` erfasst keine Complex Types    | vorbestehend | TODO-19 |
 
 Nachzügler aus Commit `e44ae9b`: die drei produktiven MigrationService-Worker sind leere Hüllen
 (`Host.CreateApplicationBuilder`, `Build()`, kein `Run()`), `WaitForCompletion` ist damit heute
@@ -42,34 +41,3 @@ src/Services/Nutrition/VitalSync.Nutrition.Contracts/   ← gRPC-Interfaces + DT
 Nicht vorwegnehmen — die Entscheidung gehört an den Tag, an dem der BFF den ersten Service
 aufruft, und dann in einen ADR (zusammen mit der bisher nur faktisch getroffenen
 Bibliothekswahl `protobuf-net.Grpc`, siehe §2).
-
----
-
-### WS-15, `ApplyEntityKeyConversions` erfasst keine Complex Types
-
-Verifiziert: der Helper kennt **keine** Complex-Type-Behandlung, er läuft über
-`Model.GetEntityTypes()`
-([EntityKeyValueConverter.cs:66](BuildingBlocks/src/BuildingBlocks.Infrastructure/Persistence/EntityKeyValueConverter.cs)).
-Ein typisierter Schlüssel innerhalb eines Complex Type bekäme keinen Konverter — und
-scheiterte damit erst beim Migrieren gegen PostgreSQL, nicht beim Modellaufbau.
-
-Der Scan hat unabhängig davon ein zweites Problem: er läuft über CLR- statt Model-Properties
-und **legt dabei Properties im Modell an**. Beide Punkte
-betreffen dieselbe Schleife und gehören in einen Fix.
-
-#### Lösungsvorschlag
-
-```csharp
-foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-{
-    Konvertiere(entityType.GetProperties());
-
-    foreach (var complex in entityType.GetComplexProperties())
-    {
-        Konvertiere(complex.ComplexType.GetProperties());
-    }
-}
-```
-
-Zusammen mit hacky Nr. 4 umsetzen: dort wird die Schleife ohnehin von CLR- auf
-Model-Properties umgestellt, und `GetComplexProperties()` ist genau dann verfügbar.
