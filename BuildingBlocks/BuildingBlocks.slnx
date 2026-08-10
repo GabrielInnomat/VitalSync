@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BuildingBlocks.Application/BuildingBlocks.Application.csproj" />
+    <Project Path="src/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj" />
+    <Project Path="src/BuildingBlocks.Infrastructure/BuildingBlocks.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BuildingBlocks.Application.Tests/BuildingBlocks.Application.Tests.csproj" />
+    <Project Path="tests/BuildingBlocks.Domain.Tests/BuildingBlocks.Domain.Tests.csproj" />
+    <Project Path="tests/BuildingBlocks.Infrastructure.Tests/BuildingBlocks.Infrastructure.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/ExternalAssemblies/">
+    <Project Path="tests/ExternalAssemblies/AmbiguousRequestsFixture/AmbiguousRequestsFixture.csproj" />
+    <Project Path="tests/ExternalAssemblies/ConflictingHandlersFixture/ConflictingHandlersFixture.csproj" />
+    <Project Path="tests/ExternalAssemblies/DeadLetterFixture/DeadLetterFixture.csproj" />
+    <Project Path="tests/ExternalAssemblies/HullFixture/HullFixture.csproj" />
+    <Project Path="tests/ExternalAssemblies/OrphanRequestsFixture/OrphanRequestsFixture.csproj" />
+    <Project Path="tests/ExternalAssemblies/SchemaFixture/SchemaFixture.csproj" />
+    <Project Path="tests/ExternalAssemblies/SchemaGapFixture/SchemaGapFixture.csproj" />
+    <Project Path="tests/ExternalAssemblies/ValidHandlersFixture/ValidHandlersFixture.csproj" />
+  </Folder>
+</Solution>
