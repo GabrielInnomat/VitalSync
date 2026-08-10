@@ -1,5 +1,6 @@
 using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Application.DomainEvents;
+using BuildingBlocks.Application.IntegrationEvents;
 using BuildingBlocks.Application.Persistence;
 using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.DependencyInjection.Provisioning;
@@ -145,7 +146,7 @@ internal static class BuildingBlocksComposition
         options.AddPipelineBehavior(typeof(UnitOfWorkBehavior<,>), BuildingBlocksOptions.UnitOfWorkBehaviorOrder);
 
         services.TryAddScoped<ProjectionRunner>();
-        services.TryAddScoped<IDomainEventPublisher, DomainEventPublisher>();
+        services.TryAddScoped<IIntegrationEventPublisher, IntegrationEventPublisher>();
         services.TryAddScoped<IUnitOfWork, NullUnitOfWork>();
     }
 

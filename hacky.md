@@ -29,4 +29,3 @@ seit ADR-0030 mit, die Voraussetzung dafür ist also erfüllt.
 
 Vor der ersten Lastmessung nicht anfassen. Hier festgehalten, damit die Entscheidung bewusst
 getroffen wird und nicht als Default stehen bleibt.
-

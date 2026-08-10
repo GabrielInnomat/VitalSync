@@ -17,6 +17,8 @@ internal static class WolverineOptionsExtensions
 {
     public const string DomainEventLocalQueueName = "building-blocks-domain-events";
 
+    public const string ProjectionLocalQueueName = "building-blocks-projections";
+
     public static readonly TimeSpan IdempotencyWindow = TimeSpan.FromDays(7);
 
     public static readonly TimeSpan[] TransientRetryCooldowns =
@@ -62,13 +64,19 @@ internal static class WolverineOptionsExtensions
 
         options.Discovery.IncludeAssembly(typeof(DomainEventEnvelopeHandler).Assembly);
 
-        options.CodeGeneration.AlwaysUseServiceLocationFor<IDomainEventPublisher>();
+        options.CodeGeneration.AlwaysUseServiceLocationFor<IIntegrationEventPublisher>();
         options.CodeGeneration.AlwaysUseServiceLocationFor<IIntegrationEventSinkFactory>();
+        options.CodeGeneration.AlwaysUseServiceLocationFor<ProjectionRunner>();
 
         options.CodeGeneration.AlwaysUseServiceLocationFor<ISender>();
 
         options.PublishMessage<DomainEventEnvelope>()
             .ToLocalQueue(DomainEventLocalQueueName)
+            .Sequential()
+            .UseDurableInbox();
+
+        options.PublishMessage<ProjectionEnvelope>()
+            .ToLocalQueue(ProjectionLocalQueueName)
             .Sequential()
             .UseDurableInbox();
 

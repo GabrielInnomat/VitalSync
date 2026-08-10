@@ -8,6 +8,7 @@ using BuildingBlocks.Domain.Events;
 using BuildingBlocks.Domain.Naming;
 using BuildingBlocks.Domain.Rules;
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.Tests;
@@ -96,7 +97,6 @@ public sealed class TracingTests
     public async Task EachProjectionHandler_GetsItsOwnSpanNamingTheHandlerAndTheAggregate()
     {
         using var recorder = new SpanRecorder(
-            "Publish TracedDomainEvent",
             "Project TracedFirstProjection",
             "Project TracedSecondProjection");
 
@@ -108,7 +108,7 @@ public sealed class TracingTests
 
         await using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
-        var publisher = scope.ServiceProvider.GetRequiredService<IDomainEventPublisher>();
+        var runner = scope.ServiceProvider.GetRequiredService<ProjectionRunner>();
 
         var metadata = new DomainEventMetadata(
             Guid.NewGuid(),
@@ -117,10 +117,10 @@ public sealed class TracingTests
             7,
             DateTimeOffset.UnixEpoch);
 
-        await publisher.PublishAsync(new TracedDomainEvent(), metadata, new CountingSink(), CancellationToken.None);
+        await runner.RunAsync(new TracedDomainEvent(), metadata, CancellationToken.None);
 
         Assert.Equal(
-            ["Project TracedFirstProjection", "Project TracedSecondProjection", "Publish TracedDomainEvent"],
+            ["Project TracedFirstProjection", "Project TracedSecondProjection"],
             recorder.Spans.Select(span => span.DisplayName).Order(StringComparer.Ordinal));
 
         var projection = recorder.Spans.Single(span => span.DisplayName == "Project TracedFirstProjection");
@@ -131,7 +131,7 @@ public sealed class TracingTests
     }
 
     [Fact]
-    public async Task TheProjectionSpans_AreNestedInsideThePublishSpan()
+    public async Task AProjectionSpan_IsNotNestedInsideThePublishSpan()
     {
         using var recorder = new SpanRecorder("Publish TracedDomainEvent", "Project TracedFirstProjection");
 
@@ -142,15 +142,17 @@ public sealed class TracingTests
 
         await using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
-        var publisher = scope.ServiceProvider.GetRequiredService<IDomainEventPublisher>();
+        var publisher = scope.ServiceProvider.GetRequiredService<IIntegrationEventPublisher>();
+        var runner = scope.ServiceProvider.GetRequiredService<ProjectionRunner>();
 
         var metadata = new DomainEventMetadata(Guid.NewGuid(), "probe", "probe-1", 1, DateTimeOffset.UnixEpoch);
         await publisher.PublishAsync(new TracedDomainEvent(), metadata, new CountingSink(), CancellationToken.None);
+        await runner.RunAsync(new TracedDomainEvent(), metadata, CancellationToken.None);
 
         var publish = recorder.Spans.Single(span => span.DisplayName == "Publish TracedDomainEvent");
         var projection = recorder.Spans.Single(span => span.DisplayName == "Project TracedFirstProjection");
 
-        Assert.Equal(publish.SpanId, projection.ParentSpanId);
+        Assert.NotEqual(publish.SpanId, projection.ParentSpanId);
         Assert.Equal(0, publish.GetTagItem("buildingblocks.integration_events.published"));
     }
 
@@ -166,7 +168,7 @@ public sealed class TracingTests
 
         await using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
-        var publisher = scope.ServiceProvider.GetRequiredService<IDomainEventPublisher>();
+        var publisher = scope.ServiceProvider.GetRequiredService<IIntegrationEventPublisher>();
 
         var sink = new CountingSink();
         var metadata = new DomainEventMetadata(Guid.NewGuid(), "probe", "probe-1", 1, DateTimeOffset.UnixEpoch);

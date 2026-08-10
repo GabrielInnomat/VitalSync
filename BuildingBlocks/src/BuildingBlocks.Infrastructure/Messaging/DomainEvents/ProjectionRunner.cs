@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 
-internal sealed class ProjectionRunner(IServiceProvider serviceProvider)
+public sealed class ProjectionRunner(IServiceProvider serviceProvider)
 {
     private static readonly ConcurrentDictionary<Type, ProjectionInvoker> Invokers = new();
 

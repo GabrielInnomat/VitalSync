@@ -11,20 +11,21 @@ auslöst. Überschneidungen mit [hacky.md](hacky.md) sind beim jeweiligen Punkt 
 
 ## Status
 
-| Nr.    | Titel                                                                | Status    | TODO    |
-| ------ | -------------------------------------------------------------------- | --------- | ------- |
-| IMP-12 | `IIntegrationEventMapper` ist untypisiert                            | offen     | TODO-30 |
-| IMP-19 | Ein Assembly für EF Core, Marten, Wolverine und RabbitMQ             | offen     | TODO-33 |
-| IMP-25 | `Sequential()` auf einer einzigen Queue für alle Domain Events       | offen     | TODO-20 |
-| IMP-26 | `DomainEventPublisher` koppelt Projektion und Publikation            | offen     | TODO-29 |
-| IMP-32 | Keine Batch- oder Bulk-Fähigkeit                                     | offen     | TODO-38 |
-| IMP-33 | Keine Saga- oder Process-Manager-Abstraktion                         | offen     | TODO-39 |
-| IMP-34 | `Result` hat keine Kombinatoren                                      | offen     | TODO-31 |
-| IMP-39 | `Result`-API: implizite Konvertierungen und werfendes `Value`      | teilweise | TODO-31 |
-| IMP-43 | Wirkungslose Varianz-Modifikatoren                                   | offen     | TODO-41 |
-| IMP-47 | Keine zentrale Paketverwaltung                                       | offen     | TODO-34 |
+| Nr.    | Titel                                                          | Status    | TODO    |
+| ------ | -------------------------------------------------------------- | --------- | ------- |
+| IMP-12 | `IIntegrationEventMapper` ist untypisiert                      | offen     | TODO-30 |
+| IMP-19 | Ein Assembly für EF Core, Marten, Wolverine und RabbitMQ       | offen     | TODO-33 |
+| IMP-25 | `Sequential()` auf einer einzigen Queue für alle Domain Events | offen     | TODO-20 |
+| IMP-26 | `DomainEventPublisher` koppelt Projektion und Publikation      | offen     | TODO-29 |
+| IMP-32 | Keine Batch- oder Bulk-Fähigkeit                               | offen     | TODO-38 |
+| IMP-33 | Keine Saga- oder Process-Manager-Abstraktion                   | offen     | TODO-39 |
+| IMP-34 | `Result` hat keine Kombinatoren                                | offen     | TODO-31 |
+| IMP-39 | `Result`-API: implizite Konvertierungen und werfendes `Value`  | teilweise | TODO-31 |
+| IMP-43 | Wirkungslose Varianz-Modifikatoren                             | offen     | TODO-41 |
+| IMP-47 | Keine zentrale Paketverwaltung                                 | offen     | TODO-34 |
 
 ---
+
 # IMP-12, `IIntegrationEventMapper` ist untypisiert
 
 ```csharp
@@ -112,55 +113,29 @@ nicht als Default stehen bleibt.
 # IMP-26, `DomainEventPublisher` koppelt Projektion und Integration-Event-Publikation
 
 ```csharp
-await projectionRunner.RunAsync(domainEvent, cancellationToken);
+await projectionRunner.RunAsync(domainEvent, metadata, cancellationToken);
 foreach (var mapper in _mappers) { foreach (...) await sink.PublishAsync(...); }
 ```
 
-([DomainEventPublisher.cs:32-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/DomainEventPublisher.cs:32))
+([DomainEventPublisher.cs:52-71](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/DomainEventPublisher.cs:52))
 
-Zwei Belange in einer Methode, ohne Fehlerisolierung: wirft eine Projektion, wird kein einziges
-Integration Event publiziert; wirft ein Mapper, laufen bei der Redelivery alle Projektionen erneut.
-Bei at-least-once-Zustellung heißt das, dass ein Fehler auf der einen Seite die andere wiederholt
-ausführt — was nur solange gutgeht, wie beide Seiten idempotent sind.
+Zwei Belange in einem Wolverine-Handler, also ein gemeinsames Retry-Schicksal, bei
+unterschiedlicher Absicherung: eine Projektion schreibt sofort und bleibt bei einem späteren Fehler
+stehen, Integration Events werden gestaget und bei einem Fehler verworfen. Wirft ein Mapper, laufen
+bei der Redelivery alle Projektionen erneut; wirft eine Projektion, verlässt das Integration Event
+den Kontext nie und ein lokaler Read-Model-Bug blockiert die gesamte Cross-Context-Kommunikation.
 
 ## Lösungsvorschlag
 
-Die beiden Wege trennen, statt sie im selben `try` zu bündeln. Zwei Optionen:
-
-```
-A) Zwei Wolverine-Handler auf demselben Envelope — jeder mit eigener Retry-/DLQ-Bilanz.
-   Sauber isoliert, kostet eine zweite Zustellung pro Event.
-
-B) Ein Handler, aber getrennte Fehlerbehandlung mit ausdrücklicher Reihenfolge:
-   erst Projektionen (in-context, schnell), dann Integration Events (extern).
-   Ein Fehler im zweiten Schritt darf den ersten nicht rückgängig machen wollen.
-```
-
-Empfehlung: B. Voraussetzung ist die Idempotenz beider Seiten. A erst, wenn Projektionen und
-Integration Events messbar unterschiedliche Fehlerraten haben.
+Die Projektion aus dem Envelope-Handler herauslösen und als eigene lokale Nachricht mit eigener
+Inbox-Zeile, eigenem Retry und eigener DLQ zustellen; die Integration Events bleiben im
+Envelope-Handler. Kostet eine zusätzliche Zustellung pro Event und lässt die Outbox-Zusage der
+Write-Seite unberührt. Details, verworfene Alternativen und die verbleibende Voraussetzung
+(Watermark-Konvention) in TODO-29.
 
 ---
 
 # IMP-32, Keine Batch- oder Bulk-Fähigkeit
-
-`ISender.Send` verarbeitet einen Request, `UnitOfWorkBehavior` committet danach. Es gibt keinen Weg,
-mehrere Commands in einer Transaktion zu bündeln oder die Event-Publikation für einen Massenvorgang zu
-unterdrücken. „Nährwertkatalog mit 500 Einträgen importieren" heißt heute: 500 Transaktionen, 500
-Outbox-Runden, 500 Projektionsläufe.
-
-## Lösungsvorschlag
-
-Kein generisches Batch-API bauen — das untergräbt die Ein-Command-eine-Transaktion-Regel. Stattdessen
-den Massenvorgang als **eigenen Command** modellieren, der die Schleife im Handler hält:
-
-```csharp
-public sealed record ImportFoodCatalog(IReadOnlyList<FoodEntry> Entries) : ICommand<ImportSummary>;
-```
-
-Das deckt den Regelfall ab. Erst wenn ein Import die Transaktionsgröße sprengt, braucht es echtes
-Chunking — dann als bewusst nicht-atomarer Vorgang mit eigenem Fortschrittszustand (siehe IMP-33).
-
----
 
 # IMP-33, Keine Saga- oder Process-Manager-Abstraktion
 
@@ -241,6 +216,7 @@ und die Reflection darüber ist mit ihr entfallen
 
 Punkt 1 mit einem Test absichern statt umbauen. Punkt 2 durch `Match` entschärfen, ohne `Value` zu
 entfernen — das ist dieselbe Arbeit wie IMP-34, und beide gehören deshalb in TODO-31.
+
 # IMP-43, Wirkungslose Varianz-Modifikatoren
 
 Verifiziert unverändert: `IEntity<out TKey>`, `IAggregateRoot<out TKey>`,

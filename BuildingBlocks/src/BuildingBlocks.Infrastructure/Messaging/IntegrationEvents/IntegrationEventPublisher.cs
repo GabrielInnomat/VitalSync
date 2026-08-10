@@ -4,11 +4,9 @@ using BuildingBlocks.Application.IntegrationEvents;
 using BuildingBlocks.Domain.Events;
 using BuildingBlocks.Infrastructure.Telemetry;
 
-namespace BuildingBlocks.Infrastructure.Messaging.DomainEvents;
+namespace BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 
-internal sealed class DomainEventPublisher(
-    ProjectionRunner projectionRunner,
-    IEnumerable<IIntegrationEventMapper> mappers) : IDomainEventPublisher
+internal sealed class IntegrationEventPublisher(IEnumerable<IIntegrationEventMapper> mappers) : IIntegrationEventPublisher
 {
     private readonly IIntegrationEventMapper[] _mappers = [.. mappers];
 
@@ -55,8 +53,6 @@ internal sealed class DomainEventPublisher(
         IIntegrationEventSink integrationEventSink,
         CancellationToken cancellationToken)
     {
-        await projectionRunner.RunAsync(domainEvent, metadata, cancellationToken).ConfigureAwait(false);
-
         var published = 0;
         foreach (var mapper in _mappers)
         {

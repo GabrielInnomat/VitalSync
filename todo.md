@@ -26,22 +26,21 @@ Lastmessung, TODO-46 auf das erste echte Aggregat.
 
 ## Übersicht
 
-| Nr.     | Titel                                                          | Prio   | Status    | Quellen           |
-| ------- | -------------------------------------------------------------- | ------ | --------- | ----------------- |
-| TODO-19 | `ApplyEntityKeyConversions` erfasst keine Complex Types        | **P2** | teilweise | hacky-4, WS-15    |
-| TODO-20 | Global sequentielle Domain-Event-Queue                         | **P2** | offen     | hacky-13, IMP-25  |
-| TODO-46 | Die MigrationService-Worker sind leere Hüllen                  | **P2** | offen     | AppHost `e44ae9b` |
-| TODO-29 | `DomainEventPublisher` koppelt Projektion und Publikation      | **P3** | offen     | IMP-26            |
-| TODO-30 | `IIntegrationEventMapper` ist untypisiert                      | **P3** | offen     | IMP-12            |
-| TODO-31 | `Result` hat keine Kombinatoren                                | **P3** | offen     | IMP-34            |
-| TODO-33 | Ein Assembly für alle Persistenz-Pakete                        | **P3** | offen     | IMP-19            |
-| TODO-34 | Keine zentrale Paketverwaltung                                 | **P3** | offen     | IMP-47            |
-| TODO-35 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets`     | **P3** | offen     | WS-04             |
-| TODO-36 | Der gRPC-Vertrag liegt noch beim Service                       | **P3** | offen     | WS-07             |
-| TODO-38 | Keine Batch- oder Bulk-Fähigkeit                               | **P3** | offen     | IMP-32            |
-| TODO-39 | Keine Saga- oder Process-Manager-Abstraktion                   | **P3** | offen     | IMP-33            |
-| TODO-50 | Kein Read-Modell-Rebuild im event-sourced Pfad                 | **P3** | offen     | ADR-0036-Folge    |
-| TODO-41 | Wirkungslose Varianz-Modifikatoren                             | **P4** | offen     | IMP-43            |
+| Nr.     | Titel                                                      | Prio   | Status    | Quellen           |
+| ------- | ---------------------------------------------------------- | ------ | --------- | ----------------- |
+| TODO-19 | `ApplyEntityKeyConversions` erfasst keine Complex Types    | **P2** | teilweise | hacky-4, WS-15    |
+| TODO-20 | Global sequentielle Domain-Event-Queue                     | **P2** | offen     | hacky-13, IMP-25  |
+| TODO-46 | Die MigrationService-Worker sind leere Hüllen              | **P2** | offen     | AppHost `e44ae9b` |
+| TODO-29 | `DomainEventPublisher` koppelt Projektion und Publikation  | **P3** | offen     | IMP-26            |
+| TODO-30 | `IIntegrationEventMapper` ist untypisiert                  | **P3** | offen     | IMP-12            |
+| TODO-31 | `Result` hat keine Kombinatoren                            | **P3** | offen     | IMP-34            |
+| TODO-33 | Ein Assembly für alle Persistenz-Pakete                    | **P3** | offen     | IMP-19            |
+| TODO-34 | Keine zentrale Paketverwaltung                             | **P3** | offen     | IMP-47            |
+| TODO-35 | `EntityFrameworkCore.Design` verträgt kein `PrivateAssets` | **P3** | offen     | WS-04             |
+| TODO-36 | Der gRPC-Vertrag liegt noch beim Service                   | **P3** | offen     | WS-07             |
+| TODO-39 | Keine Saga- oder Process-Manager-Abstraktion               | **P3** | offen     | IMP-33            |
+| TODO-50 | Kein Read-Modell-Rebuild im event-sourced Pfad             | **P3** | offen     | ADR-0036-Folge    |
+| TODO-41 | Wirkungslose Varianz-Modifikatoren                         | **P4** | offen     | IMP-43            |
 
 ---
 
@@ -97,19 +96,108 @@ statt als Default stehen zu bleiben.
 
 **P3 · offen · IMP-26**
 
-Zwei Belange in einer Methode ohne Fehlerisolierung
-([DomainEventPublisher.cs:32-40](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/DomainEventPublisher.cs:32)):
-wirft eine Projektion, wird kein Integration Event publiziert; wirft ein Mapper, laufen bei der
-Redelivery alle Projektionen erneut. Bei at-least-once heißt das, dass ein Fehler auf der einen
-Seite die andere wiederholt ausführt — tragfähig nur, solange beide idempotent sind.
+## Anforderungen (abgenommen 2026-08-09)
+
+Diese drei Zusagen sind die Abnahmekriterien; jede muss durch einen eigenen Test belegt sein.
+
+1. **Scheitert der Commit der Write-Seite, findet weder eine Projektion noch ein Integration Event
+   statt.** Das ist die härteste der drei und heute bereits strukturell erfüllt.
+2. **Scheitert eine Projektion — etwa wegen eines Bugs —, wird das Integration Event trotzdem
+   versendet.** Read Models sind nach dem Bugfix wiederherstellbar, ein nicht versendetes Integration
+   Event ist es nicht. Deshalb wird das Nicht-Wiederherstellbare priorisiert.
+3. **Projektion und Integration-Publikation werden getrennt behandelt**, hängen aber beide daran, dass
+   der Write-Commit erfolgreich war.
+
+Aus Anforderung 2 folgen zwei Punkte, die zu diesem TODO gehören:
+
+- **a) Der Rebuild existiert bisher nur für state-stored Kontexte.** `IReadModelRebuilder`,
+  `ReadModelRebuildRunner<TContext>` und der Widget-Rebuilder sind vorhanden; für event-sourced
+  Kontexte nennt ADR-0036 den Stream-Replay, aber es gibt keinen Runner, keinen Gadget-Rebuilder und
+  keinen Paritätstest. Anforderung 2 stützt sich sonst auf ein Netz, das nur die halbe Plattform hat.
+- **b) Ein Projektionsfehler wird nach dem Umbau leise.** Heute fällt er auf, weil nichts mehr
+  publiziert wird; danach läuft alles weiter und nur die Dead-Letter-Queue füllt sich. Ohne
+  Sichtbarkeit entsteht ein stilles Loch im Read Model, das erst auffällt, wenn jemand die falsche
+  Zahl sieht.
+
+## Ausgangslage
+
+`DomainEventPublisher.DispatchAsync` erledigt zwei Belange in einem Wolverine-Handler
+([DomainEventPublisher.cs:52-71](BuildingBlocks/src/BuildingBlocks.Infrastructure/Messaging/DomainEvents/DomainEventPublisher.cs:52)):
+erst laufen alle `IProjectionHandler`, dann publizieren alle `IIntegrationEventMapper`. Ein Handler
+heißt ein Retry-Schicksal — entweder gilt der ganze Handler als erfolgreich, oder der ganze wird
+wiederholt.
+
+Die beiden Seiten sind dabei unterschiedlich abgesichert. Eine Projektion schreibt sofort mit
+eigenem `SaveChangesAsync` in die Read-DB und bleibt bei einem späteren Fehler stehen. Integration
+Events werden dagegen im `IMessageContext` des Handlers gestaget und erst am Handler-Ende
+abgesendet; bei einem Fehler werden sie verworfen. Gemessen (Sonde, 2026-08-09): wirft ein Mapper
+nach einem erfolgreichen `sink.PublishAsync`, erreichen **0** Events den Broker; die Positivkontrolle
+liefert **1**. **Kernaussage: beide Belange teilen ein Retry-Schicksal, aber nur einer von beiden
+lässt sich zurückrollen.**
+
+Daraus folgen zwei Schadensfälle:
+
+1. **Ein Mapper wirft** — die Projektionen haben bereits geschrieben und laufen bei der Redelivery
+   erneut, obwohl sie fehlerfrei waren. Nur ein Risiko: die Watermark-Konvention fängt es ab.
+2. **Eine Projektion wirft** — das Integration Event wird verworfen, dreimal retryt und
+   dead-lettered. Ein Bug in der **eigenen** Read-DB verhindert dauerhaft, dass andere Kontexte von
+   einer längst committeten Änderung erfahren. Das ist der echte Schaden und der Grund für
+   Anforderung 2: der Blast Radius eines lokalen Fehlers ist plattformweit.
+
+Unberührt von alldem ist die Write-Seite: der `DomainEventEnvelope` wird in derselben Transaktion
+wie die Aggregatdaten in die Outbox geschrieben (`EfCoreUnitOfWork`, `MartenUnitOfWork`). Scheitert
+der Commit, existiert keine Outbox-Zeile, der Envelope wird nie zugestellt und weder Projektion noch
+Integration Event finden statt — Anforderung 1 ist damit erfüllt, weil sie **vor** dem Handler liegt
+und nicht in ihm.
 
 ## Lösungsvorschlag
 
-**Empfehlung: ein Handler, aber getrennte Fehlerbehandlung** mit ausdrücklicher Reihenfolge (erst
-Projektionen, dann Integration Events). Voraussetzung ist die Idempotenz beider Seiten.
+**Die Projektion aus dem Envelope-Handler herauslösen, die Integration Events darin belassen.** Der
+Envelope-Handler mappt und publiziert wie bisher und staget zusätzlich eine lokale Nachricht für die
+Projektion; diese läuft in einem eigenen Handler mit eigener Inbox-Zeile, eigenem Retry und eigener
+DLQ.
 
-Zwei getrennte Wolverine-Handler auf demselben Envelope wären sauberer isoliert, kosten aber eine
-zweite Zustellung pro Event — erst wenn beide Seiten messbar unterschiedliche Fehlerraten haben.
+- Anforderung 2 ist erfüllt: die Projektion scheitert in ihrer eigenen DLQ, das Integration Event ist
+  bereits draußen.
+- Schadensfall 1 wird besser als heute: wirft ein Mapper, wird auch die gestagete Projektionsnachricht
+  verworfen — die Projektion hat also noch nie gelaufen und läuft nach dem Retry genau einmal. Der
+  heutige Doppellauf entfällt.
+- Anforderung 1 bleibt: beide Seiten hängen weiterhin an der einen Outbox-Zeile, die nur bei
+  erfolgreichem Commit existiert.
+- Kosten: **eine** zusätzliche Zustellung pro Domain Event, nicht zwei.
+
+Bewusst verworfen wurde **ein Handler mit getrennter Fehlerbehandlung** (die frühere Empfehlung
+dieses Punktes). Sie trägt nicht: „getrennt behandeln" kann in einer Transaktion nur heißen, einen
+der beiden Fehler zu schlucken. Wird der Projektionsfehler geschluckt, gilt der Handler als
+erfolgreich, es gibt keinen Retry und das Read Model bleibt dauerhaft falsch. Wird der Mapper-Fehler
+geschluckt, wird das Staging committed und ein weiterer Fehler publiziert das Event ein zweites Mal.
+Ebenfalls verworfen wurde die **volle Zwei-Nachrichten-Variante** — sie kostet zwei zusätzliche
+Zustellungen statt einer und bringt darüber hinaus nichts.
+
+Zu akzeptieren ist eine Reihenfolgeumkehr: das Integration Event verlässt den Kontext, bevor dessen
+eigenes Read Model aktuell ist. Das ist unkritisch, weil Kontexte einander nie synchron abfragen und
+Read Models laut ADR-0022 ohnehin eventual consistent sind.
+
+## Watermark-Konvention
+
+Die Watermark (`existing.Version < metadata.Version`) wird von Building Blocks nicht erzwungen — der
+Handler schreibt in eine Read-DB, die dem Service gehört. Vorhanden sind bereits die Regel in
+ADR-0030 und acht Redelivery-Tests in den Samples (StateStored fünf, EventSourced drei) sowie
+`OutboxFlushOnCommitTests`, das die `Version` genau dort prüft, wo der Handler sie konsumiert.
+
+Entschieden: **dokumentieren statt erzwingen.** Ein Start-Check gegen mehrere Handler pro Domain
+Event wäre falsch-positiv per Konstruktion, weil der Container nicht weiß, welche Read-Model-Zeile
+ein Handler schreibt; ein zentraler Watermark-Zwang in Building Blocks bräuchte Zugriff auf die
+Read-DB, die laut ADR-0022 dem Service gehört, und würde den Stand in einer anderen Transaktion als
+den Handler schreiben — das Problem wäre verlagert, nicht beseitigt. Nachzuziehen ist deshalb nur:
+
+- ein Principles-Eintrag in `testing-strategy.md`, der den Redelivery-Test je Projektionshandler zur
+  Pflicht macht,
+- eine Regel in beiden Instruktionsdateien zu der bislang unbenannten Falle: die Watermark sitzt auf
+  der **Read-Model-Zeile**, nicht auf dem Handler, also gilt je Zeile genau ein Projektionshandler
+  pro Domain Event. Schreiben zwei Handler desselben Events dieselbe Zeile, setzt der erste die
+  Version hoch und der zweite überspringt sich selbst — schon beim ersten regulären Lauf, nicht erst
+  bei einer Redelivery.
 
 ---
 
@@ -252,28 +340,6 @@ Contracts-Projekt pro Bounded Context, das Service **und** BFF referenzieren.
 Nicht vorwegnehmen — die Entscheidung gehört an den Tag, an dem der BFF den ersten Service
 aufruft, und dann in einen ADR, zusammen mit der bisher nur faktisch getroffenen Bibliothekswahl
 `protobuf-net.Grpc`.
-
----
-
-# TODO-38, Keine Batch- oder Bulk-Fähigkeit
-
-**P3 · offen · IMP-32**
-
-`ISender.Send` verarbeitet einen Request, `UnitOfWorkBehavior` committet danach. „Nährwertkatalog
-mit 500 Einträgen importieren" heißt heute: 500 Transaktionen, 500 Outbox-Runden, 500
-Projektionsläufe.
-
-## Lösungsvorschlag
-
-Kein generisches Batch-API bauen — das untergräbt die Ein-Command-eine-Transaktion-Regel.
-Stattdessen den Massenvorgang als **eigenen Command** modellieren:
-
-```csharp
-public sealed record ImportFoodCatalog(IReadOnlyList<FoodEntry> Entries) : ICommand<ImportSummary>;
-```
-
-Deckt den Regelfall ab. Erst wenn ein Import die Transaktionsgröße sprengt, braucht es echtes
-Chunking — dann als bewusst nicht-atomarer Vorgang mit eigenem Fortschrittszustand (TODO-39).
 
 ---
 
