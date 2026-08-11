@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace BuildingBlocks.Infrastructure.Persistence;
 
-internal static class EntityKeyJsonOptions
+public static class EntityKeyJsonOptions
 {
     public static void Apply(JsonSerializerOptions options)
     {
@@ -11,7 +11,7 @@ internal static class EntityKeyJsonOptions
         options.Converters.Add(new EntityKeyJsonConverterFactory());
     }
 
-    public static JsonSerializerOptions Create()
+    internal static JsonSerializerOptions Create()
     {
         var options = new JsonSerializerOptions(JsonSerializerDefaults.General);
         Apply(options);

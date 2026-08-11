@@ -1,6 +1,6 @@
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
-internal enum StartupPhase
+public enum StartupPhase
 {
     BeforeHostedServicesStart = 0,
     AfterHostedServicesStarted,

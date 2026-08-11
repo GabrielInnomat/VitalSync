@@ -40,9 +40,9 @@ Building Block allowed to reference third-party packages.
   and accepts a `CancellationToken`.
 - **`internal` unless something outside genuinely needs the type.** A host consumes
   Infrastructure through DI, so an implementation registered in the container has no
-  reason to be visible. The public surface is exactly six types plus the handful that
-  Wolverine's runtime code generation forces open (see below), and
-  `PublicSurfaceTests` fails the build if it grows.
+  reason to be visible. The public surface is the entry points, a small set of declared
+  extension points, and the handful that Wolverine's runtime code generation forces open
+  (see below); `PublicSurfaceTests` fails the build if it grows.
 
 ## Public surface
 
@@ -57,6 +57,33 @@ Everything else is `internal`, with `InternalsVisibleTo` for the test assembly.
 | `PersistedSchema`                 | the event-schema snapshot, called from a service's tests (ADR-0035) |
 | `StateStoredReadModelRebuildRunner<TContext>`| the read-model rebuild driver for a state-stored context, constructed by a migration worker (ADR-0036) |
 | `EventSourcedReadModelRebuildRunner`| the same driver for an event-sourced context, folding Marten streams (ADR-0036) |
+
+### Declared extension points
+
+Three abstractions are public because a consumer is meant to **implement** them, not
+merely call them. They are listed separately from the entry points because they carry a
+different promise: an entry point may change shape, an extension point is something
+foreign code depends on.
+
+| Type                            | What a consumer plugs in                                            |
+| ------------------------------- | ------------------------------------------------------------------- |
+| `IStartupCheck` / `StartupPhase` | an own start-up check, run by `StartupCheckRunner` in the declared phase |
+| `IPersistenceFaultTranslator`   | an own exception → `Failure` translation, consulted by `UnitOfWorkBehavior` |
+
+Plus `EntityKeyJsonOptions.Apply(JsonSerializerOptions)`, so a consumer can attach the
+typed-key converters to its **own** serializer options. `Create()` stays `internal` on
+purpose: handing out finished options would be a second, competing way to configure
+serialization, while `Apply` composes with what the consumer already has.
+
+No registration mechanism was needed for any of them. `StartupCheckRunner` resolves
+`IEnumerable<IStartupCheck>` and `UnitOfWorkBehavior` resolves
+`IEnumerable<IPersistenceFaultTranslator>`, both from DI, so
+`services.AddSingleton<IStartupCheck, MyCheck>()` is the whole story — before or after
+`AddBuildingBlocks`. `ExtensionPointTests` proves each of them end to end using only the
+public surface, even though the test assembly could see more.
+
+`SynchronousStartupCheck` deliberately stays `internal`. It is a convenience base class,
+not a contract, and `IStartupCheck` has exactly two members.
 
 Seven further types are public **only** because Wolverine generates C# at runtime and
 the generated code names them: `DomainEventEnvelope`, `DomainEventEnvelopeHandler`,
@@ -168,7 +195,10 @@ Since ADR-0034 a key writes as its **bare underlying value** (`"GadgetId": "8f3a
 value converter already requires — both share `EntityKeyActivator<TKey, TValue>`.
 `EntityKeyJsonOptions` is the single place that attaches the factory, and it is applied at all
 three sites: the envelope serializer's options, Marten via `UseSystemTextJsonForSerialization`, and
-Wolverine via `UseSystemTextJsonForSerialization` in `BuildingBlocksWolverineExtension`.
+Wolverine via `UseSystemTextJsonForSerialization` in `BuildingBlocksWolverineExtension`. Its
+`Apply(JsonSerializerOptions)` is public so a consumer can attach the same converters to its own
+options; `Create()` is `internal`, because handing out finished options invites a fourth site that
+drifts from these three.
 
 Marten runs on System.Text.Json as part of that decision. A `[JsonIgnore]` on `IEntityKey.IsEmpty`
 would have been smaller, but it binds to one serializer and Marten's default is the other — the
@@ -794,10 +824,10 @@ the message says so: register it with `options.AddPipelineBehavior(typeof(X<,>),
 
 ### Start-up checks: one contract, two phases
 
-Every start-up check implements the internal `IStartupCheck`:
+Every start-up check implements `IStartupCheck`:
 
 ```csharp
-internal interface IStartupCheck
+public interface IStartupCheck
 {
     StartupPhase Phase { get; }
 
@@ -805,12 +835,17 @@ internal interface IStartupCheck
 }
 ```
 
+It is one of the declared extension points (see "Public surface"): a consumer registers
+its own check the same way Building Blocks registers its own, and the runner picks it up
+from `IEnumerable<IStartupCheck>`.
+
 Most checks do no I/O at all. Those derive from `SynchronousStartupCheck`, which implements
 the async member over a `protected abstract void Run()` — six bodies returning
 `Task.CompletedTask` would trip `IDE0046` under warnings-as-errors and, worse, hide which
 checks actually wait on something. Only a check that genuinely reaches out —
 `InfrastructurePresenceCheck` asking the message store whether its tables exist —
-implements `IStartupCheck` directly.
+implements `IStartupCheck` directly. That base class stays `internal`; a consumer
+implements the interface, which costs one extra member.
 
 A single `StartupCheckRunner` — the only `IHostedLifecycleService` Building Blocks
 registers — resolves `IEnumerable<IStartupCheck>` and runs the
@@ -1088,4 +1123,10 @@ A small set of architecture tests enforces the layer-dependency rules, and
 `PublicSurfaceTests` pins the exported types of this assembly against the table in
 [Public surface](#public-surface): adding a `public` type fails the test until it is
 listed with a reason, which keeps "internal by default" from eroding one convenient
-exception at a time. See [Testing strategy](./testing-strategy.md).
+exception at a time. Two of its assertions are worth knowing about. The leak test asks
+whether a type is public in an implementation namespace **without being on the intended
+list**, rather than asking which namespace it sits in — an earlier version matched on
+`".Persistence."` with a trailing dot and therefore never looked at the
+`…Infrastructure.Persistence` namespace itself. And every declared extension point must be
+an interface, an enum, or abstract, so a concrete class cannot quietly be reclassified as
+one. See [Testing strategy](./testing-strategy.md).

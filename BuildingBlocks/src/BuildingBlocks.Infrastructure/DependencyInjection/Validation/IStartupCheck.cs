@@ -1,6 +1,6 @@
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
-internal interface IStartupCheck
+public interface IStartupCheck
 {
     StartupPhase Phase { get; }
 

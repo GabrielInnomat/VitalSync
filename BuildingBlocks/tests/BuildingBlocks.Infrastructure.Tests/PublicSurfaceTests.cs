@@ -11,7 +11,11 @@ public sealed class PublicSurfaceTests
         "BuildingBlocks.Infrastructure.DependencyInjection.HostApplicationBuilderExtensions",
         "BuildingBlocks.Infrastructure.DependencyInjection.InfrastructureProvisioning",
         "BuildingBlocks.Infrastructure.DependencyInjection.ServiceCollectionExtensions",
+        "BuildingBlocks.Infrastructure.DependencyInjection.Validation.IStartupCheck",
+        "BuildingBlocks.Infrastructure.DependencyInjection.Validation.StartupPhase",
+        "BuildingBlocks.Infrastructure.Persistence.EntityKeyJsonOptions",
         "BuildingBlocks.Infrastructure.Persistence.EntityKeyModelBuilderExtensions",
+        "BuildingBlocks.Infrastructure.Persistence.IPersistenceFaultTranslator",
         "BuildingBlocks.Infrastructure.ReadModels.EventSourcedReadModelRebuildRunner",
         "BuildingBlocks.Infrastructure.ReadModels.StateStoredReadModelRebuildRunner`1",
     ];
@@ -19,6 +23,13 @@ public sealed class PublicSurfaceTests
     private static readonly string[] IntendedTestingApi =
     [
         "BuildingBlocks.Infrastructure.Schema.PersistedSchema",
+    ];
+
+    private static readonly string[] ExtensionPoints =
+    [
+        "BuildingBlocks.Infrastructure.DependencyInjection.Validation.IStartupCheck",
+        "BuildingBlocks.Infrastructure.DependencyInjection.Validation.StartupPhase",
+        "BuildingBlocks.Infrastructure.Persistence.IPersistenceFaultTranslator",
     ];
 
     private static readonly string[] RequiredByWolverineCodeGeneration =
@@ -59,17 +70,33 @@ public sealed class PublicSurfaceTests
         var leaked = typeof(ServiceCollectionExtensions).Assembly
             .GetExportedTypes()
             .Where(type => type.Namespace is not null
-                && (type.Namespace.Contains(".Persistence.", StringComparison.Ordinal)
+                && (type.Namespace.Contains(".Persistence", StringComparison.Ordinal)
                     || type.Namespace.EndsWith(".Dispatching", StringComparison.Ordinal)
                     || type.Namespace.EndsWith(".Events", StringComparison.Ordinal)
                     || type.Namespace.EndsWith(".Time", StringComparison.Ordinal)
                     || type.Namespace.EndsWith(".Wiring", StringComparison.Ordinal)
                     || type.Namespace.EndsWith(".Registration", StringComparison.Ordinal)
                     || type.Namespace.EndsWith(".Validation", StringComparison.Ordinal)))
-            .Select(type => type.FullName)
+            .Select(type => type.FullName!)
+            .Except(IntendedApi, StringComparer.Ordinal)
             .ToArray();
 
         Assert.Empty(leaked);
+    }
+
+    [Fact]
+    public void EveryExtensionPointIsAnAbstraction_NotAnImplementation()
+    {
+        var assembly = typeof(ServiceCollectionExtensions).Assembly;
+
+        foreach (var name in ExtensionPoints)
+        {
+            var type = assembly.GetType(name);
+            Assert.NotNull(type);
+            Assert.True(
+                type.IsInterface || type.IsEnum || type.IsAbstract,
+                $"'{name}' is offered as an extension point, so it must be an abstraction consumers can implement.");
+        }
     }
 
     [Fact]
