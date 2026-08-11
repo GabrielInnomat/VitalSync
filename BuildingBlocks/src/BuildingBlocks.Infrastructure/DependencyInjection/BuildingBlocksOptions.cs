@@ -25,9 +25,9 @@ public sealed class BuildingBlocksOptions
     internal BuildingBlocksOptions(IServiceCollection services, PipelineBehaviorRegistry behaviorRegistry)
     {
         _handlers = new HandlerRegistrar(services, behaviorRegistry);
-        _persistence = new PersistenceRegistrar(services, Wiring);
-        _messaging = new MessagingRegistrar(services, Wiring);
-        _provisioning = new ProvisioningRegistrar(Wiring);
+        _persistence = new PersistenceRegistrar(services, Wiring.Persistence, Wiring.Provisioning);
+        _messaging = new MessagingRegistrar(services, Wiring.Messaging);
+        _provisioning = new ProvisioningRegistrar(Wiring.Provisioning);
     }
 
     internal BuildingBlocksWiringSettings Wiring { get; } = new();

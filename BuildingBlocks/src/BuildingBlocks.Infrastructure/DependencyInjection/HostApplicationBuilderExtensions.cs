@@ -23,7 +23,7 @@ public static class HostApplicationBuilderExtensions
 
         builder.UseWolverine(options =>
         {
-            foreach (var durability in wiring.OutboxDurability)
+            foreach (var durability in wiring.Persistence.OutboxDurability)
             {
                 durability.Configure(options);
             }

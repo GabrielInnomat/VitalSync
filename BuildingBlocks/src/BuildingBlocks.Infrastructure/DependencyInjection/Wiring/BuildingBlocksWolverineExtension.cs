@@ -12,15 +12,15 @@ internal sealed class BuildingBlocksWolverineExtension(BuildingBlocksWiringSetti
         if (settings.Persistence.IsSelected)
         {
             options.ApplyBuildingBlocksIdempotencyWindow();
-            options.ApplyBuildingBlocksMessageStorageProvisioning(settings.ProvisionsInfrastructure);
+            options.ApplyBuildingBlocksMessageStorageProvisioning(settings.Provisioning.ProvisionsInfrastructure);
             options.ApplyBuildingBlocksDomainEventRouting();
         }
 
-        if (settings.Messaging is { } messaging)
+        if (settings.Messaging.Transport is { } messaging)
         {
-            options.ApplyBuildingBlocksMessagingDefaults(messaging, settings.ProvisionsInfrastructure);
+            options.ApplyBuildingBlocksMessagingDefaults(messaging, settings.Provisioning.ProvisionsInfrastructure);
 
-            if (settings.Subscription is { } subscription)
+            if (settings.Messaging.Subscription is { } subscription)
             {
                 options.ApplyBuildingBlocksSubscription(subscription, messaging.ExchangeName);
             }

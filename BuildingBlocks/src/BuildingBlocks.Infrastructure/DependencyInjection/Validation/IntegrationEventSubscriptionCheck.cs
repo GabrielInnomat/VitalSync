@@ -8,13 +8,14 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
 internal sealed class IntegrationEventSubscriptionCheck(
     IServiceProvider serviceProvider,
-    BuildingBlocksWiringSettings settings) : SynchronousStartupCheck
+    MessagingSelection messagingSelection) : SynchronousStartupCheck
 {
     public override StartupPhase Phase => StartupPhase.AfterHostedServicesStarted;
 
     protected override void Run()
     {
-        if (settings.Messaging is not { } messaging || settings.Subscription is not { } subscription)
+        if (messagingSelection.Transport is not { } messaging
+            || messagingSelection.Subscription is not { } subscription)
         {
             return;
         }

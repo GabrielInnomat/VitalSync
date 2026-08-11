@@ -16,16 +16,18 @@ public static class AspireExtensions
 {
     private const string HealthEndpointPath = "/health";
     private const string AlivenessEndpointPath = "/alive";
+    private const string DeadLetterEndpointPath = "/health/dead-letters";
 
-    private static readonly Action<ILogger, string, string, string, Exception?> HealthChecksNotMappedAction =
-        LoggerMessage.Define<string, string, string>(
+    private static readonly Action<ILogger, string, string, string, string, Exception?> HealthChecksNotMappedAction =
+        LoggerMessage.Define<string, string, string, string>(
             LogLevel.Warning,
             new EventId(1, nameof(HealthChecksNotMapped)),
             "Health check endpoints are not mapped in '{Environment}' because no 'ManagementPort' is configured. " +
-            "Set 'ManagementPort' to expose '{Health}' and '{Alive}' on an internal-only port for orchestrator probes.");
+            "Set 'ManagementPort' to expose '{Health}', '{Alive}' and '{DeadLetters}' on an internal-only port for orchestrator probes.");
 
     public const string LiveTag = "live";
     public const string ReadyTag = "ready";
+    public const string DeadLetterTag = "dead-letters";
 
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
@@ -138,12 +140,21 @@ public static class AspireExtensions
             Predicate = r => r.Tags.Contains(LiveTag)
         };
 
-        var readyOptions = new HealthCheckOptions();
+        var readyOptions = new HealthCheckOptions
+        {
+            Predicate = r => !r.Tags.Contains(DeadLetterTag)
+        };
+
+        var deadLetterOptions = new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains(DeadLetterTag)
+        };
 
         if (app.Environment.IsDevelopment())
         {
             app.MapHealthChecks(HealthEndpointPath, readyOptions);
             app.MapHealthChecks(AlivenessEndpointPath, liveOptions);
+            app.MapHealthChecks(DeadLetterEndpointPath, deadLetterOptions);
             return app;
         }
 
@@ -152,15 +163,16 @@ public static class AspireExtensions
         {
             app.MapHealthChecks(HealthEndpointPath, readyOptions).RequireHost($"*:{port}");
             app.MapHealthChecks(AlivenessEndpointPath, liveOptions).RequireHost($"*:{port}");
+            app.MapHealthChecks(DeadLetterEndpointPath, deadLetterOptions).RequireHost($"*:{port}");
         }
         else
         {
-            app.Logger.HealthChecksNotMapped(app.Environment.EnvironmentName, HealthEndpointPath, AlivenessEndpointPath);
+            app.Logger.HealthChecksNotMapped(app.Environment.EnvironmentName, HealthEndpointPath, AlivenessEndpointPath, DeadLetterEndpointPath);
         }
 
         return app;
     }
 
-    private static void HealthChecksNotMapped(this ILogger logger, string environment, string health, string alive) =>
-        HealthChecksNotMappedAction(logger, environment, health, alive, null);
+    private static void HealthChecksNotMapped(this ILogger logger, string environment, string health, string alive, string deadLetters) =>
+        HealthChecksNotMappedAction(logger, environment, health, alive, deadLetters, null);
 }

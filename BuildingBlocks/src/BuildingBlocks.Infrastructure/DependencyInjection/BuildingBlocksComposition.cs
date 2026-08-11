@@ -68,7 +68,7 @@ internal static class BuildingBlocksComposition
     {
         var wiring = options.Wiring;
 
-        if (wiring.Subscription is not null && wiring.Messaging is null)
+        if (wiring.Messaging.Subscription is not null && wiring.Messaging.Transport is null)
         {
             throw new InvalidOperationException(
                 "SubscribeToIntegrationEvents was selected without UseWolverineMessaging. Subscribing declares a " +
@@ -76,7 +76,7 @@ internal static class BuildingBlocksComposition
                 "configured as well.");
         }
 
-        if (wiring.Messaging is not null && !wiring.Persistence.IsSelected)
+        if (wiring.Messaging.IsSelected && !wiring.Persistence.IsSelected)
         {
             throw new InvalidOperationException(
                 "UseWolverineMessaging was selected without a persistence strategy. Integration events are sent " +
@@ -134,6 +134,9 @@ internal static class BuildingBlocksComposition
         services.TryAddSingleton<DomainEventEnvelopeSerializer>();
 
         services.AddSingleton(options.Wiring);
+        services.AddSingleton(options.Wiring.Persistence);
+        services.AddSingleton(options.Wiring.Messaging);
+        services.AddSingleton(options.Wiring.Provisioning);
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IWolverineExtension, BuildingBlocksWolverineExtension>());
 
@@ -165,7 +168,7 @@ internal static class BuildingBlocksComposition
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, IntegrationEventMapperCheck>());
         services.AddSingleton<IStartupCheck>(provider => new UnitOfWorkPresenceCheck(
             provider,
-            options.Wiring,
+            options.Wiring.Persistence,
             options.ScannedAssemblies,
             provider.GetRequiredService<ILogger<UnitOfWorkPresenceCheck>>()));
     }

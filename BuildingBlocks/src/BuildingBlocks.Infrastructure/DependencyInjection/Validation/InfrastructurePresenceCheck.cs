@@ -6,13 +6,14 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
 internal sealed class InfrastructurePresenceCheck(
     IServiceProvider serviceProvider,
-    BuildingBlocksWiringSettings settings) : IStartupCheck
+    PersistenceSelection persistence,
+    ProvisioningSelection provisioning) : IStartupCheck
 {
     public StartupPhase Phase => StartupPhase.AfterHostedServicesStarted;
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
-        if (settings.ProvisionsInfrastructure || !settings.Persistence.IsSelected)
+        if (provisioning.ProvisionsInfrastructure || !persistence.IsSelected)
         {
             return;
         }

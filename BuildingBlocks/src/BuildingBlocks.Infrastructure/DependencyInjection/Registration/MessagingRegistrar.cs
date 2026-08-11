@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Registration;
 
-internal sealed class MessagingRegistrar(IServiceCollection services, BuildingBlocksWiringSettings wiring)
+internal sealed class MessagingRegistrar(IServiceCollection services, MessagingSelection messaging)
 {
     public void UseMessaging(Uri rabbitMqUri, string exchangeName, string contextName)
     {
@@ -24,7 +24,7 @@ internal sealed class MessagingRegistrar(IServiceCollection services, BuildingBl
         services.Replace(ServiceDescriptor.Singleton<IIntegrationEventSinkFactory>(
             new WolverineIntegrationEventSinkFactory(contextName)));
         services.Replace(ServiceDescriptor.Singleton(new IntegrationEventSourceContext(contextName)));
-        wiring.SelectMessaging(new MessagingSettings(rabbitMqUri, exchangeName, contextName));
+        messaging.SelectTransport(new MessagingSettings(rabbitMqUri, exchangeName, contextName));
     }
 
     public void Subscribe(string queueName, Assembly consumerAssembly, string[] topicPatterns)
@@ -37,7 +37,7 @@ internal sealed class MessagingRegistrar(IServiceCollection services, BuildingBl
                 nameof(topicPatterns));
         }
 
-        wiring.SelectSubscription(new IntegrationEventSubscription(
+        messaging.SelectSubscription(new IntegrationEventSubscription(
             queueName,
             [.. topicPatterns],
             consumerAssembly));

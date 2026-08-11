@@ -27,10 +27,10 @@ public sealed class PersistenceChoiceTests
     public void TwoMartenChoicesOverDifferentDatabases_Throw()
     {
         var settings = new BuildingBlocksWiringSettings();
-        settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString));
+        settings.Persistence.Select(PersistenceChoice.Marten(ConnectionString));
 
         var exception = Assert.Throws<InvalidOperationException>(
-            () => settings.SelectPersistence(PersistenceChoice.Marten("Host=elsewhere")));
+            () => settings.Persistence.Select(PersistenceChoice.Marten("Host=elsewhere")));
 
         Assert.Contains("twice with different arguments", exception.Message, StringComparison.Ordinal);
     }
@@ -67,7 +67,7 @@ public sealed class PersistenceChoiceTests
     public void DeliberatelyWithoutPersistence_IsChosenButNotSelected()
     {
         var settings = new BuildingBlocksWiringSettings();
-        settings.SelectPersistence(PersistenceChoice.NoPersistence);
+        settings.Persistence.Select(PersistenceChoice.NoPersistence);
 
         Assert.True(settings.Persistence.IsChosen);
         Assert.False(settings.Persistence.IsSelected);
@@ -79,10 +79,10 @@ public sealed class PersistenceChoiceTests
     public void NoPersistenceAfterAStrategy_Throws()
     {
         var settings = new BuildingBlocksWiringSettings();
-        settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString));
+        settings.Persistence.Select(PersistenceChoice.Marten(ConnectionString));
 
         var exception = Assert.Throws<InvalidOperationException>(
-            () => settings.SelectPersistence(PersistenceChoice.NoPersistence));
+            () => settings.Persistence.Select(PersistenceChoice.NoPersistence));
 
         Assert.Contains("UseNoPersistence", exception.Message, StringComparison.Ordinal);
         Assert.Contains("UseMartenEventSourcing", exception.Message, StringComparison.Ordinal);
@@ -93,8 +93,8 @@ public sealed class PersistenceChoiceTests
     {
         var settings = new BuildingBlocksWiringSettings();
 
-        settings.SelectPersistence(PersistenceChoice.EfCore(ConnectionString));
-        settings.SelectPersistence(PersistenceChoice.EfCore(ConnectionString));
+        settings.Persistence.Select(PersistenceChoice.EfCore(ConnectionString));
+        settings.Persistence.Select(PersistenceChoice.EfCore(ConnectionString));
 
         Assert.Equal(ConnectionString, settings.Persistence.EfCoreWriteConnectionString);
     }
@@ -103,10 +103,10 @@ public sealed class PersistenceChoiceTests
     public void EitherPersistenceChoice_MakesWolverineRequired()
     {
         var efCore = new BuildingBlocksWiringSettings();
-        efCore.SelectPersistence(PersistenceChoice.EfCore(ConnectionString));
+        efCore.Persistence.Select(PersistenceChoice.EfCore(ConnectionString));
 
         var marten = new BuildingBlocksWiringSettings();
-        marten.SelectPersistence(PersistenceChoice.Marten(ConnectionString));
+        marten.Persistence.Select(PersistenceChoice.Marten(ConnectionString));
 
         Assert.False(new BuildingBlocksWiringSettings().RequiresWolverine);
         Assert.True(efCore.RequiresWolverine);

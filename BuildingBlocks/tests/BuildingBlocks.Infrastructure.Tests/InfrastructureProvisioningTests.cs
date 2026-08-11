@@ -22,7 +22,7 @@ public sealed class InfrastructureProvisioningTests
     {
         using var provider = BuildProvider(_ => { });
 
-        Assert.False(provider.GetRequiredService<BuildingBlocksWiringSettings>().ProvisionsInfrastructure);
+        Assert.False(provider.GetRequiredService<ProvisioningSelection>().ProvisionsInfrastructure);
     }
 
     [Fact]
@@ -31,7 +31,7 @@ public sealed class InfrastructureProvisioningTests
         using var provider = BuildProvider(options => options
             .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup));
 
-        Assert.True(provider.GetRequiredService<BuildingBlocksWiringSettings>().ProvisionsInfrastructure);
+        Assert.True(provider.GetRequiredService<ProvisioningSelection>().ProvisionsInfrastructure);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public sealed class InfrastructureProvisioningTests
     [Fact]
     public void WithoutProvisioning_TheMessageStorageIsNotBuiltAtStartup()
     {
-        var options = ConfigureOptions(Settings(settings => settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString))));
+        var options = ConfigureOptions(Settings(settings => settings.Persistence.Select(PersistenceChoice.Marten(ConnectionString))));
 
         Assert.Equal(JasperFx.AutoCreate.None, options.AutoBuildMessageStorageOnStartup);
     }
@@ -52,8 +52,8 @@ public sealed class InfrastructureProvisioningTests
     {
         var options = ConfigureOptions(Settings(settings =>
         {
-            settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString));
-            settings.SelectProvisioning(InfrastructureProvisioning.AtStartup);
+            settings.Persistence.Select(PersistenceChoice.Marten(ConnectionString));
+            settings.Provisioning.Select(InfrastructureProvisioning.AtStartup);
         }));
 
         Assert.Equal(JasperFx.AutoCreate.CreateOrUpdate, options.AutoBuildMessageStorageOnStartup);
@@ -62,7 +62,7 @@ public sealed class InfrastructureProvisioningTests
     [Fact]
     public void WithoutProvisioning_TheBrokerTopologyIsNotDeclaredAtAll()
     {
-        var options = ConfigureOptions(Settings(settings => settings.SelectMessaging(TestMessagingSettings)));
+        var options = ConfigureOptions(Settings(settings => settings.Messaging.SelectTransport(TestMessagingSettings)));
 
         var transport = RabbitMqTransportOf(options);
 
@@ -75,8 +75,8 @@ public sealed class InfrastructureProvisioningTests
     {
         var options = ConfigureOptions(Settings(settings =>
         {
-            settings.SelectMessaging(TestMessagingSettings);
-            settings.SelectProvisioning(InfrastructureProvisioning.AtStartup);
+            settings.Messaging.SelectTransport(TestMessagingSettings);
+            settings.Provisioning.Select(InfrastructureProvisioning.AtStartup);
         }));
 
         var transport = RabbitMqTransportOf(options);

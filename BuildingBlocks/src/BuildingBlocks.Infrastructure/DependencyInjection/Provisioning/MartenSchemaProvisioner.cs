@@ -7,13 +7,13 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection.Provisioning;
 
 internal sealed class MartenSchemaProvisioner(
     IServiceProvider serviceProvider,
-    BuildingBlocksWiringSettings settings) : IStartupCheck
+    ProvisioningSelection provisioning) : IStartupCheck
 {
     public StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
-        if (!settings.ProvisionsInfrastructure)
+        if (!provisioning.ProvisionsInfrastructure)
         {
             return;
         }

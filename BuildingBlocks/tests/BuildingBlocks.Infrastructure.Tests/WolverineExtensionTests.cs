@@ -46,7 +46,7 @@ public sealed class WolverineExtensionTests
         Assert.False(settings.RequiresWolverine);
         Assert.False(settings.Persistence.IsSelected);
         Assert.Null(settings.Persistence.EfCoreWriteConnectionString);
-        Assert.Null(settings.Messaging);
+        Assert.Null(settings.Messaging.Transport);
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public sealed class WolverineExtensionTests
 
         Assert.True(settings.Persistence.IsSelected);
         Assert.Equal(ConnectionString, settings.Persistence.EfCoreWriteConnectionString);
-        Assert.Null(settings.Messaging);
+        Assert.Null(settings.Messaging.Transport);
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public sealed class WolverineExtensionTests
 
         Assert.True(settings.Persistence.IsSelected);
         Assert.Null(settings.Persistence.EfCoreWriteConnectionString);
-        Assert.Null(settings.Messaging);
+        Assert.Null(settings.Messaging.Transport);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public sealed class WolverineExtensionTests
 
         var settings = provider.GetRequiredService<BuildingBlocksWiringSettings>();
 
-        Assert.Equal(RabbitMqUri, settings.Messaging!.RabbitMqUri);
+        Assert.Equal(RabbitMqUri, settings.Messaging.Transport!.RabbitMqUri);
         Assert.True(settings.RequiresWolverine);
     }
 
@@ -122,7 +122,7 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithDomainEventRouting_RoutesTheEnvelopeToTheLocalQueue()
     {
-        var options = ConfigureOptions(Settings(settings => settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString))));
+        var options = ConfigureOptions(Settings(settings => settings.Persistence.Select(PersistenceChoice.Marten(ConnectionString))));
 
         var endpoints = options.Transports.SelectMany(transport => transport.Endpoints());
 
@@ -154,7 +154,7 @@ public sealed class WolverineExtensionTests
             .UseWolverine(options =>
             {
                 new BuildingBlocksWolverineExtension(
-                    Settings(settings => settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString))))
+                    Settings(settings => settings.Persistence.Select(PersistenceChoice.Marten(ConnectionString))))
                     .Configure(options);
                 options.Discovery.IncludeAssembly(typeof(WolverineExtensionTests).Assembly);
             })
@@ -167,7 +167,7 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithBrokerUri_AddsTheRabbitMqTransport()
     {
-        var options = ConfigureOptions(Settings(settings => settings.SelectMessaging(TestMessagingSettings)));
+        var options = ConfigureOptions(Settings(settings => settings.Messaging.SelectTransport(TestMessagingSettings)));
 
         Assert.Contains(options.Transports, transport => transport.Protocol == "rabbitmq");
     }
@@ -175,7 +175,7 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithBrokerUri_DeclaresThePlatformExchangeAsDurable()
     {
-        var options = ConfigureOptions(Settings(settings => settings.SelectMessaging(TestMessagingSettings)));
+        var options = ConfigureOptions(Settings(settings => settings.Messaging.SelectTransport(TestMessagingSettings)));
 
         var exchange = RabbitMqTransportOf(options)
             .Exchanges[TestMessaging.ExchangeName];
@@ -188,8 +188,8 @@ public sealed class WolverineExtensionTests
     {
         var options = ConfigureOptions(Settings(settings =>
         {
-            settings.SelectMessaging(TestMessagingSettings);
-            settings.SelectSubscription(
+            settings.Messaging.SelectTransport(TestMessagingSettings);
+            settings.Messaging.SelectSubscription(
                 new IntegrationEventSubscription("fitness.integration-events", ["nutrition.*"], TestAssembly));
         }));
 
@@ -201,7 +201,7 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithBrokerUri_EnablesPublisherConfirmationsAndTheirTracking()
     {
-        var options = ConfigureOptions(Settings(settings => settings.SelectMessaging(TestMessagingSettings)));
+        var options = ConfigureOptions(Settings(settings => settings.Messaging.SelectTransport(TestMessagingSettings)));
 
         var channel = new WolverineRabbitMqChannelOptions();
 
@@ -228,7 +228,7 @@ public sealed class WolverineExtensionTests
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
             .SubscribeToIntegrationEvents("fitness.integration-events", TestAssembly, "nutrition.*", "analytics.*"));
 
-        var subscription = provider.GetRequiredService<BuildingBlocksWiringSettings>().Subscription;
+        var subscription = provider.GetRequiredService<MessagingSelection>().Subscription;
 
         Assert.NotNull(subscription);
         Assert.Equal("fitness.integration-events", subscription!.QueueName);
@@ -284,8 +284,8 @@ public sealed class WolverineExtensionTests
     {
         var options = ConfigureOptions(Settings(settings =>
         {
-            settings.SelectMessaging(TestMessagingSettings);
-            settings.SelectSubscription(
+            settings.Messaging.SelectTransport(TestMessagingSettings);
+            settings.Messaging.SelectSubscription(
                 new IntegrationEventSubscription("fitness.integration-events", ["nutrition.*"], TestAssembly));
         }));
 
@@ -309,7 +309,7 @@ public sealed class WolverineExtensionTests
     public void Configure_WithPersistence_WidensTheInboxIdempotencyWindow()
     {
         var options = ConfigureOptions(Settings(settings =>
-            settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString))));
+            settings.Persistence.Select(PersistenceChoice.Marten(ConnectionString))));
 
         Assert.Equal(TimeSpan.FromDays(7), options.Durability.KeepAfterMessageHandling);
     }

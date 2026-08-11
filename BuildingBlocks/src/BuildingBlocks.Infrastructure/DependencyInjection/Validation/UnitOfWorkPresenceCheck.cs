@@ -10,7 +10,7 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
 internal sealed partial class UnitOfWorkPresenceCheck(
     IServiceProvider serviceProvider,
-    BuildingBlocksWiringSettings wiring,
+    PersistenceSelection persistence,
     IReadOnlyCollection<Assembly> scannedAssemblies,
     ILogger<UnitOfWorkPresenceCheck> logger) : SynchronousStartupCheck
 {
@@ -18,12 +18,12 @@ internal sealed partial class UnitOfWorkPresenceCheck(
 
     protected override void Run()
     {
-        if (wiring.Persistence.IsSelected)
+        if (persistence.IsSelected)
         {
             return;
         }
 
-        if (wiring.Persistence.IsDeliberatelyWithoutPersistence)
+        if (persistence.IsDeliberatelyWithoutPersistence)
         {
             LogNoPersistenceSelected(logger);
             return;

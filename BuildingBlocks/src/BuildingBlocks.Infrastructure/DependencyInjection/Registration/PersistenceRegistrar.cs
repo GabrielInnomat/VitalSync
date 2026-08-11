@@ -19,14 +19,17 @@ using Wolverine.Marten;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Registration;
 
-internal sealed class PersistenceRegistrar(IServiceCollection services, BuildingBlocksWiringSettings wiring)
+internal sealed class PersistenceRegistrar(
+    IServiceCollection services,
+    PersistenceSelection persistence,
+    ProvisioningSelection provisioning)
 {
-    public void UseNone() => wiring.SelectPersistence(PersistenceChoice.NoPersistence);
+    public void UseNone() => persistence.Select(PersistenceChoice.NoPersistence);
 
     public void UseEfCore<TContext>(string connectionString, Action<DbContextOptionsBuilder>? configureContext)
         where TContext : DbContext
     {
-        wiring.SelectPersistence(PersistenceChoice.EfCore(connectionString));
+        persistence.Select(PersistenceChoice.EfCore(connectionString));
 
         services.AddDbContextWithWolverineIntegration<TContext>(builder =>
         {
@@ -45,7 +48,7 @@ internal sealed class PersistenceRegistrar(IServiceCollection services, Building
             ServiceDescriptor.Singleton<IPersistenceFaultTranslator, EfCoreFaultTranslator>());
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IPersistenceFaultTranslator, PostgresFaultTranslator>());
-        wiring.AddOutboxDurability(new EfCoreOutboxDurability(connectionString));
+        persistence.AddOutboxDurability(new EfCoreOutboxDurability(connectionString));
         DeadLetterHealthCheckRegistration.Register(services);
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IStartupCheck, AggregateStateModelCheck<TContext>>());
@@ -53,13 +56,13 @@ internal sealed class PersistenceRegistrar(IServiceCollection services, Building
 
     public void UseMarten(string connectionString)
     {
-        wiring.SelectPersistence(PersistenceChoice.Marten(connectionString));
+        persistence.Select(PersistenceChoice.Marten(connectionString));
 
         services.AddMarten(serviceProvider =>
         {
             var storeOptions = new StoreOptions();
             storeOptions.Connection(connectionString);
-            storeOptions.AutoCreateSchemaObjects = wiring.ProvisionsInfrastructure
+            storeOptions.AutoCreateSchemaObjects = provisioning.ProvisionsInfrastructure
                 ? AutoCreate.CreateOrUpdate
                 : AutoCreate.None;
             storeOptions.Events.StreamIdentity = StreamIdentity.AsString;

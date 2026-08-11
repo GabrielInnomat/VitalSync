@@ -3,13 +3,15 @@ using RabbitMQ.Client;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
-internal sealed class BrokerTopologyCheck(BuildingBlocksWiringSettings settings) : IStartupCheck
+internal sealed class BrokerTopologyCheck(
+    MessagingSelection messagingSelection,
+    ProvisioningSelection provisioning) : IStartupCheck
 {
     public StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
-        if (settings.ProvisionsInfrastructure || settings.Messaging is not { } messaging)
+        if (provisioning.ProvisionsInfrastructure || messagingSelection.Transport is not { } messaging)
         {
             return;
         }
@@ -26,7 +28,7 @@ internal sealed class BrokerTopologyCheck(BuildingBlocksWiringSettings settings)
             "ever see it",
             cancellationToken).ConfigureAwait(false);
 
-        if (settings.Subscription is not { } subscription)
+        if (messagingSelection.Subscription is not { } subscription)
         {
             return;
         }
