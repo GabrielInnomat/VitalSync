@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Hosting;
 using Wolverine;
-using Wolverine.EntityFrameworkCore;
-using Wolverine.Postgresql;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection;
 
@@ -25,10 +23,9 @@ public static class HostApplicationBuilderExtensions
 
         builder.UseWolverine(options =>
         {
-            if (wiring.Persistence.EfCoreWriteConnectionString is { } writeConnectionString)
+            foreach (var durability in wiring.OutboxDurability)
             {
-                options.PersistMessagesWithPostgresql(writeConnectionString);
-                options.UseEntityFrameworkCoreTransactions();
+                durability.Configure(options);
             }
 
             configureWolverine?.Invoke(options);

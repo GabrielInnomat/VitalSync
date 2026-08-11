@@ -6,7 +6,6 @@ using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure.DependencyInjection.Provisioning;
 using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
-using BuildingBlocks.Infrastructure.Diagnostics;
 using BuildingBlocks.Infrastructure.Dispatching;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
@@ -14,16 +13,14 @@ using BuildingBlocks.Infrastructure.Persistence;
 using BuildingBlocks.Infrastructure.Time;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection;
 
 internal static class BuildingBlocksComposition
 {
-    public static WolverineWiringSettings Compose(IServiceCollection services, Action<BuildingBlocksOptions> configure)
+    public static BuildingBlocksWiringSettings Compose(IServiceCollection services, Action<BuildingBlocksOptions> configure)
     {
         EnsureSingleCall(services);
 
@@ -35,7 +32,7 @@ internal static class BuildingBlocksComposition
         ValidateBehaviorOrders(services, behaviorRegistry);
         RegisterStartupChecks(services, options);
 
-        return options.WolverineWiring;
+        return options.Wiring;
     }
 
     private static void EnsureSingleCall(IServiceCollection services)
@@ -69,7 +66,7 @@ internal static class BuildingBlocksComposition
 
     private static void Validate(BuildingBlocksOptions options)
     {
-        var wiring = options.WolverineWiring;
+        var wiring = options.Wiring;
 
         if (wiring.Subscription is not null && wiring.Messaging is null)
         {
@@ -136,7 +133,7 @@ internal static class BuildingBlocksComposition
         services.AddSingleton(options.DomainEventTypeRegistry);
         services.TryAddSingleton<DomainEventEnvelopeSerializer>();
 
-        services.AddSingleton(options.WolverineWiring);
+        services.AddSingleton(options.Wiring);
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IWolverineExtension, BuildingBlocksWolverineExtension>());
 
@@ -152,35 +149,6 @@ internal static class BuildingBlocksComposition
         services.TryAddScoped<MapperRunner>();
         services.TryAddScoped<IIntegrationEventPublisher, IntegrationEventPublisher>();
         services.TryAddScoped<IUnitOfWork, NullUnitOfWork>();
-
-        RegisterDeadLetterHealthCheck(services, options.WolverineWiring);
-    }
-
-    private static void RegisterDeadLetterHealthCheck(IServiceCollection services, WolverineWiringSettings wiring)
-    {
-        if (wiring.Persistence.WriteConnectionString is not { } connectionString)
-        {
-            return;
-        }
-
-        services.TryAddSingleton(_ => new DeadLetterInspector(BuildDataSource(connectionString)));
-
-        services.AddHealthChecks()
-            .AddCheck<DeadLetterHealthCheck>(
-                DeadLetterHealthCheck.Name,
-                HealthStatus.Degraded,
-                [DeadLetterHealthCheck.Tag]);
-    }
-
-    private static NpgsqlDataSource BuildDataSource(string connectionString)
-    {
-        var builder = new NpgsqlConnectionStringBuilder(connectionString)
-        {
-            MaxPoolSize = 2,
-            ApplicationName = "building-blocks-dead-letter-check",
-        };
-
-        return NpgsqlDataSource.Create(builder.ConnectionString);
     }
 
     private static void RegisterStartupChecks(IServiceCollection services, BuildingBlocksOptions options)
@@ -197,7 +165,7 @@ internal static class BuildingBlocksComposition
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, IntegrationEventMapperCheck>());
         services.AddSingleton<IStartupCheck>(provider => new UnitOfWorkPresenceCheck(
             provider,
-            options.WolverineWiring,
+            options.Wiring,
             options.ScannedAssemblies,
             provider.GetRequiredService<ILogger<UnitOfWorkPresenceCheck>>()));
     }

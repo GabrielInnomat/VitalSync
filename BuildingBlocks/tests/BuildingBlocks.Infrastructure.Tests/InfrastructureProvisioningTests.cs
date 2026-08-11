@@ -1,4 +1,4 @@
-﻿using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using Marten;
@@ -22,7 +22,7 @@ public sealed class InfrastructureProvisioningTests
     {
         using var provider = BuildProvider(_ => { });
 
-        Assert.False(provider.GetRequiredService<WolverineWiringSettings>().ProvisionsInfrastructure);
+        Assert.False(provider.GetRequiredService<BuildingBlocksWiringSettings>().ProvisionsInfrastructure);
     }
 
     [Fact]
@@ -31,7 +31,7 @@ public sealed class InfrastructureProvisioningTests
         using var provider = BuildProvider(options => options
             .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup));
 
-        Assert.True(provider.GetRequiredService<WolverineWiringSettings>().ProvisionsInfrastructure);
+        Assert.True(provider.GetRequiredService<BuildingBlocksWiringSettings>().ProvisionsInfrastructure);
     }
 
     [Fact]
@@ -161,16 +161,16 @@ public sealed class InfrastructureProvisioningTests
     private static RabbitMqTransport RabbitMqTransportOf(WolverineOptions options)
         => options.Transports.OfType<RabbitMqTransport>().Single();
 
-    private static WolverineOptions ConfigureOptions(WolverineWiringSettings settings)
+    private static WolverineOptions ConfigureOptions(BuildingBlocksWiringSettings settings)
     {
         var options = new WolverineOptions();
         new BuildingBlocksWolverineExtension(settings).Configure(options);
         return options;
     }
 
-    private static WolverineWiringSettings Settings(Action<WolverineWiringSettings> configure)
+    private static BuildingBlocksWiringSettings Settings(Action<BuildingBlocksWiringSettings> configure)
     {
-        var settings = new WolverineWiringSettings();
+        var settings = new BuildingBlocksWiringSettings();
         configure(settings);
         return settings;
     }

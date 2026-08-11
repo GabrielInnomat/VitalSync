@@ -6,7 +6,7 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
 internal sealed class InfrastructurePresenceCheck(
     IServiceProvider serviceProvider,
-    WolverineWiringSettings settings) : IStartupCheck
+    BuildingBlocksWiringSettings settings) : IStartupCheck
 {
     public StartupPhase Phase => StartupPhase.AfterHostedServicesStarted;
 

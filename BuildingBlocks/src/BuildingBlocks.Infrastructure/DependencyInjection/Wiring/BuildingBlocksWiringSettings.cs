@@ -1,7 +1,11 @@
+using BuildingBlocks.Infrastructure.Persistence;
+
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 
-internal sealed class WolverineWiringSettings
+internal sealed class BuildingBlocksWiringSettings
 {
+    private readonly List<IOutboxDurabilityConfigurator> _outboxDurability = [];
+
     public PersistenceChoice Persistence { get; private set; } = PersistenceChoice.None;
 
     public MessagingSettings? Messaging { get; private set; }
@@ -14,6 +18,11 @@ internal sealed class WolverineWiringSettings
 
     public bool RequiresWolverine =>
         Persistence.IsSelected || Messaging is not null || Subscription is not null;
+
+    public IReadOnlyList<IOutboxDurabilityConfigurator> OutboxDurability => _outboxDurability;
+
+    public void AddOutboxDurability(IOutboxDurabilityConfigurator configurator) =>
+        _outboxDurability.Add(configurator);
 
     public void SelectProvisioning(InfrastructureProvisioning provisioning) => Provisioning = provisioning;
 

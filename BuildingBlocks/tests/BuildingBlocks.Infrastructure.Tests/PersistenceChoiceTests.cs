@@ -1,4 +1,4 @@
-﻿using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
+using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
@@ -26,7 +26,7 @@ public sealed class PersistenceChoiceTests
     [Fact]
     public void TwoMartenChoicesOverDifferentDatabases_Throw()
     {
-        var settings = new WolverineWiringSettings();
+        var settings = new BuildingBlocksWiringSettings();
         settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString));
 
         var exception = Assert.Throws<InvalidOperationException>(
@@ -66,7 +66,7 @@ public sealed class PersistenceChoiceTests
     [Fact]
     public void DeliberatelyWithoutPersistence_IsChosenButNotSelected()
     {
-        var settings = new WolverineWiringSettings();
+        var settings = new BuildingBlocksWiringSettings();
         settings.SelectPersistence(PersistenceChoice.NoPersistence);
 
         Assert.True(settings.Persistence.IsChosen);
@@ -78,7 +78,7 @@ public sealed class PersistenceChoiceTests
     [Fact]
     public void NoPersistenceAfterAStrategy_Throws()
     {
-        var settings = new WolverineWiringSettings();
+        var settings = new BuildingBlocksWiringSettings();
         settings.SelectPersistence(PersistenceChoice.Marten(ConnectionString));
 
         var exception = Assert.Throws<InvalidOperationException>(
@@ -91,7 +91,7 @@ public sealed class PersistenceChoiceTests
     [Fact]
     public void SelectingTheSameChoiceTwice_IsAccepted()
     {
-        var settings = new WolverineWiringSettings();
+        var settings = new BuildingBlocksWiringSettings();
 
         settings.SelectPersistence(PersistenceChoice.EfCore(ConnectionString));
         settings.SelectPersistence(PersistenceChoice.EfCore(ConnectionString));
@@ -102,13 +102,13 @@ public sealed class PersistenceChoiceTests
     [Fact]
     public void EitherPersistenceChoice_MakesWolverineRequired()
     {
-        var efCore = new WolverineWiringSettings();
+        var efCore = new BuildingBlocksWiringSettings();
         efCore.SelectPersistence(PersistenceChoice.EfCore(ConnectionString));
 
-        var marten = new WolverineWiringSettings();
+        var marten = new BuildingBlocksWiringSettings();
         marten.SelectPersistence(PersistenceChoice.Marten(ConnectionString));
 
-        Assert.False(new WolverineWiringSettings().RequiresWolverine);
+        Assert.False(new BuildingBlocksWiringSettings().RequiresWolverine);
         Assert.True(efCore.RequiresWolverine);
         Assert.True(marten.RequiresWolverine);
     }

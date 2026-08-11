@@ -1,6 +1,7 @@
 using BuildingBlocks.Application.Persistence;
 using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
+using BuildingBlocks.Infrastructure.Diagnostics;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using BuildingBlocks.Infrastructure.Persistence;
 using BuildingBlocks.Infrastructure.Persistence.EventSourced;
@@ -12,12 +13,13 @@ using Marten;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Wolverine;
 using Wolverine.EntityFrameworkCore;
 using Wolverine.Marten;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Registration;
 
-internal sealed class PersistenceRegistrar(IServiceCollection services, WolverineWiringSettings wiring)
+internal sealed class PersistenceRegistrar(IServiceCollection services, BuildingBlocksWiringSettings wiring)
 {
     public void UseNone() => wiring.SelectPersistence(PersistenceChoice.NoPersistence);
 
@@ -39,6 +41,12 @@ internal sealed class PersistenceRegistrar(IServiceCollection services, Wolverin
         services.TryAddSingleton<StateStoredReadModelRebuildRunner<TContext>>();
         services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork<TContext>>();
         services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IPersistenceFaultTranslator, EfCoreFaultTranslator>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IPersistenceFaultTranslator, PostgresFaultTranslator>());
+        wiring.AddOutboxDurability(new EfCoreOutboxDurability(connectionString));
+        DeadLetterHealthCheckRegistration.Register(services);
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IStartupCheck, AggregateStateModelCheck<TContext>>());
     }
@@ -73,5 +81,10 @@ internal sealed class PersistenceRegistrar(IServiceCollection services, Wolverin
         services.TryAddSingleton<EventSourcedReadModelRebuildRunner>();
         services.TryAddScoped<IUnitOfWork, MartenUnitOfWork>();
         services.TryAddScoped(typeof(IRepository<,>), typeof(MartenEventSourcedRepository<,>));
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IPersistenceFaultTranslator, MartenFaultTranslator>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IPersistenceFaultTranslator, PostgresFaultTranslator>());
+        DeadLetterHealthCheckRegistration.Register(services);
     }
 }

@@ -1,20 +1,17 @@
+using System.Diagnostics.CodeAnalysis;
 using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Application.Persistence;
 using BuildingBlocks.Application.Results;
-using JasperFx;
-using Microsoft.EntityFrameworkCore;
-using Npgsql;
+using BuildingBlocks.Infrastructure.Persistence;
 
 namespace BuildingBlocks.Infrastructure.Dispatching;
 
-internal sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork unitOfWork)
+internal sealed class UnitOfWorkBehavior<TRequest, TResponse>(
+    IUnitOfWork unitOfWork,
+    IEnumerable<IPersistenceFaultTranslator> faultTranslators)
     : IPipelineBehavior<TRequest, TResponse>
     where TResponse : Result
 {
-    public const string ConcurrencyConflictCode = "persistence.concurrency_conflict";
-
-    public const string UniqueViolationCode = "persistence.unique_violation";
-
     private static readonly bool IsCommand =
         typeof(ICommand).IsAssignableFrom(typeof(TRequest))
         || Array.Exists(
@@ -36,33 +33,28 @@ internal sealed class UnitOfWorkBehavior<TRequest, TResponse>(IUnitOfWork unitOf
         {
             await unitOfWork.CommitAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (ConcurrencyException exception)
+        catch (Exception exception) when (TryTranslate(exception, out var failure))
         {
-            return pipeline.Failed(Failure.Conflict(ConcurrencyConflictCode, exception.Message));
-        }
-        catch (DbUpdateConcurrencyException exception)
-        {
-            return pipeline.Failed(Failure.Conflict(ConcurrencyConflictCode, exception.Message));
-        }
-        catch (DbUpdateException exception) when (IsUniqueViolation(exception.InnerException))
-        {
-            return pipeline.Failed(Failure.Conflict(
-                UniqueViolationCode,
-                Describe((PostgresException)exception.InnerException!)));
-        }
-        catch (PostgresException exception) when (IsUniqueViolation(exception))
-        {
-            return pipeline.Failed(Failure.Conflict(UniqueViolationCode, Describe(exception)));
+            return pipeline.Failed(failure);
         }
 
         return response;
     }
 
-    private static bool IsUniqueViolation(Exception? exception) =>
-        exception is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
+    private bool TryTranslate(Exception exception, [NotNullWhen(true)] out Failure? failure)
+    {
+        for (var candidate = exception; candidate is not null; candidate = candidate.InnerException)
+        {
+            foreach (var translator in faultTranslators)
+            {
+                if (translator.TryTranslate(candidate, out failure))
+                {
+                    return true;
+                }
+            }
+        }
 
-    private static string Describe(PostgresException exception) =>
-        string.IsNullOrWhiteSpace(exception.ConstraintName)
-            ? exception.Message
-            : $"The unique constraint '{exception.ConstraintName}' was violated.";
+        failure = null;
+        return false;
+    }
 }

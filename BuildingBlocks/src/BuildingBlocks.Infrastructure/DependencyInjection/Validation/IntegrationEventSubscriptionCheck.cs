@@ -8,7 +8,7 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
 internal sealed class IntegrationEventSubscriptionCheck(
     IServiceProvider serviceProvider,
-    WolverineWiringSettings settings) : SynchronousStartupCheck
+    BuildingBlocksWiringSettings settings) : SynchronousStartupCheck
 {
     public override StartupPhase Phase => StartupPhase.AfterHostedServicesStarted;
 

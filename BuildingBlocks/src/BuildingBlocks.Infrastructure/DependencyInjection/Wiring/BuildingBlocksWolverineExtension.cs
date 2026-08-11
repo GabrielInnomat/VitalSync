@@ -3,7 +3,7 @@ using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 
-internal sealed class BuildingBlocksWolverineExtension(WolverineWiringSettings settings) : IWolverineExtension
+internal sealed class BuildingBlocksWolverineExtension(BuildingBlocksWiringSettings settings) : IWolverineExtension
 {
     public void Configure(WolverineOptions options)
     {

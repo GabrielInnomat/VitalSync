@@ -25,12 +25,12 @@ public sealed class BuildingBlocksOptions
     internal BuildingBlocksOptions(IServiceCollection services, PipelineBehaviorRegistry behaviorRegistry)
     {
         _handlers = new HandlerRegistrar(services, behaviorRegistry);
-        _persistence = new PersistenceRegistrar(services, WolverineWiring);
-        _messaging = new MessagingRegistrar(services, WolverineWiring);
-        _provisioning = new ProvisioningRegistrar(WolverineWiring);
+        _persistence = new PersistenceRegistrar(services, Wiring);
+        _messaging = new MessagingRegistrar(services, Wiring);
+        _provisioning = new ProvisioningRegistrar(Wiring);
     }
 
-    internal WolverineWiringSettings WolverineWiring { get; } = new();
+    internal BuildingBlocksWiringSettings Wiring { get; } = new();
 
     internal IReadOnlyCollection<Assembly> ScannedAssemblies => _handlers.ScannedAssemblies;
 

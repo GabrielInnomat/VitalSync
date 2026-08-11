@@ -10,7 +10,7 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
 internal sealed partial class UnitOfWorkPresenceCheck(
     IServiceProvider serviceProvider,
-    WolverineWiringSettings wiring,
+    BuildingBlocksWiringSettings wiring,
     IReadOnlyCollection<Assembly> scannedAssemblies,
     ILogger<UnitOfWorkPresenceCheck> logger) : SynchronousStartupCheck
 {

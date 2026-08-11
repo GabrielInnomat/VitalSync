@@ -86,8 +86,8 @@ public sealed class UnitOfWorkPresenceCheckTests
     {
         using var provider = BuildProvider(options => options.UseNoPersistence());
 
-        Assert.False(provider.GetRequiredService<WolverineWiringSettings>().Persistence.IsSelected);
-        Assert.False(provider.GetRequiredService<WolverineWiringSettings>().RequiresWolverine);
+        Assert.False(provider.GetRequiredService<BuildingBlocksWiringSettings>().Persistence.IsSelected);
+        Assert.False(provider.GetRequiredService<BuildingBlocksWiringSettings>().RequiresWolverine);
     }
 
     private static IStartupCheck Check(ServiceProvider provider) =>

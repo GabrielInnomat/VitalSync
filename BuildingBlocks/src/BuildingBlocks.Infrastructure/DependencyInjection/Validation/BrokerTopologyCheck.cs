@@ -3,7 +3,7 @@ using RabbitMQ.Client;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 
-internal sealed class BrokerTopologyCheck(WolverineWiringSettings settings) : IStartupCheck
+internal sealed class BrokerTopologyCheck(BuildingBlocksWiringSettings settings) : IStartupCheck
 {
     public StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 

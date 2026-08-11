@@ -4,6 +4,8 @@ using BuildingBlocks.Application.Results;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Dispatching;
 using BuildingBlocks.Infrastructure.Persistence;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
+using BuildingBlocks.Infrastructure.Persistence.StateStored;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -69,7 +71,7 @@ public sealed class UnitOfWorkBehaviorTests
         Assert.True(result.IsFailure);
         var failure = Assert.Single(result.Failures);
         Assert.Equal(FailureCategory.Conflict, failure.Category);
-        Assert.Equal(UnitOfWorkBehavior<ProbeCommand, Result>.ConcurrencyConflictCode, failure.Code);
+        Assert.Equal(PersistenceFailureCodes.ConcurrencyConflict, failure.Code);
     }
 
     [Fact]
@@ -85,7 +87,7 @@ public sealed class UnitOfWorkBehaviorTests
         Assert.True(result.IsFailure);
         var failure = Assert.Single(result.Failures);
         Assert.Equal(FailureCategory.Conflict, failure.Category);
-        Assert.Equal(UnitOfWorkBehavior<ProbeCommand, Result>.UniqueViolationCode, failure.Code);
+        Assert.Equal(PersistenceFailureCodes.UniqueViolation, failure.Code);
         Assert.Contains("ux_widgets_name", failure.Message, StringComparison.Ordinal);
     }
 
@@ -101,7 +103,7 @@ public sealed class UnitOfWorkBehaviorTests
         Assert.True(result.IsFailure);
         var failure = Assert.Single(result.Failures);
         Assert.Equal(FailureCategory.Conflict, failure.Category);
-        Assert.Equal(UnitOfWorkBehavior<ProbeCommand, Result>.UniqueViolationCode, failure.Code);
+        Assert.Equal(PersistenceFailureCodes.UniqueViolation, failure.Code);
         Assert.Contains("ux_gadgets_name", failure.Message, StringComparison.Ordinal);
     }
 
@@ -116,7 +118,7 @@ public sealed class UnitOfWorkBehaviorTests
         var result = await sender.SendAsync(new ProbeCommand(), CancellationToken.None);
 
         var failure = Assert.Single(result.Failures);
-        Assert.Equal(UnitOfWorkBehavior<ProbeCommand, Result>.UniqueViolationCode, failure.Code);
+        Assert.Equal(PersistenceFailureCodes.UniqueViolation, failure.Code);
         Assert.False(string.IsNullOrWhiteSpace(failure.Message));
     }
 
@@ -133,6 +135,22 @@ public sealed class UnitOfWorkBehaviorTests
         var sender = provider.GetRequiredService<ISender>();
 
         await Assert.ThrowsAsync<DbUpdateException>(
+            () => sender.SendAsync(new ProbeCommand(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CommitFault_WithoutAnyTranslator_IsNotSwallowed()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddScoped<IUnitOfWork>(_ => new ThrowingUnitOfWork(new DbUpdateConcurrencyException("row changed")));
+        services.AddScoped<ICommandHandler<ProbeCommand>>(_ => new PassingCommandHandler());
+        services.AddBuildingBlocks(_ => { });
+
+        using var provider = services.BuildServiceProvider();
+        var sender = provider.GetRequiredService<ISender>();
+
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(
             () => sender.SendAsync(new ProbeCommand(), CancellationToken.None));
     }
 
@@ -155,7 +173,7 @@ public sealed class UnitOfWorkBehaviorTests
     [Fact]
     public async Task Behavior_WithTheNullUnitOfWork_PassesThrough()
     {
-        var behavior = new UnitOfWorkBehavior<ProbeCommand, Result>(new NullUnitOfWork());
+        var behavior = new UnitOfWorkBehavior<ProbeCommand, Result>(new NullUnitOfWork(), []);
 
         var result = await behavior.HandleAsync(
             new ProbeCommand(),
@@ -179,6 +197,9 @@ public sealed class UnitOfWorkBehaviorTests
         services.AddLogging();
         services.AddScoped<IUnitOfWork>(_ => unitOfWork);
         services.AddScoped<ICommandHandler<ProbeCommand>>(_ => handler);
+        services.AddSingleton<IPersistenceFaultTranslator, EfCoreFaultTranslator>();
+        services.AddSingleton<IPersistenceFaultTranslator, MartenFaultTranslator>();
+        services.AddSingleton<IPersistenceFaultTranslator, PostgresFaultTranslator>();
         services.AddBuildingBlocks(_ => { });
         return services.BuildServiceProvider();
     }

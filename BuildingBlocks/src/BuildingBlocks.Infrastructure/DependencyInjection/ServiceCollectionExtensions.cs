@@ -11,7 +11,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    internal static WolverineWiringSettings AddBuildingBlocksCore(IServiceCollection services, Action<BuildingBlocksOptions> configure)
+    internal static BuildingBlocksWiringSettings AddBuildingBlocksCore(IServiceCollection services, Action<BuildingBlocksOptions> configure)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);

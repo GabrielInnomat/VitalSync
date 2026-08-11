@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
@@ -41,7 +41,7 @@ public sealed class WolverineExtensionTests
     {
         using var provider = BuildProvider(_ => { });
 
-        var settings = provider.GetRequiredService<WolverineWiringSettings>();
+        var settings = provider.GetRequiredService<BuildingBlocksWiringSettings>();
 
         Assert.False(settings.RequiresWolverine);
         Assert.False(settings.Persistence.IsSelected);
@@ -55,7 +55,7 @@ public sealed class WolverineExtensionTests
         using var provider = BuildProvider(options =>
             options.UseEfCorePersistence<TestDbContext>(ConnectionString));
 
-        var settings = provider.GetRequiredService<WolverineWiringSettings>();
+        var settings = provider.GetRequiredService<BuildingBlocksWiringSettings>();
 
         Assert.True(settings.Persistence.IsSelected);
         Assert.Equal(ConnectionString, settings.Persistence.EfCoreWriteConnectionString);
@@ -68,7 +68,7 @@ public sealed class WolverineExtensionTests
         using var provider = BuildProvider(options =>
             options.UseMartenEventSourcing(ConnectionString));
 
-        var settings = provider.GetRequiredService<WolverineWiringSettings>();
+        var settings = provider.GetRequiredService<BuildingBlocksWiringSettings>();
 
         Assert.True(settings.Persistence.IsSelected);
         Assert.Null(settings.Persistence.EfCoreWriteConnectionString);
@@ -82,7 +82,7 @@ public sealed class WolverineExtensionTests
             .UseMartenEventSourcing(ConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
 
-        var settings = provider.GetRequiredService<WolverineWiringSettings>();
+        var settings = provider.GetRequiredService<BuildingBlocksWiringSettings>();
 
         Assert.Equal(RabbitMqUri, settings.Messaging!.RabbitMqUri);
         Assert.True(settings.RequiresWolverine);
@@ -105,7 +105,7 @@ public sealed class WolverineExtensionTests
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
             .UseMartenEventSourcing(ConnectionString));
 
-        Assert.True(provider.GetRequiredService<WolverineWiringSettings>().Persistence.IsSelected);
+        Assert.True(provider.GetRequiredService<BuildingBlocksWiringSettings>().Persistence.IsSelected);
     }
 
     [Fact]
@@ -228,7 +228,7 @@ public sealed class WolverineExtensionTests
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
             .SubscribeToIntegrationEvents("fitness.integration-events", TestAssembly, "nutrition.*", "analytics.*"));
 
-        var subscription = provider.GetRequiredService<WolverineWiringSettings>().Subscription;
+        var subscription = provider.GetRequiredService<BuildingBlocksWiringSettings>().Subscription;
 
         Assert.NotNull(subscription);
         Assert.Equal("fitness.integration-events", subscription!.QueueName);
@@ -297,7 +297,7 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithNothingSelected_AddsNoRabbitMqTransportAndNoEnvelopeRoute()
     {
-        var options = ConfigureOptions(new WolverineWiringSettings());
+        var options = ConfigureOptions(new BuildingBlocksWiringSettings());
 
         Assert.DoesNotContain(options.Transports, transport => transport.Protocol == "rabbitmq");
         Assert.DoesNotContain(
@@ -325,21 +325,21 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithoutPersistence_LeavesTheIdempotencyWindowAlone()
     {
-        var options = ConfigureOptions(new WolverineWiringSettings());
+        var options = ConfigureOptions(new BuildingBlocksWiringSettings());
 
         Assert.Equal(
             new DurabilitySettings().KeepAfterMessageHandling,
             options.Durability.KeepAfterMessageHandling);
     }
 
-    private static WolverineWiringSettings Settings(Action<WolverineWiringSettings> configure)
+    private static BuildingBlocksWiringSettings Settings(Action<BuildingBlocksWiringSettings> configure)
     {
-        var settings = new WolverineWiringSettings();
+        var settings = new BuildingBlocksWiringSettings();
         configure(settings);
         return settings;
     }
 
-    private static WolverineOptions ConfigureOptions(WolverineWiringSettings settings)
+    private static WolverineOptions ConfigureOptions(BuildingBlocksWiringSettings settings)
     {
         var options = new WolverineOptions();
         new BuildingBlocksWolverineExtension(settings).Configure(options);

@@ -7,7 +7,7 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection.Provisioning;
 
 internal sealed class MartenSchemaProvisioner(
     IServiceProvider serviceProvider,
-    WolverineWiringSettings settings) : IStartupCheck
+    BuildingBlocksWiringSettings settings) : IStartupCheck
 {
     public StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 

@@ -96,7 +96,7 @@ public sealed class IntegrationEventContextTests
             provider.GetRequiredService<IntegrationEventSourceContext>().Name);
     }
 
-    private static WolverineWiringSettings Configure(Action<BuildingBlocksOptions> configure)
+    private static BuildingBlocksWiringSettings Configure(Action<BuildingBlocksOptions> configure)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -107,7 +107,7 @@ public sealed class IntegrationEventContextTests
         });
 
         using var provider = services.BuildServiceProvider();
-        return provider.GetRequiredService<WolverineWiringSettings>();
+        return provider.GetRequiredService<BuildingBlocksWiringSettings>();
     }
 }
 

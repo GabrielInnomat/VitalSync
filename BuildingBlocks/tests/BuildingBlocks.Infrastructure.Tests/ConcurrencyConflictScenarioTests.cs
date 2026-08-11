@@ -134,7 +134,7 @@ public sealed class ConcurrencyConflictScenarioTests(PostgreSqlFixture fixture)
 
         var failure = Assert.Single(result.Failures);
         Assert.Equal(FailureCategory.Conflict, failure.Category);
-        Assert.Equal(UnitOfWorkBehavior<BumpTally, Result>.ConcurrencyConflictCode, failure.Code);
+        Assert.Equal(PersistenceFailureCodes.ConcurrencyConflict, failure.Code);
     }
 
     private static async Task<Result> SendAsync(IHost host, ICommand command)

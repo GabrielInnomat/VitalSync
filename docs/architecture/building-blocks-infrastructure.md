@@ -97,7 +97,7 @@ Two cuts here carry meaning rather than tidiness:
   folders make that visible; the shared parent holds only what both need. Note that
   `ApplyEntityKeyConversions` stays in the shared parent on purpose: an event-sourced
   context still uses EF Core for its **read** models.
-- **Configuring Wolverine is not messaging.** `WolverineWiringSettings`,
+- **Configuring Wolverine is not messaging.** `BuildingBlocksWiringSettings`,
   `MessagingSettings`, `IntegrationEventSubscription`, `WolverineOptionsExtensions`, and
   `BuildingBlocksWolverineExtension` describe what the host asked for and translate it
   into Wolverine's options; they run once at composition time and never on a message.
@@ -114,7 +114,7 @@ is non-null for exactly one case. That is why the outbox cannot end up pointed a
 different database than the aggregates — there is no second place to write the
 connection string to.
 
-`WolverineWiringSettings` therefore has no public setters. Selecting is a method, and
+`BuildingBlocksWiringSettings` therefore has no public setters. Selecting is a method, and
 the two guards that need nothing but the selection itself live there: choosing two
 different strategies throws (naming both calls), and choosing the **same** strategy
 twice with **different** arguments throws too, because a bounded context has exactly
@@ -754,7 +754,7 @@ container after everything it inspects.
 
 A host has one composition root, and three of the objects registered here are a
 **single shared instance** that the options lambda writes into: the
-`PipelineBehaviorRegistry`, the `WolverineWiringSettings`, and the
+`PipelineBehaviorRegistry`, the `BuildingBlocksWiringSettings`, and the
 `DomainEventTypeRegistry`. They used to be registered with `TryAddSingleton`, which
 made a second call the worst kind of bug — it succeeded. The first instance stayed in
 the container, the second call filled a fresh one nobody resolves, and the result was
@@ -832,7 +832,7 @@ guarantee down with a real host and a hosted service registered *after* the runn
 Two consequences for authoring:
 
 - **A check registers unconditionally and guards itself.** `WolverineRuntimeCheck` and
-  `IntegrationEventSubscriptionCheck` take `WolverineWiringSettings` and return early
+  `IntegrationEventSubscriptionCheck` take `BuildingBlocksWiringSettings` and return early
   when the capability was not selected. Conditional registration would make "is this
   check even present?" a second thing to reason about.
 - **`UnitOfWorkPresenceCheck` probes the built container**, by resolving `IUnitOfWork`

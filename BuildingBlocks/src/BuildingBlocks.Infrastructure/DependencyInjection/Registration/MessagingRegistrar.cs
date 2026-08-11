@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Registration;
 
-internal sealed class MessagingRegistrar(IServiceCollection services, WolverineWiringSettings wiring)
+internal sealed class MessagingRegistrar(IServiceCollection services, BuildingBlocksWiringSettings wiring)
 {
     public void UseMessaging(Uri rabbitMqUri, string exchangeName, string contextName)
     {
