@@ -3,7 +3,7 @@ using BuildingBlocks.Infrastructure.DependencyInjection.Registration;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Dispatching;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
-using Microsoft.EntityFrameworkCore;
+using BuildingBlocks.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection;
@@ -68,22 +68,11 @@ public sealed class BuildingBlocksOptions
         return this;
     }
 
-    public BuildingBlocksOptions UseEfCorePersistence<TContext>(
-        string connectionString,
-        Action<DbContextOptionsBuilder>? configureContext = null)
-        where TContext : DbContext
+    internal BuildingBlocksOptions UsePersistence(IPersistenceAdapter adapter)
     {
-        ArgumentNullException.ThrowIfNull(connectionString);
+        ArgumentNullException.ThrowIfNull(adapter);
 
-        _persistence.UseEfCore<TContext>(connectionString, configureContext);
-        return this;
-    }
-
-    public BuildingBlocksOptions UseMartenEventSourcing(string connectionString)
-    {
-        ArgumentNullException.ThrowIfNull(connectionString);
-
-        _persistence.UseMarten(connectionString);
+        _persistence.Use(adapter);
         return this;
     }
 

@@ -1,19 +1,18 @@
-using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
-using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
+using BuildingBlocks.Infrastructure.Startup;
 using Marten;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BuildingBlocks.Infrastructure.DependencyInjection.Provisioning;
+namespace BuildingBlocks.Infrastructure.Persistence.EventSourced;
 
 internal sealed class MartenSchemaProvisioner(
     IServiceProvider serviceProvider,
-    ProvisioningSelection provisioning) : IStartupCheck
+    Func<bool> provisionsInfrastructure) : IStartupCheck
 {
     public StartupPhase Phase => StartupPhase.BeforeHostedServicesStart;
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
-        if (!provisioning.ProvisionsInfrastructure)
+        if (!provisionsInfrastructure())
         {
             return;
         }

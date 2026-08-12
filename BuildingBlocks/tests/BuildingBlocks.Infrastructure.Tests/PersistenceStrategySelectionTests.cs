@@ -1,4 +1,6 @@
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
+using BuildingBlocks.Infrastructure.Persistence.StateStored;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

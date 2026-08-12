@@ -1,4 +1,5 @@
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
+using BuildingBlocks.Infrastructure.Startup;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine.Runtime;
 

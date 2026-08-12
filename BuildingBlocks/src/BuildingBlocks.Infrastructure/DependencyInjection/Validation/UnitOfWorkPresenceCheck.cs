@@ -3,6 +3,7 @@ using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Application.Persistence;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Persistence;
+using BuildingBlocks.Infrastructure.Startup;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

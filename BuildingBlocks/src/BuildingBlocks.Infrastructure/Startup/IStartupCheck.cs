@@ -1,4 +1,4 @@
-namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
+namespace BuildingBlocks.Infrastructure.Startup;
 
 public interface IStartupCheck
 {

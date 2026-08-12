@@ -3,6 +3,7 @@ using BuildingBlocks.Application.ReadModels;
 using BuildingBlocks.Domain.Aggregates;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
+using BuildingBlocks.Infrastructure.Persistence.StateStored;
 using BuildingBlocks.Infrastructure.ReadModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

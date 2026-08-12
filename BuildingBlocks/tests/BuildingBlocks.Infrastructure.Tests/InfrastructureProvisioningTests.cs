@@ -1,6 +1,8 @@
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
+using BuildingBlocks.Infrastructure.Startup;
 using Marten;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
@@ -42,7 +44,7 @@ public sealed class InfrastructureProvisioningTests
     [Fact]
     public void WithoutProvisioning_TheMessageStorageIsNotBuiltAtStartup()
     {
-        var options = ConfigureOptions(Settings(settings => settings.Persistence.Select(PersistenceChoice.Marten(ConnectionString))));
+        var options = ConfigureOptions(Settings(settings => settings.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString)))));
 
         Assert.Equal(JasperFx.AutoCreate.None, options.AutoBuildMessageStorageOnStartup);
     }
@@ -52,7 +54,7 @@ public sealed class InfrastructureProvisioningTests
     {
         var options = ConfigureOptions(Settings(settings =>
         {
-            settings.Persistence.Select(PersistenceChoice.Marten(ConnectionString));
+            settings.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString)));
             settings.Provisioning.Select(InfrastructureProvisioning.AtStartup);
         }));
 

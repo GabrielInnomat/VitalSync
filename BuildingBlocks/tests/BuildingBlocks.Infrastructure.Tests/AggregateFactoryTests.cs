@@ -1,5 +1,6 @@
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Persistence;
+using BuildingBlocks.Infrastructure.Persistence.StateStored;
 using HullFixture;
 using Microsoft.Extensions.DependencyInjection;
 

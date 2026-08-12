@@ -1,53 +1,36 @@
+using BuildingBlocks.Infrastructure.Persistence;
+
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 
-internal abstract record PersistenceChoice
+internal sealed record PersistenceChoice
 {
-    private PersistenceChoice()
+    private PersistenceChoice(IPersistenceAdapter? adapter, string description, bool isChosen)
     {
+        Adapter = adapter;
+        Description = description;
+        IsChosen = isChosen;
     }
 
-    public static PersistenceChoice None { get; } = new NoneSelected();
+    public static PersistenceChoice None { get; } = new(null, "none", isChosen: false);
 
-    public static PersistenceChoice NoPersistence { get; } = new NoPersistenceSelected();
+    public static PersistenceChoice NoPersistence { get; } = new(null, "UseNoPersistence", isChosen: true);
 
-    public abstract string Description { get; }
+    public IPersistenceAdapter? Adapter { get; }
 
-    public bool IsChosen => this is not NoneSelected;
+    public string Description { get; }
 
-    public bool IsSelected => this is MartenEventStore or EfCoreWriteDatabase;
+    public bool IsChosen { get; }
 
-    public bool IsDeliberatelyWithoutPersistence => this is NoPersistenceSelected;
+    public bool IsSelected => Adapter is not null;
 
-    public string? EfCoreWriteConnectionString => (this as EfCoreWriteDatabase)?.ConnectionString;
+    public bool IsDeliberatelyWithoutPersistence => IsChosen && Adapter is null;
 
-    public string? WriteConnectionString => this switch
+    public string? WriteConnectionString => Adapter?.WriteConnectionString;
+
+    public static PersistenceChoice For(IPersistenceAdapter adapter)
     {
-        EfCoreWriteDatabase efCore => efCore.ConnectionString,
-        MartenEventStore marten => marten.ConnectionString,
-        _ => null,
-    };
+        ArgumentNullException.ThrowIfNull(adapter);
 
-    public static PersistenceChoice Marten(string connectionString) => new MartenEventStore(connectionString);
-
-    public static PersistenceChoice EfCore(string connectionString) => new EfCoreWriteDatabase(connectionString);
-
-    private sealed record NoneSelected : PersistenceChoice
-    {
-        public override string Description => "none";
-    }
-
-    private sealed record NoPersistenceSelected : PersistenceChoice
-    {
-        public override string Description => "UseNoPersistence";
-    }
-
-    private sealed record MartenEventStore(string ConnectionString) : PersistenceChoice
-    {
-        public override string Description => "UseMartenEventSourcing";
-    }
-
-    private sealed record EfCoreWriteDatabase(string ConnectionString) : PersistenceChoice
-    {
-        public override string Description => "UseEfCorePersistence";
+        return new PersistenceChoice(adapter, adapter.Description, isChosen: true);
     }
 }

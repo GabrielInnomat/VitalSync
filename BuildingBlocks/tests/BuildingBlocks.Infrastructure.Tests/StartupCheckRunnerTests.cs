@@ -1,5 +1,7 @@
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
+using BuildingBlocks.Infrastructure.Startup;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -71,6 +73,12 @@ public sealed class StartupCheckRunnerTests
         Assert.Equal(["late-service", "check"], observed);
     }
 
+    private static readonly string[] ContributedByAPersistenceAdapter =
+    [
+        "AggregateStateModelCheck`1",
+        "MartenSchemaProvisioner",
+    ];
+
     [Fact]
     public void EveryStartupCheckInTheAssembly_IsReachableThroughTheRunner()
     {
@@ -92,9 +100,27 @@ public sealed class StartupCheckRunnerTests
 
         var unregistered = implementations
             .Except(registered, StringComparer.Ordinal)
-            .Where(name => !name.StartsWith("AggregateStateModelCheck", StringComparison.Ordinal));
+            .Except(ContributedByAPersistenceAdapter, StringComparer.Ordinal);
 
         Assert.Empty(unregistered);
+    }
+
+    [Fact]
+    public void AChoosingPersistenceAdapter_ContributesItsOwnStartupCheck()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddBuildingBlocks(options =>
+        {
+            options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
+            options.UseMartenEventSourcing("Host=localhost;Database=test;Username=test;******");
+        });
+
+        using var provider = services.BuildServiceProvider();
+
+        Assert.Contains(
+            provider.GetServices<IStartupCheck>(),
+            check => check is MartenSchemaProvisioner);
     }
 
     private static IHostedLifecycleService CreateRunner(params IStartupCheck[] checks) =>

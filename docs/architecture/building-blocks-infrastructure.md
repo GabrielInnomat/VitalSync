@@ -114,7 +114,8 @@ capability. The folder is the namespace.
 | `DependencyInjection/`             | entry points, options, and the composition root                     |
 | `DependencyInjection/Registration/`| what a host selected, one collaborator per capability               |
 | `DependencyInjection/Wiring/`      | how Wolverine itself is configured                                  |
-| `DependencyInjection/Validation/`  | the start-up checks (ADR-0027)                                      |
+| `DependencyInjection/Validation/`  | the start-up checks the core itself contributes (ADR-0027)          |
+| `Startup/`                         | the start-up-check mechanics every package builds on: `IStartupCheck`, `StartupPhase`, `SynchronousStartupCheck`, `StartupCheckRunner` |
 | `Schema/`                          | the persisted-event snapshot a service's tests compare against (ADR-0035) |
 
 Two cuts here carry meaning rather than tidiness:
@@ -759,15 +760,20 @@ methods validates its own arguments and delegates to one internal collaborator i
 | Collaborator          | Owns                                                                    |
 | --------------------- | ----------------------------------------------------------------------- |
 | `HandlerRegistrar`    | assembly scanning, handler/mapper/projection registration, behaviors    |
-| `PersistenceRegistrar`| EF Core and Marten wiring — the only place that knows either            |
+| `PersistenceRegistrar`| the persistence selection and the hand-off to the chosen adapter — it names no vendor |
 | `MessagingRegistrar`  | the RabbitMQ selection and the single subscription                      |
 | `DomainEventCatalog`  | the domain-event assemblies and the registry they are frozen into       |
 
-The split is what keeps the options type honest: it no longer references EF Core,
-Npgsql, Marten, or Wolverine at all, so a third-party concern has exactly one file it
-can be changed in. The public API is unchanged — the fluent chain still reads
+The split is what keeps the options type honest: it references neither EF Core, Npgsql
+nor Marten, so a third-party concern has exactly one file it can be changed in.
+`UseEfCorePersistence<TContext>` and `UseMartenEventSourcing` are **extension methods**
+that live with their adapter (`Persistence/StateStored/`, `Persistence/EventSourced/`)
+and hand an `IPersistenceAdapter` to the core; a caller therefore adds a `using` for the
+namespace of the store it chose, which is what will name the package once the family is
+split. The fluent chain itself is unchanged — it still reads
 `options.AddHandlersFrom(...).UseEfCorePersistence<T>(...)`, and each method still
-returns `this`.
+returns `this`. The one vendor the facade still names is Wolverine, in the host-builder
+overload below.
 
 The work itself lives in the internal `BuildingBlocksComposition`, which runs six
 named phases in a fixed order:
@@ -779,7 +785,7 @@ named phases in a fixed order:
 | `Validate`               | rejects contradictory selections and **freezes** the domain-event registry |
 | `RegisterCore`           | dispatcher, behaviors, persistence, publisher, messaging, clock          |
 | `ValidateBehaviorOrders` | rejects an `IPipelineBehavior<,>` that was registered without an order   |
-| `RegisterStartupChecks`  | the hosted services from `DependencyInjection/Validation/`               |
+| `RegisterStartupChecks`  | the hosted services from `Startup/` and the core checks from `DependencyInjection/Validation/` |
 
 The order is load-bearing rather than cosmetic. `Validate` materialises the
 `DomainEventTypeRegistry`, which is what makes `AddDomainEventsFrom` a
@@ -912,8 +918,9 @@ One value drives three settings, because the three effects are one decision:
 
 Wolverine's two switches act at its own start, but Marten applies a configured change
 lazily on first use, so `AtStartup` adds one step of our own: `MartenSchemaProvisioner` in
-`DependencyInjection/Provisioning/`, an `IStartupCheck` in the `BeforeHostedServicesStart`
-phase calling `ApplyAllConfiguredChangesToDatabaseAsync`. It is the **only** writer among
+`Persistence/EventSourced/`, an `IStartupCheck` in the `BeforeHostedServicesStart`
+phase calling `ApplyAllConfiguredChangesToDatabaseAsync`. The Marten adapter contributes it,
+so it exists only when a host actually chose Marten. It is the **only** writer among
 the start-up steps, which is what keeps "the phase is load-bearing, not the order" true —
 a second writer would need a real ordering mechanism instead.
 
@@ -971,8 +978,9 @@ fallback is acceptable:
 `UseNoPersistence()` is a positive selection on `PersistenceChoice`, not an opt-out
 flag: it is mutually exclusive with `UseEfCorePersistence`/`UseMartenEventSourcing`
 (combining them throws) and it requires no message store, no Wolverine, and no domain
-event assembly. `PersistenceChoice` gains a fourth case for it, which is why the choice
-now distinguishes `IsChosen` (something was said) from `IsSelected` (a real store
+event assembly. `PersistenceChoice` carries the chosen adapter, and `NoPersistence` is one
+of its two sentinel states, which is why the choice distinguishes `IsChosen` (something was
+said) from `IsSelected` (a real store
 exists — the fact that drives the outbox, domain-event routing and Wolverine).
 
 The last row is the point of the whole change: a gateway, a test, or a query-only host

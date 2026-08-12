@@ -8,6 +8,7 @@ using BuildingBlocks.Domain.Events;
 using BuildingBlocks.Domain.Naming;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
 using BuildingBlocks.Infrastructure.ReadModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

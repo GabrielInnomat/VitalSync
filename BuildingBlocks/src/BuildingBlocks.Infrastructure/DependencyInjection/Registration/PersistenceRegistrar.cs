@@ -1,21 +1,6 @@
-using BuildingBlocks.Application.Persistence;
-using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
-using BuildingBlocks.Infrastructure.Diagnostics;
-using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 using BuildingBlocks.Infrastructure.Persistence;
-using BuildingBlocks.Infrastructure.Persistence.EventSourced;
-using BuildingBlocks.Infrastructure.Persistence.StateStored;
-using BuildingBlocks.Infrastructure.ReadModels;
-using JasperFx;
-using JasperFx.Events;
-using Marten;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Wolverine;
-using Wolverine.EntityFrameworkCore;
-using Wolverine.Marten;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Registration;
 
@@ -26,68 +11,14 @@ internal sealed class PersistenceRegistrar(
 {
     public void UseNone() => persistence.Select(PersistenceChoice.NoPersistence);
 
-    public void UseEfCore<TContext>(string connectionString, Action<DbContextOptionsBuilder>? configureContext)
-        where TContext : DbContext
+    public void Use(IPersistenceAdapter adapter)
     {
-        persistence.Select(PersistenceChoice.EfCore(connectionString));
+        ArgumentNullException.ThrowIfNull(adapter);
 
-        services.AddDbContextWithWolverineIntegration<TContext>(builder =>
-        {
-            builder.UseNpgsql(connectionString);
-            configureContext?.Invoke(builder);
-        });
-
-        services.TryAddScoped(static provider =>
-            new WriteDbContextAccessor(provider.GetRequiredService<TContext>()));
-        services.TryAddScoped<EfCoreAggregateTracker>();
-        services.TryAddSingleton<DomainEventEnvelopeFactory>();
-        services.TryAddSingleton<StateStoredReadModelRebuildRunner<TContext>>();
-        services.TryAddScoped<IUnitOfWork, EfCoreUnitOfWork<TContext>>();
-        services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
-        services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IPersistenceFaultTranslator, EfCoreFaultTranslator>());
-        services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IPersistenceFaultTranslator, PostgresFaultTranslator>());
-        persistence.AddOutboxDurability(new EfCoreOutboxDurability(connectionString));
-        DeadLetterHealthCheckRegistration.Register(services);
-        services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IStartupCheck, AggregateStateModelCheck<TContext>>());
-    }
-
-    public void UseMarten(string connectionString)
-    {
-        persistence.Select(PersistenceChoice.Marten(connectionString));
-
-        services.AddMarten(serviceProvider =>
-        {
-            var storeOptions = new StoreOptions();
-            storeOptions.Connection(connectionString);
-            storeOptions.AutoCreateSchemaObjects = provisioning.ProvisionsInfrastructure
-                ? AutoCreate.CreateOrUpdate
-                : AutoCreate.None;
-            storeOptions.Events.StreamIdentity = StreamIdentity.AsString;
-            storeOptions.UseSystemTextJsonForSerialization(EntityKeyJsonOptions.Create());
-
-            foreach (var (domainEventType, eventName) in serviceProvider
-                .GetRequiredService<DomainEventTypeRegistry>()
-                .NamesByType)
-            {
-                storeOptions.Events.MapEventType(domainEventType, eventName);
-            }
-
-            return storeOptions;
-        }).UseLightweightSessions()
-            .IntegrateWithWolverine();
-
-        services.TryAddScoped<MartenAggregateTracker>();
-        services.TryAddSingleton<DomainEventEnvelopeFactory>();
-        services.TryAddSingleton<EventSourcedReadModelRebuildRunner>();
-        services.TryAddScoped<IUnitOfWork, MartenUnitOfWork>();
-        services.TryAddScoped(typeof(IRepository<,>), typeof(MartenEventSourcedRepository<,>));
-        services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IPersistenceFaultTranslator, MartenFaultTranslator>());
-        services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IPersistenceFaultTranslator, PostgresFaultTranslator>());
-        DeadLetterHealthCheckRegistration.Register(services);
+        persistence.Select(PersistenceChoice.For(adapter));
+        adapter.Register(new PersistenceRegistrationContext(
+            services,
+            () => provisioning.ProvisionsInfrastructure,
+            persistence.AddOutboxDurability));
     }
 }

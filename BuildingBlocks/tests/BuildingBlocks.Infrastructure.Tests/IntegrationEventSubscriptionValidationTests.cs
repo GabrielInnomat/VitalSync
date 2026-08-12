@@ -1,5 +1,6 @@
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
 using DeadLetterFixture;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

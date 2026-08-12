@@ -10,6 +10,7 @@ using BuildingBlocks.Domain.Naming;
 using BuildingBlocks.Domain.Rules;
 using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Wolverine;

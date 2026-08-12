@@ -1,5 +1,6 @@
 using System.Reflection;
 using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Infrastructure.Startup;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;

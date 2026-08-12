@@ -1,4 +1,8 @@
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
+using BuildingBlocks.Infrastructure.Persistence;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
+using BuildingBlocks.Infrastructure.Persistence.StateStored;
+using Microsoft.EntityFrameworkCore;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
@@ -6,31 +10,35 @@ public sealed class PersistenceChoiceTests
 {
     private const string ConnectionString = "Host=localhost;Database=test;Username=test;******";
 
+    private static EfCorePersistenceAdapter<TestDbContext> EfCore(string connectionString) =>
+        new(connectionString, null);
+
     [Fact]
     public void None_IsNotSelectedAndCarriesNoConnectionString()
     {
         Assert.False(PersistenceChoice.None.IsSelected);
-        Assert.Null(PersistenceChoice.None.EfCoreWriteConnectionString);
+        Assert.Null(PersistenceChoice.None.WriteConnectionString);
+        Assert.Null(PersistenceChoice.None.Adapter);
     }
 
     [Fact]
-    public void Marten_IsSelectedAndCarriesItsWriteConnectionStringButNotTheEfCoreOne()
+    public void Marten_IsSelectedAndCarriesItsWriteConnectionString()
     {
-        var choice = PersistenceChoice.Marten(ConnectionString);
+        var choice = PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString));
 
         Assert.True(choice.IsSelected);
         Assert.Equal(ConnectionString, choice.WriteConnectionString);
-        Assert.Null(choice.EfCoreWriteConnectionString);
+        Assert.Equal("UseMartenEventSourcing", choice.Description);
     }
 
     [Fact]
     public void TwoMartenChoicesOverDifferentDatabases_Throw()
     {
         var settings = new BuildingBlocksWiringSettings();
-        settings.Persistence.Select(PersistenceChoice.Marten(ConnectionString));
+        settings.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString)));
 
         var exception = Assert.Throws<InvalidOperationException>(
-            () => settings.Persistence.Select(PersistenceChoice.Marten("Host=elsewhere")));
+            () => settings.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter("Host=elsewhere"))));
 
         Assert.Contains("twice with different arguments", exception.Message, StringComparison.Ordinal);
     }
@@ -38,29 +46,48 @@ public sealed class PersistenceChoiceTests
     [Fact]
     public void EfCore_IsSelectedAndCarriesItsConnectionString()
     {
-        var choice = PersistenceChoice.EfCore(ConnectionString);
+        var choice = PersistenceChoice.For(EfCore(ConnectionString));
 
         Assert.True(choice.IsSelected);
-        Assert.Equal(ConnectionString, choice.EfCoreWriteConnectionString);
+        Assert.Equal(ConnectionString, choice.WriteConnectionString);
+        Assert.Equal("UseEfCorePersistence", choice.Description);
     }
 
     [Fact]
     public void TwoEfCoreChoicesOverTheSameConnectionString_AreEqual()
     {
-        Assert.Equal(PersistenceChoice.EfCore(ConnectionString), PersistenceChoice.EfCore(ConnectionString));
-        Assert.NotEqual(PersistenceChoice.EfCore(ConnectionString), PersistenceChoice.EfCore("Host=elsewhere"));
+        Assert.Equal(
+            PersistenceChoice.For(EfCore(ConnectionString)),
+            PersistenceChoice.For(EfCore(ConnectionString)));
+        Assert.NotEqual(
+            PersistenceChoice.For(EfCore(ConnectionString)),
+            PersistenceChoice.For(EfCore("Host=elsewhere")));
     }
 
     [Fact]
-    public void TheHierarchyIsClosed()
+    public void TheHierarchyIsOpen_AForeignAdapterIsAcceptedAndDescribesItself()
     {
-        var declared = typeof(PersistenceChoice).Assembly
-            .GetTypes()
-            .Where(type => type != typeof(PersistenceChoice) && typeof(PersistenceChoice).IsAssignableFrom(type))
-            .ToArray();
+        var settings = new BuildingBlocksWiringSettings();
 
-        Assert.Equal(4, declared.Length);
-        Assert.All(declared, type => Assert.Equal(typeof(PersistenceChoice), type.DeclaringType));
+        settings.Persistence.Select(PersistenceChoice.For(new ForeignAdapter(ConnectionString)));
+
+        Assert.True(settings.Persistence.IsSelected);
+        Assert.True(settings.RequiresWolverine);
+        Assert.Equal(ConnectionString, settings.Persistence.WriteConnectionString);
+        Assert.Equal("UseForeignPersistence", settings.Persistence.Choice.Description);
+    }
+
+    [Fact]
+    public void AForeignAdapterAlongsideABuiltInOne_IsRejectedAsTwoStrategies()
+    {
+        var settings = new BuildingBlocksWiringSettings();
+        settings.Persistence.Select(PersistenceChoice.For(EfCore(ConnectionString)));
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => settings.Persistence.Select(PersistenceChoice.For(new ForeignAdapter(ConnectionString))));
+
+        Assert.Contains("Two persistence strategies", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("UseForeignPersistence", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -79,7 +106,7 @@ public sealed class PersistenceChoiceTests
     public void NoPersistenceAfterAStrategy_Throws()
     {
         var settings = new BuildingBlocksWiringSettings();
-        settings.Persistence.Select(PersistenceChoice.Marten(ConnectionString));
+        settings.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString)));
 
         var exception = Assert.Throws<InvalidOperationException>(
             () => settings.Persistence.Select(PersistenceChoice.NoPersistence));
@@ -93,23 +120,34 @@ public sealed class PersistenceChoiceTests
     {
         var settings = new BuildingBlocksWiringSettings();
 
-        settings.Persistence.Select(PersistenceChoice.EfCore(ConnectionString));
-        settings.Persistence.Select(PersistenceChoice.EfCore(ConnectionString));
+        settings.Persistence.Select(PersistenceChoice.For(EfCore(ConnectionString)));
+        settings.Persistence.Select(PersistenceChoice.For(EfCore(ConnectionString)));
 
-        Assert.Equal(ConnectionString, settings.Persistence.EfCoreWriteConnectionString);
+        Assert.Equal(ConnectionString, settings.Persistence.WriteConnectionString);
     }
 
     [Fact]
     public void EitherPersistenceChoice_MakesWolverineRequired()
     {
         var efCore = new BuildingBlocksWiringSettings();
-        efCore.Persistence.Select(PersistenceChoice.EfCore(ConnectionString));
+        efCore.Persistence.Select(PersistenceChoice.For(EfCore(ConnectionString)));
 
         var marten = new BuildingBlocksWiringSettings();
-        marten.Persistence.Select(PersistenceChoice.Marten(ConnectionString));
+        marten.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString)));
 
         Assert.False(new BuildingBlocksWiringSettings().RequiresWolverine);
         Assert.True(efCore.RequiresWolverine);
         Assert.True(marten.RequiresWolverine);
+    }
+
+    private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options);
+
+    private sealed record ForeignAdapter(string WriteConnectionString) : IPersistenceAdapter
+    {
+        public string Description => "UseForeignPersistence";
+
+        public void Register(PersistenceRegistrationContext context)
+        {
+        }
     }
 }

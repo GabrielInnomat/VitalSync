@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
 using JasperFx;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

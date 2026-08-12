@@ -2,6 +2,7 @@ using BuildingBlocks.Application.Cqrs;
 using BuildingBlocks.Application.DomainEvents;
 using BuildingBlocks.Application.IntegrationEvents;
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;

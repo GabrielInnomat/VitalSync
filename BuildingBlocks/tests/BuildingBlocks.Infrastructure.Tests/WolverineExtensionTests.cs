@@ -4,6 +4,8 @@ using BuildingBlocks.Infrastructure.DependencyInjection;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Dispatching;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
+using BuildingBlocks.Infrastructure.Persistence.StateStored;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -45,7 +47,7 @@ public sealed class WolverineExtensionTests
 
         Assert.False(settings.RequiresWolverine);
         Assert.False(settings.Persistence.IsSelected);
-        Assert.Null(settings.Persistence.EfCoreWriteConnectionString);
+        Assert.Null(settings.Persistence.WriteConnectionString);
         Assert.Null(settings.Messaging.Transport);
     }
 
@@ -58,7 +60,8 @@ public sealed class WolverineExtensionTests
         var settings = provider.GetRequiredService<BuildingBlocksWiringSettings>();
 
         Assert.True(settings.Persistence.IsSelected);
-        Assert.Equal(ConnectionString, settings.Persistence.EfCoreWriteConnectionString);
+        Assert.Equal(ConnectionString, settings.Persistence.WriteConnectionString);
+        Assert.Single(settings.Persistence.OutboxDurability);
         Assert.Null(settings.Messaging.Transport);
     }
 
@@ -71,7 +74,8 @@ public sealed class WolverineExtensionTests
         var settings = provider.GetRequiredService<BuildingBlocksWiringSettings>();
 
         Assert.True(settings.Persistence.IsSelected);
-        Assert.Null(settings.Persistence.EfCoreWriteConnectionString);
+        Assert.Equal(ConnectionString, settings.Persistence.WriteConnectionString);
+        Assert.Empty(settings.Persistence.OutboxDurability);
         Assert.Null(settings.Messaging.Transport);
     }
 
@@ -122,7 +126,7 @@ public sealed class WolverineExtensionTests
     [Fact]
     public void Configure_WithDomainEventRouting_RoutesTheEnvelopeToTheLocalQueue()
     {
-        var options = ConfigureOptions(Settings(settings => settings.Persistence.Select(PersistenceChoice.Marten(ConnectionString))));
+        var options = ConfigureOptions(Settings(settings => settings.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString)))));
 
         var endpoints = options.Transports.SelectMany(transport => transport.Endpoints());
 
@@ -154,7 +158,7 @@ public sealed class WolverineExtensionTests
             .UseWolverine(options =>
             {
                 new BuildingBlocksWolverineExtension(
-                    Settings(settings => settings.Persistence.Select(PersistenceChoice.Marten(ConnectionString))))
+                    Settings(settings => settings.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString)))))
                     .Configure(options);
                 options.Discovery.IncludeAssembly(typeof(WolverineExtensionTests).Assembly);
             })
@@ -309,7 +313,7 @@ public sealed class WolverineExtensionTests
     public void Configure_WithPersistence_WidensTheInboxIdempotencyWindow()
     {
         var options = ConfigureOptions(Settings(settings =>
-            settings.Persistence.Select(PersistenceChoice.Marten(ConnectionString))));
+            settings.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString)))));
 
         Assert.Equal(TimeSpan.FromDays(7), options.Durability.KeepAfterMessageHandling);
     }

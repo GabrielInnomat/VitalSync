@@ -14,7 +14,7 @@ internal sealed class PersistenceSelection
 
     public bool IsDeliberatelyWithoutPersistence => Choice.IsDeliberatelyWithoutPersistence;
 
-    public string? EfCoreWriteConnectionString => Choice.EfCoreWriteConnectionString;
+    public string? WriteConnectionString => Choice.WriteConnectionString;
 
     public IReadOnlyList<IOutboxDurabilityConfigurator> OutboxDurability => _outboxDurability;
 
@@ -40,7 +40,7 @@ internal sealed class PersistenceSelection
         }
 
         throw new InvalidOperationException(
-            Choice.GetType() == choice.GetType()
+            Choice.Adapter?.GetType() == choice.Adapter?.GetType()
                 ? $"{choice.Description} was called twice with different arguments. A bounded context has exactly " +
                     "one write database, so the second call would silently point the aggregates and the " +
                     "outbox at different databases."

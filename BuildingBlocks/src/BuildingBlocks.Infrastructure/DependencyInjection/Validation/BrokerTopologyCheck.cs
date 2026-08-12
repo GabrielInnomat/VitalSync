@@ -1,4 +1,5 @@
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
+using BuildingBlocks.Infrastructure.Startup;
 using RabbitMQ.Client;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;

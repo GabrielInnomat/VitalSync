@@ -1,10 +1,10 @@
 using BuildingBlocks.Domain.Aggregates;
-using BuildingBlocks.Infrastructure.Persistence.StateStored;
+using BuildingBlocks.Infrastructure.Startup;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
+namespace BuildingBlocks.Infrastructure.Persistence.StateStored;
 
 internal sealed class AggregateStateModelCheck<TContext>(IServiceProvider serviceProvider) : SynchronousStartupCheck
     where TContext : DbContext

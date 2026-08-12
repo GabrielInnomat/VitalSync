@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Hosting;
 
-namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
+namespace BuildingBlocks.Infrastructure.Startup;
 
 internal sealed class StartupCheckRunner(IEnumerable<IStartupCheck> checks) : IHostedLifecycleService
 {

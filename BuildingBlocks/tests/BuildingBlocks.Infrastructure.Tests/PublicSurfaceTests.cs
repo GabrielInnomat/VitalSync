@@ -1,5 +1,6 @@
 using System.Reflection;
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.Startup;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
@@ -11,11 +12,13 @@ public sealed class PublicSurfaceTests
         "BuildingBlocks.Infrastructure.DependencyInjection.HostApplicationBuilderExtensions",
         "BuildingBlocks.Infrastructure.DependencyInjection.InfrastructureProvisioning",
         "BuildingBlocks.Infrastructure.DependencyInjection.ServiceCollectionExtensions",
-        "BuildingBlocks.Infrastructure.DependencyInjection.Validation.IStartupCheck",
-        "BuildingBlocks.Infrastructure.DependencyInjection.Validation.StartupPhase",
+        "BuildingBlocks.Infrastructure.Startup.IStartupCheck",
+        "BuildingBlocks.Infrastructure.Startup.StartupPhase",
         "BuildingBlocks.Infrastructure.Persistence.EntityKeyJsonOptions",
         "BuildingBlocks.Infrastructure.Persistence.EntityKeyModelBuilderExtensions",
+        "BuildingBlocks.Infrastructure.Persistence.EventSourced.MartenPersistenceOptionsExtensions",
         "BuildingBlocks.Infrastructure.Persistence.IPersistenceFaultTranslator",
+        "BuildingBlocks.Infrastructure.Persistence.StateStored.EfCorePersistenceOptionsExtensions",
         "BuildingBlocks.Infrastructure.ReadModels.EventSourcedReadModelRebuildRunner",
         "BuildingBlocks.Infrastructure.ReadModels.StateStoredReadModelRebuildRunner`1",
     ];
@@ -27,8 +30,8 @@ public sealed class PublicSurfaceTests
 
     private static readonly string[] ExtensionPoints =
     [
-        "BuildingBlocks.Infrastructure.DependencyInjection.Validation.IStartupCheck",
-        "BuildingBlocks.Infrastructure.DependencyInjection.Validation.StartupPhase",
+        "BuildingBlocks.Infrastructure.Startup.IStartupCheck",
+        "BuildingBlocks.Infrastructure.Startup.StartupPhase",
         "BuildingBlocks.Infrastructure.Persistence.IPersistenceFaultTranslator",
     ];
 
@@ -76,6 +79,7 @@ public sealed class PublicSurfaceTests
                     || type.Namespace.EndsWith(".Time", StringComparison.Ordinal)
                     || type.Namespace.EndsWith(".Wiring", StringComparison.Ordinal)
                     || type.Namespace.EndsWith(".Registration", StringComparison.Ordinal)
+                    || type.Namespace.EndsWith(".Startup", StringComparison.Ordinal)
                     || type.Namespace.EndsWith(".Validation", StringComparison.Ordinal)))
             .Select(type => type.FullName!)
             .Except(IntendedApi, StringComparer.Ordinal)

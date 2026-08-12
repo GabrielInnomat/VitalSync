@@ -1,4 +1,5 @@
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.Persistence.EventSourced;
 using Marten;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;

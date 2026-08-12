@@ -1,4 +1,4 @@
-namespace BuildingBlocks.Infrastructure.DependencyInjection.Validation;
+namespace BuildingBlocks.Infrastructure.Startup;
 
 internal abstract class SynchronousStartupCheck : IStartupCheck
 {
