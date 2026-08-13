@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>BuildingBlocks.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Marten" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="WolverineFx.Marten" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BuildingBlocks.Infrastructure.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BuildingBlocks.Persistence.Adapters\BuildingBlocks.Persistence.Adapters.csproj" />
+    <ProjectReference Include="..\BuildingBlocks.Runtime.Wolverine\BuildingBlocks.Runtime.Wolverine.csproj" />
+  </ItemGroup>
+
+</Project>

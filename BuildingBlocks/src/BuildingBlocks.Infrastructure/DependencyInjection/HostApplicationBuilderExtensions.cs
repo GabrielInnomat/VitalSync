@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Hosting;
-using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection;
 
@@ -7,8 +6,7 @@ public static class HostApplicationBuilderExtensions
 {
     public static TBuilder AddBuildingBlocks<TBuilder>(
         this TBuilder builder,
-        Action<BuildingBlocksOptions> configure,
-        Action<WolverineOptions>? configureWolverine = null)
+        Action<BuildingBlocksOptions> configure)
         where TBuilder : IHostApplicationBuilder
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -16,20 +14,7 @@ public static class HostApplicationBuilderExtensions
 
         var wiring = ServiceCollectionExtensions.AddBuildingBlocksCore(builder.Services, configure);
 
-        if (!wiring.RequiresWolverine && configureWolverine is null)
-        {
-            return builder;
-        }
-
-        builder.UseWolverine(options =>
-        {
-            foreach (var durability in wiring.Persistence.OutboxDurability)
-            {
-                durability.Configure(options);
-            }
-
-            configureWolverine?.Invoke(options);
-        });
+        wiring.Runtime.Activator?.Activate(builder, wiring);
 
         return builder;
     }

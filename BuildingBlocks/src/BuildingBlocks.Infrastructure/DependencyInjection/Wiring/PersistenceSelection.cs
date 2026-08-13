@@ -4,8 +4,6 @@ namespace BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 
 internal sealed class PersistenceSelection
 {
-    private readonly List<IOutboxDurabilityConfigurator> _outboxDurability = [];
-
     public PersistenceChoice Choice { get; private set; } = PersistenceChoice.None;
 
     public bool IsChosen => Choice.IsChosen;
@@ -16,10 +14,7 @@ internal sealed class PersistenceSelection
 
     public string? WriteConnectionString => Choice.WriteConnectionString;
 
-    public IReadOnlyList<IOutboxDurabilityConfigurator> OutboxDurability => _outboxDurability;
-
-    public void AddOutboxDurability(IOutboxDurabilityConfigurator configurator) =>
-        _outboxDurability.Add(configurator);
+    public bool IsTransientFault(Exception exception) => Choice.IsTransientFault(exception);
 
     public void Select(PersistenceChoice choice)
     {

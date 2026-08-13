@@ -86,7 +86,7 @@ public sealed class IntegrationEventSinkDeliveryTests
                 services.AddBuildingBlocks(options => options.AddDomainEventsFrom(typeof(SinkProbeDomainEvent).Assembly));
                 services.Replace(
                     ServiceDescriptor.Singleton<IIntegrationEventSinkFactory>(
-                        new WolverineIntegrationEventSinkFactory(TestMessaging.ContextName)));
+                        new IntegrationEventSinkFactory(TestMessaging.ContextName)));
                 services.AddSingleton<IIntegrationEventMapper<SinkProbeDomainEvent>, SinkProbeMapper>();
                 services.AddSingleton<IIntegrationEventMapper<SinkProbeDomainEvent>, SinkProbeCrashingMapper>();
                 services.AddSingleton<SinkProbeRecorder>();

@@ -105,12 +105,12 @@ public sealed class EventSourcedReadModelRebuildRunnerTests(PostgreSqlFixture fi
             options => options
                 .AddDomainEventsFrom(typeof(RebuildProbeStarted).Assembly)
                 .UseMartenEventSourcing(fixture.ConnectionString)
-                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup),
-            wolverine =>
-            {
-                wolverine.Durability.Mode = DurabilityMode.Solo;
-                wolverine.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
-            });
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
+                .CustomizeWolverine(wolverine =>
+                {
+                    wolverine.Durability.Mode = DurabilityMode.Solo;
+                    wolverine.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
+                }));
 
         builder.Services.AddScoped<ICommandHandler<StartRebuildProbe>, StartRebuildProbeHandler>();
         builder.Services.AddScoped<ICommandHandler<RenameRebuildProbe>, RenameRebuildProbeHandler>();

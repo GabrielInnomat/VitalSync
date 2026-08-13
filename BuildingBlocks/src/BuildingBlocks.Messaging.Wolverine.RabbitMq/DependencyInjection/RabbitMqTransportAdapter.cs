@@ -1,0 +1,69 @@
+using BuildingBlocks.Application.IntegrationEvents;
+using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
+using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
+using BuildingBlocks.Infrastructure.Messaging.Transport;
+using BuildingBlocks.Infrastructure.Startup;
+using Microsoft.Extensions.DependencyInjection;
+using Wolverine;
+using Wolverine.RabbitMQ;
+
+namespace BuildingBlocks.Infrastructure.DependencyInjection;
+
+internal sealed class RabbitMqTransportAdapter(Uri rabbitMqUri, string exchangeName, string contextName)
+    : IWolverineMessagingTransport
+{
+    public string Description => "UseWolverineMessaging";
+
+    public string ContextName => contextName;
+
+    public Uri RabbitMqUri => rabbitMqUri;
+
+    public string ExchangeName => exchangeName;
+
+    public void Register(MessagingTransportRegistrationContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        context.UseWolverineRuntime();
+        context.Services.AddSingleton<IStartupCheck>(new BrokerTopologyCheck(this, context));
+    }
+
+    public void Configure(WolverineOptions options, bool provisionInfrastructure)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        var transport = options.UseRabbitMq(rabbitMqUri)
+            .UseQuorumQueues()
+            .ConfigureChannelCreation(channel =>
+            {
+                channel.PublisherConfirmationsEnabled = true;
+                channel.PublisherConfirmationTrackingEnabled = true;
+            });
+
+        if (provisionInfrastructure)
+        {
+            transport.AutoProvision();
+        }
+
+        transport.DeclareExchange(exchangeName, exchange => exchange.IsDurable = true);
+
+        options.PublishMessagesToRabbitMqExchange<IIntegrationEvent>(
+                exchangeName,
+                integrationEvent => TopicResolver.For(integrationEvent.GetType(), contextName))
+            .UseDurableOutbox();
+    }
+
+    public void ConfigureSubscription(WolverineOptions options, IntegrationEventSubscription subscription)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(subscription);
+
+        options.ListenToRabbitQueue(subscription.QueueName, queue => queue.IsDurable = true).UseDurableInbox();
+
+        var exchange = options.UseRabbitMq().BindExchange(exchangeName);
+        foreach (var topicPattern in subscription.TopicPatterns)
+        {
+            exchange.ToQueue(subscription.QueueName, bindingKey: topicPattern);
+        }
+    }
+}

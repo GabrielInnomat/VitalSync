@@ -1,18 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <PackageReference Include="Marten" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageReference Include="WolverineFx.RabbitMQ" />
-    <PackageReference Include="WolverineFx.Marten" />
-    <PackageReference Include="WolverineFx.EntityFrameworkCore" />
-    <PackageReference Include="WolverineFx.Postgresql" />
-    <PackageReference Include="WolverineFx.RuntimeCompilation" />
   </ItemGroup>
 
   <ItemGroup>

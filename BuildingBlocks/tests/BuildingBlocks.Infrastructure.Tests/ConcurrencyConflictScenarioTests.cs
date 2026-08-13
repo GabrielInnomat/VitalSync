@@ -36,8 +36,8 @@ public sealed class ConcurrencyConflictScenarioTests(PostgreSqlFixture fixture)
                 .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
                 .UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString)
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
-                .AddPipelineBehavior(typeof(CompetingWriteBehavior<,>), InsideTheUnitOfWork),
-            ConfigureSoloDurability);
+                .AddPipelineBehavior(typeof(CompetingWriteBehavior<,>), InsideTheUnitOfWork)
+                .CustomizeWolverine(ConfigureSoloDurability));
 
         builder.Services.AddSingleton(competingWrite);
         builder.Services.AddScoped<ICommandHandler<StartFlushProbe>, StartFlushProbeHandler>();
@@ -93,8 +93,8 @@ public sealed class ConcurrencyConflictScenarioTests(PostgreSqlFixture fixture)
                 .AddDomainEventsFrom(typeof(TallyOpened).Assembly)
                 .UseMartenEventSourcing(fixture.ConnectionString)
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
-                .AddPipelineBehavior(typeof(CompetingWriteBehavior<,>), InsideTheUnitOfWork),
-            ConfigureSoloDurability);
+                .AddPipelineBehavior(typeof(CompetingWriteBehavior<,>), InsideTheUnitOfWork)
+                .CustomizeWolverine(ConfigureSoloDurability));
 
         builder.Services.AddSingleton(competingWrite);
         builder.Services.AddScoped<ICommandHandler<OpenTally>, OpenTallyHandler>();

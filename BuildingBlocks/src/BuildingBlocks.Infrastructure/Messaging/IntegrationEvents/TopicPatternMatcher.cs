@@ -1,6 +1,6 @@
 namespace BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 
-internal static class TopicPatternMatcher
+public static class TopicPatternMatcher
 {
     public static bool Matches(string pattern, string topic)
     {

@@ -1,14 +1,16 @@
+using BuildingBlocks.Infrastructure.Messaging.Transport;
+
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 
 internal sealed class MessagingSelection
 {
-    public MessagingSettings? Transport { get; private set; }
+    public IMessagingTransportAdapter? Transport { get; private set; }
 
     public IntegrationEventSubscription? Subscription { get; private set; }
 
     public bool IsSelected => Transport is not null;
 
-    public void SelectTransport(MessagingSettings transport) => Transport = transport;
+    public void SelectTransport(IMessagingTransportAdapter transport) => Transport = transport;
 
     public void SelectSubscription(IntegrationEventSubscription subscription)
     {

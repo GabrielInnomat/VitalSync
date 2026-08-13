@@ -4,11 +4,11 @@ using BuildingBlocks.Domain.Aggregates;
 
 namespace BuildingBlocks.Infrastructure.Persistence;
 
-internal static class AggregateFactory
+public static class AggregateFactory
 {
     private static readonly ConcurrentDictionary<Type, ConstructorInfo> Constructors = new();
 
-    internal static TAggregate CreateEmpty<TAggregate>()
+    public static TAggregate CreateEmpty<TAggregate>()
         where TAggregate : class =>
         (TAggregate)ConstructorFor(typeof(TAggregate)).Invoke(null);
 

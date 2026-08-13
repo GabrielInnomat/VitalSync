@@ -1,4 +1,5 @@
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Persistence.EventSourced;
 using BuildingBlocks.Infrastructure.Persistence.StateStored;
 using Microsoft.EntityFrameworkCore;
@@ -95,6 +96,25 @@ public sealed class PersistenceStrategySelectionTests
             services.AddBuildingBlocks(options => options
                 .UseMartenEventSourcing(ConnectionString)
                 .UseEfCorePersistence<TestDbContext>(ConnectionString)));
+    }
+
+    [Fact]
+    public void AddBuildingBlocks_CombinesSelectionsFromSeparateSatellitePackages()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBuildingBlocks(options => WithDomainEvents(options)
+            .UseEfCorePersistence<TestDbContext>(ConnectionString)
+            .UseWolverineMessaging(
+                new Uri("amqp://localhost:5672"),
+                TestMessaging.ExchangeName,
+                TestMessaging.ContextName));
+
+        using var provider = services.BuildServiceProvider();
+        var wiring = provider.GetRequiredService<BuildingBlocksWiringSettings>();
+
+        Assert.True(wiring.Persistence.IsSelected);
+        Assert.True(wiring.Messaging.IsSelected);
     }
 
     private static BuildingBlocksOptions WithDomainEvents(BuildingBlocksOptions options) =>

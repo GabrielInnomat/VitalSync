@@ -27,6 +27,8 @@ internal sealed record PersistenceChoice
 
     public string? WriteConnectionString => Adapter?.WriteConnectionString;
 
+    public bool IsTransientFault(Exception exception) => Adapter?.IsTransientFault(exception) ?? false;
+
     public static PersistenceChoice For(IPersistenceAdapter adapter)
     {
         ArgumentNullException.ThrowIfNull(adapter);

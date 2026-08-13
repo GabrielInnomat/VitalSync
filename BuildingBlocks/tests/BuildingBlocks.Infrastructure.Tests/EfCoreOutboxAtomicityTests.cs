@@ -29,12 +29,12 @@ public sealed class EfCoreOutboxAtomicityTests(PostgreSqlFixture fixture)
                 .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
                 .UseEfCorePersistence<FlushProbeContext>(
                 fixture.ConnectionString,
-                context => context.AddInterceptors(recorder)),
-            wolverine =>
-            {
-                wolverine.Durability.Mode = DurabilityMode.Solo;
-                wolverine.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
-            });
+                context => context.AddInterceptors(recorder))
+                .CustomizeWolverine(wolverine =>
+                {
+                    wolverine.Durability.Mode = DurabilityMode.Solo;
+                    wolverine.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
+                }));
 
         builder.Services.AddScoped<ICommandHandler<StartFlushProbe>, StartFlushProbeHandler>();
 

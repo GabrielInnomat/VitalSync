@@ -182,12 +182,12 @@ public sealed class EfCoreChildCollectionTests(PostgreSqlFixture fixture)
             options => options
                 .AddDomainEventsFrom(typeof(BasketOpened).Assembly)
                 .UseEfCorePersistence<LooseContext>(fixture.ConnectionString)
-                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup),
-            wolverine =>
-            {
-                wolverine.Durability.Mode = DurabilityMode.Solo;
-                wolverine.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
-            });
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
+                .CustomizeWolverine(wolverine =>
+                {
+                    wolverine.Durability.Mode = DurabilityMode.Solo;
+                    wolverine.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
+                }));
 
         using var host = builder.Build();
 
@@ -209,12 +209,12 @@ public sealed class EfCoreChildCollectionTests(PostgreSqlFixture fixture)
             options => options
                 .AddDomainEventsFrom(typeof(BasketOpened).Assembly)
                 .UseEfCorePersistence<DerivedNameContext>(fixture.ConnectionString)
-                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup),
-            wolverine =>
-            {
-                wolverine.Durability.Mode = DurabilityMode.Solo;
-                wolverine.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
-            });
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
+                .CustomizeWolverine(wolverine =>
+                {
+                    wolverine.Durability.Mode = DurabilityMode.Solo;
+                    wolverine.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
+                }));
 
         using var host = builder.Build();
 
@@ -450,12 +450,12 @@ public sealed class EfCoreChildCollectionTests(PostgreSqlFixture fixture)
             options => options
                 .AddDomainEventsFrom(typeof(BasketOpened).Assembly)
                 .UseEfCorePersistence<BasketContext>(fixture.ConnectionString)
-                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup),
-            wolverine =>
-            {
-                wolverine.Durability.Mode = DurabilityMode.Solo;
-                wolverine.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
-            });
+                    .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
+                .CustomizeWolverine(wolverine =>
+                {
+                    wolverine.Durability.Mode = DurabilityMode.Solo;
+                    wolverine.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
+                }));
 
         var host = builder.Build();
         await host.StartAsync(TestContext.Current.CancellationToken);

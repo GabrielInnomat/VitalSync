@@ -1,6 +1,9 @@
+using BuildingBlocks.Infrastructure.DependencyInjection.Extensibility;
+using BuildingBlocks.Infrastructure.Messaging.Transport;
+
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 
-internal sealed class BuildingBlocksWiringSettings
+internal sealed class BuildingBlocksWiringSettings : IWiringSnapshot
 {
     public PersistenceSelection Persistence { get; } = new();
 
@@ -8,6 +11,18 @@ internal sealed class BuildingBlocksWiringSettings
 
     public ProvisioningSelection Provisioning { get; } = new();
 
-    public bool RequiresWolverine =>
+    public RuntimeActivation Runtime { get; } = new();
+
+    public bool RequiresRuntime =>
         Persistence.IsSelected || Messaging.IsSelected || Messaging.Subscription is not null;
+
+    public bool PersistenceSelected => Persistence.IsSelected;
+
+    public bool ProvisionsInfrastructure => Provisioning.ProvisionsInfrastructure;
+
+    public IMessagingTransportAdapter? Transport => Messaging.Transport;
+
+    public IntegrationEventSubscription? Subscription => Messaging.Subscription;
+
+    public bool IsTransientFault(Exception exception) => Persistence.IsTransientFault(exception);
 }

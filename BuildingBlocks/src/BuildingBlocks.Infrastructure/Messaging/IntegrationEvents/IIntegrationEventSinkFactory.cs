@@ -1,9 +1,9 @@
 using BuildingBlocks.Application.IntegrationEvents;
-using Wolverine;
+using BuildingBlocks.Infrastructure.Messaging.Transport;
 
 namespace BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 
 public interface IIntegrationEventSinkFactory
 {
-    IIntegrationEventSink Create(IMessageContext context);
+    IIntegrationEventSink Create(IMessageEmitter emitter);
 }

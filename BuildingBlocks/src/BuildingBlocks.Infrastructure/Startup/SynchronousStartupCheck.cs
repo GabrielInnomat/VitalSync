@@ -1,6 +1,6 @@
 namespace BuildingBlocks.Infrastructure.Startup;
 
-internal abstract class SynchronousStartupCheck : IStartupCheck
+public abstract class SynchronousStartupCheck : IStartupCheck
 {
     public abstract StartupPhase Phase { get; }
 

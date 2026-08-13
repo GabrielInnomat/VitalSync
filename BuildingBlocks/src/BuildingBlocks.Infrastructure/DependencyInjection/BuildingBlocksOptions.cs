@@ -1,8 +1,10 @@
 using System.Reflection;
+using BuildingBlocks.Infrastructure.DependencyInjection.Extensibility;
 using BuildingBlocks.Infrastructure.DependencyInjection.Registration;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Dispatching;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
+using BuildingBlocks.Infrastructure.Messaging.Transport;
 using BuildingBlocks.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,12 +27,14 @@ public sealed class BuildingBlocksOptions
     internal BuildingBlocksOptions(IServiceCollection services, PipelineBehaviorRegistry behaviorRegistry)
     {
         _handlers = new HandlerRegistrar(services, behaviorRegistry);
-        _persistence = new PersistenceRegistrar(services, Wiring.Persistence, Wiring.Provisioning);
-        _messaging = new MessagingRegistrar(services, Wiring.Messaging);
+        _persistence = new PersistenceRegistrar(services, Wiring.Persistence, Wiring.Provisioning, Wiring.Runtime);
+        _messaging = new MessagingRegistrar(services, Wiring.Messaging, Wiring.Provisioning, Wiring.Runtime);
         _provisioning = new ProvisioningRegistrar(Wiring.Provisioning);
     }
 
     internal BuildingBlocksWiringSettings Wiring { get; } = new();
+
+    public RuntimeActivation Runtime => Wiring.Runtime;
 
     internal IReadOnlyCollection<Assembly> ScannedAssemblies => _handlers.ScannedAssemblies;
 
@@ -68,7 +72,7 @@ public sealed class BuildingBlocksOptions
         return this;
     }
 
-    internal BuildingBlocksOptions UsePersistence(IPersistenceAdapter adapter)
+    public BuildingBlocksOptions UsePersistence(IPersistenceAdapter adapter)
     {
         ArgumentNullException.ThrowIfNull(adapter);
 
@@ -76,13 +80,11 @@ public sealed class BuildingBlocksOptions
         return this;
     }
 
-    public BuildingBlocksOptions UseWolverineMessaging(Uri rabbitMqUri, string exchangeName, string contextName)
+    public BuildingBlocksOptions UseMessagingTransport(IMessagingTransportAdapter adapter)
     {
-        ArgumentNullException.ThrowIfNull(rabbitMqUri);
-        ArgumentException.ThrowIfNullOrWhiteSpace(exchangeName);
-        ArgumentException.ThrowIfNullOrWhiteSpace(contextName);
+        ArgumentNullException.ThrowIfNull(adapter);
 
-        _messaging.UseMessaging(rabbitMqUri, exchangeName, contextName);
+        _messaging.UseTransport(adapter);
         return this;
     }
 

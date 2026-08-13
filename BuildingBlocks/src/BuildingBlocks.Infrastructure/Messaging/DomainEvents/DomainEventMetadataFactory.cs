@@ -2,7 +2,7 @@ using BuildingBlocks.Application.DomainEvents;
 
 namespace BuildingBlocks.Infrastructure.Messaging.DomainEvents;
 
-internal static class DomainEventMetadataFactory
+public static class DomainEventMetadataFactory
 {
     public static DomainEventMetadata From(DomainEventEnvelope envelope)
     {

@@ -26,7 +26,7 @@ public sealed class IntegrationEventMapperCheckTests
 
         Assert.Contains(nameof(RegistrationMapper), exception.Message, StringComparison.Ordinal);
         Assert.Contains(
-            nameof(BuildingBlocksOptions.UseWolverineMessaging),
+            nameof(RabbitMqMessagingExtensions.UseWolverineMessaging),
             exception.Message,
             StringComparison.Ordinal);
     }
@@ -56,7 +56,7 @@ public sealed class IntegrationEventMapperCheckTests
         using var provider = BuildProvider(
             options => options.AddHandlersFrom(typeof(RegistrationMapper).Assembly),
             services => services.Replace(ServiceDescriptor.Singleton<IIntegrationEventSinkFactory>(
-                new WolverineIntegrationEventSinkFactory(TestMessaging.ContextName))));
+                new IntegrationEventSinkFactory(TestMessaging.ContextName))));
 
         await Check(provider).RunAsync(TestContext.Current.CancellationToken);
     }

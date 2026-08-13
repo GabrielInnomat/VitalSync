@@ -71,11 +71,10 @@ public sealed class HostBuilderWiringTests
         var builder = Host.CreateApplicationBuilder();
         var applied = false;
 
-        builder.AddBuildingBlocks(
-            options => options
-                .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
-                .UseEfCorePersistence<TestDbContext>(WriteConnectionString),
-            _ => applied = true);
+        builder.AddBuildingBlocks(options => options
+            .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
+            .UseEfCorePersistence<TestDbContext>(WriteConnectionString)
+            .CustomizeWolverine(_ => applied = true));
 
         Assert.True(applied);
     }
@@ -85,7 +84,7 @@ public sealed class HostBuilderWiringTests
     {
         var builder = Host.CreateApplicationBuilder();
 
-        builder.AddBuildingBlocks(_ => { }, _ => { });
+        builder.AddBuildingBlocks(options => options.CustomizeWolverine(_ => { }));
 
         Assert.Contains(builder.Services, descriptor => descriptor.ServiceType == typeof(IWolverineRuntime));
     }

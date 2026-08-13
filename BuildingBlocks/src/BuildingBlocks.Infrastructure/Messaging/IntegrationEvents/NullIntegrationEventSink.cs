@@ -1,6 +1,6 @@
 using BuildingBlocks.Application.IntegrationEvents;
+using BuildingBlocks.Infrastructure.Messaging.Transport;
 using Microsoft.Extensions.Logging;
-using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 
@@ -24,5 +24,5 @@ internal sealed class NullIntegrationEventSinkFactory(ILogger<NullIntegrationEve
 {
     private readonly NullIntegrationEventSink _sink = new(logger);
 
-    public IIntegrationEventSink Create(IMessageContext context) => _sink;
+    public IIntegrationEventSink Create(IMessageEmitter emitter) => _sink;
 }

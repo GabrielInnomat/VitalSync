@@ -4,6 +4,11 @@
     <Project Path="BuildingBlocks/src/BuildingBlocks.Application/BuildingBlocks.Application.csproj" />
     <Project Path="BuildingBlocks/src/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj" />
     <Project Path="BuildingBlocks/src/BuildingBlocks.Infrastructure/BuildingBlocks.Infrastructure.csproj" />
+    <Project Path="BuildingBlocks/src/BuildingBlocks.Persistence.Adapters/BuildingBlocks.Persistence.Adapters.csproj" />
+    <Project Path="BuildingBlocks/src/BuildingBlocks.Runtime.Wolverine/BuildingBlocks.Runtime.Wolverine.csproj" />
+    <Project Path="BuildingBlocks/src/BuildingBlocks.Messaging.Wolverine.RabbitMq/BuildingBlocks.Messaging.Wolverine.RabbitMq.csproj" />
+    <Project Path="BuildingBlocks/src/BuildingBlocks.Persistence.EfCore.Postgres/BuildingBlocks.Persistence.EfCore.Postgres.csproj" />
+    <Project Path="BuildingBlocks/src/BuildingBlocks.EventSourcing.Marten/BuildingBlocks.EventSourcing.Marten.csproj" />
   </Folder>
   <Folder Name="/BuildingBlocks/tests/">
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Application.Tests/BuildingBlocks.Application.Tests.csproj" />

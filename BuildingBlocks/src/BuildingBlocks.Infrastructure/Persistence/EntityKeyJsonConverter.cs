@@ -14,7 +14,7 @@ internal sealed class EntityKeyJsonConverter<TKey, TValue> : JsonConverter<TKey>
             ?? throw new JsonException(
                 $"The strongly typed key '{typeof(TKey)}' cannot be read from a null value.");
 
-        return EntityKeyActivator<TKey, TValue>.Create(value);
+        return EntityKeyActivator.Create<TKey, TValue>(value);
     }
 
     public override void Write(Utf8JsonWriter writer, TKey value, JsonSerializerOptions options)

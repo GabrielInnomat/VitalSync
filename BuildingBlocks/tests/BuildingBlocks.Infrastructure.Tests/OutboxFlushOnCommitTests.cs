@@ -75,8 +75,8 @@ public sealed class OutboxFlushOnCommitTests(PostgreSqlFixture fixture)
                 options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
                 options.UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString)
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup);
-            },
-            ConfigureFlushOnlyDurability);
+                options.CustomizeWolverine(ConfigureFlushOnlyDurability);
+            });
 
         builder.Services.AddScoped<ICommandHandler<StartFlushProbe>, StartFlushProbeHandler>();
         builder.Services.AddScoped<IProjectionHandler<FlushProbeStarted>, FlushProbeProjection>();

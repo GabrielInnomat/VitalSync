@@ -32,6 +32,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\BuildingBlocks.Infrastructure\BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks.Persistence.EfCore.Postgres\BuildingBlocks.Persistence.EfCore.Postgres.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks.EventSourcing.Marten\BuildingBlocks.EventSourcing.Marten.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks.Messaging.Wolverine.RabbitMq\BuildingBlocks.Messaging.Wolverine.RabbitMq.csproj" />
     <ProjectReference Include="..\ExternalAssemblies\AmbiguousRequestsFixture\AmbiguousRequestsFixture.csproj" />
     <ProjectReference Include="..\ExternalAssemblies\ConflictingHandlersFixture\ConflictingHandlersFixture.csproj" />
     <ProjectReference Include="..\ExternalAssemblies\DeadLetterFixture\DeadLetterFixture.csproj" />

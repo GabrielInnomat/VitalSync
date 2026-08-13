@@ -28,8 +28,17 @@ Building Block allowed to reference third-party packages.
 - **VitalSync-agnostic.** No references to VitalSync bounded contexts, aggregates,
   or concepts. Everything here must be reusable in any future project.
 - **All third parties live here.** EF Core, Marten, Wolverine, Npgsql, and DI
-  abstractions are referenced **only** in this package (and service hosts).
-  `Domain` and `Application` stay dependency-free (ADR-0018).
+  abstractions are referenced **only** in this package family (and service hosts).
+  `Domain` and `Application` stay dependency-free (ADR-0018). Since the persistence and
+  transport splits, "here" means five assemblies: the core plus
+  `BuildingBlocks.Persistence.Adapters`, `BuildingBlocks.Persistence.EfCore.Postgres`,
+  `BuildingBlocks.EventSourcing.Marten` and `BuildingBlocks.Messaging.Wolverine.RabbitMq`.
+  The core itself references neither EF Core, Marten, Npgsql nor RabbitMQ; Wolverine stays in
+  the core because it is the in-process backbone for domain events, projections and the outbox,
+  not an optional transport.
+  They share the `BuildingBlocks.Infrastructure.*` namespace root, so a consumer's `using`
+  lines do not reveal which assembly a type comes from; the assembly boundary exists to keep
+  the vendor packages off the core, not to re-cut the namespaces.
 - **Implements `Application` contracts; defines none of its own use-case contracts.**
   Where a new abstraction is needed that services must see, the contract goes to
   the innermost layer that consumes it (ADR-0024).
@@ -58,6 +67,40 @@ Everything else is `internal`, with `InternalsVisibleTo` for the test assembly.
 | `StateStoredReadModelRebuildRunner<TContext>`| the read-model rebuild driver for a state-stored context, constructed by a migration worker (ADR-0036) |
 | `EventSourcedReadModelRebuildRunner`| the same driver for an event-sourced context, folding Marten streams (ADR-0036) |
 
+### The adapter contract
+
+A second group is public for a different reason: it is what a **persistence or transport adapter**
+in a satellite assembly needs, not what an application needs. An app developer never names these.
+
+| Type                                | Who uses it                                                       |
+| ----------------------------------- | ----------------------------------------------------------------- |
+| `IPersistenceAdapter`               | implemented by each adapter; chosen via `BuildingBlocksOptions.UsePersistence` |
+| `PersistenceRegistrationContext`    | what an adapter registers into                                    |
+| `IOutboxDurabilityConfigurator`     | the adapter's outbox wiring, resolved by the Wolverine extension   |
+| `IMessagingTransportAdapter`        | implemented by a transport; chosen via `BuildingBlocksOptions.UseMessagingTransport` |
+| `MessagingTransportRegistrationContext` | what a transport registers into, and its live view of the subscription |
+| `IMessageEmitter`                   | the outbound channel a sink publishes through, supplied per message   |
+| `IntegrationEventSubscription`      | the queue, topics and consumer assembly a transport binds          |
+| `TopicResolver`                     | the routing key a transport publishes under                        |
+| `SynchronousStartupCheck`           | base class for the checks an adapter contributes                   |
+| `AggregateFactory`                  | the empty-hull factory both repositories rehydrate through         |
+| `EntityKeyActivator`                | key reconstruction, shared by the JSON and EF Core converters      |
+| `DeadLetterHealthCheckRegistration` | registered by each adapter alongside its message store             |
+
+`IPersistenceAdapter.IsTransientFault` is the reason the core no longer names Npgsql: which
+exception is worth retrying is knowledge the database has, so the adapter supplies the predicate
+and the core keeps the retry policy and its ordering.
+
+`IMessageEmitter` plays the same role for messaging. `IIntegrationEventSinkFactory.Create` used to
+take Wolverine's `IMessageContext`, which put a vendor type into a core contract; it now takes an
+emitter the core owns. The sink therefore only decides *what* to publish and *which headers* to
+attach, while `WolverineMessageEmitter` — the one adapter behind it — decides *how*. Because the
+emitter wraps the very `IMessageContext` the handler was given, the outbox participation of the
+publish is unchanged.
+
+`BuildingBlocksOptions.UsePersistence` and `EntityKeyJsonOptions.Create()` are public for the
+same reason.
+
 ### Declared extension points
 
 Three abstractions are public because a consumer is meant to **implement** them, not
@@ -71,9 +114,9 @@ foreign code depends on.
 | `IPersistenceFaultTranslator`   | an own exception → `Failure` translation, consulted by `UnitOfWorkBehavior` |
 
 Plus `EntityKeyJsonOptions.Apply(JsonSerializerOptions)`, so a consumer can attach the
-typed-key converters to its **own** serializer options. `Create()` stays `internal` on
-purpose: handing out finished options would be a second, competing way to configure
-serialization, while `Apply` composes with what the consumer already has.
+typed-key converters to its **own** serializer options. `Create()` is public too, but only
+because the satellite assemblies need it; `Apply` stays the way a consumer configures
+serialization, because handing out finished options would be a second, competing way.
 
 No registration mechanism was needed for any of them. `StartupCheckRunner` resolves
 `IEnumerable<IStartupCheck>` and `UnitOfWorkBehavior` resolves
@@ -82,8 +125,9 @@ No registration mechanism was needed for any of them. `StartupCheckRunner` resol
 `AddBuildingBlocks`. `ExtensionPointTests` proves each of them end to end using only the
 public surface, even though the test assembly could see more.
 
-`SynchronousStartupCheck` deliberately stays `internal`. It is a convenience base class,
-not a contract, and `IStartupCheck` has exactly two members.
+`SynchronousStartupCheck` is public since the persistence split, because adapters in the
+satellite assemblies derive from it. It is still a convenience base class, not a contract —
+`IStartupCheck` has exactly two members and remains the thing to implement.
 
 Seven further types are public **only** because Wolverine generates C# at runtime and
 the generated code names them: `DomainEventEnvelope`, `DomainEventEnvelopeHandler`,
@@ -96,27 +140,33 @@ distinction survives.
 
 ## Capabilities (internal organization)
 
-`Infrastructure` is deliberately one package (ADR-0018), organized internally by
-capability. The folder is the namespace.
+`Infrastructure` was deliberately one package (ADR-0018). It is now four: the core plus three
+persistence satellites, because a core that references EF Core, Marten and Npgsql cannot be
+published as an application-facing package. The folder is still the namespace, and the folder
+layout below is unchanged by the split — the satellites keep the paths and namespaces they had
+inside the core. The **Assembly** column says where each folder lives now.
 
-| Folder                             | Capability                                                          |
-| ---------------------------------- | ------------------------------------------------------------------- |
-| `Dispatching/`                     | DI-based `ISender` implementation + pipeline behaviors              |
-| `Persistence/`                     | shared: aggregate reconstitution, tracking base, envelope factory, typed-key conversion for EF Core and JSON |
-| `Persistence/StateStored/`         | EF Core write path — repository, unit of work, tracker, state graph |
-| `ReadModels/`                      | the read-model rebuild runner — host-invoked, therefore public and outside `Persistence/` |
-| `Persistence/EventSourced/`        | Marten write path — repository, unit of work, tracker               |
-| `Messaging/DomainEvents/`          | in-context events: publisher, projection runner, type registry, serializer, both envelope handlers |
-| `Messaging/IntegrationEvents/`     | the cross-context contract: topics, sink, source context, filter    |
-| `Diagnostics/`                     | the dead-letter health check — the only place a lost projection is recorded (ADR-0022 amendment) |
-| `Time/`                            | `IClock` implementation on top of `TimeProvider`                    |
-| `Telemetry/`                       | the `ActivitySource` and the tag names the three instrumented paths use |
-| `DependencyInjection/`             | entry points, options, and the composition root                     |
-| `DependencyInjection/Registration/`| what a host selected, one collaborator per capability               |
-| `DependencyInjection/Wiring/`      | how Wolverine itself is configured                                  |
-| `DependencyInjection/Validation/`  | the start-up checks the core itself contributes (ADR-0027)          |
-| `Startup/`                         | the start-up-check mechanics every package builds on: `IStartupCheck`, `StartupPhase`, `SynchronousStartupCheck`, `StartupCheckRunner` |
-| `Schema/`                          | the persisted-event snapshot a service's tests compare against (ADR-0035) |
+| Folder                             | Capability                                                          | Assembly |
+| ---------------------------------- | ------------------------------------------------------------------- | -------- |
+| `Dispatching/`                     | DI-based `ISender` implementation + pipeline behaviors              | core |
+| `Persistence/`                     | the adapter contract, aggregate reconstitution, typed-key conversion for JSON | core |
+| `Persistence/` (shared mechanics)  | tracking base, envelope factory, key formatting, PG fault translation | Adapters |
+| `Persistence/StateStored/`         | EF Core write path — repository, unit of work, tracker, state graph | EfCore.Postgres |
+| `Persistence/EventSourced/`        | Marten write path — repository, unit of work, tracker               | EventSourcing.Marten |
+| `ReadModels/`                      | the read-model rebuild runner — host-invoked, therefore public and outside `Persistence/` | writer in Adapters, one runner per satellite |
+| `Messaging/DomainEvents/`          | in-context events: publisher, projection runner, type registry, serializer, both envelope handlers | core |
+| `Messaging/IntegrationEvents/`     | the cross-context contract: topics, sink, source context, filter    | core |
+| `Messaging/Transport/`             | the transport adapter contract a broker package implements          | core |
+| `DependencyInjection/` (RabbitMQ)  | the RabbitMQ transport: `UseWolverineMessaging`, exchange/queue wiring, broker topology check | Messaging.Wolverine.RabbitMq |
+| `Diagnostics/`                     | the dead-letter health check — the only place a lost projection is recorded (ADR-0022 amendment) | core |
+| `Time/`                            | `IClock` implementation on top of `TimeProvider`                    | core |
+| `Telemetry/`                       | the `ActivitySource` and the tag names the three instrumented paths use | core |
+| `DependencyInjection/`             | entry points, options, and the composition root                     | core |
+| `DependencyInjection/Registration/`| what a host selected, one collaborator per capability               | core |
+| `DependencyInjection/Wiring/`      | how Wolverine itself is configured                                  | core |
+| `DependencyInjection/Validation/`  | the start-up checks the core itself contributes (ADR-0027) — the broker topology check moved to the RabbitMQ package, so a host without integration events no longer carries it | core |
+| `Startup/`                         | the start-up-check mechanics every package builds on: `IStartupCheck`, `StartupPhase`, `SynchronousStartupCheck`, `StartupCheckRunner` | core |
+| `Schema/`                          | the persisted-event snapshot a service's tests compare against (ADR-0035) | core |
 
 Two cuts here carry meaning rather than tidiness:
 
@@ -193,7 +243,7 @@ default, and events are immutable.
 Since ADR-0034 a key writes as its **bare underlying value** (`"GadgetId": "8f3a…"`).
 `EntityKeyJsonConverterFactory` builds an `EntityKeyJsonConverter<TKey, TValue>` for any
 `IEntityKey<TValue>` and reads it back through the same single-argument constructor the EF Core
-value converter already requires — both share `EntityKeyActivator<TKey, TValue>`.
+value converter already requires — both share `EntityKeyActivator.Create<TKey, TValue>`.
 `EntityKeyJsonOptions` is the single place that attaches the factory, and it is applied at all
 three sites: the envelope serializer's options, Marten via `UseSystemTextJsonForSerialization`, and
 Wolverine via `UseSystemTextJsonForSerialization` in `BuildingBlocksWolverineExtension`. Its
@@ -356,7 +406,7 @@ public interface IRepository<TAggregate, in TKey>
   repositories: the read side reads its own read database directly
   (ADR-0021/0022).
 - Both implementations obtain the empty hull they rehydrate into through the
-  internal `AggregateFactory`, which resolves and caches each aggregate's
+  `AggregateFactory`, which resolves and caches each aggregate's
   **private parameterless constructor** — no `new()` constraint, no public
   constructor required, and no asymmetry between the two paths. The convention
   is validated at host startup: `AddBuildingBlocks` checks every aggregate in
@@ -1128,7 +1178,8 @@ and a DI container. Marten optimistic concurrency and strongly-typed key
 persistence are covered by integration tests against a disposable PostgreSQL
 instance via Testcontainers (skipped automatically when Docker is unavailable).
 A small set of architecture tests enforces the layer-dependency rules, and
-`PublicSurfaceTests` pins the exported types of this assembly against the table in
+`PublicSurfaceTests` pins the exported types of the core assembly and of each persistence
+satellite assembly against the table in
 [Public surface](#public-surface): adding a `public` type fails the test until it is
 listed with a reason, which keeps "internal by default" from eroding one convenient
 exception at a time. Two of its assertions are worth knowing about. The leak test asks

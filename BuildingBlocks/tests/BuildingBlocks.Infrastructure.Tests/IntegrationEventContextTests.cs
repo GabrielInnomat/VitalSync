@@ -54,7 +54,9 @@ public sealed class IntegrationEventContextTests
             .UseMartenEventSourcing(ConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
 
-        Assert.Equal(TestMessaging.ExchangeName, settings.Messaging.Transport!.ExchangeName);
+        Assert.Equal(
+            TestMessaging.ExchangeName,
+            ((RabbitMqTransportAdapter)settings.Messaging.Transport!).ExchangeName);
         Assert.Equal(TestMessaging.ContextName, settings.Messaging.Transport.ContextName);
     }
 

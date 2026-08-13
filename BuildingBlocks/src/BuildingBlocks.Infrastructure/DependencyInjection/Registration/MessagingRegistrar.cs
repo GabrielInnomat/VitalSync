@@ -1,16 +1,24 @@
 using System.Reflection;
 using BuildingBlocks.Domain.Naming;
+using BuildingBlocks.Infrastructure.DependencyInjection.Extensibility;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
+using BuildingBlocks.Infrastructure.Messaging.Transport;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection.Registration;
 
-internal sealed class MessagingRegistrar(IServiceCollection services, MessagingSelection messaging)
+internal sealed class MessagingRegistrar(
+    IServiceCollection services,
+    MessagingSelection messaging,
+    ProvisioningSelection provisioning,
+    RuntimeActivation runtime)
 {
-    public void UseMessaging(Uri rabbitMqUri, string exchangeName, string contextName)
+    public void UseTransport(IMessagingTransportAdapter adapter)
     {
+        var contextName = adapter.ContextName;
+
         if (!KebabCase.IsValid(contextName))
         {
             throw new ArgumentException(
@@ -18,13 +26,19 @@ internal sealed class MessagingRegistrar(IServiceCollection services, MessagingS
                 "key this service publishes, so it must be a single lower-case kebab-case word without a dot " +
                 "(for example \"nutrition\"). A value containing a dot is almost always the exchange name passed " +
                 "in the wrong position.",
-                nameof(contextName));
+                nameof(adapter));
         }
 
         services.Replace(ServiceDescriptor.Singleton<IIntegrationEventSinkFactory>(
-            new WolverineIntegrationEventSinkFactory(contextName)));
+            new IntegrationEventSinkFactory(contextName)));
         services.Replace(ServiceDescriptor.Singleton(new IntegrationEventSourceContext(contextName)));
-        messaging.SelectTransport(new MessagingSettings(rabbitMqUri, exchangeName, contextName));
+        messaging.SelectTransport(adapter);
+
+        adapter.Register(new MessagingTransportRegistrationContext(
+            services,
+            () => provisioning.ProvisionsInfrastructure,
+            () => messaging.Subscription,
+            runtime));
     }
 
     public void Subscribe(string queueName, Assembly consumerAssembly, string[] topicPatterns)

@@ -23,19 +23,28 @@ public sealed class WolverineExtensionTests
 
     private static readonly Uri RabbitMqUri = new("amqp://guest:guest@localhost:5672");
 
-    private static readonly MessagingSettings TestMessagingSettings =
+    private static readonly RabbitMqTransportAdapter TestMessagingSettings =
         new(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName);
 
     private static readonly Assembly TestAssembly = typeof(WolverineExtensionTests).Assembly;
 
     [Fact]
-    public void AddBuildingBlocks_RegistersTheWolverineExtension()
+    public void AddBuildingBlocks_WithAPersistenceStrategy_RegistersTheWolverineExtension()
     {
-        using var provider = BuildProvider(_ => { });
+        using var provider = BuildProvider(options =>
+            options.UseEfCorePersistence<TestDbContext>(ConnectionString));
 
         Assert.Single(
             provider.GetServices<IWolverineExtension>(),
             extension => extension is BuildingBlocksWolverineExtension);
+    }
+
+    [Fact]
+    public void AddBuildingBlocks_WithoutAnyCapability_RegistersNoWolverineExtension()
+    {
+        using var provider = BuildProvider(_ => { });
+
+        Assert.Empty(provider.GetServices<IWolverineExtension>());
     }
 
     [Fact]
@@ -45,7 +54,7 @@ public sealed class WolverineExtensionTests
 
         var settings = provider.GetRequiredService<BuildingBlocksWiringSettings>();
 
-        Assert.False(settings.RequiresWolverine);
+        Assert.False(settings.RequiresRuntime);
         Assert.False(settings.Persistence.IsSelected);
         Assert.Null(settings.Persistence.WriteConnectionString);
         Assert.Null(settings.Messaging.Transport);
@@ -61,7 +70,6 @@ public sealed class WolverineExtensionTests
 
         Assert.True(settings.Persistence.IsSelected);
         Assert.Equal(ConnectionString, settings.Persistence.WriteConnectionString);
-        Assert.Single(settings.Persistence.OutboxDurability);
         Assert.Null(settings.Messaging.Transport);
     }
 
@@ -75,7 +83,6 @@ public sealed class WolverineExtensionTests
 
         Assert.True(settings.Persistence.IsSelected);
         Assert.Equal(ConnectionString, settings.Persistence.WriteConnectionString);
-        Assert.Empty(settings.Persistence.OutboxDurability);
         Assert.Null(settings.Messaging.Transport);
     }
 
@@ -88,8 +95,8 @@ public sealed class WolverineExtensionTests
 
         var settings = provider.GetRequiredService<BuildingBlocksWiringSettings>();
 
-        Assert.Equal(RabbitMqUri, settings.Messaging.Transport!.RabbitMqUri);
-        Assert.True(settings.RequiresWolverine);
+        Assert.Equal(RabbitMqUri, ((RabbitMqTransportAdapter)settings.Messaging.Transport!).RabbitMqUri);
+        Assert.True(settings.RequiresRuntime);
     }
 
     [Fact]
@@ -334,6 +341,14 @@ public sealed class WolverineExtensionTests
         Assert.Equal(
             new DurabilitySettings().KeepAfterMessageHandling,
             options.Durability.KeepAfterMessageHandling);
+    }
+
+    [Fact]
+    public void Configure_WithoutABroker_StillAppliesTheFailurePolicies()
+    {
+        var options = ConfigureOptions(new BuildingBlocksWiringSettings());
+
+        Assert.NotEmpty(options.Policies.Failures);
     }
 
     private static BuildingBlocksWiringSettings Settings(Action<BuildingBlocksWiringSettings> configure)

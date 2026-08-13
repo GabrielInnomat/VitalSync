@@ -16,7 +16,7 @@ public sealed class InfrastructureProvisioningTests
 
     private static readonly Uri RabbitMqUri = new("amqp://localhost:5672");
 
-    private static readonly MessagingSettings TestMessagingSettings =
+    private static readonly RabbitMqTransportAdapter TestMessagingSettings =
         new(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName);
 
     [Fact]
@@ -88,17 +88,30 @@ public sealed class InfrastructureProvisioningTests
     }
 
     [Fact]
-    public void TheBrokerTopologyCheck_IsRegisteredEvenWhenNothingNeedsIt()
+    public void TheBrokerTopologyCheck_IsNotRegisteredWithoutMessaging()
     {
         using var provider = BuildProvider(_ => { });
+
+        Assert.DoesNotContain(provider.GetServices<IStartupCheck>(), check => check is BrokerTopologyCheck);
+    }
+
+    [Fact]
+    public void TheBrokerTopologyCheck_IsRegisteredWhenMessagingIsSelected()
+    {
+        using var provider = BuildProvider(options => options
+            .UseMartenEventSourcing(ConnectionString)
+            .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
 
         Assert.Single(provider.GetServices<IStartupCheck>(), check => check is BrokerTopologyCheck);
     }
 
     [Fact]
-    public async Task TheBrokerTopologyCheck_PassesWithoutMessaging()
+    public async Task TheBrokerTopologyCheck_PassesOnAProvisioningHost()
     {
-        using var provider = BuildProvider(_ => { });
+        using var provider = BuildProvider(options => options
+            .UseMartenEventSourcing(ConnectionString)
+            .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
+            .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup));
 
         await BrokerCheck(provider).RunAsync(TestContext.Current.CancellationToken);
     }
@@ -126,19 +139,19 @@ public sealed class InfrastructureProvisioningTests
     }
 
     [Fact]
-    public void ThePresenceCheck_IsRegisteredEvenWhenNothingNeedsIt()
+    public void ThePresenceCheck_IsNotRegisteredWhenNothingNeedsIt()
     {
         using var provider = BuildProvider(_ => { });
 
-        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is InfrastructurePresenceCheck);
+        Assert.Empty(provider.GetServices<IStartupCheck>().OfType<InfrastructurePresenceCheck>());
     }
 
     [Fact]
-    public async Task ThePresenceCheck_PassesWithoutPersistence()
+    public void ThePresenceCheck_IsRegisteredAsSoonAsPersistenceIsSelected()
     {
-        using var provider = BuildProvider(_ => { });
+        using var provider = BuildProvider(options => options.UseMartenEventSourcing(ConnectionString));
 
-        await Check(provider).RunAsync(TestContext.Current.CancellationToken);
+        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is InfrastructurePresenceCheck);
     }
 
     [Fact]

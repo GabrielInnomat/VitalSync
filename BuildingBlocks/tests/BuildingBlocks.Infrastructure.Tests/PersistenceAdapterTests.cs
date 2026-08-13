@@ -1,9 +1,10 @@
 using BuildingBlocks.Infrastructure.DependencyInjection;
+using BuildingBlocks.Infrastructure.DependencyInjection.Extensibility;
 using BuildingBlocks.Infrastructure.DependencyInjection.Registration;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
-using Wolverine;
+using Microsoft.Extensions.Hosting;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
@@ -18,7 +19,8 @@ public sealed class PersistenceAdapterTests
         var persistence = new PersistenceSelection();
         var adapter = new RecordingAdapter(ConnectionString);
 
-        new PersistenceRegistrar(services, persistence, new ProvisioningSelection()).Use(adapter);
+        new PersistenceRegistrar(services, persistence, new ProvisioningSelection(), new RuntimeActivation())
+            .Use(adapter);
 
         Assert.True(adapter.WasRegistered);
         Assert.Same(services, adapter.SeenServices);
@@ -32,7 +34,7 @@ public sealed class PersistenceAdapterTests
         var provisioning = new ProvisioningSelection();
         var adapter = new RecordingAdapter(ConnectionString);
 
-        new PersistenceRegistrar(new ServiceCollection(), new PersistenceSelection(), provisioning)
+        new PersistenceRegistrar(new ServiceCollection(), new PersistenceSelection(), provisioning, new RuntimeActivation())
             .Use(adapter);
 
         Assert.False(adapter.SeenContext!.ProvisionsInfrastructure);
@@ -43,28 +45,70 @@ public sealed class PersistenceAdapterTests
     }
 
     [Fact]
-    public void OutboxDurabilityContributedByTheAdapter_ReachesTheWiring()
+    public void TheRuntimeContributedByTheAdapter_ReachesTheWiring()
+    {
+        var runtime = new RuntimeActivation();
+
+        new PersistenceRegistrar(new ServiceCollection(), new PersistenceSelection(), new ProvisioningSelection(), runtime)
+            .Use(new RecordingAdapter(ConnectionString) { ContributesRuntime = true });
+
+        Assert.IsType<RecordingActivator>(runtime.Activator);
+    }
+
+    [Fact]
+    public void TwoAdaptersAskingForTheSameRuntime_ShareOneActivator()
+    {
+        var runtime = new RuntimeActivation();
+
+        var first = runtime.GetOrAdd(static () => new RecordingActivator());
+        var second = runtime.GetOrAdd(static () => new RecordingActivator());
+
+        Assert.Same(first, second);
+    }
+
+    [Fact]
+    public void TwoDifferentRuntimes_FailWithAnExplanation()
+    {
+        var runtime = new RuntimeActivation();
+        runtime.GetOrAdd(static () => new RecordingActivator());
+
+        var thrown = Assert.Throws<InvalidOperationException>(
+            () => runtime.GetOrAdd(static () => new OtherActivator()));
+
+        Assert.Contains("exactly one messaging runtime", thrown.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheTransientFaultDecision_ComesFromTheChosenAdapter()
     {
         var persistence = new PersistenceSelection();
-        var configurator = new RecordingOutboxDurability();
+        var transient = new TimeoutException();
 
-        new PersistenceRegistrar(new ServiceCollection(), persistence, new ProvisioningSelection())
-            .Use(new RecordingAdapter(ConnectionString) { OutboxDurability = configurator });
+        Assert.False(persistence.IsTransientFault(transient));
 
-        Assert.Same(configurator, Assert.Single(persistence.OutboxDurability));
+        new PersistenceRegistrar(new ServiceCollection(), persistence, new ProvisioningSelection(), new RuntimeActivation())
+            .Use(new RecordingAdapter(ConnectionString) { TransientFault = transient });
+
+        Assert.True(persistence.IsTransientFault(transient));
+        Assert.False(persistence.IsTransientFault(new InvalidOperationException()));
     }
 
     private sealed record RecordingAdapter(string WriteConnectionString) : IPersistenceAdapter
     {
         public string Description => "UseRecordingPersistence";
 
-        public IOutboxDurabilityConfigurator? OutboxDurability { get; init; }
+        public bool ContributesRuntime { get; init; }
+
+        public Exception? TransientFault { get; init; }
 
         public bool WasRegistered { get; private set; }
 
         public IServiceCollection? SeenServices { get; private set; }
 
         public PersistenceRegistrationContext? SeenContext { get; private set; }
+
+        public bool IsTransientFault(Exception exception) =>
+            TransientFault is not null && ReferenceEquals(TransientFault, exception);
 
         public void Register(PersistenceRegistrationContext context)
         {
@@ -74,16 +118,23 @@ public sealed class PersistenceAdapterTests
             SeenServices = context.Services;
             SeenContext = context;
 
-            if (OutboxDurability is not null)
+            if (ContributesRuntime)
             {
-                context.AddOutboxDurability(OutboxDurability);
+                context.UseRuntime(static () => new RecordingActivator());
             }
         }
     }
 
-    private sealed class RecordingOutboxDurability : IOutboxDurabilityConfigurator
+    private sealed class RecordingActivator : IRuntimeActivator
     {
-        public void Configure(WolverineOptions options)
+        public void Activate(IHostApplicationBuilder builder, IWiringSnapshot wiring)
+        {
+        }
+    }
+
+    private sealed class OtherActivator : IRuntimeActivator
+    {
+        public void Activate(IHostApplicationBuilder builder, IWiringSnapshot wiring)
         {
         }
     }

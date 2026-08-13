@@ -3,6 +3,7 @@ using BuildingBlocks.Application.DomainEvents;
 using BuildingBlocks.Application.IntegrationEvents;
 using BuildingBlocks.Application.Persistence;
 using BuildingBlocks.Domain;
+using BuildingBlocks.Infrastructure.DependencyInjection.Extensibility;
 using BuildingBlocks.Infrastructure.DependencyInjection.Validation;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Dispatching;
@@ -14,7 +15,6 @@ using BuildingBlocks.Infrastructure.Time;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Wolverine;
 
 namespace BuildingBlocks.Infrastructure.DependencyInjection;
 
@@ -134,11 +134,10 @@ internal static class BuildingBlocksComposition
         services.TryAddSingleton<DomainEventEnvelopeSerializer>();
 
         services.AddSingleton(options.Wiring);
+        services.AddSingleton<IWiringSnapshot>(options.Wiring);
         services.AddSingleton(options.Wiring.Persistence);
         services.AddSingleton(options.Wiring.Messaging);
         services.AddSingleton(options.Wiring.Provisioning);
-        services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IWolverineExtension, BuildingBlocksWolverineExtension>());
 
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<IClock, SystemClock>();
@@ -160,10 +159,6 @@ internal static class BuildingBlocksComposition
 
         services.AddSingleton<IStartupCheck>(provider =>
             new HandlerRegistrationCheck(provider, options.ScannedAssemblies));
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, WolverineRuntimeCheck>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, BrokerTopologyCheck>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, InfrastructurePresenceCheck>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, IntegrationEventSubscriptionCheck>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupCheck, IntegrationEventMapperCheck>());
         services.AddSingleton<IStartupCheck>(provider => new UnitOfWorkPresenceCheck(
             provider,

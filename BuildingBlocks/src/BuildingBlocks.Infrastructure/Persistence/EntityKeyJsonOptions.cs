@@ -11,7 +11,7 @@ public static class EntityKeyJsonOptions
         options.Converters.Add(new EntityKeyJsonConverterFactory());
     }
 
-    internal static JsonSerializerOptions Create()
+    public static JsonSerializerOptions Create()
     {
         var options = new JsonSerializerOptions(JsonSerializerDefaults.General);
         Apply(options);

@@ -36,17 +36,18 @@ public sealed class WolverineWiringStartupValidationTests
     }
 
     [Fact]
-    public async Task NoWolverineCapabilitySelected_TheCheckPassesWithoutARuntime()
+    public void NoWolverineCapabilitySelected_TheCheckIsNotRegisteredBecauseNothingCanNeedARuntime()
     {
         using var provider = BuildProvider(_ => { });
 
-        await GetValidator(provider).RunAsync(TestContext.Current.CancellationToken);
+        Assert.Empty(provider.GetServices<IStartupCheck>().OfType<WolverineRuntimeCheck>());
     }
 
     [Fact]
-    public void TheCheckIsRegisteredEvenWhenNoCapabilityNeedsIt()
+    public void ACapabilityNeedingWolverine_RegistersTheCheck()
     {
-        using var provider = BuildProvider(_ => { });
+        using var provider = BuildProvider(options =>
+            options.UseEfCorePersistence<TestDbContext>(ConnectionString));
 
         Assert.Single(provider.GetServices<IStartupCheck>(), check => check is WolverineRuntimeCheck);
     }

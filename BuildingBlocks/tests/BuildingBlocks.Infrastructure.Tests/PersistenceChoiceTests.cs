@@ -72,7 +72,7 @@ public sealed class PersistenceChoiceTests
         settings.Persistence.Select(PersistenceChoice.For(new ForeignAdapter(ConnectionString)));
 
         Assert.True(settings.Persistence.IsSelected);
-        Assert.True(settings.RequiresWolverine);
+        Assert.True(settings.RequiresRuntime);
         Assert.Equal(ConnectionString, settings.Persistence.WriteConnectionString);
         Assert.Equal("UseForeignPersistence", settings.Persistence.Choice.Description);
     }
@@ -99,7 +99,7 @@ public sealed class PersistenceChoiceTests
         Assert.True(settings.Persistence.IsChosen);
         Assert.False(settings.Persistence.IsSelected);
         Assert.True(settings.Persistence.IsDeliberatelyWithoutPersistence);
-        Assert.False(settings.RequiresWolverine);
+        Assert.False(settings.RequiresRuntime);
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public sealed class PersistenceChoiceTests
     }
 
     [Fact]
-    public void EitherPersistenceChoice_MakesWolverineRequired()
+    public void EitherPersistenceChoice_MakesTheRuntimeRequired()
     {
         var efCore = new BuildingBlocksWiringSettings();
         efCore.Persistence.Select(PersistenceChoice.For(EfCore(ConnectionString)));
@@ -135,9 +135,9 @@ public sealed class PersistenceChoiceTests
         var marten = new BuildingBlocksWiringSettings();
         marten.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString)));
 
-        Assert.False(new BuildingBlocksWiringSettings().RequiresWolverine);
-        Assert.True(efCore.RequiresWolverine);
-        Assert.True(marten.RequiresWolverine);
+        Assert.False(new BuildingBlocksWiringSettings().RequiresRuntime);
+        Assert.True(efCore.RequiresRuntime);
+        Assert.True(marten.RequiresRuntime);
     }
 
     private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options);
@@ -145,6 +145,8 @@ public sealed class PersistenceChoiceTests
     private sealed record ForeignAdapter(string WriteConnectionString) : IPersistenceAdapter
     {
         public string Description => "UseForeignPersistence";
+
+        public bool IsTransientFault(Exception exception) => false;
 
         public void Register(PersistenceRegistrationContext context)
         {
