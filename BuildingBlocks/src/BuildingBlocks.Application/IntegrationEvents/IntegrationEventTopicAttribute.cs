@@ -17,7 +17,7 @@ public sealed class IntegrationEventTopicAttribute : Attribute
         ArgumentException.ThrowIfNullOrWhiteSpace(topic);
 
         var segments = topic.Split('.');
-        return segments.Length == 2 && Array.TrueForAll(segments, KebabCase.IsValid)
+        return segments.Length == 2 && Array.TrueForAll(segments, NameSegment.IsValid)
             ? topic
             : throw new ArgumentException(
                 $"'{topic}' is not a valid integration event topic. A topic is the published routing key " +

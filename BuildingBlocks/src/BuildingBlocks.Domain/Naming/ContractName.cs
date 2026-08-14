@@ -6,7 +6,7 @@ internal static class ContractName
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name, parameterName);
 
-        return KebabCase.IsValid(name)
+        return NameSegment.IsValid(name)
             ? name
             : throw new ArgumentException(
                 $"'{name}' is not a valid contract name. A persisted name is lower-case kebab-case " +

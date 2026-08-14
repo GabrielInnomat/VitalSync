@@ -19,7 +19,7 @@ internal sealed class MessagingRegistrar(
     {
         var contextName = adapter.ContextName;
 
-        if (!KebabCase.IsValid(contextName))
+        if (!NameSegment.IsValid(contextName))
         {
             throw new ArgumentException(
                 $"'{contextName}' is not a valid bounded-context name. It is the first segment of every routing " +

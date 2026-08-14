@@ -26,7 +26,7 @@ public sealed class PublicSurfaceTests
         "BuildingBlocks.Domain.IClock",
         "BuildingBlocks.Domain.Naming.AggregateNameAttribute",
         "BuildingBlocks.Domain.Naming.EventNameAttribute",
-        "BuildingBlocks.Domain.Naming.KebabCase",
+        "BuildingBlocks.Domain.Naming.NameSegment",
         "BuildingBlocks.Domain.Rules.BusinessRuleViolationException",
         "BuildingBlocks.Domain.Rules.DomainValidationException",
         "BuildingBlocks.Domain.Rules.IBusinessRule",

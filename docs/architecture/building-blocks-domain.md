@@ -39,7 +39,7 @@ The block provides a **single aggregate authoring model**: every aggregate deriv
 | `IBusinessRule`                           | interface       | An invariant that can be _broken_.                                                   |
 | `IDomainValidationRule`                   | interface       | A validation constraint that can be _invalid_.                                       |
 | `RuleChecker`                             | static class    | Evaluates rules and throws the matching exception; a `null` rule throws.           |
-| `KebabCase`                               | static class    | The single kebab-case validator, shared by persisted names and integration-event topics. |
+| `NameSegment`                             | static class    | The single validator for one name segment (lower-case kebab-case); shared by persisted names, bounded-context names and integration-event topics. |
 | `BusinessRuleViolationException`          | exception       | Raised when a business rule is broken.                                               |
 | `DomainValidationException`               | exception       | Raised when a domain validation rule is invalid.                                     |
 
@@ -51,7 +51,7 @@ BuildingBlocks.Domain/
 │                 IEventSourcedAggregateRoot, IStateOwner
 ├── Entities/     IEntityKey, IEntity, EntityBase, Entity, EntityState
 ├── Events/       IDomainEvent, DomainEvent, IHasDomainEvents, IDomainEventOwner, IDomainEventRaiser
-├── Naming/       EventNameAttribute, AggregateNameAttribute, KebabCase, ContractName (internal)
+├── Naming/       EventNameAttribute, AggregateNameAttribute, NameSegment, ContractName (internal)
 ├── Rules/        IBusinessRule, IDomainValidationRule, RuleChecker, both exceptions
 └── IClock.cs     stays in the root — it belongs to no group and serves all of them
 ```

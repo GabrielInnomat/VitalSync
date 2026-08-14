@@ -1,6 +1,6 @@
 namespace BuildingBlocks.Domain.Naming;
 
-public static class KebabCase
+public static class NameSegment
 {
     public static bool IsValid(string segment)
     {
