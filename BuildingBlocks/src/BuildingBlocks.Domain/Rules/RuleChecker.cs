@@ -2,7 +2,7 @@ namespace BuildingBlocks.Domain.Rules;
 
 public static class RuleChecker
 {
-    public static void Check(IBusinessRule rule)
+    public static void CheckBusinessRule(IBusinessRule rule)
     {
         ArgumentNullException.ThrowIfNull(rule);
 
@@ -12,7 +12,7 @@ public static class RuleChecker
         }
     }
 
-    public static void Check(IDomainValidationRule rule)
+    public static void CheckValidationRule(IDomainValidationRule rule)
     {
         ArgumentNullException.ThrowIfNull(rule);
 
@@ -22,7 +22,7 @@ public static class RuleChecker
         }
     }
 
-    public static void Check(params IBusinessRule[] rules)
+    public static void CheckAllBusinessRules(params IBusinessRule[] rules)
     {
         GuardAll(rules);
 
@@ -41,7 +41,7 @@ public static class RuleChecker
         }
     }
 
-    public static void Check(params IDomainValidationRule[] rules)
+    public static void CheckAllValidationRules(params IDomainValidationRule[] rules)
     {
         GuardAll(rules);
 

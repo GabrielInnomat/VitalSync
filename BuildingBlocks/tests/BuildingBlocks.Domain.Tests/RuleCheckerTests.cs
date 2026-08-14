@@ -6,51 +6,51 @@ namespace BuildingBlocks.Domain.Tests;
 public sealed class RuleCheckerTests
 {
     [Fact]
-    public void Check_BrokenBusinessRule_ThrowsWithMessage()
+    public void CheckBusinessRule_Broken_ThrowsWithMessage()
     {
         var rule = new FakeBusinessRule(isBroken: true, message: "nope");
 
-        var ex = Assert.Throws<BusinessRuleViolationException>(() => RuleChecker.Check(rule));
+        var ex = Assert.Throws<BusinessRuleViolationException>(() => RuleChecker.CheckBusinessRule(rule));
         Assert.Equal("nope", ex.Message);
     }
 
     [Fact]
-    public void Check_SatisfiedBusinessRule_DoesNotThrow()
+    public void CheckBusinessRule_Satisfied_DoesNotThrow()
     {
         var rule = new FakeBusinessRule(isBroken: false);
 
-        RuleChecker.Check(rule);
+        RuleChecker.CheckBusinessRule(rule);
 
         Assert.True(rule.Evaluated);
     }
 
     [Fact]
-    public void Check_InvalidValidationRule_ThrowsWithMessage()
+    public void CheckValidationRule_Invalid_ThrowsWithMessage()
     {
         var rule = new FakeValidationRule(isInvalid: true, message: "bad");
 
-        var ex = Assert.Throws<DomainValidationException>(() => RuleChecker.Check(rule));
+        var ex = Assert.Throws<DomainValidationException>(() => RuleChecker.CheckValidationRule(rule));
         Assert.Equal("bad", ex.Message);
     }
 
     [Fact]
-    public void Check_ValidValidationRule_DoesNotThrow()
+    public void CheckValidationRule_Valid_DoesNotThrow()
     {
         var rule = new FakeValidationRule(isInvalid: false);
 
-        RuleChecker.Check(rule);
+        RuleChecker.CheckValidationRule(rule);
 
         Assert.True(rule.Evaluated);
     }
 
     [Fact]
-    public void Check_BusinessRuleParams_EvaluatesEveryRuleAndCollectsAll()
+    public void CheckAllBusinessRules_EvaluatesEveryRuleAndCollectsAll()
     {
         var broken = new FakeBusinessRule(isBroken: true, message: "first", code: "a");
         var alsoBroken = new FakeBusinessRule(isBroken: true, message: "second", code: "b");
 
         var ex = Assert.Throws<BusinessRuleViolationException>(
-            () => RuleChecker.Check(broken, alsoBroken));
+            () => RuleChecker.CheckAllBusinessRules(broken, alsoBroken));
 
         Assert.True(alsoBroken.Evaluated);
         Assert.Equal(2, ex.Violations.Count);
@@ -63,11 +63,11 @@ public sealed class RuleCheckerTests
     }
 
     [Fact]
-    public void Check_BrokenBusinessRule_CarriesTheRulesOwnCodeAndNoTarget()
+    public void CheckBusinessRule_Broken_CarriesTheRulesOwnCodeAndNoTarget()
     {
         var broken = new FakeBusinessRule(isBroken: true, message: "first", code: "recipe.already_published");
 
-        var ex = Assert.Throws<BusinessRuleViolationException>(() => RuleChecker.Check(broken));
+        var ex = Assert.Throws<BusinessRuleViolationException>(() => RuleChecker.CheckBusinessRule(broken));
 
         var violation = Assert.Single(ex.Violations);
         Assert.Equal("recipe.already_published", violation.Code);
@@ -75,25 +75,25 @@ public sealed class RuleCheckerTests
     }
 
     [Fact]
-    public void Check_BusinessRuleParams_AllSatisfied_DoesNotThrow()
+    public void CheckAllBusinessRules_AllSatisfied_DoesNotThrow()
     {
         var a = new FakeBusinessRule(isBroken: false);
         var b = new FakeBusinessRule(isBroken: false);
 
-        RuleChecker.Check(a, b);
+        RuleChecker.CheckAllBusinessRules(a, b);
 
         Assert.True(a.Evaluated);
         Assert.True(b.Evaluated);
     }
 
     [Fact]
-    public void Check_ValidationRuleParams_EvaluatesEveryRuleAndCollectsAll()
+    public void CheckAllValidationRules_EvaluatesEveryRuleAndCollectsAll()
     {
         var invalid = new FakeValidationRule(isInvalid: true, message: "first", code: "a", target: "name");
         var alsoInvalid = new FakeValidationRule(isInvalid: true, message: "second", code: "b", target: "quantity");
 
         var ex = Assert.Throws<DomainValidationException>(
-            () => RuleChecker.Check(invalid, alsoInvalid));
+            () => RuleChecker.CheckAllValidationRules(invalid, alsoInvalid));
 
         Assert.True(alsoInvalid.Evaluated);
         Assert.Equal(2, ex.Violations.Count);
@@ -106,12 +106,12 @@ public sealed class RuleCheckerTests
     }
 
     [Fact]
-    public void Check_ValidationRuleParams_OnlyOneInvalid_KeepsTheRuleMessageVerbatim()
+    public void CheckAllValidationRules_OnlyOneInvalid_KeepsTheRuleMessageVerbatim()
     {
         var valid = new FakeValidationRule(isInvalid: false);
         var invalid = new FakeValidationRule(isInvalid: true, message: "bad", target: "name");
 
-        var ex = Assert.Throws<DomainValidationException>(() => RuleChecker.Check(valid, invalid));
+        var ex = Assert.Throws<DomainValidationException>(() => RuleChecker.CheckAllValidationRules(valid, invalid));
 
         Assert.Equal("bad", ex.Message);
         var violation = Assert.Single(ex.Violations);
@@ -119,70 +119,70 @@ public sealed class RuleCheckerTests
     }
 
     [Fact]
-    public void Check_ValidationRuleParams_AllValid_DoesNotThrow()
+    public void CheckAllValidationRules_AllValid_DoesNotThrow()
     {
         var a = new FakeValidationRule(isInvalid: false);
         var b = new FakeValidationRule(isInvalid: false);
 
-        RuleChecker.Check(a, b);
+        RuleChecker.CheckAllValidationRules(a, b);
 
         Assert.True(a.Evaluated);
         Assert.True(b.Evaluated);
     }
 
     [Fact]
-    public void Check_NullBusinessRule_Throws()
+    public void CheckBusinessRule_Null_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => RuleChecker.Check((IBusinessRule)null!));
+        Assert.Throws<ArgumentNullException>(() => RuleChecker.CheckBusinessRule(null!));
     }
 
     [Fact]
-    public void Check_NullValidationRule_Throws()
+    public void CheckValidationRule_Null_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => RuleChecker.Check((IDomainValidationRule)null!));
+        Assert.Throws<ArgumentNullException>(() => RuleChecker.CheckValidationRule(null!));
     }
 
     [Fact]
-    public void Check_NullBusinessRuleArray_Throws()
+    public void CheckAllBusinessRules_NullArray_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => RuleChecker.Check((IBusinessRule[])null!));
+        Assert.Throws<ArgumentNullException>(() => RuleChecker.CheckAllBusinessRules(null!));
     }
 
     [Fact]
-    public void Check_NullValidationRuleArray_Throws()
+    public void CheckAllValidationRules_NullArray_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => RuleChecker.Check((IDomainValidationRule[])null!));
+        Assert.Throws<ArgumentNullException>(() => RuleChecker.CheckAllValidationRules(null!));
     }
 
     [Fact]
-    public void Check_NullRuleAmongBusinessRules_ThrowsAndDoesNotEvaluateLaterRules()
+    public void CheckAllBusinessRules_NullAmongRules_ThrowsAndDoesNotEvaluateLaterRules()
     {
         var later = new FakeBusinessRule(isBroken: true, message: "later");
 
-        Assert.Throws<ArgumentNullException>(() => RuleChecker.Check(null!, later));
+        Assert.Throws<ArgumentNullException>(() => RuleChecker.CheckAllBusinessRules(null!, later));
 
         Assert.False(later.Evaluated);
     }
 
     [Fact]
-    public void Check_NullRuleAmongValidationRules_ThrowsAndDoesNotEvaluateLaterRules()
+    public void CheckAllValidationRules_NullAmongRules_ThrowsAndDoesNotEvaluateLaterRules()
     {
         var later = new FakeValidationRule(isInvalid: true, message: "later");
 
-        Assert.Throws<ArgumentNullException>(() => RuleChecker.Check(null!, later));
+        Assert.Throws<ArgumentNullException>(() => RuleChecker.CheckAllValidationRules(null!, later));
 
         Assert.False(later.Evaluated);
     }
 
     [Fact]
-    public void Check_EmptyBusinessRuleParams_DoesNotThrow()
+    public void CheckAllBusinessRules_Empty_DoesNotThrow()
     {
-        RuleChecker.Check(Array.Empty<IBusinessRule>());
+        RuleChecker.CheckAllBusinessRules();
     }
 
     [Fact]
-    public void Check_EmptyValidationRuleParams_DoesNotThrow()
+    public void CheckAllValidationRules_Empty_DoesNotThrow()
     {
-        RuleChecker.Check(Array.Empty<IDomainValidationRule>());
+        RuleChecker.CheckAllValidationRules();
     }
 }

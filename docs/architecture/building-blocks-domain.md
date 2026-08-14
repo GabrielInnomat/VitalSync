@@ -288,7 +288,7 @@ public sealed class Ingredient : Entity<IngredientId, IngredientState>
 
     public void Regram(int grams)
     {
-        RuleChecker.Check(new IngredientGramsMustBePositive(grams));
+        RuleChecker.CheckValidationRule(new IngredientGramsMustBePositive(grams));
 
         RaiseEvent(new IngredientRegrammed(_recipe.Id, Id, grams));
     }
@@ -489,14 +489,15 @@ which is what lets a client react to *that* constraint instead of to "some busin
 `null` for a rule spanning several fields. An invariant has no field, so `IBusinessRule`
 deliberately has no `Target`; that argument is about the field and does not extend to the code.
 
-`RuleChecker` evaluates them:
+`RuleChecker` evaluates them. The method name says which kind of rule is being checked, and
+therefore which of the two exceptions can escape:
 
 ```csharp
-RuleChecker.Check(new RecipeNameMustNotBeEmpty(name));
-RuleChecker.Check(rule1, rule2, rule3);
+RuleChecker.CheckValidationRule(new RecipeNameMustNotBeEmpty(name));
+RuleChecker.CheckAllBusinessRules(rule1, rule2, rule3);
 ```
 
-**The `params` overloads evaluate every rule and collect the broken ones**, throwing once at the
+**The `CheckAll…` methods evaluate every rule and collect the broken ones**, throwing once at the
 end. Both exceptions carry `IReadOnlyList<RuleViolation> Violations` — `RuleViolation(Code,
 Target, Message)`, where `Code` is never `null` — so a caller gets every field error in one round
 trip instead of one per request. The message-only constructors that CA1032 requires carry no rule
@@ -553,7 +554,7 @@ public sealed class Recipe : EventSourcedAggregateRoot<RecipeId, RecipeState>
 
     public static Recipe Create(RecipeId id, string name)
     {
-        RuleChecker.Check(new RecipeNameMustNotBeEmpty(name));
+        RuleChecker.CheckValidationRule(new RecipeNameMustNotBeEmpty(name));
         var recipe = new Recipe();
         recipe.RaiseEvent(new RecipeCreated(id, name));
         return recipe;
@@ -561,7 +562,7 @@ public sealed class Recipe : EventSourcedAggregateRoot<RecipeId, RecipeState>
 
     public void Rename(string newName)
     {
-        RuleChecker.Check(new RecipeNameMustNotBeEmpty(newName));
+        RuleChecker.CheckValidationRule(new RecipeNameMustNotBeEmpty(newName));
         RaiseEvent(new RecipeRenamed(newName));
     }
 }

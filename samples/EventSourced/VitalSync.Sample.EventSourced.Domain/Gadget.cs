@@ -15,7 +15,7 @@ public sealed class Gadget : EventSourcedAggregateRoot<GadgetId, GadgetState>
 
     public static Gadget Create(GadgetId id, string name)
     {
-        RuleChecker.Check(new GadgetNameMustNotBeEmpty(name));
+        RuleChecker.CheckValidationRule(new GadgetNameMustNotBeEmpty(name));
 
         var gadget = new Gadget();
         gadget.RaiseEvent(new GadgetCreated(id, name));
@@ -24,15 +24,15 @@ public sealed class Gadget : EventSourcedAggregateRoot<GadgetId, GadgetState>
 
     public void Rename(string name)
     {
-        RuleChecker.Check(new GadgetNameMustNotBeEmpty(name));
-        RuleChecker.Check(new RetiredGadgetMustNotChange(IsRetired));
+        RuleChecker.CheckValidationRule(new GadgetNameMustNotBeEmpty(name));
+        RuleChecker.CheckBusinessRule(new RetiredGadgetMustNotChange(IsRetired));
 
         RaiseEvent(new GadgetRenamed(Id, name, RenameCount + 1));
     }
 
     public void Retire(string reason)
     {
-        RuleChecker.Check(new RetiredGadgetMustNotChange(IsRetired));
+        RuleChecker.CheckBusinessRule(new RetiredGadgetMustNotChange(IsRetired));
 
         RaiseEvent(new GadgetRetired(Id, reason));
     }
@@ -42,8 +42,8 @@ public sealed class Gadget : EventSourcedAggregateRoot<GadgetId, GadgetState>
 
     public GadgetComponentId AddComponent(string label)
     {
-        RuleChecker.Check(new GadgetComponentLabelMustNotBeEmpty(label));
-        RuleChecker.Check(new RetiredGadgetMustNotChange(IsRetired));
+        RuleChecker.CheckValidationRule(new GadgetComponentLabelMustNotBeEmpty(label));
+        RuleChecker.CheckBusinessRule(new RetiredGadgetMustNotChange(IsRetired));
 
         var componentId = GadgetComponentId.New();
         RaiseEvent(new GadgetComponentAdded(Id, componentId, label));
@@ -52,7 +52,7 @@ public sealed class Gadget : EventSourcedAggregateRoot<GadgetId, GadgetState>
 
     public GadgetComponent Component(GadgetComponentId componentId)
     {
-        RuleChecker.Check(new GadgetComponentMustExist(State.Components, componentId));
+        RuleChecker.CheckBusinessRule(new GadgetComponentMustExist(State.Components, componentId));
 
         return new GadgetComponent(this, componentId);
     }

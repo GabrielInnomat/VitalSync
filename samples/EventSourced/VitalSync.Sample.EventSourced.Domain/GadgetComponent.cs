@@ -14,8 +14,8 @@ public sealed class GadgetComponent : Entity<GadgetComponentId, GadgetComponentS
 
     public void Relabel(string label)
     {
-        RuleChecker.Check(new GadgetComponentLabelMustNotBeEmpty(label));
-        RuleChecker.Check(new RetiredGadgetMustNotChange(_gadget.IsRetired));
+        RuleChecker.CheckValidationRule(new GadgetComponentLabelMustNotBeEmpty(label));
+        RuleChecker.CheckBusinessRule(new RetiredGadgetMustNotChange(_gadget.IsRetired));
 
         RaiseEvent(new GadgetComponentRelabelled(_gadget.Id, Id, label));
     }

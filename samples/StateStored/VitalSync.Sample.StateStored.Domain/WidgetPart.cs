@@ -16,7 +16,7 @@ public sealed class WidgetPart : Entity<WidgetPartId, WidgetPartState>
 
     public void ChangeQuantity(int quantity)
     {
-        RuleChecker.Check(new WidgetPartQuantityMustBePositive(quantity));
+        RuleChecker.CheckValidationRule(new WidgetPartQuantityMustBePositive(quantity));
 
         RaiseEvent(new WidgetPartQuantityChanged(_widgetId, Id, quantity, Quantity));
     }

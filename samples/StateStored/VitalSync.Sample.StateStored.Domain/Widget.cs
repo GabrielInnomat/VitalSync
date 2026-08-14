@@ -16,7 +16,7 @@ public sealed class Widget : AggregateRoot<WidgetId, WidgetState>
 
     public static Widget Create(WidgetId id, string name)
     {
-        RuleChecker.Check(new WidgetNameMustNotBeEmpty(name));
+        RuleChecker.CheckValidationRule(new WidgetNameMustNotBeEmpty(name));
 
         var widget = new Widget();
         widget.RaiseEvent(new WidgetCreated(id, name));
@@ -25,14 +25,14 @@ public sealed class Widget : AggregateRoot<WidgetId, WidgetState>
 
     public void Rename(string name)
     {
-        RuleChecker.Check(new WidgetNameMustNotBeEmpty(name));
+        RuleChecker.CheckValidationRule(new WidgetNameMustNotBeEmpty(name));
 
         RaiseEvent(new WidgetRenamed(Id, name, RenameCount + 1));
     }
 
     public WidgetPartId AddPart(string label, int quantity)
     {
-        RuleChecker.Check(
+        RuleChecker.CheckAllValidationRules(
             new WidgetPartLabelMustNotBeEmpty(label),
             new WidgetPartQuantityMustBePositive(quantity));
 
@@ -43,21 +43,21 @@ public sealed class Widget : AggregateRoot<WidgetId, WidgetState>
 
     public void ChangePartQuantity(WidgetPartId partId, int quantity)
     {
-        RuleChecker.Check(new WidgetPartMustExist(State.Parts, partId));
+        RuleChecker.CheckBusinessRule(new WidgetPartMustExist(State.Parts, partId));
 
         Part(partId).ChangeQuantity(quantity);
     }
 
     public void RemovePart(WidgetPartId partId)
     {
-        RuleChecker.Check(new WidgetPartMustExist(State.Parts, partId));
+        RuleChecker.CheckBusinessRule(new WidgetPartMustExist(State.Parts, partId));
 
         RaiseEvent(new WidgetPartRemoved(Id, partId, PartStateOrThrow(partId).Quantity));
     }
 
     public WidgetPart Part(WidgetPartId partId)
     {
-        RuleChecker.Check(new WidgetPartMustExist(State.Parts, partId));
+        RuleChecker.CheckBusinessRule(new WidgetPartMustExist(State.Parts, partId));
 
         return new WidgetPart(this, partId);
     }
