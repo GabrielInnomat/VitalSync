@@ -25,6 +25,13 @@
     <Project Path="BuildingBlocks/tests/ExternalAssemblies/SchemaGapFixture/SchemaGapFixture.csproj" />
     <Project Path="BuildingBlocks/tests/ExternalAssemblies/ValidHandlersFixture/ValidHandlersFixture.csproj" />
   </Folder>
+  <Folder Name="/BuildingBlocks/tests/MatrixHosts/">
+    <Project Path="BuildingBlocks/tests/MatrixHosts/BareHost/BareHost.csproj" />
+    <Project Path="BuildingBlocks/tests/MatrixHosts/EventsBusHost/EventsBusHost.csproj" />
+    <Project Path="BuildingBlocks/tests/MatrixHosts/EventsHost/EventsHost.csproj" />
+    <Project Path="BuildingBlocks/tests/MatrixHosts/StateBusHost/StateBusHost.csproj" />
+    <Project Path="BuildingBlocks/tests/MatrixHosts/StateHost/StateHost.csproj" />
+  </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/VitalSync.Sample.Contracts/VitalSync.Sample.Contracts.csproj" />
     <Project Path="samples/VitalSync.Samples.AppHost/VitalSync.Samples.AppHost.csproj" />

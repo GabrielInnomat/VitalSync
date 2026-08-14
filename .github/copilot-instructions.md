@@ -189,3 +189,6 @@ Full strategy: `docs/architecture/testing-strategy.md`. What it will not tell yo
 8. Use short, clear commit messages, but **never commit yourself**.
 9. If you are unsure about a decision, **ask a human** — Copilot is not the arbiter of architecture
    or domain rules.
+10. **Never answer with a table.** Not in chat, not in plan or notes documents you write. Use a
+    heading with a short list underneath instead, and say what each item *means* rather than only
+    what it measures. Existing tables in the repository docs stay as they are.

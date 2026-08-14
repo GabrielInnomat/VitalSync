@@ -43,6 +43,11 @@
     <ProjectReference Include="..\ExternalAssemblies\SchemaFixture\SchemaFixture.csproj" />
     <ProjectReference Include="..\ExternalAssemblies\SchemaGapFixture\SchemaGapFixture.csproj" />
     <ProjectReference Include="..\ExternalAssemblies\ValidHandlersFixture\ValidHandlersFixture.csproj" />
+    <ProjectReference Include="..\MatrixHosts\BareHost\BareHost.csproj" />
+    <ProjectReference Include="..\MatrixHosts\EventsBusHost\EventsBusHost.csproj" />
+    <ProjectReference Include="..\MatrixHosts\EventsHost\EventsHost.csproj" />
+    <ProjectReference Include="..\MatrixHosts\StateBusHost\StateBusHost.csproj" />
+    <ProjectReference Include="..\MatrixHosts\StateHost\StateHost.csproj" />
   </ItemGroup>
 
   <ItemGroup>

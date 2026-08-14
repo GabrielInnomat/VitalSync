@@ -2,8 +2,12 @@
   <Folder Name="/src/">
     <Project Path="src/BuildingBlocks.Application/BuildingBlocks.Application.csproj" />
     <Project Path="src/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj" />
+    <Project Path="src/BuildingBlocks.EventSourcing.Marten/BuildingBlocks.EventSourcing.Marten.csproj" />
     <Project Path="src/BuildingBlocks.Infrastructure/BuildingBlocks.Infrastructure.csproj" />
-  <Project Path="src/BuildingBlocks.Runtime.Wolverine/BuildingBlocks.Runtime.Wolverine.csproj" />
+    <Project Path="src/BuildingBlocks.Messaging.Wolverine.RabbitMq/BuildingBlocks.Messaging.Wolverine.RabbitMq.csproj" />
+    <Project Path="src/BuildingBlocks.Persistence.Adapters/BuildingBlocks.Persistence.Adapters.csproj" />
+    <Project Path="src/BuildingBlocks.Persistence.EfCore.Postgres/BuildingBlocks.Persistence.EfCore.Postgres.csproj" />
+    <Project Path="src/BuildingBlocks.Runtime.Wolverine/BuildingBlocks.Runtime.Wolverine.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/BuildingBlocks.Application.Tests/BuildingBlocks.Application.Tests.csproj" />
@@ -19,5 +23,12 @@
     <Project Path="tests/ExternalAssemblies/SchemaFixture/SchemaFixture.csproj" />
     <Project Path="tests/ExternalAssemblies/SchemaGapFixture/SchemaGapFixture.csproj" />
     <Project Path="tests/ExternalAssemblies/ValidHandlersFixture/ValidHandlersFixture.csproj" />
+  </Folder>
+  <Folder Name="/tests/MatrixHosts/">
+    <Project Path="tests/MatrixHosts/BareHost/BareHost.csproj" />
+    <Project Path="tests/MatrixHosts/EventsBusHost/EventsBusHost.csproj" />
+    <Project Path="tests/MatrixHosts/EventsHost/EventsHost.csproj" />
+    <Project Path="tests/MatrixHosts/StateBusHost/StateBusHost.csproj" />
+    <Project Path="tests/MatrixHosts/StateHost/StateHost.csproj" />
   </Folder>
 </Solution>
