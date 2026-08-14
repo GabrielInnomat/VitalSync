@@ -14,6 +14,15 @@
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Application.Tests/BuildingBlocks.Application.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Domain.Tests/BuildingBlocks.Domain.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests/BuildingBlocks.Infrastructure.Tests.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.EventSourcing.Marten.Tests/BuildingBlocks.EventSourcing.Marten.Tests.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.Messaging.Wolverine.RabbitMq.Tests/BuildingBlocks.Messaging.Wolverine.RabbitMq.Tests.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.PackageConventions.Tests/BuildingBlocks.PackageConventions.Tests.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.Persistence.Adapters.Tests/BuildingBlocks.Persistence.Adapters.Tests.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.Persistence.EfCore.Postgres.Tests/BuildingBlocks.Persistence.EfCore.Postgres.Tests.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.Runtime.Wolverine.Tests/BuildingBlocks.Runtime.Wolverine.Tests.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.TestSupport/BuildingBlocks.TestSupport.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.TestSupport.Containers/BuildingBlocks.TestSupport.Containers.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.TestSupport.EfCore/BuildingBlocks.TestSupport.EfCore.csproj" />
   </Folder>
   <Folder Name="/BuildingBlocks/tests/ExternalAssemblies/">
     <Project Path="BuildingBlocks/tests/ExternalAssemblies/AmbiguousRequestsFixture/AmbiguousRequestsFixture.csproj" />

@@ -13,6 +13,12 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="BuildingBlocks.Infrastructure.Tests" />
+    <InternalsVisibleTo Include="BuildingBlocks.Persistence.Adapters.Tests" />
+    <InternalsVisibleTo Include="BuildingBlocks.Persistence.EfCore.Postgres.Tests" />
+    <InternalsVisibleTo Include="BuildingBlocks.EventSourcing.Marten.Tests" />
+    <InternalsVisibleTo Include="BuildingBlocks.Runtime.Wolverine.Tests" />
+    <InternalsVisibleTo Include="BuildingBlocks.Messaging.Wolverine.RabbitMq.Tests" />
+    <InternalsVisibleTo Include="BuildingBlocks.PackageConventions.Tests" />
   </ItemGroup>
 
   <ItemGroup>

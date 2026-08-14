@@ -188,7 +188,9 @@ Full strategy: `docs/architecture/testing-strategy.md`. What it will not tell yo
 7. **Always work on `main`** — never a separate branch, and never ask which branch to use.
 8. Use short, clear commit messages, but **never commit yourself**.
 9. If you are unsure about a decision, **ask a human** — Copilot is not the arbiter of architecture
-   or domain rules.
+   or domain rules. **Ask in the chat, as plain prose.** Never open a dialog, prompt, or
+   multiple-choice picker; do not use a question tool. Write the question and its options as normal
+   text in your answer and then stop and wait.
 10. **Never answer with a table.** Not in chat, not in plan or notes documents you write. Use a
     heading with a short list underneath instead, and say what each item *means* rather than only
     what it measures. Existing tables in the repository docs stay as they are.

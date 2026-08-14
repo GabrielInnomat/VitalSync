@@ -11,7 +11,7 @@ public sealed class DomainEventTypeRegistryTests
     [Fact]
     public void ARegisteredEvent_ResolvesInBothDirections()
     {
-        var registry = new DomainEventTypeRegistry([typeof(DomainEventTypeRegistryTests).Assembly]);
+        var registry = new DomainEventTypeRegistry([typeof(FlushProbeStarted).Assembly]);
 
         Assert.Equal("flush-probe-started-v1", registry.NameOf(typeof(FlushProbeStarted)));
         Assert.Equal(typeof(FlushProbeStarted), registry.Resolve("flush-probe-started-v1"));
@@ -41,7 +41,7 @@ public sealed class DomainEventTypeRegistryTests
     [Fact]
     public void ScanningTheSameAssemblyTwice_IsIdempotent()
     {
-        var assembly = typeof(DomainEventTypeRegistryTests).Assembly;
+        var assembly = typeof(FlushProbeStarted).Assembly;
 
         var registry = new DomainEventTypeRegistry([assembly, assembly]);
 

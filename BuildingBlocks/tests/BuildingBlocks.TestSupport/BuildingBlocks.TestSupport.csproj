@@ -1,13 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>BuildingBlocks.Infrastructure</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>BuildingBlocks.Infrastructure.Tests</RootNamespace>
+    <NoWarn>$(NoWarn);CA2007</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Marten" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="WolverineFx.Marten" />
+    <PackageReference Include="xunit.v3.extensibility.core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BuildingBlocks.Infrastructure\BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -18,11 +22,11 @@
     <InternalsVisibleTo Include="BuildingBlocks.Runtime.Wolverine.Tests" />
     <InternalsVisibleTo Include="BuildingBlocks.Messaging.Wolverine.RabbitMq.Tests" />
     <InternalsVisibleTo Include="BuildingBlocks.PackageConventions.Tests" />
+    <InternalsVisibleTo Include="BuildingBlocks.TestSupport.Containers" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BuildingBlocks.Persistence.Adapters\BuildingBlocks.Persistence.Adapters.csproj" />
-    <ProjectReference Include="..\BuildingBlocks.Runtime.Wolverine\BuildingBlocks.Runtime.Wolverine.csproj" />
+    <Using Include="Xunit" />
   </ItemGroup>
 
 </Project>

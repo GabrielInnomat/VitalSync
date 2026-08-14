@@ -5,6 +5,7 @@
     <IsTestProject>true</IsTestProject>
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <RootNamespace>BuildingBlocks.Infrastructure.Tests</RootNamespace>
     <NoWarn>$(NoWarn);CA2007</NoWarn>
   </PropertyGroup>
 
@@ -13,11 +14,11 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
-    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
@@ -27,15 +28,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\BuildingBlocks.Infrastructure\BuildingBlocks.Infrastructure.csproj" />
-    <ProjectReference Include="..\BuildingBlocks.TestSupport\BuildingBlocks.TestSupport.csproj" />
-    <ProjectReference Include="..\ExternalAssemblies\AmbiguousRequestsFixture\AmbiguousRequestsFixture.csproj" />
-    <ProjectReference Include="..\ExternalAssemblies\ConflictingHandlersFixture\ConflictingHandlersFixture.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks.Persistence.EfCore.Postgres\BuildingBlocks.Persistence.EfCore.Postgres.csproj" />
+    <ProjectReference Include="..\BuildingBlocks.TestSupport.EfCore\BuildingBlocks.TestSupport.EfCore.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks.Runtime.Wolverine\BuildingBlocks.Runtime.Wolverine.csproj" />
+    <ProjectReference Include="..\BuildingBlocks.TestSupport.Containers\BuildingBlocks.TestSupport.Containers.csproj" />
     <ProjectReference Include="..\ExternalAssemblies\HullFixture\HullFixture.csproj" />
-    <ProjectReference Include="..\ExternalAssemblies\OrphanRequestsFixture\OrphanRequestsFixture.csproj" />
-    <ProjectReference Include="..\ExternalAssemblies\SchemaFixture\SchemaFixture.csproj" />
-    <ProjectReference Include="..\ExternalAssemblies\SchemaGapFixture\SchemaGapFixture.csproj" />
-    <ProjectReference Include="..\ExternalAssemblies\ValidHandlersFixture\ValidHandlersFixture.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\ContainerCollections.cs" Link="ContainerCollections.cs" />
   </ItemGroup>
 
   <ItemGroup>

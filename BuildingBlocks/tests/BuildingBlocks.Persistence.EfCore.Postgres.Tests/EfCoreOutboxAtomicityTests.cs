@@ -27,6 +27,7 @@ public sealed class EfCoreOutboxAtomicityTests(PostgreSqlFixture fixture)
         builder.AddBuildingBlocks(
             options => options
                 .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
+                .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
                 .UseEfCorePersistence<FlushProbeContext>(
                 fixture.ConnectionString,
                 context => context.AddInterceptors(recorder))

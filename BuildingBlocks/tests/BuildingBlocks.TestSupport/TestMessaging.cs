@@ -1,6 +1,6 @@
 namespace BuildingBlocks.Infrastructure.Tests;
 
-internal static class TestMessaging
+public static class TestMessaging
 {
     public const string ExchangeName = "test-platform.integration-events";
 

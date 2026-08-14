@@ -2,7 +2,7 @@ using RabbitMQ.Client;
 
 namespace BuildingBlocks.Infrastructure.Tests;
 
-internal sealed class BrokerProbe(IConnection connection, IChannel channel) : IAsyncDisposable
+public sealed class BrokerProbe(IConnection connection, IChannel channel) : IAsyncDisposable
 {
     public static async Task<BrokerProbe> ConnectAsync(Uri brokerUri, CancellationToken cancellationToken)
     {
