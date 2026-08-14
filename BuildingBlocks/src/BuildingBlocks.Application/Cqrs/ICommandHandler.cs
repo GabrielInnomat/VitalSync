@@ -10,6 +10,7 @@ public interface ICommandHandler<in TCommand>
 
 public interface ICommandHandler<in TCommand, TResult>
     where TCommand : ICommand<TResult>
+    where TResult : notnull
 {
     Task<Result<TResult>> HandleAsync(TCommand command, CancellationToken cancellationToken);
 }

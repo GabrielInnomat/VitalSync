@@ -24,19 +24,20 @@ public sealed class ResultOfTTests
     }
 
     [Fact]
-    public void Success_WithNullValue_Throws()
+    public void TheNullCheck_MovedFromRuntimeToTheCompiler()
     {
-        Assert.Throws<ArgumentNullException>(() => Result<string>.Success(null!));
+        var result = Result<string>.Success(null!);
+
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
-    public void ImplicitConversion_FromNullValue_Throws()
+    public void ResultOfFailure_IsRejectedWithAnExplanation()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-        {
-            Result<string> result = (string)null!;
-            return result;
-        });
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => Result<Failure>.Failed(Failure.NotFound("gone", "No such thing.")));
+
+        Assert.Contains("Result<Failure> is not a usable result type", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

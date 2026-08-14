@@ -34,7 +34,8 @@ public class Result
 
     public static Result Success() => new(true, NoFailures);
 
-    public static Result<TResult> Success<TResult>(TResult value) => Result<TResult>.Success(value);
+    public static Result<TResult> Success<TResult>(TResult value)
+        where TResult : notnull => Result<TResult>.Success(value);
 
     public static Result Failed(Failure failure)
     {

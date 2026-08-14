@@ -32,6 +32,7 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
     }
 
     public Task<Result<TResult>> SendAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken)
+        where TResult : notnull
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -48,6 +49,7 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
     }
 
     public Task<Result<TResult>> SendAsync<TResult>(IQuery<TResult> query, CancellationToken cancellationToken)
+        where TResult : notnull
     {
         ArgumentNullException.ThrowIfNull(query);
 
@@ -154,12 +156,14 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
     }
 
     private abstract class CommandWithResultDispatcher<TResult>
+        where TResult : notnull
     {
         public abstract Task<Result<TResult>> DispatchAsync(ICommand<TResult> command, IServiceProvider services, CancellationToken cancellationToken);
     }
 
     private sealed class CommandWithResultDispatcher<TCommand, TResult> : CommandWithResultDispatcher<TResult>
         where TCommand : ICommand<TResult>
+        where TResult : notnull
     {
         public override Task<Result<TResult>> DispatchAsync(ICommand<TResult> command, IServiceProvider services, CancellationToken cancellationToken)
         {
@@ -175,12 +179,14 @@ internal sealed class RequestSender(IServiceProvider serviceProvider) : ISender
     }
 
     private abstract class QueryDispatcher<TResult>
+        where TResult : notnull
     {
         public abstract Task<Result<TResult>> DispatchAsync(IQuery<TResult> query, IServiceProvider services, CancellationToken cancellationToken);
     }
 
     private sealed class QueryDispatcher<TQuery, TResult> : QueryDispatcher<TResult>
         where TQuery : IQuery<TResult>
+        where TResult : notnull
     {
         public override Task<Result<TResult>> DispatchAsync(IQuery<TResult> query, IServiceProvider services, CancellationToken cancellationToken)
         {
