@@ -36,6 +36,8 @@
   </Folder>
   <Folder Name="/BuildingBlocks/tests/MatrixHosts/">
     <Project Path="BuildingBlocks/tests/MatrixHosts/BareHost/BareHost.csproj" />
+    <Project Path="BuildingBlocks/tests/MatrixHosts/ContractsHost/ContractsHost.csproj" />
+    <Project Path="BuildingBlocks/tests/MatrixHosts/DomainOnlyHost/DomainOnlyHost.csproj" />
     <Project Path="BuildingBlocks/tests/MatrixHosts/EventsBusHost/EventsBusHost.csproj" />
     <Project Path="BuildingBlocks/tests/MatrixHosts/EventsHost/EventsHost.csproj" />
     <Project Path="BuildingBlocks/tests/MatrixHosts/StateBusHost/StateBusHost.csproj" />

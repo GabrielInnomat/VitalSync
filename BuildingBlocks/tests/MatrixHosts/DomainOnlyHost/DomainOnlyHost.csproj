@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\BuildingBlocks.Domain\BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="BuildingBlocks.Domain.Aggregates" />
+    <Using Include="BuildingBlocks.Domain.Entities" />
+    <Using Include="BuildingBlocks.Domain.Events" />
+    <Using Include="BuildingBlocks.Domain.Naming" />
+    <Using Include="BuildingBlocks.Domain.Rules" />
+  </ItemGroup>
+
+</Project>

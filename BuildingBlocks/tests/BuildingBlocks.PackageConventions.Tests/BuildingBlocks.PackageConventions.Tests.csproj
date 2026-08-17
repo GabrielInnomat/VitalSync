@@ -34,6 +34,8 @@
     <ProjectReference Include="..\..\src\BuildingBlocks.Messaging.Wolverine.RabbitMq\BuildingBlocks.Messaging.Wolverine.RabbitMq.csproj" />
     <ProjectReference Include="..\BuildingBlocks.TestSupport.Containers\BuildingBlocks.TestSupport.Containers.csproj" />
     <ProjectReference Include="..\MatrixHosts\BareHost\BareHost.csproj" />
+    <ProjectReference Include="..\MatrixHosts\ContractsHost\ContractsHost.csproj" />
+    <ProjectReference Include="..\MatrixHosts\DomainOnlyHost\DomainOnlyHost.csproj" />
     <ProjectReference Include="..\MatrixHosts\EventsBusHost\EventsBusHost.csproj" />
     <ProjectReference Include="..\MatrixHosts\EventsHost\EventsHost.csproj" />
     <ProjectReference Include="..\MatrixHosts\StateBusHost\StateBusHost.csproj" />

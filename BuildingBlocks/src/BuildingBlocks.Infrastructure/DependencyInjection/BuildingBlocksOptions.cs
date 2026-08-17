@@ -84,6 +84,12 @@ public sealed class BuildingBlocksOptions
         return this;
     }
 
+    public BuildingBlocksOptions WithoutEventHistory()
+    {
+        Wiring.Persistence.WaiveEventHistory();
+        return this;
+    }
+
     public BuildingBlocksOptions UseMessagingTransport(IMessagingTransportAdapter adapter)
     {
         ArgumentNullException.ThrowIfNull(adapter);

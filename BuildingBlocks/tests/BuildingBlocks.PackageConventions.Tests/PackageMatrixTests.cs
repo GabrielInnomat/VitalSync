@@ -1,5 +1,6 @@
 using System.Text.Json;
 using BuildingBlocks.Application.Cqrs;
+using BuildingBlocks.Application.Results;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -22,6 +23,8 @@ public sealed class PackageMatrixTests
     public static TheoryData<string, string[]> ForbiddenVendorsPerHost =>
         new()
         {
+            { "DomainOnlyHost", [Marten, EfCore, RabbitMq, Wolverine, Npgsql] },
+            { "ContractsHost", [Marten, EfCore, RabbitMq, Wolverine, Npgsql] },
             { "BareHost", [Marten, EfCore, RabbitMq, Wolverine, Npgsql] },
             { "StateHost", [Marten, RabbitMq] },
             { "EventsHost", [EfCore, RabbitMq] },
@@ -84,6 +87,52 @@ public sealed class PackageMatrixTests
         using var built = BuildHost(host);
 
         Assert.NotNull(built.Services.GetRequiredService<ISender>());
+    }
+
+    [Fact]
+    public void TheDomainStageModelsAnAggregateWithoutAnyRuntime()
+    {
+        var raised = DomainOnlyHost.MatrixHost.Probe();
+
+        Assert.Equal(
+            ["ReadingRecorded", "ReadingCorrected"],
+            raised.Select(domainEvent => domainEvent.GetType().Name));
+    }
+
+    [Fact]
+    public void TheDomainStageEnforcesItsOwnRulesWithoutAnyRuntime()
+    {
+        var violation = DomainOnlyHost.MatrixHost.ProbeRejection();
+
+        Assert.Equal("reading.value.not-positive", violation.Code);
+    }
+
+    [Fact]
+    public async Task TheContractsStageRunsAHandlerWithoutAnyRuntime()
+    {
+        var found = await ContractsHost.MatrixHost.ProbeAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(found.IsSuccess);
+        Assert.Equal(72, found.Value);
+    }
+
+    [Fact]
+    public async Task TheContractsStageTurnsAMissingAggregateIntoAFailure()
+    {
+        var missing = await ContractsHost.MatrixHost.ProbeMissingAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(missing.IsFailure);
+        Assert.Equal(FailureCategory.NotFound, missing.Failures[0].Category);
+    }
+
+    [Fact]
+    public async Task TheContractsStageProjectsIntoAReadModelWithoutAnyRuntime()
+    {
+        var written = await ContractsHost.MatrixHost.ProbeProjectionAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal([72, 75], written.Select(summary => summary.Value));
+        Assert.Equal([1L, 2L], written.Select(summary => summary.Version));
+        Assert.Single(written.Select(summary => summary.AggregateId).Distinct());
     }
 
     private static IHost BuildHost(string host) => host switch

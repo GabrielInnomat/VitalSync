@@ -6,6 +6,8 @@ internal sealed class PersistenceSelection
 {
     public PersistenceChoice Choice { get; private set; } = PersistenceChoice.None;
 
+    public bool IsEventHistoryWaived { get; private set; }
+
     public bool IsChosen => Choice.IsChosen;
 
     public bool IsSelected => Choice.IsSelected;
@@ -15,6 +17,8 @@ internal sealed class PersistenceSelection
     public string? WriteConnectionString => Choice.WriteConnectionString;
 
     public bool IsTransientFault(Exception exception) => Choice.IsTransientFault(exception);
+
+    public void WaiveEventHistory() => IsEventHistoryWaived = true;
 
     public void Select(PersistenceChoice choice)
     {

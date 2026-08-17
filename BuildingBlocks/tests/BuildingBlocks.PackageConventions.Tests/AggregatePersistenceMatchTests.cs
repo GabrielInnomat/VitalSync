@@ -41,6 +41,39 @@ public sealed class AggregatePersistenceMatchTests
         Assert.Contains("UseEfCorePersistence", thrown.Message, StringComparison.Ordinal);
         Assert.Contains(nameof(Journal), thrown.Message, StringComparison.Ordinal);
         Assert.Contains("record of truth", thrown.Message, StringComparison.Ordinal);
+        Assert.Contains("WithoutEventHistory", thrown.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StateStorageWithAnEventSourcedAggregate_PassesTheStartWhenTheHistoryIsWaived() =>
+        await RunChecksAsync(
+            options => options
+                .UseEfCorePersistence<MatchDbContext>(WriteConnectionString)
+                .WithoutEventHistory(),
+            services => services.AddScoped<ICommandHandler<OpenJournal>, OpenJournalHandler>());
+
+    [Fact]
+    public async Task WaivingTheHistoryOnAnEventSourcingStore_FailsTheStartWithTheReason()
+    {
+        var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => RunChecksAsync(
+            options => options
+                .UseMartenEventSourcing(WriteConnectionString)
+                .WithoutEventHistory(),
+            services => services.AddScoped<ICommandHandler<OpenJournal>, OpenJournalHandler>()));
+
+        Assert.Contains("WithoutEventHistory", thrown.Message, StringComparison.Ordinal);
+        Assert.Contains("UseMartenEventSourcing", thrown.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task WaivingTheHistoryWithoutAnyStore_FailsTheStartWithTheReason()
+    {
+        var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => RunChecksAsync(
+            options => options.WithoutEventHistory(),
+            _ => { }));
+
+        Assert.Contains("WithoutEventHistory", thrown.Message, StringComparison.Ordinal);
+        Assert.Contains("no persistence strategy", thrown.Message, StringComparison.Ordinal);
     }
 
     [Fact]
