@@ -1,7 +1,8 @@
 namespace VitalSync.Sample.EventSourced.Domain;
 
 [AggregateName("gadget")]
-public sealed class Gadget : EventSourcedAggregateRoot<GadgetId, GadgetState>
+public sealed class Gadget : EventSourcedAggregateRoot<GadgetId, GadgetState>,
+    IChildOwner<GadgetComponentId, GadgetComponentState>
 {
     private Gadget() : base(GadgetState.Empty)
     {
@@ -59,4 +60,7 @@ public sealed class Gadget : EventSourcedAggregateRoot<GadgetId, GadgetState>
 
     internal GadgetComponentState? FindComponent(GadgetComponentId componentId) =>
         State.Components.FirstOrDefault(component => component.Id == componentId);
+
+    GadgetComponentState? IChildOwner<GadgetComponentId, GadgetComponentState>.FindChild(
+        GadgetComponentId childId) => FindComponent(childId);
 }

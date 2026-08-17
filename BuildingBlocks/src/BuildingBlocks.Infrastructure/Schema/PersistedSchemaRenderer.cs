@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using BuildingBlocks.Application.IntegrationEvents;
+using BuildingBlocks.Domain.Aggregates;
 using BuildingBlocks.Domain.Entities;
 using BuildingBlocks.Domain.Events;
 using BuildingBlocks.Domain.Naming;
@@ -92,19 +93,44 @@ internal static class PersistedSchemaRenderer
         return types.Where(static type =>
             type is { IsClass: true, IsAbstract: false }
             && !type.IsGenericTypeDefinition
-            && (typeof(IDomainEvent).IsAssignableFrom(type) || typeof(IIntegrationEvent).IsAssignableFrom(type)));
+            && (typeof(IDomainEvent).IsAssignableFrom(type)
+                || typeof(IIntegrationEvent).IsAssignableFrom(type)
+                || AggregateKeyType(type) is not null));
     }
+
+    private static Type? AggregateKeyType(Type type) =>
+        Array.Find(
+            type.GetInterfaces(),
+            static @interface => @interface.IsGenericType
+                && @interface.GetGenericTypeDefinition() == typeof(IAggregateRoot<>))
+            ?.GenericTypeArguments[0];
 
     private static string RenderBlock(Type persistedType, JsonSerializerOptions options)
     {
         var builder = new StringBuilder();
         builder.Append(Header(persistedType)).Append('\n');
-        RenderMembers(persistedType, options, builder, depth: 1, [persistedType]);
+
+        if (AggregateKeyType(persistedType) is null)
+        {
+            RenderMembers(persistedType, options, builder, depth: 1, [persistedType]);
+        }
+
         return builder.ToString();
     }
 
     private static string Header(Type persistedType)
     {
+        var aggregateKeyType = AggregateKeyType(persistedType);
+        if (aggregateKeyType is not null)
+        {
+            var aggregateName = persistedType.GetCustomAttribute<AggregateNameAttribute>(inherit: false)?.Name
+                ?? throw new InvalidOperationException(
+                    $"The aggregate '{persistedType}' has no [AggregateName] and therefore has no stream key to " +
+                    "snapshot.");
+
+            return $"aggregate-stream {aggregateName}/{LeafName(aggregateKeyType)}";
+        }
+
         if (typeof(IDomainEvent).IsAssignableFrom(persistedType))
         {
             var name = persistedType.GetCustomAttribute<EventNameAttribute>(inherit: false)?.Name

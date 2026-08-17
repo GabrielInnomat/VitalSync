@@ -16,3 +16,11 @@ internal sealed class OtherEventSourcedAggregate()
 {
     public void Raise(IDomainEvent domainEvent) => RaiseEvent(domainEvent);
 }
+
+internal sealed class NullApplyAggregate() : AggregateRoot<TestId, NullApplyState>(NullApplyState.Empty)
+{
+    public void Raise(IDomainEvent domainEvent) => RaiseEvent(domainEvent);
+}
+
+internal sealed class NullApplyEventSourcedAggregate()
+    : EventSourcedAggregateRoot<TestId, NullApplyState>(NullApplyState.Empty);

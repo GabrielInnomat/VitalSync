@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using BuildingBlocks.Infrastructure.DependencyInjection.Extensibility;
 using BuildingBlocks.Infrastructure.DependencyInjection.Registration;
@@ -42,6 +43,7 @@ public sealed class BuildingBlocksOptions
 
     internal DomainEventTypeRegistry DomainEventTypeRegistry => _domainEvents.Registry;
 
+    [RequiresUnreferencedCode(TrimmingMessages.AssemblyScanning)]
     public BuildingBlocksOptions AddHandlersFrom(Assembly assembly)
     {
         ArgumentNullException.ThrowIfNull(assembly);
@@ -50,6 +52,7 @@ public sealed class BuildingBlocksOptions
         return this;
     }
 
+    [RequiresUnreferencedCode(TrimmingMessages.AssemblyScanning)]
     public BuildingBlocksOptions AddDomainEventsFrom(Assembly assembly)
     {
         ArgumentNullException.ThrowIfNull(assembly);
@@ -58,6 +61,7 @@ public sealed class BuildingBlocksOptions
         return this;
     }
 
+    [RequiresUnreferencedCode(TrimmingMessages.AssemblyScanning)]
     public BuildingBlocksOptions AddPipelineBehavior(Type openGenericBehavior, int order)
     {
         ArgumentNullException.ThrowIfNull(openGenericBehavior);

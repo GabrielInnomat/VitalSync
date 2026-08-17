@@ -31,7 +31,13 @@ public abstract class AggregateRoot<TKey, TState> : EntityBase<TKey>, IAggregate
 
     private protected void ApplyEvent(IDomainEvent domainEvent)
     {
-        State = State.Apply(domainEvent).WithVersion(State.Version + 1);
+        var applied = State.Apply(domainEvent)
+            ?? throw new InvalidOperationException(
+                $"'{typeof(TState)}.Apply' returned null for the event '{domainEvent.GetType()}'. Applying an "
+                + "event returns the state that follows it, and an unhandled event returns the state unchanged; "
+                + "null is never a state an aggregate can be in.");
+
+        State = applied.WithVersion(State.Version + 1);
 
         if (State.Id.IsEmpty)
         {

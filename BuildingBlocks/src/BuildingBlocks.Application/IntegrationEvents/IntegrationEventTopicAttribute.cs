@@ -22,7 +22,7 @@ public sealed class IntegrationEventTopicAttribute : Attribute
             : throw new ArgumentException(
                 $"'{topic}' is not a valid integration event topic. A topic is the published routing key " +
                 "in the form '<context>.<event>', both segments lower-case kebab-case " +
-                "(for example 'nutrition.recipe-created'), so that consumer bindings such as 'nutrition.*' " +
+                "(for example 'orders.order-placed'), so that consumer bindings such as 'orders.*' " +
                 "stay stable and independent of the CLR type the attribute happens to be written on.",
                 nameof(topic));
     }

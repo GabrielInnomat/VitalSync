@@ -5,9 +5,9 @@ namespace BuildingBlocks.Application.Tests;
 public class IntegrationEventTopicAttributeTests
 {
     [Theory]
-    [InlineData("nutrition.recipe-created")]
+    [InlineData("orders.order-placed")]
     [InlineData("sample.widget-created")]
-    [InlineData("fitness.workout-session-completed-v2")]
+    [InlineData("billing.invoice-payment-received-v2")]
     [InlineData("a.b")]
     public void Constructor_WithContextDotEventInKebabCase_ExposesTheTopic(string topic)
     {
@@ -17,17 +17,17 @@ public class IntegrationEventTopicAttributeTests
     }
 
     [Theory]
-    [InlineData("recipe-created")]
-    [InlineData("nutrition.recipe.created")]
-    [InlineData("Nutrition.recipe-created")]
-    [InlineData("nutrition.Recipe-Created")]
-    [InlineData("nutrition.recipe--created")]
-    [InlineData("nutrition.-recipe-created")]
-    [InlineData("nutrition.recipe-created-")]
-    [InlineData("nutrition.")]
-    [InlineData(".recipe-created")]
-    [InlineData("nutrition.recipe_created")]
-    [InlineData("nutrition.recipe created")]
+    [InlineData("order-placed")]
+    [InlineData("orders.order.placed")]
+    [InlineData("Orders.order-placed")]
+    [InlineData("orders.Order-Placed")]
+    [InlineData("orders.order--placed")]
+    [InlineData("orders.-order-placed")]
+    [InlineData("orders.order-placed-")]
+    [InlineData("orders.")]
+    [InlineData(".order-placed")]
+    [InlineData("orders.order_placed")]
+    [InlineData("orders.order placed")]
     public void Constructor_WithInvalidTopic_Throws(string topic)
     {
         var exception = Assert.Throws<ArgumentException>(() => new IntegrationEventTopicAttribute(topic));

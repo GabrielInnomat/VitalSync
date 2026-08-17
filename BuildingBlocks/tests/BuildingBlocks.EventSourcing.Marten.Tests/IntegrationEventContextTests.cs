@@ -34,15 +34,15 @@ public sealed class IntegrationEventContextTests
             Configure(options => options.UseWolverineMessaging(
                 RabbitMqUri,
                 TestMessaging.ExchangeName,
-                "vitalsync.integration-events")));
+                "orders.integration-events")));
 
         Assert.Contains("wrong position", thrown.Message, StringComparison.Ordinal);
     }
 
     [Theory]
-    [InlineData("Nutrition")]
-    [InlineData("nutrition_service")]
-    [InlineData("-nutrition")]
+    [InlineData("Orders")]
+    [InlineData("orders_service")]
+    [InlineData("-orders")]
     public void ContextNameThatIsNotKebabCase_IsRejected(string contextName) =>
         Assert.Throws<ArgumentException>(() =>
             Configure(options => options.UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, contextName)));
@@ -77,8 +77,8 @@ public sealed class IntegrationEventContextTests
     }
 
     [Theory]
-    [InlineData("nutrition.recipe-created", "nutrition")]
-    [InlineData("nutrition", "nutrition")]
+    [InlineData("orders.order-placed", "orders")]
+    [InlineData("orders", "orders")]
     public void ContextOf_ReadsTheFirstSegment(string topic, string expected) =>
         Assert.Equal(expected, TopicResolver.ContextOf(topic));
 

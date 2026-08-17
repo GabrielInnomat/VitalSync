@@ -51,10 +51,10 @@ public sealed class TransientIdentityTests
     [Fact]
     public void AChildEntity_CannotBeConstructedWithoutIdentity()
     {
-        var parent = new TestAggregate(new TestId(1));
+        var parent = ParentAggregate.Create(new TestId(1));
 
         Assert.Throws<DomainValidationException>(
-            () => new TestChild(parent, TestId.Empty, _ => null));
+            () => new TestChild(parent, TestId.Empty));
     }
 
     [Fact]

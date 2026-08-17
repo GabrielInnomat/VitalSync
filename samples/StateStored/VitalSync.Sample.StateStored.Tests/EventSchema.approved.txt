@@ -1,3 +1,5 @@
+aggregate-stream widget/guid
+
 domain-event widget-created-v1
   Name : string
   WidgetId : guid

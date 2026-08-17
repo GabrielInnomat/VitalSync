@@ -23,7 +23,7 @@ public sealed class BrokerTopologyCheckTests(PostgreSqlFixture postgres, RabbitM
             StartAsync(exchangeName, queueName: null, InfrastructureProvisioning.Never));
 
         Assert.Contains(exchangeName, thrown.Message, StringComparison.Ordinal);
-        Assert.Contains("migration worker", thrown.Message, StringComparison.Ordinal);
+        Assert.Contains("InfrastructureProvisioning.AtStartup", thrown.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public sealed class BrokerTopologyCheckTests(PostgreSqlFixture postgres, RabbitM
             StartAsync(exchangeName, absentQueue, InfrastructureProvisioning.Never));
 
         Assert.Contains(absentQueue, thrown.Message, StringComparison.Ordinal);
-        Assert.Contains("migration worker", thrown.Message, StringComparison.Ordinal);
+        Assert.Contains("InfrastructureProvisioning.AtStartup", thrown.Message, StringComparison.Ordinal);
     }
 
     [Fact]

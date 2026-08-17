@@ -1,3 +1,5 @@
+aggregate-stream gadget/guid
+
 domain-event gadget-component-added-v1
   ComponentId : guid
   GadgetId : guid

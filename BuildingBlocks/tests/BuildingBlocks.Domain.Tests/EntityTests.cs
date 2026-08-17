@@ -167,23 +167,27 @@ public sealed class EntityTests
         parent.RemoveChild(new TestId(2));
 
         var ex = Assert.Throws<DomainValidationException>(() => child.Value);
-        Assert.Contains("no longer part of its aggregate", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("no longer part of 'ParentAggregate'", ex.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Child_WithoutARaiser_IsRejected()
+    public void Child_WithoutAnOwner_IsRejected()
     {
         Assert.Throws<ArgumentNullException>(
-            () => new TestChild(null!, new TestId(2), _ => null));
+            () => new TestChild(null!, new TestId(2)));
     }
 
     [Fact]
-    public void Child_WithoutAStateLookup_IsRejected()
+    public void Child_ReadsStateAndRaisesEventsThroughTheSameOwner()
     {
         var parent = ParentAggregate.Create(new TestId(1));
+        parent.AddChild(new TestId(2), 3);
 
-        Assert.Throws<ArgumentNullException>(
-            () => new TestChild(parent, new TestId(2), null!));
+        var child = parent.Child(new TestId(2));
+        child.ChangeValue(42);
+
+        Assert.Equal(42, child.Value);
+        Assert.Equal(42, parent.Child(new TestId(2)).Value);
     }
 
     [Fact]
@@ -192,7 +196,7 @@ public sealed class EntityTests
         var parent = ParentAggregate.Create(new TestId(1));
 
         Assert.Throws<DomainValidationException>(
-            () => new TestChild(parent, TestId.Empty, _ => null));
+            () => new TestChild(parent, TestId.Empty));
     }
 
     [Fact]

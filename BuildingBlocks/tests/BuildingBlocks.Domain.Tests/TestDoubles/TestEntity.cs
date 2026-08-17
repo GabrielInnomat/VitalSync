@@ -10,8 +10,17 @@ internal sealed class NoOpRaiser : IDomainEventRaiser
     }
 }
 
+internal sealed class StubChildOwner(TestId id) : IChildOwner<TestId, ChildState>
+{
+    public void Raise(IDomainEvent domainEvent)
+    {
+    }
+
+    public ChildState? FindChild(TestId childId) => new(id, 0);
+}
+
 internal sealed class TestEntity(TestId id)
-    : Entity<TestId, ChildState>(new NoOpRaiser(), id, _ => new ChildState(id, 0));
+    : Entity<TestId, ChildState>(new StubChildOwner(id), id);
 
 internal sealed class OtherTestEntity(TestId id)
-    : Entity<TestId, ChildState>(new NoOpRaiser(), id, _ => new ChildState(id, 0));
+    : Entity<TestId, ChildState>(new StubChildOwner(id), id);

@@ -7,36 +7,33 @@ public abstract class Entity<TKey, TState> : EntityBase<TKey>
     where TKey : struct, IEntityKey, IEquatable<TKey>
     where TState : EntityState<TState, TKey>
 {
-    private readonly IDomainEventRaiser _raiser;
-    private readonly Func<TKey, TState?> _stateLookup;
+    private readonly IChildOwner<TKey, TState> _owner;
 
-    protected Entity(IDomainEventRaiser raiser, TKey id, Func<TKey, TState?> stateLookup)
+    protected Entity(IChildOwner<TKey, TState> owner, TKey id)
     {
         if (id.IsEmpty)
         {
             throw new DomainValidationException("The id of an entity cannot be empty.");
         }
 
-        ArgumentNullException.ThrowIfNull(raiser);
-        ArgumentNullException.ThrowIfNull(stateLookup);
+        ArgumentNullException.ThrowIfNull(owner);
 
         Id = id;
-        _raiser = raiser;
-        _stateLookup = stateLookup;
+        _owner = owner;
     }
 
     public sealed override TKey Id { get; }
 
     protected TState GetCurrentState()
     {
-        return _stateLookup(Id)
+        return _owner.FindChild(Id)
             ?? throw new DomainValidationException(
-                $"The entity '{Id}' is no longer part of its aggregate.");
+                $"The entity '{Id}' is no longer part of '{_owner.GetType().Name}'.");
     }
 
     protected void RaiseEvent(IDomainEvent domainEvent)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
-        _raiser.Raise(domainEvent);
+        _owner.Raise(domainEvent);
     }
 }

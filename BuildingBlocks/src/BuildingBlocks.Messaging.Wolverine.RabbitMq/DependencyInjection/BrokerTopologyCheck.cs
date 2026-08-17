@@ -70,9 +70,9 @@ internal sealed class BrokerTopologyCheck(
         }
 
         throw new InvalidOperationException(
-            $"This host does not provision infrastructure, and {complaint}. Run the context's migration worker — " +
-            "the one host that selects ProvisionInfrastructure(InfrastructureProvisioning.AtStartup) — before " +
-            "starting this one.",
+            $"This host does not provision infrastructure, and {complaint}. Start the host that selects " +
+            "ProvisionInfrastructure(InfrastructureProvisioning.AtStartup) for this context — and let it finish — " +
+            "before starting this one.",
             failure);
     }
 }

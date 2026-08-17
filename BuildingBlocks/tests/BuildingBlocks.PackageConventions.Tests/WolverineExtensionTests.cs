@@ -201,10 +201,10 @@ public sealed class WolverineExtensionTests
         {
             settings.Messaging.SelectTransport(TestMessagingSettings);
             settings.Messaging.SelectSubscription(
-                new IntegrationEventSubscription("fitness.integration-events", ["nutrition.*"], TestAssembly));
+                new IntegrationEventSubscription("billing.integration-events", ["orders.*"], TestAssembly));
         }));
 
-        var queue = RabbitMqTransportOf(options).Queues["fitness.integration-events"];
+        var queue = RabbitMqTransportOf(options).Queues["billing.integration-events"];
 
         Assert.True(queue.IsDurable);
     }
@@ -237,13 +237,13 @@ public sealed class WolverineExtensionTests
         using var provider = BuildProvider(options => options
             .UseMartenEventSourcing(ConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
-            .SubscribeToIntegrationEvents("fitness.integration-events", TestAssembly, "nutrition.*", "analytics.*"));
+            .SubscribeToIntegrationEvents("billing.integration-events", TestAssembly, "orders.*", "reporting.*"));
 
         var subscription = provider.GetRequiredService<MessagingSelection>().Subscription;
 
         Assert.NotNull(subscription);
-        Assert.Equal("fitness.integration-events", subscription!.QueueName);
-        Assert.Equal(["nutrition.*", "analytics.*"], subscription.TopicPatterns);
+        Assert.Equal("billing.integration-events", subscription!.QueueName);
+        Assert.Equal(["orders.*", "reporting.*"], subscription.TopicPatterns);
         Assert.Equal(TestAssembly, subscription.ConsumerAssembly);
     }
 
@@ -252,7 +252,7 @@ public sealed class WolverineExtensionTests
     {
         var thrown = Assert.Throws<InvalidOperationException>(() =>
             BuildProvider(options =>
-                options.SubscribeToIntegrationEvents("fitness.integration-events", TestAssembly, "nutrition.*")));
+                options.SubscribeToIntegrationEvents("billing.integration-events", TestAssembly, "orders.*")));
 
         Assert.Contains("UseWolverineMessaging", thrown.Message, StringComparison.Ordinal);
     }
@@ -264,8 +264,8 @@ public sealed class WolverineExtensionTests
             BuildProvider(options => options
                 .UseMartenEventSourcing(ConnectionString)
                 .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
-                .SubscribeToIntegrationEvents("first", TestAssembly, "nutrition.*")
-                .SubscribeToIntegrationEvents("second", TestAssembly, "fitness.*")));
+                .SubscribeToIntegrationEvents("first", TestAssembly, "orders.*")
+                .SubscribeToIntegrationEvents("second", TestAssembly, "billing.*")));
 
         Assert.Contains("one queue", thrown.Message, StringComparison.Ordinal);
     }
@@ -277,7 +277,7 @@ public sealed class WolverineExtensionTests
             BuildProvider(options => options
                 .UseMartenEventSourcing(ConnectionString)
                 .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
-                .SubscribeToIntegrationEvents("fitness.integration-events", TestAssembly)));
+                .SubscribeToIntegrationEvents("billing.integration-events", TestAssembly)));
     }
 
     [Fact]
@@ -287,7 +287,7 @@ public sealed class WolverineExtensionTests
             BuildProvider(options => options
                 .UseMartenEventSourcing(ConnectionString)
                 .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
-                .SubscribeToIntegrationEvents("fitness.integration-events", TestAssembly, "  ")));
+                .SubscribeToIntegrationEvents("billing.integration-events", TestAssembly, "  ")));
     }
 
     [Fact]
@@ -297,12 +297,12 @@ public sealed class WolverineExtensionTests
         {
             settings.Messaging.SelectTransport(TestMessagingSettings);
             settings.Messaging.SelectSubscription(
-                new IntegrationEventSubscription("fitness.integration-events", ["nutrition.*"], TestAssembly));
+                new IntegrationEventSubscription("billing.integration-events", ["orders.*"], TestAssembly));
         }));
 
         Assert.Contains(
             options.Transports.SelectMany(transport => transport.Endpoints()),
-            endpoint => endpoint.Uri.ToString().Contains("fitness.integration-events", StringComparison.Ordinal));
+            endpoint => endpoint.Uri.ToString().Contains("billing.integration-events", StringComparison.Ordinal));
     }
 
     [Fact]

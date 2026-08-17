@@ -15,6 +15,7 @@ public sealed class PublicSurfaceTests
         "BuildingBlocks.Domain.Entities.Entity`2",
         "BuildingBlocks.Domain.Entities.EntityBase`1",
         "BuildingBlocks.Domain.Entities.EntityState`2",
+        "BuildingBlocks.Domain.Entities.IChildOwner`2",
         "BuildingBlocks.Domain.Entities.IEntity`1",
         "BuildingBlocks.Domain.Entities.IEntityKey",
         "BuildingBlocks.Domain.Entities.IEntityKey`1",

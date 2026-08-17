@@ -97,6 +97,8 @@ public sealed class PersistenceAdapterTests
     {
         public string Description => "UseRecordingPersistence";
 
+        public AggregateStyle AggregateStyle => AggregateStyle.StateStored;
+
         public bool ContributesRuntime { get; init; }
 
         public Exception? TransientFault { get; init; }

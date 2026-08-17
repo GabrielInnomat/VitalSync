@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using BuildingBlocks.Domain.Events;
 using BuildingBlocks.Domain.Naming;
@@ -9,6 +10,7 @@ public sealed class DomainEventTypeRegistry
     private readonly Dictionary<string, Type> _typesByName = [];
     private readonly Dictionary<Type, string> _namesByType = [];
 
+    [RequiresUnreferencedCode(TrimmingMessages.AssemblyScanning)]
     public DomainEventTypeRegistry(IEnumerable<Assembly> assemblies)
     {
         ArgumentNullException.ThrowIfNull(assemblies);

@@ -1,7 +1,8 @@
 namespace VitalSync.Sample.StateStored.Domain;
 
 [AggregateName("widget")]
-public sealed class Widget : AggregateRoot<WidgetId, WidgetState>
+public sealed class Widget : AggregateRoot<WidgetId, WidgetState>,
+    IChildOwner<WidgetPartId, WidgetPartState>
 {
     private Widget() : base(WidgetState.Empty)
     {
@@ -64,6 +65,9 @@ public sealed class Widget : AggregateRoot<WidgetId, WidgetState>
 
     internal WidgetPartState? FindPart(WidgetPartId partId) =>
         State.Parts.FirstOrDefault(part => part.Id == partId);
+
+    WidgetPartState? IChildOwner<WidgetPartId, WidgetPartState>.FindChild(WidgetPartId childId) =>
+        FindPart(childId);
 
     private WidgetPartState PartStateOrThrow(WidgetPartId partId) =>
         State.Parts.First(part => part.Id == partId);

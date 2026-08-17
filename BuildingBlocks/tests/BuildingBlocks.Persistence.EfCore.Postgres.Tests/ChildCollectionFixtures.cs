@@ -30,7 +30,7 @@ public sealed record BasketLine(BasketLineId Id, string Label, int Quantity)
 public sealed class BasketLineEntity : Entity<BasketLineId, BasketLine>
 {
     internal BasketLineEntity(Basket basket, BasketLineId id)
-        : base(basket, id, basket.FindLine)
+        : base(basket, id)
     {
     }
 
@@ -88,7 +88,8 @@ public sealed record BasketState(BasketId Id) : AggregateState<BasketState, Bask
 }
 
 [AggregateName("basket")]
-public sealed class Basket : AggregateRoot<BasketId, BasketState>
+public sealed class Basket : AggregateRoot<BasketId, BasketState>,
+    IChildOwner<BasketLineId, BasketLine>
 {
     private Basket() : base(BasketState.Empty)
     {
@@ -119,6 +120,9 @@ public sealed class Basket : AggregateRoot<BasketId, BasketState>
 
     internal BasketLine? FindLine(BasketLineId lineId) =>
         State.Lines.FirstOrDefault(line => line.Id == lineId);
+
+    BasketLine? IChildOwner<BasketLineId, BasketLine>.FindChild(BasketLineId childId) =>
+        FindLine(childId);
 }
 
 public sealed record ArrayBasketState(BasketId Id) : AggregateState<ArrayBasketState, BasketId>

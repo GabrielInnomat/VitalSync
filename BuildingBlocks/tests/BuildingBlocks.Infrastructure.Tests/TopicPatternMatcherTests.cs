@@ -5,24 +5,24 @@ namespace BuildingBlocks.Infrastructure.Tests;
 public sealed class TopicPatternMatcherTests
 {
     [Theory]
-    [InlineData("nutrition.*", "nutrition.recipe-created")]
-    [InlineData("*.recipe-created", "nutrition.recipe-created")]
-    [InlineData("nutrition.recipe-created", "nutrition.recipe-created")]
-    [InlineData("#", "nutrition.recipe-created")]
-    [InlineData("nutrition.#", "nutrition.recipe-created")]
-    [InlineData("nutrition.#", "nutrition.recipe.created.v2")]
-    [InlineData("nutrition.#", "nutrition")]
-    [InlineData("#.created", "nutrition.recipe.created")]
+    [InlineData("orders.*", "orders.order-placed")]
+    [InlineData("*.order-placed", "orders.order-placed")]
+    [InlineData("orders.order-placed", "orders.order-placed")]
+    [InlineData("#", "orders.order-placed")]
+    [InlineData("orders.#", "orders.order-placed")]
+    [InlineData("orders.#", "orders.order.placed.v2")]
+    [InlineData("orders.#", "orders")]
+    [InlineData("#.placed", "orders.order.placed")]
     public void MatchingPattern_IsRecognised(string pattern, string topic) =>
         Assert.True(TopicPatternMatcher.Matches(pattern, topic));
 
     [Theory]
-    [InlineData("nutrition.*", "fitness.recipe-created")]
-    [InlineData("nutrition.*", "nutrition.recipe.created")]
-    [InlineData("nutrition.*", "nutrition")]
-    [InlineData("nutrion.*", "nutrition.recipe-created")]
-    [InlineData("nutrition.recipe-created", "nutrition.recipe-createdx")]
-    [InlineData("nutrition.#", "fitness.recipe-created")]
+    [InlineData("orders.*", "billing.order-placed")]
+    [InlineData("orders.*", "orders.order.placed")]
+    [InlineData("orders.*", "orders")]
+    [InlineData("order.*", "orders.order-placed")]
+    [InlineData("orders.order-placed", "orders.order-placedx")]
+    [InlineData("orders.#", "billing.order-placed")]
     public void NonMatchingPattern_IsRejected(string pattern, string topic) =>
         Assert.False(TopicPatternMatcher.Matches(pattern, topic));
 

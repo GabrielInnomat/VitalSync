@@ -19,6 +19,8 @@ internal sealed record EfCorePersistenceAdapter<TContext>(
 {
     public string Description => "UseEfCorePersistence";
 
+    public AggregateStyle AggregateStyle => AggregateStyle.StateStored;
+
     public bool IsTransientFault(Exception exception) => PostgresTransientFaults.IsTransient(exception);
 
     public void Register(PersistenceRegistrationContext context)
@@ -48,6 +50,7 @@ internal sealed record EfCorePersistenceAdapter<TContext>(
             ServiceDescriptor.Singleton<IPersistenceFaultTranslator, PostgresFaultTranslator>());
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IStartupCheck, AggregateStateModelCheck<TContext>>());
+        services.AddSingleton<IStartupCheck>(new WriteDbContextLifetimeCheck<TContext>(services));
         context.UseWolverineRuntime()
             .AddOutboxDurability(new EfCoreOutboxDurability(connectionString));
         DeadLetterHealthCheckRegistration.Register(services);

@@ -33,9 +33,9 @@ internal sealed class InfrastructurePresenceCheck(
                 "This host does not provision infrastructure, but Wolverine's message storage is missing or does " +
                 $"not match the configured schema in '{messageStore.Name}'. The outbox is what makes a commit and " +
                 "its integration events one unit, so without those tables this host would accept " +
-                "commands and lose every event they produce. Run the context's migration worker — the one host " +
-                "that selects ProvisionInfrastructure(InfrastructureProvisioning.AtStartup) — before starting this " +
-                "one.",
+                "commands and lose every event they produce. Start the host that selects " +
+                "ProvisionInfrastructure(InfrastructureProvisioning.AtStartup) for this context — and let it " +
+                "finish — before starting this one.",
                 exception);
         }
     }

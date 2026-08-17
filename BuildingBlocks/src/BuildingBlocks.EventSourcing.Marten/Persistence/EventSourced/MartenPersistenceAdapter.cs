@@ -17,6 +17,8 @@ internal sealed record MartenPersistenceAdapter(string WriteConnectionString) : 
 {
     public string Description => "UseMartenEventSourcing";
 
+    public AggregateStyle AggregateStyle => AggregateStyle.EventSourced;
+
     public bool IsTransientFault(Exception exception) => PostgresTransientFaults.IsTransient(exception);
 
     public void Register(PersistenceRegistrationContext context)

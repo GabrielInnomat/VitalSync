@@ -196,7 +196,9 @@ invariants. Its data is an [entity state](#entity-state-entitystatetself-tkey)
 held in the root's state; the class itself is a thin hull the root builds on
 demand, which reads its state **through the root** (`GetCurrentState()`, a method
 because it throws once the child is gone) and raises events through the root's
-`IDomainEventRaiser` channel. It has **no** event list and **no** version of its
+`IDomainEventRaiser` channel. Both halves arrive as **one** `IChildOwner<TChildKey,
+TChildState>` the root passes to the child, so a child can never read one root's
+state while raising events on another. It has **no** event list and **no** version of its
 own — one list and one version, both on the root. See
 [ADR-0032](./architecture/decisions/0032-child-entities-raise-via-root.md).
 

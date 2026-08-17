@@ -165,5 +165,10 @@ internal static class BuildingBlocksComposition
             options.Wiring.Persistence,
             options.ScannedAssemblies,
             provider.GetRequiredService<ILogger<UnitOfWorkPresenceCheck>>()));
+        services.AddSingleton<IStartupCheck>(new AggregatePersistenceMatchCheck(
+            options.Wiring.Persistence,
+            services));
+        services.AddSingleton<IStartupCheck>(new AggregateStateSelfBindingCheck(
+            [.. options.ScannedAssemblies.Union(options.DomainEventAssemblies)]));
     }
 }

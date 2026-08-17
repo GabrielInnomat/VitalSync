@@ -1,3 +1,4 @@
+using BuildingBlocks.Domain.Aggregates;
 using BuildingBlocks.Domain.Events;
 using BuildingBlocks.Domain.Rules;
 using BuildingBlocks.Domain.Tests.TestDoubles;
@@ -167,5 +168,30 @@ public sealed class AggregateRootTests
         aggregate.Child(new TestId(3)).ChangeValue(11);
 
         Assert.Equal([3, 11], aggregate.Children.Select(child => child.Value));
+    }
+
+    [Fact]
+    public void RaiseEvent_WhenTheStateReturnsNull_NamesTheStateAndTheEventInsteadOfDereferencingIt()
+    {
+        var aggregate = new NullApplyAggregate();
+
+        var thrown = Assert.Throws<InvalidOperationException>(
+            () => aggregate.Raise(new TestDomainEvent(1)));
+
+        Assert.Contains(nameof(NullApplyState), thrown.Message, StringComparison.Ordinal);
+        Assert.Contains(nameof(TestDomainEvent), thrown.Message, StringComparison.Ordinal);
+        Assert.Contains("never a state an aggregate can be in", thrown.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RaiseEvent_WhenTheStateReturnsItselfForAnUnhandledEvent_IsAccepted()
+    {
+        var aggregate = new TestEventSourcedAggregate();
+        aggregate.Raise(new TestDomainEvent(1));
+
+        aggregate.Raise(new ParentCreated(new TestId(9)));
+
+        Assert.Equal(1, aggregate.CurrentState.Value);
+        Assert.Equal(2, ((IStateOwner)aggregate).Version);
     }
 }

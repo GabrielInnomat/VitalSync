@@ -25,6 +25,7 @@ The block provides a **single aggregate authoring model**: every aggregate deriv
 | `Entity<TKey, TState>`                    | abstract class  | The base for a **non-aggregate entity**, always a child inside an aggregate: constructor-set identity with guard, identity equality, its own state read through the root, and `RaiseEvent` via the root's channel. |
 | `EntityState<TSelf, TKey>`                | abstract record | A child entity's state: identity plus a pure `Apply`. Carries **no** version.        |
 | `IDomainEventRaiser`                      | interface       | The aggregate-internal channel a child raises through (explicit, never called by application code). |
+| `IChildOwner<TChildKey, TChildState>`     | interface       | What a root offers **one** child type: the raise channel plus `FindChild`, handed to the child as a single object so state and events cannot come from different roots. |
 | `AggregateState<TSelf, TKey>`             | abstract record | An aggregate's state: owns the identity, the version, and the event-apply ("evolve") logic. |
 | `IAggregateRoot<TKey>`                    | interface       | Marker for an aggregate root; exposes events **read-only**.                          |
 | `IEventSourcedAggregateRoot<TKey>`        | interface       | Infrastructure-only capability exposing `LoadFromHistory` for ES replay.               |
@@ -49,7 +50,7 @@ The block provides a **single aggregate authoring model**: every aggregate deriv
 BuildingBlocks.Domain/
 ├── Aggregates/   AggregateRoot, AggregateState, EventSourcedAggregateRoot, IAggregateRoot,
 │                 IEventSourcedAggregateRoot, IStateOwner
-├── Entities/     IEntityKey, IEntity, EntityBase, Entity, EntityState
+├── Entities/     IEntityKey, IEntity, EntityBase, Entity, EntityState, IChildOwner
 ├── Events/       IDomainEvent, DomainEvent, IHasDomainEvents, IDomainEventOwner, IDomainEventRaiser
 ├── Naming/       EventNameAttribute, AggregateNameAttribute, NameSegment, ContractName (internal)
 ├── Rules/        IBusinessRule, IDomainValidationRule, RuleChecker, both exceptions
@@ -127,12 +128,11 @@ There are two cases, by design:
 For `Entity<TKey, TState>` the guard runs **in the constructor**, before the id is assigned:
 
 ```csharp
-protected Entity(IDomainEventRaiser raiser, TKey id, Func<TKey, TState?> stateLookup)
+protected Entity(IChildOwner<TKey, TState> owner, TKey id)
 {
     if (id.IsEmpty)
         throw new DomainValidationException("The id of an entity cannot be empty.");
-    ArgumentNullException.ThrowIfNull(raiser);
-    ArgumentNullException.ThrowIfNull(stateLookup);
+    ArgumentNullException.ThrowIfNull(owner);
     Id = id;
     …
 }
@@ -282,7 +282,7 @@ public sealed class Ingredient : Entity<IngredientId, IngredientState>
     private readonly Recipe _recipe;
 
     internal Ingredient(Recipe recipe, IngredientId id)
-        : base(recipe, id, recipe.FindIngredient) => _recipe = recipe;
+        : base(recipe, id) => _recipe = recipe;
 
     public int Grams => GetCurrentState().Grams;
 
@@ -303,11 +303,15 @@ public IReadOnlyCollection<Ingredient> Ingredients =>
 
 internal IngredientState? FindIngredient(IngredientId id) =>
     State.Ingredients.FirstOrDefault(i => i.Id == id);
+
+IngredientState? IChildOwner<IngredientId, IngredientState>.FindChild(IngredientId childId) =>
+    FindIngredient(childId);
 ```
 
 Four properties follow, and they are the whole point of the design:
 
 - **The root stays the sole owner of the uncommitted events.** `RaiseEvent` on the child hands the event to `AggregateRoot.RaiseEvent` through `IDomainEventRaiser`, which the root implements explicitly. One list, one order, one `ClearDomainEvents()`.
+- **State and events always come from the same root.** The child takes a single `IChildOwner<TChildKey, TChildState>` — the raise channel and `FindChild` in one object — so it is structurally impossible to wire a child to read one root's state while raising events on another. The root implements it explicitly, once per child type.
 - **The child raising an event advances the aggregate version** — the same number that is the EF Core concurrency token and the projection watermark. A child-only change is therefore never invisible.
 - **A hull is a view, not a copy.** `GetCurrentState()` looks the state up through the root on every call, so two hulls for the same child are equal and both see the latest data. It is a method, not a property, because it throws when the child was removed in the same command — reading a removed child must fail, not return stale values.
 - **Nothing new happens on the fold path.** The child's state is part of the root's state, so `State.Apply(e)` folds it (usually by delegating to the child state's own `Apply`), and `LoadFromHistory` and `IStateOwner.Restore` rebuild children with no extra machinery.
@@ -369,6 +373,9 @@ IHasDomainEvents          → IReadOnlyCollection<IDomainEvent> DomainEvents   (
 IDomainEventOwner      → void ClearDomainEvents()                          (infrastructure only)
 
 IDomainEventRaiser     → void Raise(IDomainEvent e)                        (child entities only)
+        ▲
+        │
+IChildOwner<TChildKey, TChildState> → TChildState? FindChild(TChildKey id)  (child entities only)
 ```
 
 - `IAggregateRoot<TKey>` inherits **only** `IHasDomainEvents`. Application code holding an aggregate therefore sees `DomainEvents` and **cannot** see `ClearDomainEvents()`.
@@ -378,7 +385,7 @@ IDomainEventRaiser     → void Raise(IDomainEvent e)                        (ch
 void IDomainEventOwner.ClearDomainEvents() => _domainEvents.Clear();
 ```
 
-- Raising (`RaiseEvent`) is `protected`, so only the aggregate itself can add events. A child entity inside the aggregate reaches it through `IDomainEventRaiser`, which the root implements **explicitly** and hands to its own children only ([ADR-0032](./decisions/0032-child-entities-raise-via-root.md)).
+- Raising (`RaiseEvent`) is `protected`, so only the aggregate itself can add events. A child entity inside the aggregate reaches it through `IChildOwner<TChildKey, TChildState>`, which inherits `IDomainEventRaiser` and which the root implements **explicitly**, handing itself to its own children only ([ADR-0032](./decisions/0032-child-entities-raise-via-root.md)). `Raise` stays on the base interface so a root with several child types still has exactly one raise implementation.
 
 The same explicit-implementation technique hides the event-sourcing capability on the ES base:
 

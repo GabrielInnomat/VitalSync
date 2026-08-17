@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Collections.Concurrent;
 using System.Reflection;
 using BuildingBlocks.Domain.Aggregates;
@@ -8,6 +9,7 @@ public static class AggregateFactory
 {
     private static readonly ConcurrentDictionary<Type, ConstructorInfo> Constructors = new();
 
+    [RequiresUnreferencedCode(TrimmingMessages.AssemblyScanning)]
     public static TAggregate CreateEmpty<TAggregate>()
         where TAggregate : class =>
         (TAggregate)ConstructorFor(typeof(TAggregate)).Invoke(null);

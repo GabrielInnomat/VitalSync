@@ -5,7 +5,7 @@ public sealed class WidgetPart : Entity<WidgetPartId, WidgetPartState>
     private readonly WidgetId _widgetId;
 
     internal WidgetPart(Widget widget, WidgetPartId id)
-        : base(widget, id, widget.FindPart)
+        : base(widget, id)
     {
         _widgetId = widget.Id;
     }

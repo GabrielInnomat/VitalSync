@@ -24,7 +24,7 @@ internal sealed class MessagingRegistrar(
             throw new ArgumentException(
                 $"'{contextName}' is not a valid bounded-context name. It is the first segment of every routing " +
                 "key this service publishes, so it must be a single lower-case kebab-case word without a dot " +
-                "(for example \"nutrition\"). A value containing a dot is almost always the exchange name passed " +
+                "(for example \"orders\"). A value containing a dot is almost always the exchange name passed " +
                 "in the wrong position.",
                 nameof(adapter));
         }

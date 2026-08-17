@@ -146,6 +146,8 @@ public sealed class PersistenceChoiceTests
     {
         public string Description => "UseForeignPersistence";
 
+        public AggregateStyle AggregateStyle => AggregateStyle.StateStored;
+
         public bool IsTransientFault(Exception exception) => false;
 
         public void Register(PersistenceRegistrationContext context)

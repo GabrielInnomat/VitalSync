@@ -50,8 +50,8 @@ internal sealed record ParentState(TestId Id, int Value) : AggregateState<Parent
 
 internal sealed class TestChild : Entity<TestId, ChildState>
 {
-    internal TestChild(IDomainEventRaiser raiser, TestId id, Func<TestId, ChildState?> stateLookup)
-        : base(raiser, id, stateLookup)
+    internal TestChild(IChildOwner<TestId, ChildState> owner, TestId id)
+        : base(owner, id)
     {
     }
 
@@ -62,7 +62,8 @@ internal sealed class TestChild : Entity<TestId, ChildState>
     public void RaiseNothing() => RaiseEvent(null!);
 }
 
-internal sealed class ParentAggregate : AggregateRoot<TestId, ParentState>
+internal sealed class ParentAggregate : AggregateRoot<TestId, ParentState>,
+    IChildOwner<TestId, ChildState>
 {
     private ParentAggregate() : base(ParentState.Empty)
     {
@@ -78,17 +79,18 @@ internal sealed class ParentAggregate : AggregateRoot<TestId, ParentState>
         return parent;
     }
 
-    public TestChild Child(TestId childId) => new(this, childId, FindChild);
+    public TestChild Child(TestId childId) => new(this, childId);
 
     public void AddChild(TestId childId, int value) => RaiseEvent(new ChildAdded(childId, value));
 
     public void RemoveChild(TestId childId) => RaiseEvent(new ChildRemoved(childId));
 
-    private ChildState? FindChild(TestId childId) =>
+    ChildState? IChildOwner<TestId, ChildState>.FindChild(TestId childId) =>
         State.Children.FirstOrDefault(child => child.Id == childId);
 }
 
-internal sealed class EventSourcedParent : EventSourcedAggregateRoot<TestId, ParentState>
+internal sealed class EventSourcedParent : EventSourcedAggregateRoot<TestId, ParentState>,
+    IChildOwner<TestId, ChildState>
 {
     private EventSourcedParent() : base(ParentState.Empty)
     {
@@ -104,10 +106,10 @@ internal sealed class EventSourcedParent : EventSourcedAggregateRoot<TestId, Par
         return parent;
     }
 
-    public TestChild Child(TestId childId) => new(this, childId, FindChild);
+    public TestChild Child(TestId childId) => new(this, childId);
 
     public void AddChild(TestId childId, int value) => RaiseEvent(new ChildAdded(childId, value));
 
-    private ChildState? FindChild(TestId childId) =>
+    ChildState? IChildOwner<TestId, ChildState>.FindChild(TestId childId) =>
         State.Children.FirstOrDefault(child => child.Id == childId);
 }

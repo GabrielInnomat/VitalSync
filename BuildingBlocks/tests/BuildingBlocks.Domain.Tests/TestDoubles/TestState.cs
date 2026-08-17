@@ -25,3 +25,10 @@ internal sealed record NeverIdentifiedState(TestId Id, int Value) : AggregateSta
         _ => this,
     };
 }
+
+internal sealed record NullApplyState(TestId Id, int Value) : AggregateState<NullApplyState, TestId>
+{
+    public static NullApplyState Empty => new(TestId.Empty, 0);
+
+    public override NullApplyState Apply(IDomainEvent domainEvent) => null!;
+}

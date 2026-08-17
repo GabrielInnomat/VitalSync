@@ -6,6 +6,8 @@ public interface IPersistenceAdapter
 
     string WriteConnectionString { get; }
 
+    AggregateStyle AggregateStyle { get; }
+
     bool IsTransientFault(Exception exception);
 
     void Register(PersistenceRegistrationContext context);

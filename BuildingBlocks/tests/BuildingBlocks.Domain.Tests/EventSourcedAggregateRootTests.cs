@@ -165,4 +165,46 @@ public sealed class EventSourcedAggregateRootTests
             () => ((IEventSourcedAggregateRoot<TestId>)aggregate)
                 .LoadFromHistory([new ParentCreated(new TestId(1))]));
     }
+
+    [Fact]
+    public void LoadFromHistory_CalledTwice_IsRejectedInsteadOfDuplicatingTheState()
+    {
+        var aggregate = (EventSourcedParent)Activator.CreateInstance(
+            typeof(EventSourcedParent), nonPublic: true)!;
+        var loadable = (IEventSourcedAggregateRoot<TestId>)aggregate;
+        IDomainEvent[] history = [new ParentCreated(new TestId(1)), new ChildAdded(new TestId(2), 3)];
+
+        loadable.LoadFromHistory(history);
+
+        var thrown = Assert.Throws<InvalidOperationException>(() => loadable.LoadFromHistory(history));
+
+        Assert.Contains("cannot be called twice", thrown.Message, StringComparison.Ordinal);
+        Assert.Single(aggregate.Children);
+        Assert.Equal(2, ((IStateOwner)aggregate).Version);
+    }
+
+    [Fact]
+    public void LoadFromHistory_CalledTwiceWithNoHistoryAtAll_IsAlsoRejected()
+    {
+        var aggregate = (EventSourcedParent)Activator.CreateInstance(
+            typeof(EventSourcedParent), nonPublic: true)!;
+        var loadable = (IEventSourcedAggregateRoot<TestId>)aggregate;
+
+        loadable.LoadFromHistory([]);
+
+        Assert.Throws<InvalidOperationException>(() => loadable.LoadFromHistory([]));
+    }
+
+    [Fact]
+    public void LoadFromHistory_WhenTheStateReturnsNull_NamesTheStateAndTheEvent()
+    {
+        var aggregate = new NullApplyEventSourcedAggregate();
+
+        var thrown = Assert.Throws<InvalidOperationException>(
+            () => ((IEventSourcedAggregateRoot<TestId>)aggregate)
+                .LoadFromHistory([new TestDomainEvent(1)]));
+
+        Assert.Contains(nameof(NullApplyState), thrown.Message, StringComparison.Ordinal);
+        Assert.Contains(nameof(TestDomainEvent), thrown.Message, StringComparison.Ordinal);
+    }
 }

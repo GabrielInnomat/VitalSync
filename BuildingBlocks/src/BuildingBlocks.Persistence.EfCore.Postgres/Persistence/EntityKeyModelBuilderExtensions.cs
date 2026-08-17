@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Collections.Concurrent;
 using BuildingBlocks.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,8 @@ public static class EntityKeyModelBuilderExtensions
 {
     private static readonly ConcurrentDictionary<Type, ValueConverter> Converters = new();
 
+    [RequiresUnreferencedCode(TrimmingMessages.ModelReflection)]
+    [RequiresDynamicCode(TrimmingMessages.ModelReflection)]
     public static ModelBuilder ApplyEntityKeyConversions(this ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);

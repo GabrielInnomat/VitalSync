@@ -5,7 +5,7 @@ public sealed class GadgetComponent : Entity<GadgetComponentId, GadgetComponentS
     private readonly Gadget _gadget;
 
     internal GadgetComponent(Gadget gadget, GadgetComponentId id)
-        : base(gadget, id, gadget.FindComponent)
+        : base(gadget, id)
     {
         _gadget = gadget;
     }
