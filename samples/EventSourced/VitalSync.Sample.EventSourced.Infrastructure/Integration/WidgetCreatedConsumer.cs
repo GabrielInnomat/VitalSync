@@ -1,4 +1,4 @@
-using BuildingBlocks.Application.Cqrs;
+using GaWeCodes.Application.Cqrs;
 using VitalSync.Sample.Contracts;
 using VitalSync.Sample.EventSourced.Application;
 

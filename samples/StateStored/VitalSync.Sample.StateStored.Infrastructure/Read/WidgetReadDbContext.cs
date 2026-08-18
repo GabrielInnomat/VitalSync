@@ -1,4 +1,4 @@
-using BuildingBlocks.Infrastructure.Persistence;
+using GaWeCodes.Persistence;
 using Microsoft.EntityFrameworkCore;
 using VitalSync.Sample.StateStored.Domain;
 

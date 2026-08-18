@@ -1,6 +1,6 @@
-using BuildingBlocks.Application.DomainEvents;
-using BuildingBlocks.Application.IntegrationEvents;
-using BuildingBlocks.Domain.Events;
+using GaWeCodes.Application.DomainEvents;
+using GaWeCodes.Application.IntegrationEvents;
+using GaWeCodes.Domain.Events;
 using VitalSync.Sample.Contracts;
 using VitalSync.Sample.StateStored.Domain;
 

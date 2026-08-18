@@ -1,5 +1,5 @@
-using BuildingBlocks.Application.DomainEvents;
-using BuildingBlocks.Domain.Events;
+using GaWeCodes.Application.DomainEvents;
+using GaWeCodes.Domain.Events;
 using Microsoft.EntityFrameworkCore;
 using VitalSync.Sample.EventSourced.Domain;
 using VitalSync.Sample.EventSourced.Infrastructure.Read;

@@ -1,4 +1,4 @@
-using BuildingBlocks.Application.DomainEvents;
+using GaWeCodes.Application.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 using VitalSync.Sample.StateStored.Domain;
 using VitalSync.Sample.StateStored.Infrastructure.Read;

@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\BuildingBlocks.Domain\BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="..\..\..\src\GaWeCodes.Domain\GaWeCodes.Domain.csproj" />
   </ItemGroup>
 
 </Project>

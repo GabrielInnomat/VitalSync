@@ -1,8 +1,8 @@
-﻿using BuildingBlocks.Domain.Events;
-using BuildingBlocks.Domain.Naming;
-using BuildingBlocks.Infrastructure.DependencyInjection;
-using BuildingBlocks.Infrastructure.Persistence;
-using BuildingBlocks.Infrastructure.Persistence.StateStored;
+using GaWeCodes.Domain.Events;
+using GaWeCodes.Domain.Naming;
+using GaWeCodes.DependencyInjection;
+using GaWeCodes.Persistence;
+using GaWeCodes.Persistence.StateStored;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Wolverine;

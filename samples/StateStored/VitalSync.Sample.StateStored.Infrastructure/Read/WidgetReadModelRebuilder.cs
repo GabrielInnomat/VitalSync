@@ -1,5 +1,5 @@
-using BuildingBlocks.Application.ReadModels;
-using BuildingBlocks.Domain.Aggregates;
+using GaWeCodes.Application.ReadModels;
+using GaWeCodes.Domain.Aggregates;
 using Microsoft.EntityFrameworkCore;
 using VitalSync.Sample.StateStored.Domain;
 

@@ -9,8 +9,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\BuildingBlocks.EventSourcing.Marten\BuildingBlocks.EventSourcing.Marten.csproj" />
-    <ProjectReference Include="..\..\..\src\BuildingBlocks.Messaging.Wolverine.RabbitMq\BuildingBlocks.Messaging.Wolverine.RabbitMq.csproj" />
+    <ProjectReference Include="..\..\..\src\GaWeCodes.EventSourcing.Marten\GaWeCodes.EventSourcing.Marten.csproj" />
+    <ProjectReference Include="..\..\..\src\GaWeCodes.Messaging.RabbitMq\GaWeCodes.Messaging.RabbitMq.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,4 @@
-namespace BuildingBlocks.Infrastructure.Tests;
+namespace GaWeCodes.Tests;
 
 [CollectionDefinition(Name)]
 public sealed class PostgreSqlCollection : ICollectionFixture<PostgreSqlFixture>

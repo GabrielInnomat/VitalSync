@@ -116,13 +116,13 @@ See [Communication](./docs/architecture/communication.md) for details.
 VitalSync/
 ├── BuildingBlocks/              # Reusable, VitalSync-independent platform
 │   ├── src/
-│   │   ├── BuildingBlocks.Domain/
-│   │   ├── BuildingBlocks.Application/
-│   │   └── BuildingBlocks.Infrastructure/
+│   │   ├── GaWeCodes.Domain/
+│   │   ├── GaWeCodes.Application/
+│   │   └── GaWeCodes.Composition/
 │   └── tests/
-│       ├── BuildingBlocks.Domain.Tests/
-│       ├── BuildingBlocks.Application.Tests/
-│       └── BuildingBlocks.Infrastructure.Tests/
+│       ├── GaWeCodes.Domain.Tests/
+│       ├── GaWeCodes.Application.Tests/
+│       └── GaWeCodes.Composition.Tests/
 ├── src/                         # VitalSync application
 │   ├── Aspire/                  # .NET Aspire AppHost & ServiceDefaults
 │   ├── Bff/                     # Backend-for-Frontend
@@ -142,9 +142,9 @@ In addition to the application, VitalSync includes a **reusable platform of shar
 
 These Building Blocks are deliberately **independent of VitalSync** and reusable in future projects. See [Building Blocks](./docs/architecture/building-blocks.md) for the overview, and the per-package references:
 
-- [BuildingBlocks.Domain](./docs/architecture/building-blocks-domain.md)
-- [BuildingBlocks.Application](./docs/architecture/building-blocks-application.md)
-- [BuildingBlocks.Infrastructure](./docs/architecture/building-blocks-infrastructure.md)
+- [GaWeCodes.Domain](./docs/architecture/building-blocks-domain.md)
+- [GaWeCodes.Application](./docs/architecture/building-blocks-application.md)
+- [GaWeCodes](./docs/architecture/building-blocks-infrastructure.md)
 
 ## Getting started
 
@@ -197,9 +197,9 @@ See [Testing strategy](./docs/architecture/testing-strategy.md).
 - [Architecture overview](./docs/architecture/overview.md)
 - [Communication](./docs/architecture/communication.md)
 - [Building Blocks](./docs/architecture/building-blocks.md)
-    - [BuildingBlocks.Domain](./docs/architecture/building-blocks-domain.md)
-    - [BuildingBlocks.Application](./docs/architecture/building-blocks-application.md)
-    - [BuildingBlocks.Infrastructure](./docs/architecture/building-blocks-infrastructure.md)
+    - [GaWeCodes.Domain](./docs/architecture/building-blocks-domain.md)
+    - [GaWeCodes.Application](./docs/architecture/building-blocks-application.md)
+    - [GaWeCodes](./docs/architecture/building-blocks-infrastructure.md)
 - [Domain model](./docs/architecture/domain-model.md)
 - [CQRS & Event Sourcing](./docs/architecture/cqrs-and-event-sourcing.md)
 - [Testing strategy](./docs/architecture/testing-strategy.md)

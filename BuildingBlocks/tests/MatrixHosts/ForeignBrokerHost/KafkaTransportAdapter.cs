@@ -1,6 +1,6 @@
-using BuildingBlocks.Application.IntegrationEvents;
-using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
-using BuildingBlocks.Infrastructure.Messaging.Transport;
+using GaWeCodes.Application.IntegrationEvents;
+using GaWeCodes.DependencyInjection.Wiring;
+using GaWeCodes.Messaging.Transport;
 using Wolverine;
 using Wolverine.Kafka;
 

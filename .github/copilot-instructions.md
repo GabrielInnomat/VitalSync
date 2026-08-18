@@ -21,7 +21,7 @@ and **selective Event Sourcing**.
 dotnet build
 dotnet test
 dotnet test --filter "FullyQualifiedName~AggregateRootTests"
-dotnet test BuildingBlocks/tests/BuildingBlocks.Domain.Tests
+dotnet test BuildingBlocks/tests/GaWeCodes.Domain.Tests
 dotnet run --project src/Aspire/VitalSync.AppHost
 ```
 
@@ -38,11 +38,11 @@ silently. Never reintroduce a per-project `Version`. Two versions stay outside b
 manage them: the SDK pin in `global.json` and `Aspire.AppHost.Sdk` in each AppHost's `<Project Sdk="...">`.
 
 **Analyzer relaxations are rare and deliberate.** Beside the root `.editorconfig` there are exactly
-**two** under `BuildingBlocks/src` — `BuildingBlocks.Domain` relaxes `CA1033` (`IDomainEventOwner`/
-`IStateOwner` are implemented explicitly on purpose, ADR-0007) and `BuildingBlocks.Application`
+**two** under `BuildingBlocks/src` — `GaWeCodes.Domain` relaxes `CA1033` (`IDomainEventOwner`/
+`IStateOwner` are implemented explicitly on purpose, ADR-0007) and `GaWeCodes.Application`
 relaxes `CA1000` (`Result<T>` needs static factories) — plus one for the test projects. Test-only
 relaxations that no `.editorconfig` covers live in the test `.csproj` as `NoWarn`.
-**`BuildingBlocks.Infrastructure` has none and needs none**: it carries the full analyzer set
+**`GaWeCodes.Composition` has none and needs none**: it carries the full analyzer set
 unrelaxed. A new suppression there is a smell worth arguing about first.
 
 ## Repository map
@@ -51,9 +51,9 @@ unrelaxed. A new suppression there is a smell worth arguing about first.
 VitalSync/
 ├── BuildingBlocks/                 Reusable, VitalSync-INDEPENDENT platform (own tests/ folder)
 │   └── src/
-│       ├── BuildingBlocks.Domain/          aggregates, entities, domain events, typed IDs, rules
-│       ├── BuildingBlocks.Application/     CQRS abstractions, Result/Failure
-│       └── BuildingBlocks.Infrastructure/  dispatcher, persistence, outbox, projections, transport
+│       ├── GaWeCodes.Domain/       aggregates, entities, domain events, typed IDs, rules
+│       ├── GaWeCodes.Application/  CQRS abstractions, Result/Failure
+│       └── GaWeCodes.Composition/  dispatcher, persistence, outbox, projections, transport
 ├── src/                            VitalSync APPLICATION
 │   ├── Aspire/                     AppHost & ServiceDefaults (entry point)
 │   ├── Bff/                        Backend-for-Frontend (REST out, gRPC in)
@@ -87,7 +87,7 @@ VitalSync/
   (`<context>-write` *and* `<context>-read`), `AddRabbitMqReadinessCheck()`, `AddProblemDetails()` +
   `app.UseExceptionHandler()` (ADR-0017's thin global handler), `app.MapDefaultEndpoints()`, and
   `await app.RunAsync().ConfigureAwait(false)`. The connection names **are** the Aspire resource
-  names. `AddServiceDefaults()` already registers the OpenTelemetry sources `BuildingBlocks`,
+  names. `AddServiceDefaults()` already registers the OpenTelemetry sources `GaWeCodes`,
   `Npgsql`, `Wolverine` and `Marten` — do not re-add them.
 - **No comments** — not in `*.cs`, `*.csproj`, workflow YAML, or code examples in `*.md` (ADR-0028).
 - **No FluentAssertions** — xUnit built-in asserts only (ADR-0014).
@@ -148,7 +148,7 @@ Vocabulary: `docs/glossary.md`.
 - **Never name a folder or type after a vendor whose namespace you use.** A `Persistence/Marten/`
   folder breaks every `using Marten;` inside it. Same for type names a vendor already owns:
   the dispatcher is `RequestSender`, the publication step is `DomainEventPublisher`.
-- **A service declares shared usings once in its `.csproj`** (`<Using Include="BuildingBlocks.Domain.Aggregates" />`),
+- **A service declares shared usings once in its `.csproj`** (`<Using Include="GaWeCodes.Domain.Aggregates" />`),
   not per file — the sample Domain/Application projects show it.
 - **Method naming:** every awaitable contract method carries the `Async` suffix. The one exception
   is a method that satisfies **Wolverine's** discovery convention (`…Handler.Handle`) — renaming
@@ -178,7 +178,7 @@ Full strategy: `docs/architecture/testing-strategy.md`. What it will not tell yo
 
 ## When contributing
 
-1. Reusable and VitalSync-agnostic → `BuildingBlocks`; domain logic → the matching service.
+1. Reusable and VitalSync-agnostic → `GaWeCodes`; domain logic → the matching service.
 2. Respect the non-negotiable rules above and read the sources from the table before editing.
 3. Add or update tests, and make sure they pass.
 4. If a change affects architecture, add or update an ADR (template in `decisions/README.md`).

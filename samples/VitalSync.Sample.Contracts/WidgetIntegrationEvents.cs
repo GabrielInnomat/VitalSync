@@ -1,4 +1,4 @@
-using BuildingBlocks.Application.IntegrationEvents;
+using GaWeCodes.Application.IntegrationEvents;
 
 namespace VitalSync.Sample.Contracts;
 

@@ -1,6 +1,6 @@
-using BuildingBlocks.Application.Cqrs;
-using BuildingBlocks.Application.Persistence;
-using BuildingBlocks.Application.Results;
+using GaWeCodes.Application.Cqrs;
+using GaWeCodes.Application.Persistence;
+using GaWeCodes.Application.Results;
 using NSubstitute;
 using VitalSync.Sample.Contracts;
 using VitalSync.Sample.EventSourced.Application;

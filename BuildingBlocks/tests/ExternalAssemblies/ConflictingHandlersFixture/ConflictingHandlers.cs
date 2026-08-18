@@ -1,5 +1,5 @@
-using BuildingBlocks.Application.Cqrs;
-using BuildingBlocks.Application.Results;
+using GaWeCodes.Application.Cqrs;
+using GaWeCodes.Application.Results;
 
 namespace ConflictingHandlersFixture;
 

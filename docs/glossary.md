@@ -119,7 +119,7 @@ language.
 ## Tactical Domain-Driven Design
 
 These are the building-block primitives provided by
-[`BuildingBlocks.Domain`](./architecture/building-blocks-domain.md) and used by
+[`GaWeCodes.Domain`](./architecture/building-blocks-domain.md) and used by
 every service's domain layer.
 
 ### Aggregate
@@ -253,7 +253,7 @@ return a plain `Result`.
 A **mandatory** pattern in every microservice: write operations (**commands**) are
 separated from read operations (**queries**), each handled by a dedicated handler.
 The abstractions live in
-[`BuildingBlocks.Application`](./architecture/building-blocks-application.md).
+[`GaWeCodes.Application`](./architecture/building-blocks-application.md).
 
 ### Dispatcher (`ISender`) / hand-rolled mediator
 
@@ -311,7 +311,7 @@ and handled by an `IQueryHandler<TQuery, TResult>` returning `Task<Result<TResul
 
 The uniform outcome model returned by handlers. `Result` is success or a failure
 carrying one or more `Failure`s; `Result<T>` additionally carries a value on
-success. It lives in `BuildingBlocks.Application`. See
+success. It lives in `GaWeCodes.Application`. See
 [ADR-0016](./architecture/decisions/0016-remove-common-result-in-application.md).
 
 ---
@@ -408,7 +408,7 @@ domain-shaped and owned by each service. See
 
 ### Publisher (outbox-backed)
 
-The `BuildingBlocks.Infrastructure` component that, **after** the write commits,
+The `GaWeCodes.Composition` component that, **after** the write commits,
 **drains the transactional [outbox](#outbox-transactional-outbox)** and dispatches
 each domain event to (a) **in-context [projection handlers](#projection-handler)**
 that update the read database and (b) the **integration-event path** to
@@ -436,7 +436,7 @@ child-raised events.
 ### Read model rebuilder
 
 A service-owned type implementing `IReadModelRebuilder<TAggregate, TKey>`
-(`BuildingBlocks.Application.ReadModels`). It sits **next to** a context's projection
+(`GaWeCodes.Application.ReadModels`). It sits **next to** a context's projection
 handlers, not instead of them: the handlers keep the read model current from domain
 events, the rebuilder reconstructs it from scratch when a projection bug or a new field
 makes that necessary. One of two runners drives it, depending on the persistence path:
@@ -566,7 +566,7 @@ Its routing key is declared on the contract as
 **owning bounded context**. A service declares its own context name when it
 configures messaging, which makes three things enforceable: it cannot publish
 under a foreign context, it never consumes an event it published itself (every
-event carries a `buildingblocks.source-context` header, and a consumer-side
+event carries a `gawecodes.source-context` header, and a consumer-side
 middleware drops its own), and a handler whose topic no bound pattern matches
 fails the host at start-up (ADR-0023 amendment 2026-08-05).
 
@@ -623,21 +623,21 @@ Split into exactly **three** packages by a **purity / dependency** boundary, not
 functional one. See [Building Blocks](./architecture/building-blocks.md) and
 [ADR-0018](./architecture/decisions/0018-three-building-block-packages.md).
 
-### BuildingBlocks.Application
+### GaWeCodes.Application
 
 The **framework-agnostic use-case layer**: CQRS contracts, the pipeline-behavior
 and dispatcher contracts, and the `Result` / `Failure` model. Depends **only** on
 `Domain` and holds **contracts, not implementations**. See
 [reference](./architecture/building-blocks-application.md).
 
-### BuildingBlocks.Domain
+### GaWeCodes.Domain
 
 The **pure core**: tactical DDD primitives (entities, the two aggregate bases,
 strongly typed keys, domain events, business-rule/validation abstractions). It has
 **zero** third-party dependencies — BCL only. See
 [reference](./architecture/building-blocks-domain.md).
 
-### BuildingBlocks.Infrastructure
+### GaWeCodes
 
 The **single outer layer** holding all reusable, framework-bound,
 third-party-backed implementations that are still VitalSync-agnostic: unit of work,

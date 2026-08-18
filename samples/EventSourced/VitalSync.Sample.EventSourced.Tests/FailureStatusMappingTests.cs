@@ -1,4 +1,4 @@
-using BuildingBlocks.Application.Results;
+using GaWeCodes.Application.Results;
 using Grpc.Core;
 using VitalSync.Sample.EventSourced.Api;
 

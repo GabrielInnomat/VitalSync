@@ -1,9 +1,9 @@
-# BuildingBlocks.Application
+# GaWeCodes.Application
 
-`BuildingBlocks.Application` is the reusable, framework-agnostic building block that
+`GaWeCodes.Application` is the reusable, framework-agnostic building block that
 defines the **CQRS abstractions** (commands, queries, handlers), the **pipeline
 behavior** contract, the **dispatcher** contract, and the **`Result` / `Failure`**
-model shared by every microservice. It depends only on `BuildingBlocks.Domain` and
+model shared by every microservice. It depends only on `GaWeCodes.Domain` and
 is independent of VitalSync.
 
 > Related decisions:
@@ -20,12 +20,12 @@ is independent of VitalSync.
 - **Depends on `Domain` only.** Needed for the domain exception types translated by
   the pipeline; nothing else is required.
 - **Contracts here, DI wiring elsewhere.** The dispatcher and behavior _contracts_
-  live here; their DI-based _implementations_ live in `BuildingBlocks.Infrastructure`.
+  live here; their DI-based _implementations_ live in `GaWeCodes.Composition`.
 
 ## Folder layout — folder is namespace, and it is a contract
 
 ```
-BuildingBlocks.Application/
+GaWeCodes.Application/
 ├── Cqrs/               ICommand, IQuery, ICommandHandler, IQueryHandler, ISender,
 │                       IPipelineBehavior, RequestPipeline, RequestPipelineContinuation
 ├── Results/            Result, Result<T>, Failure, FailureCategory
@@ -48,9 +48,9 @@ A service pays for this once, in its `.csproj`, not per file:
 
 ```xml
 <ItemGroup>
-  <Using Include="BuildingBlocks.Application.Cqrs" />
-  <Using Include="BuildingBlocks.Application.Persistence" />
-  <Using Include="BuildingBlocks.Application.Results" />
+  <Using Include="GaWeCodes.Application.Cqrs" />
+  <Using Include="GaWeCodes.Application.Persistence" />
+  <Using Include="GaWeCodes.Application.Results" />
 </ItemGroup>
 ```
 
@@ -103,7 +103,7 @@ public interface ISender
 ```
 
 `ISender` is the single entry point callers use. Its DI-based implementation in
-`BuildingBlocks.Infrastructure` resolves the matching handler and the ordered
+`GaWeCodes.Composition` resolves the matching handler and the ordered
 pipeline behaviors from the container.
 
 ## Pipeline behaviors
@@ -144,8 +144,8 @@ public sealed class RequestPipeline<TResponse>
 Per [ADR-0024](./decisions/0024-contract-placement-innermost-consumer.md), a
 contract lives in the innermost layer that consumes it. The following contracts
 therefore live in `Application` while their implementations reside in
-`BuildingBlocks.Infrastructure` (see
-[BuildingBlocks.Infrastructure](./building-blocks-infrastructure.md)):
+`GaWeCodes.Composition` (see
+[GaWeCodes](./building-blocks-infrastructure.md)):
 
 ### Unit of work
 
@@ -187,7 +187,7 @@ internal factory in `Infrastructure` and validated at host startup
 reconstitution amendment 2026-08-04) — no public constructor is ever demanded.
 
 The `TKey : struct, IEntityKey, IEquatable<TKey>` constraint ties the repository to the strongly
-typed identifier model of `BuildingBlocks.Domain` (ADR-0005): keys are value
+typed identifier model of `GaWeCodes.Domain` (ADR-0005): keys are value
 types implementing `IEntityKey`, never primitives, and they must declare value
 equality — a `readonly record struct` does so automatically (ADR-0008 amendment
 2026-08-05).
@@ -346,7 +346,7 @@ where to go.
 
 ## Transport status mapping (not defined here)
 
-`BuildingBlocks.Application` never mentions HTTP or gRPC status codes. Mapping
+`GaWeCodes.Application` never mentions HTTP or gRPC status codes. Mapping
 `FailureCategory` to a status code is a transport concern owned by the boundary:
 
 - the **BFF** maps `FailureCategory` → HTTP status code;
@@ -356,6 +356,6 @@ Both consume the same semantic categories, mapping them independently.
 
 ## Testing
 
-`BuildingBlocks.Application.Tests` mirrors this project. Tests use xUnit (built-in
+`GaWeCodes.Application.Tests` mirrors this project. Tests use xUnit (built-in
 asserts), NSubstitute, and EF Core InMemory where needed (ADR-0014). See
 [Testing strategy](./testing-strategy.md).

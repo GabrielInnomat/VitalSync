@@ -1,5 +1,5 @@
-using BuildingBlocks.Application.Cqrs;
-using BuildingBlocks.Application.Results;
+using GaWeCodes.Application.Cqrs;
+using GaWeCodes.Application.Results;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NSubstitute;

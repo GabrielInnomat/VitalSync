@@ -1,15 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\BuildingBlocks\src\BuildingBlocks.Domain\BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\src\GaWeCodes.Domain\GaWeCodes.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="BuildingBlocks.Domain.Aggregates" />
-    <Using Include="BuildingBlocks.Domain.Entities" />
-    <Using Include="BuildingBlocks.Domain.Events" />
-    <Using Include="BuildingBlocks.Domain.Naming" />
-    <Using Include="BuildingBlocks.Domain.Rules" />
+    <Using Include="GaWeCodes.Domain.Aggregates" />
+    <Using Include="GaWeCodes.Domain.Entities" />
+    <Using Include="GaWeCodes.Domain.Events" />
+    <Using Include="GaWeCodes.Domain.Naming" />
+    <Using Include="GaWeCodes.Domain.Rules" />
   </ItemGroup>
 
 </Project>

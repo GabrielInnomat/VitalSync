@@ -1,6 +1,6 @@
-using BuildingBlocks.Application.ReadModels;
-using BuildingBlocks.Infrastructure.DependencyInjection;
-using BuildingBlocks.Infrastructure.ReadModels;
+using GaWeCodes.Application.ReadModels;
+using GaWeCodes.DependencyInjection;
+using GaWeCodes.ReadModels;
 using Microsoft.EntityFrameworkCore;
 using VitalSync.Sample.EventSourced.Domain;
 using VitalSync.Sample.EventSourced.Infrastructure;

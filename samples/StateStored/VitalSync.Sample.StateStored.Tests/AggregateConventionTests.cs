@@ -1,8 +1,8 @@
 using System.Reflection;
-using BuildingBlocks.Domain.Aggregates;
-using BuildingBlocks.Domain.Entities;
-using BuildingBlocks.Domain.Events;
-using BuildingBlocks.Domain.Naming;
+using GaWeCodes.Domain.Aggregates;
+using GaWeCodes.Domain.Entities;
+using GaWeCodes.Domain.Events;
+using GaWeCodes.Domain.Naming;
 using VitalSync.Sample.StateStored.Domain;
 
 namespace VitalSync.Sample.StateStored.Tests;

@@ -1,4 +1,4 @@
-using BuildingBlocks.Application.DomainEvents;
+using GaWeCodes.Application.DomainEvents;
 
 namespace ContractsHost;
 

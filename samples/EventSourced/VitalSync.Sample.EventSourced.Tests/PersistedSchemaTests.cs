@@ -1,5 +1,5 @@
 using System.Runtime.CompilerServices;
-using BuildingBlocks.Infrastructure.Schema;
+using GaWeCodes.Schema;
 using VitalSync.Sample.EventSourced.Domain;
 using VitalSync.Sample.EventSourced.Infrastructure.Integration;
 

@@ -9,8 +9,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\BuildingBlocks.Persistence.EfCore.Postgres\BuildingBlocks.Persistence.EfCore.Postgres.csproj" />
-    <ProjectReference Include="..\..\..\src\BuildingBlocks.Messaging.Wolverine.RabbitMq\BuildingBlocks.Messaging.Wolverine.RabbitMq.csproj" />
+    <ProjectReference Include="..\..\..\src\GaWeCodes.Persistence.EfCore.Postgres\GaWeCodes.Persistence.EfCore.Postgres.csproj" />
+    <ProjectReference Include="..\..\..\src\GaWeCodes.Messaging.RabbitMq\GaWeCodes.Messaging.RabbitMq.csproj" />
   </ItemGroup>
 
 </Project>

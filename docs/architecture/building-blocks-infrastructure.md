@@ -1,10 +1,10 @@
-# BuildingBlocks.Infrastructure
+# GaWeCodes
 
-`BuildingBlocks.Infrastructure` is the single outer layer of the Building Blocks
+`GaWeCodes.Composition` is the single outer layer of the Building Blocks
 platform. It holds **all** reusable, framework-bound, third-party-backed
 implementations that are still **independent of any VitalSync domain logic**
 ([ADR-0018](./decisions/0018-three-building-block-packages.md)). It depends on
-`BuildingBlocks.Domain` and `BuildingBlocks.Application` and is the **only**
+`GaWeCodes.Domain` and `GaWeCodes.Application` and is the **only**
 Building Block allowed to reference third-party packages.
 
 > **Status: implemented.** This document is the authoritative design for the
@@ -31,12 +31,12 @@ Building Block allowed to reference third-party packages.
   abstractions are referenced **only** in this package family (and service hosts).
   `Domain` and `Application` stay dependency-free (ADR-0018). Since the persistence and
   transport splits, "here" means five assemblies: the core plus
-  `BuildingBlocks.Persistence.Adapters`, `BuildingBlocks.Persistence.EfCore.Postgres`,
-  `BuildingBlocks.EventSourcing.Marten` and `BuildingBlocks.Messaging.Wolverine.RabbitMq`.
+  `GaWeCodes.Persistence`, `GaWeCodes.Persistence.EfCore.Postgres`,
+  `GaWeCodes.EventSourcing.Marten` and `GaWeCodes.Messaging.RabbitMq`.
   The core itself references neither EF Core, Marten, Npgsql nor RabbitMQ; Wolverine stays in
   the core because it is the in-process backbone for domain events, projections and the outbox,
   not an optional transport.
-  They share the `BuildingBlocks.Infrastructure.*` namespace root, so a consumer's `using`
+  They share the `GaWeCodes.*` namespace root, so a consumer's `using`
   lines do not reveal which assembly a type comes from; the assembly boundary exists to keep
   the vendor packages off the core, not to re-cut the namespaces.
 - **Implements `Application` contracts; defines none of its own use-case contracts.**
@@ -63,7 +63,7 @@ Everything else is `internal`, with `InternalsVisibleTo` for the test assembly.
 | `HostApplicationBuilderExtensions`| `AddBuildingBlocks` on the host builder (ADR-0027)                |
 | `BuildingBlocksOptions`           | the configuration surface passed to it                            |
 | `EntityKeyModelBuilderExtensions` | `ApplyEntityKeyConversions`, called from a host's `DbContext`     |
-| `PersistedSchema`                 | the event-schema snapshot, called from a service's tests (ADR-0035); it lives in `BuildingBlocks.Testing`, not in the core |
+| `PersistedSchema`                 | the event-schema snapshot, called from a service's tests (ADR-0035); it lives in `GaWeCodes.Testing`, not in the core |
 | `StateStoredReadModelRebuildRunner<TContext>`| the read-model rebuild driver for a state-stored context, constructed by a migration worker (ADR-0036) |
 | `EventSourcedReadModelRebuildRunner`| the same driver for an event-sourced context, folding Marten streams (ADR-0036) |
 
@@ -264,7 +264,7 @@ ADR-0030 removed derived names at the type level and left the field level open: 
 — no exception, no log entry, no failing test.
 
 ADR-0035 answers this with visibility rather than tolerance. `PersistedSchema` — shipped in
-`BuildingBlocks.Testing`, so that a runtime host never carries an approval-test tool — renders every
+`GaWeCodes.Testing`, so that a runtime host never carries an approval-test tool — renders every
 domain event and integration event of a set of assemblies into a deterministic text file and compares
 it against an approved baseline that lives with the service that owns the events:
 
@@ -293,7 +293,7 @@ of its owned children without an explicit `HasColumnName`, or without `HasJsonPr
 
 ## 1. CQRS dispatcher (`ISender` implementation)
 
-Implements the `ISender` contract from `BuildingBlocks.Application`
+Implements the `ISender` contract from `GaWeCodes.Application`
 (ADR-0015):
 
 - Resolves the single matching `ICommandHandler<...>` / `IQueryHandler<...>`
@@ -599,14 +599,14 @@ A small cluster of classes, using Marten as a **raw stream store**:
   broker (ADR-0022/0023, pinned by `IntegrationEventRoutingTests`). Each
   integration event supplies its routing key via a mandatory
   `[IntegrationEventTopic("<context>.<event>")]` attribute from
-  `BuildingBlocks.Application` — resolved by the routing rule's topic source, so
+  `GaWeCodes.Application` — resolved by the routing rule's topic source, so
   publishing an event without it throws instead of silently using a CLR-derived
   key (ADR-0023 amendment 2026-08-03).
 - **Context identity.** The host also names its own bounded context
   (ADR-0023 amendment 2026-08-05). The topic source compares the first segment of
   every routing key against that name and **throws** when they differ, so a service
   cannot publish under another context's identity. Every published event carries the
-  header `buildingblocks.source-context`, and a consumer-side middleware discards an
+  header `gawecodes.source-context`, and a consumer-side middleware discards an
   integration event whose source is the consuming context itself.
 - **Durability.** The topology is declared durable end to end (ADR-0023 amendment
   2026-08-04). The exchange and the subscriber queue are declared `IsDurable`, and
@@ -1042,7 +1042,7 @@ writing `UseNoPersistence()` in its own composition root.
 
 There is no `Persistence/Marten/` or `DependencyInjection/Wolverine/` folder, and there
 must not be. C# resolves a name against the enclosing namespaces first, so inside
-`BuildingBlocks.Infrastructure.Persistence.Marten` a plain `using Marten;` binds to the
+`GaWeCodes.Persistence.Marten` a plain `using Marten;` binds to the
 own namespace and every Marten type stops resolving. The names `StateStored`,
 `EventSourced`, and `Wiring` avoid the collision and happen to describe the *role*
 rather than the vendor, which is the better name anyway.
@@ -1061,7 +1061,7 @@ uses.** Qualify it with what it actually operates on.
 
 The rule also covers collisions with **our own** types: the helper that derives a routing
 key from an event type is `TopicResolver`, not `IntegrationEventTopic`, because
-`[IntegrationEventTopic]` in `BuildingBlocks.Application` is the attribute it reads. A
+`[IntegrationEventTopic]` in `GaWeCodes.Application` is the attribute it reads. A
 class and an attribute that differ only by the compiler-elided `Attribute` suffix both
 compile and both read the same in a call site, which is precisely the problem.
 
@@ -1081,7 +1081,7 @@ files are the ones that are kept current; look there.
 
 ## 8. Clock (`IClock` implementation)
 
-`IClock` is the narrow time port declared in `BuildingBlocks.Domain` ("the
+`IClock` is the narrow time port declared in `GaWeCodes.Domain` ("the
 domain only ever needs *now*"). Infrastructure ships the single default
 implementation so no service has to write one:
 
@@ -1109,9 +1109,9 @@ internal sealed class SystemClock(TimeProvider timeProvider) : IClock
 ## 9. Tracing (`ActivitySource`)
 
 Three paths carry a span, and each answers a different question. The source is named
-**`BuildingBlocks`** and its version is the assembly's `AssemblyInformationalVersion`; every tag
-starts with `buildingblocks.`, matching the existing message header
-`buildingblocks.source-context`.
+**`GaWeCodes`** and its version is the assembly's `AssemblyInformationalVersion`; every tag
+starts with `gawecodes.`, matching the existing message header
+`gawecodes.source-context`.
 
 | Path                   | Span                    | Answers                                                     |
 | ---------------------- | ----------------------- | ----------------------------------------------------------- |
@@ -1125,10 +1125,10 @@ after-work splits between read models and the transport.
 Four rules hold here and are worth keeping:
 
 - **The name must not say `vitalsync`.** ADR-0018 guarantees the string does not occur anywhere
-  under `BuildingBlocks/src`. The source name is therefore `BuildingBlocks`, and the host
+  under `BuildingBlocks/src`. The source name is therefore `GaWeCodes`, and the host
   registers it as a literal in `AspireExtensions.cs` — exactly like `Npgsql`, `Wolverine`, and
   `Marten`. A typed constant would need a `ProjectReference` from `VitalSync.ServiceDefaults` to
-  `BuildingBlocks.Infrastructure`, which has none today, and would drag Marten, Wolverine, and
+  `GaWeCodes.Composition`, which has none today, and would drag Marten, Wolverine, and
   EF Core into every host's dependency tree. Two tests pin the literal from opposite ends:
   `OpenTelemetryConfigurationTests` proves the host listens to that name,
   `TracingTests` proves Building Blocks emits under it.
@@ -1149,7 +1149,7 @@ Four rules hold here and are worth keeping:
 - **Domain-to-integration-event translation maps** — per service.
 - **HTTP/gRPC status mapping** — the BFF and service hosts own transport
   mapping of `FailureCategory` (see
-  [BuildingBlocks.Application](./building-blocks-application.md)).
+  [GaWeCodes.Application](./building-blocks-application.md)).
 - **Any use-case contract** — contracts belong in the innermost layer that
   consumes them (ADR-0024).
 - **MassTransit** — superseded by Wolverine; must not be reintroduced
@@ -1171,7 +1171,7 @@ Adding any further third-party dependency to the platform requires it to land
 
 ## Testing
 
-`BuildingBlocks.Infrastructure.Tests` mirrors this project. Tests use xUnit
+`GaWeCodes.Tests` mirrors this project. Tests use xUnit
 (built-in asserts), NSubstitute, and EF Core InMemory where applicable
 (ADR-0014). Dispatching, DI wiring, failure translation, serialization, and
 entity-key mapping are covered by fast in-memory tests against the real `RequestSender`

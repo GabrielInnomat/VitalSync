@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>GaWeCodes.Tests</RootNamespace>
+    <NoWarn>$(NoWarn);CA2007</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3.extensibility.core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GaWeCodes.Composition\GaWeCodes.Composition.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GaWeCodes.Composition.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Persistence.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Persistence.EfCore.Postgres.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.EventSourcing.Marten.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Runtime.Wolverine.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Messaging.RabbitMq.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.PackageConventions.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.TestSupport.Containers" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

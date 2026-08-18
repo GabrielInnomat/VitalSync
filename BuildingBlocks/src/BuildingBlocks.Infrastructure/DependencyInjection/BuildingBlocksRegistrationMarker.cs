@@ -1,3 +1,0 @@
-namespace BuildingBlocks.Infrastructure.DependencyInjection;
-
-internal sealed class BuildingBlocksRegistrationMarker;

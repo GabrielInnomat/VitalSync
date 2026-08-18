@@ -1,4 +1,4 @@
-using BuildingBlocks.Application.Cqrs;
+using GaWeCodes.Application.Cqrs;
 
 namespace OrphanRequestsFixture;
 

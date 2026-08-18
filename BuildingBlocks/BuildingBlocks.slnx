@@ -1,27 +1,27 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/BuildingBlocks.Application/BuildingBlocks.Application.csproj" />
-    <Project Path="src/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj" />
-    <Project Path="src/BuildingBlocks.EventSourcing.Marten/BuildingBlocks.EventSourcing.Marten.csproj" />
-    <Project Path="src/BuildingBlocks.Infrastructure/BuildingBlocks.Infrastructure.csproj" />
-    <Project Path="src/BuildingBlocks.Messaging.Wolverine.RabbitMq/BuildingBlocks.Messaging.Wolverine.RabbitMq.csproj" />
-    <Project Path="src/BuildingBlocks.Persistence.Adapters/BuildingBlocks.Persistence.Adapters.csproj" />
-    <Project Path="src/BuildingBlocks.Persistence.EfCore.Postgres/BuildingBlocks.Persistence.EfCore.Postgres.csproj" />
-    <Project Path="src/BuildingBlocks.Runtime.Wolverine/BuildingBlocks.Runtime.Wolverine.csproj" />
+    <Project Path="src/GaWeCodes.Application/GaWeCodes.Application.csproj" />
+    <Project Path="src/GaWeCodes.Domain/GaWeCodes.Domain.csproj" />
+    <Project Path="src/GaWeCodes.EventSourcing.Marten/GaWeCodes.EventSourcing.Marten.csproj" />
+    <Project Path="src/GaWeCodes.Composition/GaWeCodes.Composition.csproj" />
+    <Project Path="src/GaWeCodes.Messaging.RabbitMq/GaWeCodes.Messaging.RabbitMq.csproj" />
+    <Project Path="src/GaWeCodes.Persistence/GaWeCodes.Persistence.csproj" />
+    <Project Path="src/GaWeCodes.Persistence.EfCore.Postgres/GaWeCodes.Persistence.EfCore.Postgres.csproj" />
+    <Project Path="src/GaWeCodes.Runtime.Wolverine/GaWeCodes.Runtime.Wolverine.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/BuildingBlocks.Application.Tests/BuildingBlocks.Application.Tests.csproj" />
-    <Project Path="tests/BuildingBlocks.Domain.Tests/BuildingBlocks.Domain.Tests.csproj" />
-    <Project Path="tests/BuildingBlocks.Infrastructure.Tests/BuildingBlocks.Infrastructure.Tests.csproj" />
-    <Project Path="tests/BuildingBlocks.EventSourcing.Marten.Tests/BuildingBlocks.EventSourcing.Marten.Tests.csproj" />
-    <Project Path="tests/BuildingBlocks.Messaging.Wolverine.RabbitMq.Tests/BuildingBlocks.Messaging.Wolverine.RabbitMq.Tests.csproj" />
-    <Project Path="tests/BuildingBlocks.PackageConventions.Tests/BuildingBlocks.PackageConventions.Tests.csproj" />
-    <Project Path="tests/BuildingBlocks.Persistence.Adapters.Tests/BuildingBlocks.Persistence.Adapters.Tests.csproj" />
-    <Project Path="tests/BuildingBlocks.Persistence.EfCore.Postgres.Tests/BuildingBlocks.Persistence.EfCore.Postgres.Tests.csproj" />
-    <Project Path="tests/BuildingBlocks.Runtime.Wolverine.Tests/BuildingBlocks.Runtime.Wolverine.Tests.csproj" />
-    <Project Path="tests/BuildingBlocks.TestSupport/BuildingBlocks.TestSupport.csproj" />
-    <Project Path="tests/BuildingBlocks.TestSupport.Containers/BuildingBlocks.TestSupport.Containers.csproj" />
-    <Project Path="tests/BuildingBlocks.TestSupport.EfCore/BuildingBlocks.TestSupport.EfCore.csproj" />
+    <Project Path="tests/GaWeCodes.Application.Tests/GaWeCodes.Application.Tests.csproj" />
+    <Project Path="tests/GaWeCodes.Domain.Tests/GaWeCodes.Domain.Tests.csproj" />
+    <Project Path="tests/GaWeCodes.Composition.Tests/GaWeCodes.Composition.Tests.csproj" />
+    <Project Path="tests/GaWeCodes.EventSourcing.Marten.Tests/GaWeCodes.EventSourcing.Marten.Tests.csproj" />
+    <Project Path="tests/GaWeCodes.Messaging.RabbitMq.Tests/GaWeCodes.Messaging.RabbitMq.Tests.csproj" />
+    <Project Path="tests/GaWeCodes.PackageConventions.Tests/GaWeCodes.PackageConventions.Tests.csproj" />
+    <Project Path="tests/GaWeCodes.Persistence.Tests/GaWeCodes.Persistence.Tests.csproj" />
+    <Project Path="tests/GaWeCodes.Persistence.EfCore.Postgres.Tests/GaWeCodes.Persistence.EfCore.Postgres.Tests.csproj" />
+    <Project Path="tests/GaWeCodes.Runtime.Wolverine.Tests/GaWeCodes.Runtime.Wolverine.Tests.csproj" />
+    <Project Path="tests/GaWeCodes.TestSupport/GaWeCodes.TestSupport.csproj" />
+    <Project Path="tests/GaWeCodes.TestSupport.Containers/GaWeCodes.TestSupport.Containers.csproj" />
+    <Project Path="tests/GaWeCodes.TestSupport.EfCore/GaWeCodes.TestSupport.EfCore.csproj" />
   </Folder>
   <Folder Name="/tests/ExternalAssemblies/">
     <Project Path="tests/ExternalAssemblies/AmbiguousRequestsFixture/AmbiguousRequestsFixture.csproj" />

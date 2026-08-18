@@ -1,6 +1,6 @@
-# BuildingBlocks.Domain — Technical Reference
+# GaWeCodes.Domain — Technical Reference
 
-`BuildingBlocks.Domain` is the foundational building block of the platform. It provides the tactical Domain-Driven Design primitives that every microservice's domain layer builds upon, and it is deliberately kept pure — no framework, no infrastructure, BCL only.
+`GaWeCodes.Domain` is the foundational building block of the platform. It provides the tactical Domain-Driven Design primitives that every microservice's domain layer builds upon, and it is deliberately kept pure — no framework, no infrastructure, BCL only.
 
 The block provides a **single aggregate authoring model**: every aggregate derives from `AggregateRoot<TKey, TState>` and expresses state changes by folding domain events into an immutable state object. Event sourcing is a purely **additive** capability — `EventSourcedAggregateRoot<TKey, TState>` adds only a version and replay — so how an aggregate is persisted is a composition-layer decision, not a class-hierarchy decision (see [ADR-0025](./decisions/0025-unified-state-fold-aggregate-model.md)).
 
@@ -47,7 +47,7 @@ The block provides a **single aggregate authoring model**: every aggregate deriv
 ## Folder layout — folder is namespace, and it is a contract
 
 ```
-BuildingBlocks.Domain/
+GaWeCodes.Domain/
 ├── Aggregates/   AggregateRoot, AggregateState, EventSourcedAggregateRoot, IAggregateRoot,
 │                 IEventSourcedAggregateRoot, IStateOwner
 ├── Entities/     IEntityKey, IEntity, EntityBase, Entity, EntityState, IChildOwner
@@ -59,7 +59,7 @@ BuildingBlocks.Domain/
 
 The cut follows the aggregate boundary, not an abstract taxonomy: `Aggregates/` holds what a root
 is, `Entities/` what a root and a child share, and `Events/` the channel between them. The root
-namespace `BuildingBlocks.Domain` is deliberately almost empty.
+namespace `GaWeCodes.Domain` is deliberately almost empty.
 
 Because every type here is `public`, **the namespaces are part of the published API**: moving a
 file changes each exported type's `FullName` and breaks every consumer. `PublicSurfaceTests` pins
@@ -69,11 +69,11 @@ A service does **not** pay for this per file. The four to five usings go into th
 
 ```xml
 <ItemGroup>
-  <Using Include="BuildingBlocks.Domain.Aggregates" />
-  <Using Include="BuildingBlocks.Domain.Entities" />
-  <Using Include="BuildingBlocks.Domain.Events" />
-  <Using Include="BuildingBlocks.Domain.Naming" />
-  <Using Include="BuildingBlocks.Domain.Rules" />
+  <Using Include="GaWeCodes.Domain.Aggregates" />
+  <Using Include="GaWeCodes.Domain.Entities" />
+  <Using Include="GaWeCodes.Domain.Events" />
+  <Using Include="GaWeCodes.Domain.Naming" />
+  <Using Include="GaWeCodes.Domain.Rules" />
 </ItemGroup>
 ```
 
@@ -479,7 +479,7 @@ An event's **type name** is declared with `[EventName]` and is therefore rename-
 names** are not: they are the CLR property names the serializer sees, so renaming a property renames
 the stored field. Domain has no attribute for that on purpose — a field rename almost always changes
 meaning and should cost a new event version. What makes it visible is a checked-in schema snapshot
-per service, rendered by `PersistedSchema` in `BuildingBlocks.Testing` and asserted by a test (ADR-0035).
+per service, rendered by `PersistedSchema` in `GaWeCodes.Testing` and asserted by a test (ADR-0035).
 
 ## Business rules and validation
 

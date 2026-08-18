@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\BuildingBlocks\src\BuildingBlocks.Testing\BuildingBlocks.Testing.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\src\GaWeCodes.Testing\GaWeCodes.Testing.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.StateStored.Domain\VitalSync.Sample.StateStored.Domain.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.StateStored.Infrastructure\VitalSync.Sample.StateStored.Infrastructure.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.StateStored.Contracts\VitalSync.Sample.StateStored.Contracts.csproj" />

@@ -1,5 +1,5 @@
-using BuildingBlocks.Application.IntegrationEvents;
-using BuildingBlocks.Domain.Rules;
+using GaWeCodes.Application.IntegrationEvents;
+using GaWeCodes.Domain.Rules;
 
 namespace DeadLetterFixture;
 

@@ -1,5 +1,5 @@
-using BuildingBlocks.Application.IntegrationEvents;
-using BuildingBlocks.Domain.Events;
+using GaWeCodes.Application.IntegrationEvents;
+using GaWeCodes.Domain.Events;
 
 namespace SchemaGapFixture;
 

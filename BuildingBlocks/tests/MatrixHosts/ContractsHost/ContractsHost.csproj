@@ -5,14 +5,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\BuildingBlocks.Application\BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\GaWeCodes.Application\GaWeCodes.Application.csproj" />
     <ProjectReference Include="..\DomainOnlyHost\DomainOnlyHost.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="BuildingBlocks.Application.Cqrs" />
-    <Using Include="BuildingBlocks.Application.Persistence" />
-    <Using Include="BuildingBlocks.Application.Results" />
+    <Using Include="GaWeCodes.Application.Cqrs" />
+    <Using Include="GaWeCodes.Application.Persistence" />
+    <Using Include="GaWeCodes.Application.Results" />
     <Using Include="DomainOnlyHost" />
   </ItemGroup>
 

@@ -1,5 +1,5 @@
-using BuildingBlocks.Infrastructure.DependencyInjection;
-using BuildingBlocks.Infrastructure.Persistence.EventSourced;
+using GaWeCodes.DependencyInjection;
+using GaWeCodes.Persistence.EventSourced;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

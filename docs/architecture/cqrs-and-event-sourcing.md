@@ -112,7 +112,7 @@ that fails once the package reappears in Infrastructure or loses `PrivateAssets`
 
 When a context is event-sourced, its events are persisted in **Marten on
 PostgreSQL**, used as a **raw event store**: the event-sourced repository in
-`BuildingBlocks.Infrastructure` tracks the aggregates it hands out, and the unit
+`GaWeCodes.Composition` tracks the aggregates it hands out, and the unit
 of work appends their uncommitted domain events to the stream at commit (with
 optimistic concurrency asserted against the aggregate's `Version`); on load, the
 repository fetches the raw stream and folds it through the aggregate's own
@@ -139,7 +139,7 @@ event-sourced and state-stored contexts:
 2. In the **write transaction** those events are also written to a **transactional
    outbox** in the write database, so they are captured atomically with the change
    (no cross-database transaction is required).
-3. After commit, the **Publisher** (in `BuildingBlocks.Infrastructure`) drains the
+3. After commit, the **Publisher** (in `GaWeCodes.Composition`) drains the
    outbox and dispatches each event to **in-context projection handlers** (which
    update the read database) and, where selected, to the **integration-event path**
    on RabbitMQ/Wolverine ([ADR-0023](./decisions/0023-wolverine-messaging-transport.md), which supersedes [ADR-0004](./decisions/0004-asynchronous-messaging-between-services.md)).

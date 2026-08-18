@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
-using BuildingBlocks.Application.IntegrationEvents;
-using BuildingBlocks.Domain.Entities;
-using BuildingBlocks.Domain.Events;
-using BuildingBlocks.Domain.Naming;
+using GaWeCodes.Application.IntegrationEvents;
+using GaWeCodes.Domain.Entities;
+using GaWeCodes.Domain.Events;
+using GaWeCodes.Domain.Naming;
 
 namespace SchemaFixture;
 

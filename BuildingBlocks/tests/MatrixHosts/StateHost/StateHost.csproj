@@ -9,7 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\BuildingBlocks.Persistence.EfCore.Postgres\BuildingBlocks.Persistence.EfCore.Postgres.csproj" />
+    <ProjectReference Include="..\..\..\src\GaWeCodes.Persistence.EfCore.Postgres\GaWeCodes.Persistence.EfCore.Postgres.csproj" />
   </ItemGroup>
 
 </Project>

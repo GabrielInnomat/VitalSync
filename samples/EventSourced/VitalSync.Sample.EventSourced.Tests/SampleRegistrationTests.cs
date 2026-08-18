@@ -1,7 +1,7 @@
-using BuildingBlocks.Application.Cqrs;
-using BuildingBlocks.Application.DomainEvents;
-using BuildingBlocks.Application.IntegrationEvents;
-using BuildingBlocks.Application.Persistence;
+using GaWeCodes.Application.Cqrs;
+using GaWeCodes.Application.DomainEvents;
+using GaWeCodes.Application.IntegrationEvents;
+using GaWeCodes.Application.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using VitalSync.Sample.EventSourced.Application;

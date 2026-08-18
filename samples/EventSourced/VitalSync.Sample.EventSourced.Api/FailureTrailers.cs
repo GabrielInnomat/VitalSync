@@ -1,5 +1,5 @@
 using System.Globalization;
-using BuildingBlocks.Application.Results;
+using GaWeCodes.Application.Results;
 using Grpc.Core;
 
 namespace VitalSync.Sample.EventSourced.Api;

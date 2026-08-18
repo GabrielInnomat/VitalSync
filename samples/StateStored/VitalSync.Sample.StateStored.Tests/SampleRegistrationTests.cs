@@ -1,7 +1,7 @@
 using System.Reflection;
-using BuildingBlocks.Application.Cqrs;
-using BuildingBlocks.Application.DomainEvents;
-using BuildingBlocks.Application.IntegrationEvents;
+using GaWeCodes.Application.Cqrs;
+using GaWeCodes.Application.DomainEvents;
+using GaWeCodes.Application.IntegrationEvents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using VitalSync.Sample.StateStored.Application;

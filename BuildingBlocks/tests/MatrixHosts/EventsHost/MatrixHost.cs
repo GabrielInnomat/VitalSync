@@ -1,7 +1,7 @@
-﻿using BuildingBlocks.Domain.Events;
-using BuildingBlocks.Domain.Naming;
-using BuildingBlocks.Infrastructure.DependencyInjection;
-using BuildingBlocks.Infrastructure.Persistence.EventSourced;
+using GaWeCodes.Domain.Events;
+using GaWeCodes.Domain.Naming;
+using GaWeCodes.DependencyInjection;
+using GaWeCodes.Persistence.EventSourced;
 using Microsoft.Extensions.Hosting;
 
 namespace EventsHost;
