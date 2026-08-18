@@ -63,7 +63,7 @@ Everything else is `internal`, with `InternalsVisibleTo` for the test assembly.
 | `HostApplicationBuilderExtensions`| `AddBuildingBlocks` on the host builder (ADR-0027)                |
 | `BuildingBlocksOptions`           | the configuration surface passed to it                            |
 | `EntityKeyModelBuilderExtensions` | `ApplyEntityKeyConversions`, called from a host's `DbContext`     |
-| `PersistedSchema`                 | the event-schema snapshot, called from a service's tests (ADR-0035) |
+| `PersistedSchema`                 | the event-schema snapshot, called from a service's tests (ADR-0035); it lives in `BuildingBlocks.Testing`, not in the core |
 | `StateStoredReadModelRebuildRunner<TContext>`| the read-model rebuild driver for a state-stored context, constructed by a migration worker (ADR-0036) |
 | `EventSourcedReadModelRebuildRunner`| the same driver for an event-sourced context, folding Marten streams (ADR-0036) |
 
@@ -263,9 +263,10 @@ ADR-0030 removed derived names at the type level and left the field level open: 
 `Name` renames the field on the wire. Stored events keep the old name and deserialize to `default`
 — no exception, no log entry, no failing test.
 
-ADR-0035 answers this with visibility rather than tolerance. `PersistedSchema` renders every domain
-event and integration event of a set of assemblies into a deterministic text file and compares it
-against an approved baseline that lives with the service that owns the events:
+ADR-0035 answers this with visibility rather than tolerance. `PersistedSchema` — shipped in
+`BuildingBlocks.Testing`, so that a runtime host never carries an approval-test tool — renders every
+domain event and integration event of a set of assemblies into a deterministic text file and compares
+it against an approved baseline that lives with the service that owns the events:
 
 ```text
 domain-event widget-created-v1

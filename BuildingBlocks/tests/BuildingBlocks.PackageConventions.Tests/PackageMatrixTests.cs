@@ -18,6 +18,8 @@ public sealed class PackageMatrixTests
 
     private const string Npgsql = "Npgsql";
 
+    private const string Kafka = "Confluent.Kafka";
+
     private static readonly string[] AllVendors = [Marten, EfCore, RabbitMq, Wolverine, Npgsql];
 
     public static TheoryData<string, string[]> ForbiddenVendorsPerHost =>
@@ -30,6 +32,8 @@ public sealed class PackageMatrixTests
             { "EventsHost", [EfCore, RabbitMq] },
             { "StateBusHost", [Marten] },
             { "EventsBusHost", [EfCore] },
+            { "ForeignStoreHost", [Marten, RabbitMq, Npgsql] },
+            { "ForeignBrokerHost", [Marten, RabbitMq, Npgsql] },
         };
 
     public static TheoryData<string, string[]> RequiredVendorsPerHost =>
@@ -39,10 +43,20 @@ public sealed class PackageMatrixTests
             { "EventsHost", [Marten, Npgsql, Wolverine] },
             { "StateBusHost", [EfCore, RabbitMq, Wolverine] },
             { "EventsBusHost", [Marten, RabbitMq, Wolverine] },
+            { "ForeignStoreHost", [EfCore, Wolverine] },
+            { "ForeignBrokerHost", [EfCore, Wolverine, Kafka] },
         };
 
     public static TheoryData<string> HostNames =>
-        ["BareHost", "StateHost", "EventsHost", "StateBusHost", "EventsBusHost"];
+    [
+        "BareHost",
+        "StateHost",
+        "EventsHost",
+        "StateBusHost",
+        "EventsBusHost",
+        "ForeignStoreHost",
+        "ForeignBrokerHost",
+    ];
 
     [Theory]
     [MemberData(nameof(ForbiddenVendorsPerHost))]
@@ -142,6 +156,8 @@ public sealed class PackageMatrixTests
         "EventsHost" => EventsHost.MatrixHost.Build(),
         "StateBusHost" => StateBusHost.MatrixHost.Build(),
         "EventsBusHost" => EventsBusHost.MatrixHost.Build(),
+        "ForeignStoreHost" => ForeignStoreHost.MatrixHost.Build(),
+        "ForeignBrokerHost" => ForeignBrokerHost.MatrixHost.Build(),
         _ => throw new ArgumentOutOfRangeException(nameof(host), host, "Unknown matrix host."),
     };
 

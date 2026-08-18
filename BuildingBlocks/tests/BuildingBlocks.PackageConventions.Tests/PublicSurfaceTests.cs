@@ -5,6 +5,7 @@ using BuildingBlocks.Infrastructure.Persistence;
 using BuildingBlocks.Infrastructure.Persistence.EventSourced;
 using BuildingBlocks.Infrastructure.Persistence.StateStored;
 using BuildingBlocks.Infrastructure.ReadModels;
+using BuildingBlocks.Infrastructure.Schema;
 using BuildingBlocks.Infrastructure.Startup;
 
 namespace BuildingBlocks.Infrastructure.Tests;
@@ -17,14 +18,20 @@ public sealed class PublicSurfaceTests
 
     private static readonly Assembly Adapters = typeof(ReadModelRebuildWriter).Assembly;
 
-    private static readonly Assembly EfCore = typeof(EfCorePersistenceOptionsExtensions).Assembly;
+    private static readonly Assembly Postgres = typeof(PostgresTransientFaults).Assembly;
+
+    private static readonly Assembly EfCore = typeof(IEfCoreDatabaseDriver).Assembly;
+
+    private static readonly Assembly EfCorePostgres = typeof(EfCorePersistenceOptionsExtensions).Assembly;
 
     private static readonly Assembly Marten = typeof(MartenPersistenceOptionsExtensions).Assembly;
 
     private static readonly Assembly RabbitMq = typeof(RabbitMqMessagingExtensions).Assembly;
 
+    private static readonly Assembly Testing = typeof(PersistedSchema).Assembly;
+
     private static readonly Assembly[] AllAssemblies =
-        [Core, RuntimeWolverine, Adapters, EfCore, Marten, RabbitMq];
+        [Core, RuntimeWolverine, Adapters, Postgres, EfCore, EfCorePostgres, Marten, RabbitMq, Testing];
 
     private static readonly string[] IntendedCoreApi =
     [
@@ -80,16 +87,26 @@ public sealed class PublicSurfaceTests
         "BuildingBlocks.Infrastructure.Persistence.EntityKeyFormatter",
         "BuildingBlocks.Infrastructure.Persistence.ITrackedAggregate",
         "BuildingBlocks.Infrastructure.Persistence.PersistenceFailureCodes",
+        "BuildingBlocks.Infrastructure.ReadModels.ReadModelRebuildWriter",
+    ];
+
+    private static readonly string[] IntendedPostgresApi =
+    [
         "BuildingBlocks.Infrastructure.Persistence.PostgresFaultTranslator",
         "BuildingBlocks.Infrastructure.Persistence.PostgresTransientFaults",
-        "BuildingBlocks.Infrastructure.ReadModels.ReadModelRebuildWriter",
     ];
 
     private static readonly string[] IntendedEfCoreApi =
     [
         "BuildingBlocks.Infrastructure.Persistence.EntityKeyModelBuilderExtensions",
-        "BuildingBlocks.Infrastructure.Persistence.StateStored.EfCorePersistenceOptionsExtensions",
+        "BuildingBlocks.Infrastructure.Persistence.StateStored.EfCorePersistenceAdapter`1",
+        "BuildingBlocks.Infrastructure.Persistence.StateStored.IEfCoreDatabaseDriver",
         "BuildingBlocks.Infrastructure.ReadModels.StateStoredReadModelRebuildRunner`1",
+    ];
+
+    private static readonly string[] IntendedEfCorePostgresApi =
+    [
+        "BuildingBlocks.Infrastructure.Persistence.StateStored.EfCorePersistenceOptionsExtensions",
     ];
 
     private static readonly string[] IntendedMartenApi =
@@ -157,15 +174,17 @@ public sealed class PublicSurfaceTests
                 "BuildingBlocks.Infrastructure",
                 [.. IntendedCoreApi
                     .Concat(IntendedCoreAdapterContract)
-                    .Concat(IntendedTestingApi)
                     .Concat(CodeGenerationTypesInTheCore)]
             },
+            { "BuildingBlocks.Testing", IntendedTestingApi },
             {
                 "BuildingBlocks.Runtime.Wolverine",
                 [.. IntendedRuntimeWolverineApi.Concat(CodeGenerationTypesInTheWolverineRuntime)]
             },
             { "BuildingBlocks.Persistence.Adapters", IntendedAdaptersApi },
-            { "BuildingBlocks.Persistence.EfCore.Postgres", IntendedEfCoreApi },
+            { "BuildingBlocks.Persistence.Postgres", IntendedPostgresApi },
+            { "BuildingBlocks.Persistence.EfCore", IntendedEfCoreApi },
+            { "BuildingBlocks.Persistence.EfCore.Postgres", IntendedEfCorePostgresApi },
             { "BuildingBlocks.EventSourcing.Marten", IntendedMartenApi },
             { "BuildingBlocks.Messaging.Wolverine.RabbitMq", IntendedRabbitMqApi },
         };
@@ -195,7 +214,9 @@ public sealed class PublicSurfaceTests
             .Concat(IntendedCoreAdapterContract)
             .Concat(IntendedRuntimeWolverineApi)
             .Concat(IntendedAdaptersApi)
+            .Concat(IntendedPostgresApi)
             .Concat(IntendedEfCoreApi)
+            .Concat(IntendedEfCorePostgresApi)
             .Concat(IntendedMartenApi)
             .Concat(IntendedRabbitMqApi)
             .ToArray();

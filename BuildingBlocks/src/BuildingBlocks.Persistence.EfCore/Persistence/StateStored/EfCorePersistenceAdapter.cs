@@ -1,4 +1,4 @@
-using BuildingBlocks.Application.Persistence;
+﻿using BuildingBlocks.Application.Persistence;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
 using BuildingBlocks.Infrastructure.Diagnostics;
 using BuildingBlocks.Infrastructure.Messaging.DomainEvents;
@@ -7,21 +7,36 @@ using BuildingBlocks.Infrastructure.Startup;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Wolverine;
 using Wolverine.EntityFrameworkCore;
 
 namespace BuildingBlocks.Infrastructure.Persistence.StateStored;
 
-internal sealed record EfCorePersistenceAdapter<TContext>(
-    string WriteConnectionString,
-    Action<DbContextOptionsBuilder>? ConfigureContext) : IPersistenceAdapter
+public sealed record EfCorePersistenceAdapter<TContext> : IPersistenceAdapter
     where TContext : DbContext
 {
+    private readonly IEfCoreDatabaseDriver _driver;
+    private readonly Action<DbContextOptionsBuilder>? _configureContext;
+
+    public EfCorePersistenceAdapter(
+        IEfCoreDatabaseDriver driver,
+        string writeConnectionString,
+        Action<DbContextOptionsBuilder>? configureContext = null)
+    {
+        ArgumentNullException.ThrowIfNull(driver);
+        ArgumentNullException.ThrowIfNull(writeConnectionString);
+
+        _driver = driver;
+        _configureContext = configureContext;
+        WriteConnectionString = writeConnectionString;
+    }
+
     public string Description => "UseEfCorePersistence";
+
+    public string WriteConnectionString { get; }
 
     public AggregateStyle AggregateStyle => AggregateStyle.StateStored;
 
-    public bool IsTransientFault(Exception exception) => PostgresTransientFaults.IsTransient(exception);
+    public bool IsTransientFault(Exception exception) => _driver.IsTransientFault(exception);
 
     public void Register(PersistenceRegistrationContext context)
     {
@@ -29,11 +44,12 @@ internal sealed record EfCorePersistenceAdapter<TContext>(
 
         var services = context.Services;
         var connectionString = WriteConnectionString;
-        var configureContext = ConfigureContext;
+        var driver = _driver;
+        var configureContext = _configureContext;
 
         services.AddDbContextWithWolverineIntegration<TContext>(builder =>
         {
-            builder.UseNpgsql(connectionString);
+            driver.ConfigureContext(builder, connectionString);
             configureContext?.Invoke(builder);
         });
 
@@ -46,13 +62,17 @@ internal sealed record EfCorePersistenceAdapter<TContext>(
         services.TryAddScoped(typeof(IRepository<,>), typeof(EfCoreRepository<,>));
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IPersistenceFaultTranslator, EfCoreFaultTranslator>());
-        services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IPersistenceFaultTranslator, PostgresFaultTranslator>());
+
+        foreach (var translator in driver.FaultTranslators)
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton(translator));
+        }
+
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IStartupCheck, AggregateStateModelCheck<TContext>>());
         services.AddSingleton<IStartupCheck>(new WriteDbContextLifetimeCheck<TContext>(services));
         context.UseWolverineRuntime()
-            .AddOutboxDurability(new EfCoreOutboxDurability(connectionString));
+            .AddOutboxDurability(new EfCoreOutboxDurability(driver, connectionString));
         DeadLetterHealthCheckRegistration.Register(services);
     }
 }

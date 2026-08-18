@@ -36,8 +36,8 @@ internal sealed class BrokerTopologyCheck(
 
         await AssertExistsAsync(
             connection,
-            channel => channel.QueueDeclarePassiveAsync(subscription.QueueName, cancellationToken),
-            $"the queue '{subscription.QueueName}' does not exist on the broker. Wolverine's listener would fail " +
+            channel => channel.QueueDeclarePassiveAsync(subscription.EndpointName, cancellationToken),
+            $"the queue '{subscription.EndpointName}' does not exist on the broker. Wolverine's listener would fail " +
             "with a bare AMQP 404 that names neither this host nor the reason",
             cancellationToken).ConfigureAwait(false);
     }

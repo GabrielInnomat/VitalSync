@@ -11,7 +11,7 @@ public sealed class PersistenceChoiceTests
     private const string ConnectionString = "Host=localhost;Database=test;Username=test;******";
 
     private static EfCorePersistenceAdapter<TestDbContext> EfCore(string connectionString) =>
-        new(connectionString, null);
+        new(PostgresDatabaseDriver.Instance, connectionString, null);
 
     [Fact]
     public void None_IsNotSelectedAndCarriesNoConnectionString()

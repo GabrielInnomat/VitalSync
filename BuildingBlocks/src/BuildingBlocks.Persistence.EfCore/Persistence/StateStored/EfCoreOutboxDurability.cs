@@ -1,16 +1,16 @@
-using Wolverine;
+﻿using Wolverine;
 using Wolverine.EntityFrameworkCore;
-using Wolverine.Postgresql;
 
 namespace BuildingBlocks.Infrastructure.Persistence.StateStored;
 
-internal sealed class EfCoreOutboxDurability(string writeConnectionString) : IOutboxDurabilityConfigurator
+internal sealed class EfCoreOutboxDurability(IEfCoreDatabaseDriver driver, string writeConnectionString)
+    : IOutboxDurabilityConfigurator
 {
     public void Configure(WolverineOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        options.PersistMessagesWithPostgresql(writeConnectionString);
+        driver.PersistMessages(options, writeConnectionString);
         options.UseEntityFrameworkCoreTransactions();
     }
 }

@@ -1,6 +1,5 @@
 using BuildingBlocks.Application.IntegrationEvents;
 using BuildingBlocks.Infrastructure.DependencyInjection.Wiring;
-using BuildingBlocks.Infrastructure.Messaging.IntegrationEvents;
 using BuildingBlocks.Infrastructure.Messaging.Transport;
 using BuildingBlocks.Infrastructure.Startup;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,12 +44,15 @@ internal sealed class RabbitMqTransportAdapter(Uri rabbitMqUri, string exchangeN
             transport.AutoProvision();
         }
 
-        transport.DeclareExchange(exchangeName, exchange => exchange.IsDurable = true);
+        transport.DeclareExchange(exchangeName, exchange =>
+        {
+            exchange.IsDurable = true;
+            exchange.ExchangeType = ExchangeType.Topic;
+        });
 
-        options.PublishMessagesToRabbitMqExchange<IIntegrationEvent>(
-                exchangeName,
-                integrationEvent => TopicResolver.For(integrationEvent.GetType(), contextName))
-            .UseDurableOutbox();
+        options.Publish(rule => rule.MessagesImplementing<IIntegrationEvent>()
+            .ToRabbitTopics(exchangeName)
+            .UseDurableOutbox());
     }
 
     public void ConfigureSubscription(WolverineOptions options, IntegrationEventSubscription subscription)
@@ -58,12 +60,12 @@ internal sealed class RabbitMqTransportAdapter(Uri rabbitMqUri, string exchangeN
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(subscription);
 
-        options.ListenToRabbitQueue(subscription.QueueName, queue => queue.IsDurable = true).UseDurableInbox();
+        options.ListenToRabbitQueue(subscription.EndpointName, queue => queue.IsDurable = true).UseDurableInbox();
 
         var exchange = options.UseRabbitMq().BindExchange(exchangeName);
         foreach (var topicPattern in subscription.TopicPatterns)
         {
-            exchange.ToQueue(subscription.QueueName, bindingKey: topicPattern);
+            exchange.ToQueue(subscription.EndpointName, bindingKey: topicPattern);
         }
     }
 }

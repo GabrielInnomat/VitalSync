@@ -53,9 +53,9 @@ internal sealed class IntegrationEventSubscriptionCheck(
             {
                 problems.Add(
                     $"'{messageType.FullName}' is handled here but its topic '{topic}' matches none of the bound " +
-                    $"patterns [{string.Join(", ", subscription.TopicPatterns)}]. The queue would never receive it, " +
-                    "and an empty queue looks exactly like an upstream context that has not published yet. Bind a " +
-                    "matching pattern in SubscribeToIntegrationEvents.");
+                    $"patterns [{string.Join(", ", subscription.TopicPatterns)}]. The endpoint would never receive " +
+                    "it, and an empty endpoint looks exactly like an upstream context that has not published yet. " +
+                    "Bind a matching pattern in SubscribeToIntegrationEvents.");
             }
         }
 

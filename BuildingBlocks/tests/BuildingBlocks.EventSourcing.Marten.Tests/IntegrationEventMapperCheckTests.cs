@@ -26,7 +26,7 @@ public sealed class IntegrationEventMapperCheckTests
 
         Assert.Contains(nameof(RegistrationMapper), exception.Message, StringComparison.Ordinal);
         Assert.Contains(
-            nameof(RabbitMqMessagingExtensions.UseWolverineMessaging),
+            "Select a messaging transport",
             exception.Message,
             StringComparison.Ordinal);
     }

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <RootNamespace>BuildingBlocks.Infrastructure</RootNamespace>
@@ -6,9 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageReference Include="WolverineFx.EntityFrameworkCore" />
     <PackageReference Include="WolverineFx.Postgresql" />
   </ItemGroup>
 
@@ -23,8 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BuildingBlocks.Persistence.Adapters\BuildingBlocks.Persistence.Adapters.csproj" />
-    <ProjectReference Include="..\BuildingBlocks.Runtime.Wolverine\BuildingBlocks.Runtime.Wolverine.csproj" />
+    <ProjectReference Include="..\BuildingBlocks.Persistence.EfCore\BuildingBlocks.Persistence.EfCore.csproj" />
+    <ProjectReference Include="..\BuildingBlocks.Persistence.Postgres\BuildingBlocks.Persistence.Postgres.csproj" />
   </ItemGroup>
 
 </Project>

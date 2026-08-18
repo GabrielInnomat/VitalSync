@@ -33,8 +33,6 @@
     <ProjectReference Include="..\ExternalAssemblies\ConflictingHandlersFixture\ConflictingHandlersFixture.csproj" />
     <ProjectReference Include="..\ExternalAssemblies\HullFixture\HullFixture.csproj" />
     <ProjectReference Include="..\ExternalAssemblies\OrphanRequestsFixture\OrphanRequestsFixture.csproj" />
-    <ProjectReference Include="..\ExternalAssemblies\SchemaFixture\SchemaFixture.csproj" />
-    <ProjectReference Include="..\ExternalAssemblies\SchemaGapFixture\SchemaGapFixture.csproj" />
     <ProjectReference Include="..\ExternalAssemblies\ValidHandlersFixture\ValidHandlersFixture.csproj" />
   </ItemGroup>
 

@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\src\BuildingBlocks.Testing\BuildingBlocks.Testing.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Contracts\VitalSync.Sample.EventSourced.Contracts.csproj" />
     <ProjectReference Include="..\..\StateStored\VitalSync.Sample.StateStored.Contracts\VitalSync.Sample.StateStored.Contracts.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Domain\VitalSync.Sample.EventSourced.Domain.csproj" />

@@ -71,15 +71,15 @@ internal static class BuildingBlocksComposition
         if (wiring.Messaging.Subscription is not null && wiring.Messaging.Transport is null)
         {
             throw new InvalidOperationException(
-                "SubscribeToIntegrationEvents was selected without UseWolverineMessaging. Subscribing declares a " +
-                "queue on the RabbitMQ broker and binds it to the platform exchange, so the transport must be " +
-                "configured as well.");
+                "SubscribeToIntegrationEvents was selected without a messaging transport. Subscribing declares a " +
+                "listening endpoint on the broker and binds it to the topics it wants, so a transport must be " +
+                "selected as well.");
         }
 
         if (wiring.Messaging.IsSelected && !wiring.Persistence.IsSelected)
         {
             throw new InvalidOperationException(
-                "UseWolverineMessaging was selected without a persistence strategy. Integration events are sent " +
+                "A messaging transport was selected without a persistence strategy. Integration events are sent " +
                 "through a durable endpoint so that they survive a broker restart and a crash between commit and " +
                 "broker acknowledgement, and a durable endpoint needs Wolverine's message store. " +
                 "Without one the host would look durable and silently not be. Select UseEfCorePersistence<TContext>" +

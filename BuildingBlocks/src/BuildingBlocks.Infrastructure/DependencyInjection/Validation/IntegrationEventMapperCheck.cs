@@ -38,7 +38,7 @@ internal sealed class IntegrationEventMapperCheck(
             $"{string.Join(", ", mappers)}. A mapper exists for one purpose — turning a domain event into an " +
             "integration event that leaves this context — so every event it produces would be handed to the null " +
             "sink and dropped after a log warning, while the commit reports success and every downstream context " +
-            "silently stops receiving. Call options.UseWolverineMessaging(rabbitMqUri, exchangeName, contextName), " +
+            "silently stops receiving. Select a messaging transport, " +
             "or delete the mapper if this context publishes nothing.");
     }
 }

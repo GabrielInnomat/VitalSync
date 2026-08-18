@@ -117,6 +117,24 @@ internal static class WolverineOptionsExtensions
         return options;
     }
 
+    public static WolverineOptions ApplyBuildingBlocksIntegrationEventTopics(
+        this WolverineOptions options,
+        string contextName)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contextName);
+
+        options.Policies.AllSenders(sender => sender.CustomizeOutgoing(envelope =>
+        {
+            if (envelope.Message is IIntegrationEvent)
+            {
+                envelope.TopicName = TopicResolver.For(envelope.Message.GetType(), contextName);
+            }
+        }));
+
+        return options;
+    }
+
     public static WolverineOptions ApplyBuildingBlocksSubscriptionDiscovery(
         this WolverineOptions options,
         IntegrationEventSubscription subscription)

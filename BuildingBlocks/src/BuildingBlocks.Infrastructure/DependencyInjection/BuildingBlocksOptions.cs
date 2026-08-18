@@ -99,15 +99,15 @@ public sealed class BuildingBlocksOptions
     }
 
     public BuildingBlocksOptions SubscribeToIntegrationEvents(
-        string queueName,
+        string endpointName,
         Assembly consumerAssembly,
         params string[] topicPatterns)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpointName);
         ArgumentNullException.ThrowIfNull(consumerAssembly);
         ArgumentNullException.ThrowIfNull(topicPatterns);
 
-        _messaging.Subscribe(queueName, consumerAssembly, topicPatterns);
+        _messaging.Subscribe(endpointName, consumerAssembly, topicPatterns);
         return this;
     }
 

@@ -32,6 +32,7 @@ internal sealed class BuildingBlocksWolverineExtension(IWiringSnapshot wiring) :
                     "a transport that targets this runtime.");
             }
 
+            options.ApplyBuildingBlocksIntegrationEventTopics(wolverineTransport.ContextName);
             wolverineTransport.Configure(options, wiring.ProvisionsInfrastructure);
 
             if (wiring.Subscription is { } subscription)

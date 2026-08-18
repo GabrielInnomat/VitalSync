@@ -24,8 +24,8 @@ internal sealed class MessagingRegistrar(
             throw new ArgumentException(
                 $"'{contextName}' is not a valid bounded-context name. It is the first segment of every routing " +
                 "key this service publishes, so it must be a single lower-case kebab-case word without a dot " +
-                "(for example \"orders\"). A value containing a dot is almost always the exchange name passed " +
-                "in the wrong position.",
+                "(for example \"orders\"). A value containing a dot is almost always the broker destination name " +
+                "passed in the wrong position.",
                 nameof(adapter));
         }
 
@@ -41,18 +41,18 @@ internal sealed class MessagingRegistrar(
             runtime));
     }
 
-    public void Subscribe(string queueName, Assembly consumerAssembly, string[] topicPatterns)
+    public void Subscribe(string endpointName, Assembly consumerAssembly, string[] topicPatterns)
     {
         if (topicPatterns.Length == 0 || Array.Exists(topicPatterns, string.IsNullOrWhiteSpace))
         {
             throw new ArgumentException(
-                "At least one non-blank topic pattern is required. A queue with no binding receives nothing, " +
+                "At least one non-blank topic pattern is required. An endpoint with no binding receives nothing, " +
                 "and neither the broker nor Wolverine reports that as an error.",
                 nameof(topicPatterns));
         }
 
         messaging.SelectSubscription(new IntegrationEventSubscription(
-            queueName,
+            endpointName,
             [.. topicPatterns],
             consumerAssembly));
     }

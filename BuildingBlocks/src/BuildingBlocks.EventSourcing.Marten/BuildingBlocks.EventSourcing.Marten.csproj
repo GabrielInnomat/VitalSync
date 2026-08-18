@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BuildingBlocks.Persistence.Adapters\BuildingBlocks.Persistence.Adapters.csproj" />
+    <ProjectReference Include="..\BuildingBlocks.Persistence.Postgres\BuildingBlocks.Persistence.Postgres.csproj" />
     <ProjectReference Include="..\BuildingBlocks.Runtime.Wolverine\BuildingBlocks.Runtime.Wolverine.csproj" />
   </ItemGroup>
 

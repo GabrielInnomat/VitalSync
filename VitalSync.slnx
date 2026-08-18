@@ -5,19 +5,24 @@
     <Project Path="BuildingBlocks/src/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj" />
     <Project Path="BuildingBlocks/src/BuildingBlocks.Infrastructure/BuildingBlocks.Infrastructure.csproj" />
     <Project Path="BuildingBlocks/src/BuildingBlocks.Persistence.Adapters/BuildingBlocks.Persistence.Adapters.csproj" />
+    <Project Path="BuildingBlocks/src/BuildingBlocks.Persistence.Postgres/BuildingBlocks.Persistence.Postgres.csproj" />
     <Project Path="BuildingBlocks/src/BuildingBlocks.Runtime.Wolverine/BuildingBlocks.Runtime.Wolverine.csproj" />
     <Project Path="BuildingBlocks/src/BuildingBlocks.Messaging.Wolverine.RabbitMq/BuildingBlocks.Messaging.Wolverine.RabbitMq.csproj" />
+    <Project Path="BuildingBlocks/src/BuildingBlocks.Persistence.EfCore/BuildingBlocks.Persistence.EfCore.csproj" />
     <Project Path="BuildingBlocks/src/BuildingBlocks.Persistence.EfCore.Postgres/BuildingBlocks.Persistence.EfCore.Postgres.csproj" />
     <Project Path="BuildingBlocks/src/BuildingBlocks.EventSourcing.Marten/BuildingBlocks.EventSourcing.Marten.csproj" />
+    <Project Path="BuildingBlocks/src/BuildingBlocks.Testing/BuildingBlocks.Testing.csproj" />
   </Folder>
   <Folder Name="/BuildingBlocks/tests/">
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Application.Tests/BuildingBlocks.Application.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Domain.Tests/BuildingBlocks.Domain.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Infrastructure.Tests/BuildingBlocks.Infrastructure.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.EventSourcing.Marten.Tests/BuildingBlocks.EventSourcing.Marten.Tests.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.Messaging.Tests/BuildingBlocks.Messaging.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Messaging.Wolverine.RabbitMq.Tests/BuildingBlocks.Messaging.Wolverine.RabbitMq.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.PackageConventions.Tests/BuildingBlocks.PackageConventions.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Persistence.Adapters.Tests/BuildingBlocks.Persistence.Adapters.Tests.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.Persistence.EfCore.Tests/BuildingBlocks.Persistence.EfCore.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Persistence.EfCore.Postgres.Tests/BuildingBlocks.Persistence.EfCore.Postgres.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.Runtime.Wolverine.Tests/BuildingBlocks.Runtime.Wolverine.Tests.csproj" />
     <Project Path="BuildingBlocks/tests/BuildingBlocks.TestSupport/BuildingBlocks.TestSupport.csproj" />
@@ -40,6 +45,9 @@
     <Project Path="BuildingBlocks/tests/MatrixHosts/DomainOnlyHost/DomainOnlyHost.csproj" />
     <Project Path="BuildingBlocks/tests/MatrixHosts/EventsBusHost/EventsBusHost.csproj" />
     <Project Path="BuildingBlocks/tests/MatrixHosts/EventsHost/EventsHost.csproj" />
+    <Project Path="BuildingBlocks/tests/BuildingBlocks.Testing.Tests/BuildingBlocks.Testing.Tests.csproj" />
+    <Project Path="BuildingBlocks/tests/MatrixHosts/ForeignBrokerHost/ForeignBrokerHost.csproj" />
+    <Project Path="BuildingBlocks/tests/MatrixHosts/ForeignStoreHost/ForeignStoreHost.csproj" />
     <Project Path="BuildingBlocks/tests/MatrixHosts/StateBusHost/StateBusHost.csproj" />
     <Project Path="BuildingBlocks/tests/MatrixHosts/StateHost/StateHost.csproj" />
   </Folder>

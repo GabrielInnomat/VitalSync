@@ -5,6 +5,8 @@
     <IsTestProject>true</IsTestProject>
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <RootNamespace>BuildingBlocks.Messaging.Tests</RootNamespace>
+    <NoWarn>$(NoWarn);CA2007</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,23 +14,22 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="WolverineFx.Kafka" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="xunit.v3" />
-    <PackageReference Include="Grpc.Net.Client" />
-    <PackageReference Include="protobuf-net.Grpc" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\BuildingBlocks\src\BuildingBlocks.Testing\BuildingBlocks.Testing.csproj" />
-    <ProjectReference Include="..\VitalSync.Sample.StateStored.Domain\VitalSync.Sample.StateStored.Domain.csproj" />
-    <ProjectReference Include="..\VitalSync.Sample.StateStored.Infrastructure\VitalSync.Sample.StateStored.Infrastructure.csproj" />
-    <ProjectReference Include="..\VitalSync.Sample.StateStored.Contracts\VitalSync.Sample.StateStored.Contracts.csproj" />
-    <ProjectReference Include="..\VitalSync.Sample.StateStored.Api\VitalSync.Sample.StateStored.Api.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks.Runtime.Wolverine\BuildingBlocks.Runtime.Wolverine.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks.EventSourcing.Marten\BuildingBlocks.EventSourcing.Marten.csproj" />
+    <ProjectReference Include="..\MatrixHosts\ForeignBrokerHost\ForeignBrokerHost.csproj" />
+    <ProjectReference Include="..\BuildingBlocks.TestSupport.Containers\BuildingBlocks.TestSupport.Containers.csproj" />
   </ItemGroup>
 
   <ItemGroup>

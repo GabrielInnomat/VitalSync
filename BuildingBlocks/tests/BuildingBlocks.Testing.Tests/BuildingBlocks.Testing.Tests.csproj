@@ -5,6 +5,8 @@
     <IsTestProject>true</IsTestProject>
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <RootNamespace>BuildingBlocks.Infrastructure.Tests</RootNamespace>
+    <NoWarn>$(NoWarn);CA2007</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,17 +20,12 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="xunit.v3" />
-    <PackageReference Include="Grpc.Net.Client" />
-    <PackageReference Include="protobuf-net.Grpc" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\BuildingBlocks\src\BuildingBlocks.Testing\BuildingBlocks.Testing.csproj" />
-    <ProjectReference Include="..\VitalSync.Sample.StateStored.Domain\VitalSync.Sample.StateStored.Domain.csproj" />
-    <ProjectReference Include="..\VitalSync.Sample.StateStored.Infrastructure\VitalSync.Sample.StateStored.Infrastructure.csproj" />
-    <ProjectReference Include="..\VitalSync.Sample.StateStored.Contracts\VitalSync.Sample.StateStored.Contracts.csproj" />
-    <ProjectReference Include="..\VitalSync.Sample.StateStored.Api\VitalSync.Sample.StateStored.Api.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks.Testing\BuildingBlocks.Testing.csproj" />
+    <ProjectReference Include="..\ExternalAssemblies\SchemaFixture\SchemaFixture.csproj" />
+    <ProjectReference Include="..\ExternalAssemblies\SchemaGapFixture\SchemaGapFixture.csproj" />
   </ItemGroup>
 
   <ItemGroup>

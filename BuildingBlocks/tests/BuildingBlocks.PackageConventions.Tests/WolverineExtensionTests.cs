@@ -242,7 +242,7 @@ public sealed class WolverineExtensionTests
         var subscription = provider.GetRequiredService<MessagingSelection>().Subscription;
 
         Assert.NotNull(subscription);
-        Assert.Equal("billing.integration-events", subscription!.QueueName);
+        Assert.Equal("billing.integration-events", subscription!.EndpointName);
         Assert.Equal(["orders.*", "reporting.*"], subscription.TopicPatterns);
         Assert.Equal(TestAssembly, subscription.ConsumerAssembly);
     }
@@ -254,7 +254,7 @@ public sealed class WolverineExtensionTests
             BuildProvider(options =>
                 options.SubscribeToIntegrationEvents("billing.integration-events", TestAssembly, "orders.*")));
 
-        Assert.Contains("UseWolverineMessaging", thrown.Message, StringComparison.Ordinal);
+        Assert.Contains("without a messaging transport", thrown.Message, StringComparison.Ordinal);
     }
 
     [Fact]

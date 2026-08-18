@@ -479,7 +479,7 @@ An event's **type name** is declared with `[EventName]` and is therefore rename-
 names** are not: they are the CLR property names the serializer sees, so renaming a property renames
 the stored field. Domain has no attribute for that on purpose — a field rename almost always changes
 meaning and should cost a new event version. What makes it visible is a checked-in schema snapshot
-per service, rendered by `PersistedSchema` in Infrastructure and asserted by a test (ADR-0035).
+per service, rendered by `PersistedSchema` in `BuildingBlocks.Testing` and asserted by a test (ADR-0035).
 
 ## Business rules and validation
 

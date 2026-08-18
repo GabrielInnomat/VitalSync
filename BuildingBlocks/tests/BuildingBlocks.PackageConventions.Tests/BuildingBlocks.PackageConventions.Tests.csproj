@@ -32,12 +32,15 @@
     <ProjectReference Include="..\BuildingBlocks.TestSupport.EfCore\BuildingBlocks.TestSupport.EfCore.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks.EventSourcing.Marten\BuildingBlocks.EventSourcing.Marten.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks.Messaging.Wolverine.RabbitMq\BuildingBlocks.Messaging.Wolverine.RabbitMq.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks.Testing\BuildingBlocks.Testing.csproj" />
     <ProjectReference Include="..\BuildingBlocks.TestSupport.Containers\BuildingBlocks.TestSupport.Containers.csproj" />
     <ProjectReference Include="..\MatrixHosts\BareHost\BareHost.csproj" />
     <ProjectReference Include="..\MatrixHosts\ContractsHost\ContractsHost.csproj" />
     <ProjectReference Include="..\MatrixHosts\DomainOnlyHost\DomainOnlyHost.csproj" />
     <ProjectReference Include="..\MatrixHosts\EventsBusHost\EventsBusHost.csproj" />
     <ProjectReference Include="..\MatrixHosts\EventsHost\EventsHost.csproj" />
+    <ProjectReference Include="..\MatrixHosts\ForeignBrokerHost\ForeignBrokerHost.csproj" />
+    <ProjectReference Include="..\MatrixHosts\ForeignStoreHost\ForeignStoreHost.csproj" />
     <ProjectReference Include="..\MatrixHosts\StateBusHost\StateBusHost.csproj" />
     <ProjectReference Include="..\MatrixHosts\StateHost\StateHost.csproj" />
   </ItemGroup>
