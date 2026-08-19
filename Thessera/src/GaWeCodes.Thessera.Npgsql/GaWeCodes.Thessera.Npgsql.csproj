@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <PackageTags>postgres;postgresql;npgsql;readiness-check;health-checks</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

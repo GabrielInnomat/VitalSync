@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <PackageTags>efcore;entity-framework;persistence;unit-of-work;repository;wolverine</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

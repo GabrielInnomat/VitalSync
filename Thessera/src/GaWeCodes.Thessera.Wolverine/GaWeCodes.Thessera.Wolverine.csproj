@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <PackageTags>wolverine;cqrs;dispatcher;messaging;outbox;host-builder</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,2 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageTags>ddd;domain-driven-design;aggregate;domain-events;value-objects;typed-ids</PackageTags>
+  </PropertyGroup>
+
 </Project>

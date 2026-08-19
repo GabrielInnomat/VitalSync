@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+	<PropertyGroup>
+		<PackageTags>cqrs;mediator;result-pattern;application-layer</PackageTags>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<ProjectReference Include="..\GaWeCodes.Thessera.Domain\GaWeCodes.Thessera.Domain.csproj" />
 	</ItemGroup>
