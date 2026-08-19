@@ -1,5 +1,5 @@
-using GaWeCodes.Application.Cqrs;
-using GaWeCodes.Application.Results;
+using GaWeCodes.Thessera.Application.Cqrs;
+using GaWeCodes.Thessera.Application.Results;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NSubstitute;

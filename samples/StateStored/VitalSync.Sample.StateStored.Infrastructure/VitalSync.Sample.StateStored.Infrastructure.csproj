@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\BuildingBlocks\src\GaWeCodes.Persistence.EfCore.Postgres\GaWeCodes.Persistence.EfCore.Postgres.csproj" />
-    <ProjectReference Include="..\..\..\BuildingBlocks\src\GaWeCodes.Messaging.RabbitMq\GaWeCodes.Messaging.RabbitMq.csproj" />
+    <ProjectReference Include="..\..\..\Thessera\src\GaWeCodes.Thessera.Persistence.EfCore.Postgres\GaWeCodes.Thessera.Persistence.EfCore.Postgres.csproj" />
+    <ProjectReference Include="..\..\..\Thessera\src\GaWeCodes.Thessera.Messaging.RabbitMq\GaWeCodes.Thessera.Messaging.RabbitMq.csproj" />
     <ProjectReference Include="..\..\VitalSync.Sample.Contracts\VitalSync.Sample.Contracts.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.StateStored.Application\VitalSync.Sample.StateStored.Application.csproj" />
   </ItemGroup>

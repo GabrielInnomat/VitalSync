@@ -66,6 +66,7 @@ original wording away — the amendment must remain readable as a correction.
 | [0035](./0035-persisted-field-names-are-pinned-by-a-snapshot.md) | A persisted field name is pinned by a snapshot, not by an attribute | Accepted |
 | [0036](./0036-state-stored-read-model-rebuild.md) | A state-stored read model is rebuilt from the current state, not from a replay | Accepted |
 | [0037](./0037-infrastructure-provisioning-is-a-role.md) | Creating schema and broker topology is a role, not a start-up side effect | Accepted |
+| [0038](./0038-thessera-is-the-product-name.md) | Thessera is the product name; `GaWeCodes` stays the publisher prefix | Accepted |
 
 ## Template
 

@@ -1,5 +1,5 @@
-using GaWeCodes.Domain.Aggregates;
-using GaWeCodes.Domain.Rules;
+using GaWeCodes.Thessera.Domain.Aggregates;
+using GaWeCodes.Thessera.Domain.Rules;
 using VitalSync.Sample.StateStored.Domain;
 
 namespace VitalSync.Sample.StateStored.Tests;

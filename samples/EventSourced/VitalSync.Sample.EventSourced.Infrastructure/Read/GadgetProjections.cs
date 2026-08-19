@@ -1,4 +1,4 @@
-using GaWeCodes.Application.DomainEvents;
+using GaWeCodes.Thessera.Application.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 using VitalSync.Sample.EventSourced.Domain;
 

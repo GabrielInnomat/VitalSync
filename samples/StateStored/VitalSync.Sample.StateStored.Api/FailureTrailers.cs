@@ -1,5 +1,5 @@
 using System.Globalization;
-using GaWeCodes.Application.Results;
+using GaWeCodes.Thessera.Application.Results;
 using Grpc.Core;
 
 namespace VitalSync.Sample.StateStored.Api;

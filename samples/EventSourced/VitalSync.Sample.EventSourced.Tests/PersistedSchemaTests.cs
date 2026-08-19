@@ -1,5 +1,5 @@
 using System.Runtime.CompilerServices;
-using GaWeCodes.Testing;
+using GaWeCodes.Thessera.Testing;
 using VitalSync.Sample.EventSourced.Domain;
 using VitalSync.Sample.EventSourced.Infrastructure.Integration;
 

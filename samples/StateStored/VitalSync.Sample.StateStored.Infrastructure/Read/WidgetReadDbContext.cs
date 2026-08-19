@@ -1,5 +1,5 @@
-using GaWeCodes.Domain.Entities;
-using GaWeCodes.Persistence.EfCore;
+using GaWeCodes.Thessera.Domain.Entities;
+using GaWeCodes.Thessera.Persistence.EfCore;
 using Microsoft.EntityFrameworkCore;
 using VitalSync.Sample.StateStored.Domain;
 

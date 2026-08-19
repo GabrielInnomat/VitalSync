@@ -54,14 +54,14 @@ The architecture must be:
 - cloud-native
 - reusable in the long term
 
-## The Building Blocks platform
+## The Thessera platform
 
-A reusable set of shared Building Blocks underpins the services without coupling them to VitalSync. It covers Domain, Application, and Infrastructure. See [Building Blocks](./building-blocks.md).
+**Thessera** is a reusable platform that underpins the services without coupling them to VitalSync. It covers Domain, Application, and Infrastructure. See [Thessera](./thessera.md).
 
 ## Related documents
 
 - [Communication](./communication.md)
-- [Building Blocks](./building-blocks.md)
+- [Thessera](./thessera.md)
 - [Domain model](./domain-model.md)
 - [CQRS & Event Sourcing](./cqrs-and-event-sourcing.md)
 - [Testing strategy](./testing-strategy.md)

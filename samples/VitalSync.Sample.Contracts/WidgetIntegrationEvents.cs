@@ -1,4 +1,4 @@
-using GaWeCodes.Application.IntegrationEvents;
+using GaWeCodes.Thessera.Application.IntegrationEvents;
 
 namespace VitalSync.Sample.Contracts;
 

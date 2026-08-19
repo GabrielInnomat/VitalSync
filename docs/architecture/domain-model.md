@@ -69,5 +69,5 @@ The candidate contexts are **Nutrition**, **Fitness**, and **Analytics**, but th
 ## Related
 
 - [CQRS & Event Sourcing](./cqrs-and-event-sourcing.md)
-- [Building Blocks](./building-blocks.md)
+- [Thessera](./thessera.md)
 - [Glossary](../glossary.md)

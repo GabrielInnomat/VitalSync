@@ -1,6 +1,6 @@
-using GaWeCodes.Application.Cqrs;
-using GaWeCodes.Application.Persistence;
-using GaWeCodes.Application.Results;
+using GaWeCodes.Thessera.Application.Cqrs;
+using GaWeCodes.Thessera.Application.Persistence;
+using GaWeCodes.Thessera.Application.Results;
 using NSubstitute;
 using VitalSync.Sample.Contracts;
 using VitalSync.Sample.EventSourced.Application;

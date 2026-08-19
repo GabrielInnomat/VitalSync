@@ -1,5 +1,5 @@
-using GaWeCodes;
-using GaWeCodes.Core.DependencyInjection;
+using GaWeCodes.Thessera;
+using GaWeCodes.Thessera.Core.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -26,7 +26,7 @@ public static class SampleEventSourcedInfrastructure
 
         var services = builder.Services;
 
-        builder.AddBuildingBlocks(options =>
+        builder.AddThessera(options =>
         {
             options.AddHandlersFrom(typeof(CreateGadget).Assembly);
             options.AddHandlersFrom(typeof(SampleEventSourcedInfrastructure).Assembly);

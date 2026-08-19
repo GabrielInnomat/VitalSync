@@ -1,4 +1,4 @@
-using GaWeCodes.Testing;
+using GaWeCodes.Thessera.Testing;
 using Microsoft.EntityFrameworkCore;
 using VitalSync.Sample.StateStored.Domain;
 using VitalSync.Sample.StateStored.Infrastructure.Read;

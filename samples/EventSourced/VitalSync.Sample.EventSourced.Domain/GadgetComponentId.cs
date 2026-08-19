@@ -1,4 +1,4 @@
-using GaWeCodes.Domain.Entities;
+using GaWeCodes.Thessera.Domain.Entities;
 
 namespace VitalSync.Sample.EventSourced.Domain;
 

@@ -1,5 +1,5 @@
-using GaWeCodes.Domain.Events;
-using GaWeCodes.Domain.Naming;
+using GaWeCodes.Thessera.Domain.Events;
+using GaWeCodes.Thessera.Domain.Naming;
 
 namespace VitalSync.Sample.EventSourced.Domain;
 

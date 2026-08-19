@@ -1,7 +1,7 @@
-using GaWeCodes.Domain.Aggregates;
-using GaWeCodes.Domain.Entities;
-using GaWeCodes.Domain.Naming;
-using GaWeCodes.Domain.Rules;
+using GaWeCodes.Thessera.Domain.Aggregates;
+using GaWeCodes.Thessera.Domain.Entities;
+using GaWeCodes.Thessera.Domain.Naming;
+using GaWeCodes.Thessera.Domain.Rules;
 
 namespace VitalSync.Sample.StateStored.Domain;
 

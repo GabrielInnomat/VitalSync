@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\BuildingBlocks\src\GaWeCodes.Application\GaWeCodes.Application.csproj" />
+    <ProjectReference Include="..\..\..\Thessera\src\GaWeCodes.Thessera.Application\GaWeCodes.Thessera.Application.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Domain\VitalSync.Sample.EventSourced.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="GaWeCodes.Application.Cqrs" />
-    <Using Include="GaWeCodes.Application.Persistence" />
-    <Using Include="GaWeCodes.Application.Results" />
+    <Using Include="GaWeCodes.Thessera.Application.Cqrs" />
+    <Using Include="GaWeCodes.Thessera.Application.Persistence" />
+    <Using Include="GaWeCodes.Thessera.Application.Results" />
   </ItemGroup>
 
 </Project>

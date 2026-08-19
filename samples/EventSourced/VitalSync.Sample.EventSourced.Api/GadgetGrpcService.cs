@@ -1,4 +1,4 @@
-using GaWeCodes.Application.Cqrs;
+using GaWeCodes.Thessera.Application.Cqrs;
 using Grpc.Core;
 using ProtoBuf.Grpc;
 using static VitalSync.Sample.EventSourced.Api.FailureStatusMapping;

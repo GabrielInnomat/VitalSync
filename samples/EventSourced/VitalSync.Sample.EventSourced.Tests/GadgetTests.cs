@@ -1,6 +1,6 @@
-using GaWeCodes.Domain.Aggregates;
-using GaWeCodes.Domain.Events;
-using GaWeCodes.Domain.Rules;
+using GaWeCodes.Thessera.Domain.Aggregates;
+using GaWeCodes.Thessera.Domain.Events;
+using GaWeCodes.Thessera.Domain.Rules;
 using VitalSync.Sample.EventSourced.Domain;
 
 namespace VitalSync.Sample.EventSourced.Tests;

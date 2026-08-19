@@ -20,7 +20,7 @@ it directly. Cross-references point to the deeper documents under
 - [CQRS & the application layer](#cqrs--the-application-layer)
 - [Event Sourcing & persistence](#event-sourcing--persistence)
 - [Messaging & communication](#messaging--communication)
-- [The Building Blocks platform](#the-building-blocks-platform)
+- [The Thessera platform](#the-thessera-platform)
 - [Technology & operations](#technology--operations)
 - [Testing](#testing)
 - [Process & conventions](#process--conventions)
@@ -119,7 +119,7 @@ language.
 ## Tactical Domain-Driven Design
 
 These are the building-block primitives provided by
-[`GaWeCodes.Domain`](./architecture/building-blocks-domain.md) and used by
+[`GaWeCodes.Thessera.Domain`](./architecture/thessera-domain.md) and used by
 every service's domain layer.
 
 ### Aggregate
@@ -253,7 +253,7 @@ return a plain `Result`.
 A **mandatory** pattern in every microservice: write operations (**commands**) are
 separated from read operations (**queries**), each handled by a dedicated handler.
 The abstractions live in
-[`GaWeCodes.Application`](./architecture/building-blocks-application.md).
+[`GaWeCodes.Thessera.Application`](./architecture/thessera-application.md).
 
 ### Dispatcher (`ISender`) / hand-rolled mediator
 
@@ -295,7 +295,7 @@ A wrapper around handler execution that applies **cross-cutting concerns**
 **explicit numeric order** (lower orders wrap further out); the built-ins occupy
 fixed slots and hosts add their own via `AddPipelineBehavior(type, order)`, which is
 the only supported registration path — a behavior added directly to the
-`IServiceCollection` has no order and fails `AddBuildingBlocks`. Only
+`IServiceCollection` has no order and fails `AddThessera`. Only
 the `IPipelineBehavior<TRequest, TResponse>` contract lives in `Application`, the
 concrete behaviors live in `Infrastructure`. A behavior receives a
 `RequestPipeline<TResponse>` — `NextAsync` runs the rest of the chain, `Failed`
@@ -311,7 +311,7 @@ and handled by an `IQueryHandler<TQuery, TResult>` returning `Task<Result<TResul
 
 The uniform outcome model returned by handlers. `Result` is success or a failure
 carrying one or more `Failure`s; `Result<T>` additionally carries a value on
-success. It lives in `GaWeCodes.Application`. See
+success. It lives in `GaWeCodes.Thessera.Application`. See
 [ADR-0016](./architecture/decisions/0016-remove-common-result-in-application.md).
 
 ---
@@ -402,13 +402,13 @@ twice yields the same state — e.g. upsert by key) and **order-aware** (each re
 model tracks a **last-processed position/version** per aggregate/stream and skips
 events at or below it). Cross-aggregate ordering is **not** guaranteed. In-context
 projections consume **domain** events directly; cross-context read data arrives only
-via **integration** events. Read models are **not** a Building Block — they are
+via **integration** events. Read models are **not** a Thessera package — they are
 domain-shaped and owned by each service. See
 [ADR-0022](./architecture/decisions/0022-event-driven-read-models.md).
 
 ### Publisher (outbox-backed)
 
-The `GaWeCodes.Composition` component that, **after** the write commits,
+The `GaWeCodes.Thessera.Core` component that, **after** the write commits,
 **drains the transactional [outbox](#outbox-transactional-outbox)** and dispatches
 each domain event to (a) **in-context [projection handlers](#projection-handler)**
 that update the read database and (b) the **integration-event path** to
@@ -436,7 +436,7 @@ child-raised events.
 ### Read model rebuilder
 
 A service-owned type implementing `IReadModelRebuilder<TAggregate, TKey>`
-(`GaWeCodes.Application.ReadModels`). It sits **next to** a context's projection
+(`GaWeCodes.Thessera.Application.ReadModels`). It sits **next to** a context's projection
 handlers, not instead of them: the handlers keep the read model current from domain
 events, the rebuilder reconstructs it from scratch when a projection bug or a new field
 makes that necessary. One of two runners drives it, depending on the persistence path:
@@ -456,7 +456,7 @@ comes from the aggregate's **private parameterless constructor**, invoked throug
 an internal, per-type-cached factory in `Infrastructure`. The private constructor
 keeps `new Widget()` a compile error, so the aggregate's own named factory stays
 the only public way into existence, and the domain never sees an unidentified
-hull. The convention is validated at **host startup**: `AddBuildingBlocks` scans
+hull. The convention is validated at **host startup**: `AddThessera` scans
 the `AddDomainEventsFrom` assemblies and fails registration, naming the aggregate,
 if the constructor is missing. An earlier design expressed this as an explicit
 `IReconstitutable<TSelf>` implementation (`static abstract CreateEmpty`) on every
@@ -496,7 +496,7 @@ dispatcher/outbox, and clears them **only after** the save succeeds. Integration
 events are enqueued to the [Wolverine](#wolverine) outbox **within this same
 transaction**, so they commit atomically with the state change and are delivered
 after commit ([ADR-0023](./architecture/decisions/0023-wolverine-messaging-transport.md)).
-The dependency is **not optional**: Building Blocks registers a `NullUnitOfWork`
+The dependency is **not optional**: Thessera registers a `NullUnitOfWork`
 fallback so the pipeline always resolves, and fails the host at start when scanned
 commands would run into that fallback. A host that deliberately commits nothing
 selects `UseNoPersistence()`
@@ -566,14 +566,14 @@ Its routing key is declared on the contract as
 **owning bounded context**. A service declares its own context name when it
 configures messaging, which makes three things enforceable: it cannot publish
 under a foreign context, it never consumes an event it published itself (every
-event carries a `gawecodes.source-context` header, and a consumer-side
+event carries a `thessera.source-context` header, and a consumer-side
 middleware drops its own), and a handler whose topic no bound pattern matches
 fails the host at start-up (ADR-0023 amendment 2026-08-05).
 
 ### Platform exchange
 
 The single RabbitMQ topic exchange all integration events are published to. Its
-name is **not** a Building Blocks constant — the host supplies it, so the package
+name is **not** a Thessera constant — the host supplies it, so the package
 stays product-independent (ADR-0018 amendment 2026-08-05). VitalSync defines it
 once as `VitalSyncMessaging.IntegrationEventExchangeName`
 (`vitalsync.integration-events`) in `VitalSync.ServiceDefaults`; every host passes
@@ -613,31 +613,31 @@ messaging transport — **not** as the in-process CQRS
 
 ---
 
-## The Building Blocks platform
+## The Thessera platform
 
-### Building Blocks
+### Thessera
 
 A **reusable platform of shared primitives** that underpins the microservices
 **without coupling them to VitalSync**, so it can be reused in future projects.
 Split into exactly **three** packages by a **purity / dependency** boundary, not a
-functional one. See [Building Blocks](./architecture/building-blocks.md) and
+functional one. See [Thessera](./architecture/thessera.md) and
 [ADR-0018](./architecture/decisions/0018-three-building-block-packages.md).
 
-### GaWeCodes.Application
+### GaWeCodes.Thessera.Application
 
 The **framework-agnostic use-case layer**: CQRS contracts, the pipeline-behavior
 and dispatcher contracts, and the `Result` / `Failure` model. Depends **only** on
 `Domain` and holds **contracts, not implementations**. See
-[reference](./architecture/building-blocks-application.md).
+[reference](./architecture/thessera-application.md).
 
-### GaWeCodes.Domain
+### GaWeCodes.Thessera.Domain
 
 The **pure core**: tactical DDD primitives (entities, the two aggregate bases,
 strongly typed keys, domain events, business-rule/validation abstractions). It has
 **zero** third-party dependencies — BCL only. See
-[reference](./architecture/building-blocks-domain.md).
+[reference](./architecture/thessera-domain.md).
 
-### GaWeCodes
+### GaWeCodes.Thessera.Core
 
 The **single outer layer** holding all reusable, framework-bound,
 third-party-backed implementations that are still VitalSync-agnostic: unit of work,
@@ -676,7 +676,7 @@ constructor.
 
 The **orchestrator** (version 13) used to compose and run the distributed
 application locally and in the cloud, via the `AppHost` and `ServiceDefaults`
-projects. Aspire is applied at the orchestration layer; the Building Blocks remain
+projects. Aspire is applied at the orchestration layer; the Thessera remain
 framework-agnostic. See
 [ADR-0002](./architecture/decisions/0002-use-dotnet-aspire-13-for-orchestration.md).
 
@@ -748,7 +748,7 @@ A testing principle: assert observable behavior (e.g. "creating a recipe raises 
 
 ### Testing strategy
 
-Automated tests cover **both** the Building Blocks and the individual
+Automated tests cover **both** the Thessera and the individual
 microservices, spanning several categories. See
 [Testing strategy](./architecture/testing-strategy.md).
 

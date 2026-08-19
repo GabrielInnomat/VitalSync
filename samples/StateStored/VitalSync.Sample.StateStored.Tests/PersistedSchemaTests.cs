@@ -1,5 +1,5 @@
 using System.Runtime.CompilerServices;
-using GaWeCodes.Testing;
+using GaWeCodes.Thessera.Testing;
 using VitalSync.Sample.Contracts;
 using VitalSync.Sample.StateStored.Domain;
 

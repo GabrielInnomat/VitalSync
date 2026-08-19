@@ -59,7 +59,7 @@ public static class AspireExtensions
                     .AddRuntimeInstrumentation()
                     .AddMeter("Npgsql"))
             .WithTracing(tracing => tracing.AddSource(builder.Environment.ApplicationName)
-                    .AddSource("GaWeCodes")
+                    .AddSource("Thessera")
                     .AddSource("Npgsql")
                     .AddSource("Wolverine")
                     .AddSource("Marten")

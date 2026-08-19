@@ -21,7 +21,7 @@ and **selective Event Sourcing**.
 dotnet build
 dotnet test
 dotnet test --filter "FullyQualifiedName~AggregateRootTests"
-dotnet test BuildingBlocks/tests/GaWeCodes.Domain.Tests
+dotnet test Thessera/tests/GaWeCodes.Thessera.Domain.Tests
 dotnet run --project src/Aspire/VitalSync.AppHost
 ```
 
@@ -38,22 +38,22 @@ silently. Never reintroduce a per-project `Version`. Two versions stay outside b
 manage them: the SDK pin in `global.json` and `Aspire.AppHost.Sdk` in each AppHost's `<Project Sdk="...">`.
 
 **Analyzer relaxations are rare and deliberate.** Beside the root `.editorconfig` there are exactly
-**two** under `BuildingBlocks/src` — `GaWeCodes.Domain` relaxes `CA1033` (`IDomainEventOwner`/
-`IStateOwner` are implemented explicitly on purpose, ADR-0007) and `GaWeCodes.Application`
+**two** under `Thessera/src` — `GaWeCodes.Thessera.Domain` relaxes `CA1033` (`IDomainEventOwner`/
+`IStateOwner` are implemented explicitly on purpose, ADR-0007) and `GaWeCodes.Thessera.Application`
 relaxes `CA1000` (`Result<T>` needs static factories) — plus one for the test projects. Test-only
 relaxations that no `.editorconfig` covers live in the test `.csproj` as `NoWarn`.
-**`GaWeCodes.Composition` has none and needs none**: it carries the full analyzer set
+**`GaWeCodes.Thessera.Core` has none and needs none**: it carries the full analyzer set
 unrelaxed. A new suppression there is a smell worth arguing about first.
 
 ## Repository map
 
 ```text
 VitalSync/
-├── BuildingBlocks/                 Reusable, VitalSync-INDEPENDENT platform (own tests/ folder)
+├── Thessera/                 Reusable, VitalSync-INDEPENDENT platform (own tests/ folder)
 │   └── src/
-│       ├── GaWeCodes.Domain/       aggregates, entities, domain events, typed IDs, rules
-│       ├── GaWeCodes.Application/  CQRS abstractions, Result/Failure
-│       └── GaWeCodes.Composition/  dispatcher, persistence, outbox, projections, transport
+│       ├── GaWeCodes.Thessera.Domain/       aggregates, entities, domain events, typed IDs, rules
+│       ├── GaWeCodes.Thessera.Application/  CQRS abstractions, Result/Failure
+│       └── GaWeCodes.Thessera.Core/  dispatcher, persistence, outbox, projections, transport
 ├── src/                            VitalSync APPLICATION
 │   ├── Aspire/                     AppHost & ServiceDefaults (entry point)
 │   ├── Bff/                        Backend-for-Frontend (REST out, gRPC in)
@@ -64,9 +64,9 @@ VitalSync/
 └── tests/                          tests for src/
 ```
 
-- **Reusable, VitalSync-agnostic concepts** → `BuildingBlocks/src/…`, framework-agnostic.
+- **Reusable, VitalSync-agnostic concepts** → `Thessera/src/…`, framework-agnostic.
 - **Business logic** → `src/Services/<Domain>/`. **UI** → `src/Frontend/`. **Running it** → `src/Aspire/`.
-- **How Building Blocks is actually consumed** → `samples/`. A deliberately business-empty vertical
+- **How Thessera is actually consumed** → `samples/`. A deliberately business-empty vertical
   slice that proves the wiring works, meant to be deleted once it has answered its questions. Never
   add business value there, and never let production code depend on it.
 
@@ -80,14 +80,14 @@ VitalSync/
   that *consumes* it, implementations always in `Infrastructure` (ADR-0024).
 - Each bounded context owns a **write + read database pair**, never shared, no cross-database FKs,
   joins or transactions (ADR-0021).
-- `AddBuildingBlocks` is called **exactly once** per host, through the host-builder overload; a host
+- `AddThessera` is called **exactly once** per host, through the host-builder overload; a host
   never calls `UseWolverine` itself (ADR-0027).
 - **Every service host wires the same defaults** (see any `src/Services/<Domain>/*.Api/Program.cs`):
   `builder.AddServiceDefaults()`, one `AddNpgSqlReadinessCheck` **per database the context owns**
   (`<context>-write` *and* `<context>-read`), `AddRabbitMqReadinessCheck()`, `AddProblemDetails()` +
   `app.UseExceptionHandler()` (ADR-0017's thin global handler), `app.MapDefaultEndpoints()`, and
   `await app.RunAsync().ConfigureAwait(false)`. The connection names **are** the Aspire resource
-  names. `AddServiceDefaults()` already registers the OpenTelemetry sources `GaWeCodes`,
+  names. `AddServiceDefaults()` already registers the OpenTelemetry sources `GaWeCodes.Thessera`,
   `Npgsql`, `Wolverine` and `Marten` — do not re-add them.
 - **No comments** — not in `*.cs`, `*.csproj`, workflow YAML, or code examples in `*.md` (ADR-0028).
 - **No FluentAssertions** — xUnit built-in asserts only (ADR-0014).
@@ -121,18 +121,18 @@ Read the listed sources **before** editing, not after a review comment.
 
 | You are touching… | Binding sources |
 | ----------------- | --------------- |
-| An aggregate, its state, a child entity | ADR-0005 to 0008, 0010, 0025, 0030, 0031, 0032 · `building-blocks-domain.md` |
-| A domain event or its persisted name | ADR-0006, 0007, 0029, 0030 · `building-blocks-domain.md` |
-| A business rule or domain validation | ADR-0009 · `building-blocks-domain.md` |
-| A command, query, handler or pipeline behavior | ADR-0015, 0016, 0024, 0027 · `building-blocks-application.md` |
-| `Result`, `Failure`, error translation, transport status | ADR-0017 · `building-blocks-application.md` |
-| A repository, unit of work or `DbContext` mapping | ADR-0021, 0026, 0031, 0033 · `building-blocks-infrastructure.md` |
-| Typed-key serialization or a persisted field name | ADR-0034, 0035 · `building-blocks-infrastructure.md` |
+| An aggregate, its state, a child entity | ADR-0005 to 0008, 0010, 0025, 0030, 0031, 0032 · `thessera-domain.md` |
+| A domain event or its persisted name | ADR-0006, 0007, 0029, 0030 · `thessera-domain.md` |
+| A business rule or domain validation | ADR-0009 · `thessera-domain.md` |
+| A command, query, handler or pipeline behavior | ADR-0015, 0016, 0024, 0027 · `thessera-application.md` |
+| `Result`, `Failure`, error translation, transport status | ADR-0017 · `thessera-application.md` |
+| A repository, unit of work or `DbContext` mapping | ADR-0021, 0026, 0031, 0033 · `thessera-core.md` |
+| Typed-key serialization or a persisted field name | ADR-0034, 0035 · `thessera-core.md` |
 | Persistence technology or database topology | ADR-0019, 0020, 0021 · `cqrs-and-event-sourcing.md` |
-| A projection, read model or its rebuild | ADR-0022, 0036 · `building-blocks-infrastructure.md` |
+| A projection, read model or its rebuild | ADR-0022, 0036 · `thessera-core.md` |
 | An integration event, broker topology, retries, idempotency | ADR-0023 · `communication.md` |
 | Schema or broker provisioning, a MigrationService | ADR-0037 · `cqrs-and-event-sourcing.md` |
-| DI wiring, start-up checks, the public surface of Infrastructure | ADR-0018, 0027, 0037 · `building-blocks-infrastructure.md` |
+| DI wiring, start-up checks, the public surface of Infrastructure | ADR-0018, 0027, 0037 · `thessera-core.md` |
 | The BFF, gRPC contracts or the AppHost | ADR-0002, 0003 · `communication.md` |
 | Tests, fixtures or CI | `testing-strategy.md` |
 
@@ -144,17 +144,17 @@ Vocabulary: `docs/glossary.md`.
 - **Folder = namespace, and in `Domain` and `Application` the namespaces are a contract.** Every
   type there is public, so moving a file changes an exported `FullName` and breaks consumers;
   `PublicSurfaceTests` pins the exported-type list in both. In `Infrastructure` the default is
-  `internal` and the folder cut carries meaning instead — see `building-blocks-infrastructure.md`.
+  `internal` and the folder cut carries meaning instead — see `thessera-core.md`.
 - **Never name a folder or type after a vendor whose namespace you use.** A `Persistence/Marten/`
   folder breaks every `using Marten;` inside it. Same for type names a vendor already owns:
   the dispatcher is `RequestSender`, the publication step is `DomainEventPublisher`.
-- **A service declares shared usings once in its `.csproj`** (`<Using Include="GaWeCodes.Domain.Aggregates" />`),
+- **A service declares shared usings once in its `.csproj`** (`<Using Include="GaWeCodes.Thessera.Domain.Aggregates" />`),
   not per file — the sample Domain/Application projects show it.
 - **Method naming:** every awaitable contract method carries the `Async` suffix. The one exception
   is a method that satisfies **Wolverine's** discovery convention (`…Handler.Handle`) — renaming
   that silently stops discovery, with no compiler error and no dead letter.
 - **A start-up check is never optional.** Each exists because the failure it catches is otherwise
-  silent at run time. Do not add an opt-out flag to `BuildingBlocksOptions`; if a check is too
+  silent at run time. Do not add an opt-out flag to `ThesseraOptions`; if a check is too
   strict, fix the check.
 - **Assume at-least-once delivery everywhere.** Projection handlers must be idempotent and
   order-aware via the aggregate `Version` watermark; never write a consumer that assumes exactly-once.
@@ -173,12 +173,12 @@ Full strategy: `docs/architecture/testing-strategy.md`. What it will not tell yo
   skipping**. Keep both flags when touching `.github/workflows/build.yml`, and keep
   `--report-xunit-trx` together with its `if: failure()` reporting step — either alone is useless.
 - Fixture types that must live outside the test assembly go under
-  `BuildingBlocks/tests/ExternalAssemblies/<ShortName>Fixture/`; keep names **short** (Windows
+  `Thessera/tests/ExternalAssemblies/<ShortName>Fixture/`; keep names **short** (Windows
   `MAX_PATH`) and add the project to `VitalSync.slnx`.
 
 ## When contributing
 
-1. Reusable and VitalSync-agnostic → `GaWeCodes`; domain logic → the matching service.
+1. Reusable and VitalSync-agnostic → `GaWeCodes.Thessera`; domain logic → the matching service.
 2. Respect the non-negotiable rules above and read the sources from the table before editing.
 3. Add or update tests, and make sure they pass.
 4. If a change affects architecture, add or update an ADR (template in `decisions/README.md`).

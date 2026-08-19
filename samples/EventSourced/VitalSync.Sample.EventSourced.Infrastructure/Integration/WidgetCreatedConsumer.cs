@@ -1,4 +1,4 @@
-using GaWeCodes.Application.Cqrs;
+using GaWeCodes.Thessera.Application.Cqrs;
 using VitalSync.Sample.Contracts;
 using VitalSync.Sample.EventSourced.Application;
 

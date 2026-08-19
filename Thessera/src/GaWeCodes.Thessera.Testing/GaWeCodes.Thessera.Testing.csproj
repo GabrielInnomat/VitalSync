@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GaWeCodes.Thessera.Testing.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GaWeCodes.Thessera.Application\GaWeCodes.Thessera.Application.csproj" />
+    <ProjectReference Include="..\GaWeCodes.Thessera.Core\GaWeCodes.Thessera.Core.csproj" />
+    <ProjectReference Include="..\GaWeCodes.Thessera.Domain\GaWeCodes.Thessera.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

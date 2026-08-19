@@ -1,5 +1,5 @@
-using GaWeCodes.Domain.Entities;
-using GaWeCodes.Domain.Events;
+using GaWeCodes.Thessera.Domain.Entities;
+using GaWeCodes.Thessera.Domain.Events;
 
 namespace VitalSync.Sample.StateStored.Domain;
 

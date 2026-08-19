@@ -1,15 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\BuildingBlocks\src\GaWeCodes.Domain\GaWeCodes.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Thessera\src\GaWeCodes.Thessera.Domain\GaWeCodes.Thessera.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="GaWeCodes.Domain.Aggregates" />
-    <Using Include="GaWeCodes.Domain.Entities" />
-    <Using Include="GaWeCodes.Domain.Events" />
-    <Using Include="GaWeCodes.Domain.Naming" />
-    <Using Include="GaWeCodes.Domain.Rules" />
+    <Using Include="GaWeCodes.Thessera.Domain.Aggregates" />
+    <Using Include="GaWeCodes.Thessera.Domain.Entities" />
+    <Using Include="GaWeCodes.Thessera.Domain.Events" />
+    <Using Include="GaWeCodes.Thessera.Domain.Naming" />
+    <Using Include="GaWeCodes.Thessera.Domain.Rules" />
   </ItemGroup>
 
 </Project>

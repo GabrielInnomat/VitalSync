@@ -1,5 +1,5 @@
-using GaWeCodes.Application.DomainEvents;
-using GaWeCodes.Application.IntegrationEvents;
+using GaWeCodes.Thessera.Application.DomainEvents;
+using GaWeCodes.Thessera.Application.IntegrationEvents;
 using VitalSync.Sample.Contracts;
 using VitalSync.Sample.StateStored.Domain;
 

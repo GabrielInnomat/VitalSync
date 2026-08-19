@@ -21,7 +21,7 @@ VitalSync lets users manage nutrition- and workout-related information and deriv
 - [Architecture at a glance](#architecture-at-a-glance)
 - [Technology stack](#technology-stack)
 - [Repository structure](#repository-structure)
-- [Building Blocks platform](#building-blocks-platform)
+- [Thessera platform](#thessera-platform)
 - [Getting started](#getting-started)
     - [Prerequisites](#prerequisites)
     - [Build](#build)
@@ -106,7 +106,7 @@ See [Communication](./docs/architecture/communication.md) for details.
 | Patterns                | DDD, CQRS, Event Sourcing (selective)                                                                                                            |
 | Testing                 | xUnit (built-in asserts, see ADR-0014), NSubstitute, EF Core InMemory                                                                            |
 
-> **Note:** `.NET Aspire 13` is the chosen orchestrator version for this project. Aspire is applied at the orchestration/application layer; the reusable Building Blocks remain framework-agnostic.
+> **Note:** `.NET Aspire 13` is the chosen orchestrator version for this project. Aspire is applied at the orchestration/application layer; the reusable Thessera remain framework-agnostic.
 
 ## Repository structure
 
@@ -114,15 +114,15 @@ See [Communication](./docs/architecture/communication.md) for details.
 
 ```text
 VitalSync/
-├── BuildingBlocks/              # Reusable, VitalSync-independent platform
+├── Thessera/              # Reusable, VitalSync-independent platform
 │   ├── src/
-│   │   ├── GaWeCodes.Domain/
-│   │   ├── GaWeCodes.Application/
-│   │   └── GaWeCodes.Composition/
+│   │   ├── GaWeCodes.Thessera.Domain/
+│   │   ├── GaWeCodes.Thessera.Application/
+│   │   └── GaWeCodes.Thessera.Core/
 │   └── tests/
-│       ├── GaWeCodes.Domain.Tests/
-│       ├── GaWeCodes.Application.Tests/
-│       └── GaWeCodes.Composition.Tests/
+│       ├── GaWeCodes.Thessera.Domain.Tests/
+│       ├── GaWeCodes.Thessera.Application.Tests/
+│       └── GaWeCodes.Thessera.Core.Tests/
 ├── src/                         # VitalSync application
 │   ├── Aspire/                  # .NET Aspire AppHost & ServiceDefaults
 │   ├── Bff/                     # Backend-for-Frontend
@@ -136,15 +136,15 @@ VitalSync/
 └── tests/                       # Cross-cutting / integration tests
 ```
 
-## Building Blocks platform
+## Thessera platform
 
-In addition to the application, VitalSync includes a **reusable platform of shared Building Blocks** providing reusable concepts for the Domain, Application, and Infrastructure layers.
+In addition to the application, VitalSync includes **Thessera**, a reusable platform providing shared concepts for the Domain, Application, and Infrastructure layers.
 
-These Building Blocks are deliberately **independent of VitalSync** and reusable in future projects. See [Building Blocks](./docs/architecture/building-blocks.md) for the overview, and the per-package references:
+Thessera is deliberately **independent of VitalSync** and reusable in future projects. See [Thessera](./docs/architecture/thessera.md) for the overview, and the per-package references:
 
-- [GaWeCodes.Domain](./docs/architecture/building-blocks-domain.md)
-- [GaWeCodes.Application](./docs/architecture/building-blocks-application.md)
-- [GaWeCodes](./docs/architecture/building-blocks-infrastructure.md)
+- [GaWeCodes.Thessera.Domain](./docs/architecture/thessera-domain.md)
+- [GaWeCodes.Thessera.Application](./docs/architecture/thessera-application.md)
+- [GaWeCodes.Thessera.Core](./docs/architecture/thessera-core.md)
 
 ## Getting started
 
@@ -176,7 +176,7 @@ The AppHost composes the whole system:
 - One **migration worker per context**, which runs to completion before its service starts (`WaitForCompletion`).
 - The three **services**, the **BFF**, and the **Blazor frontend** (the only externally reachable endpoint), each gated on a `/health` check.
 
-> The service and migration projects are still **skeletons without domain code**; the walking skeleton under `samples/` (see [WalkingSkeleton.md](./WalkingSkeleton.md)) has its own Aspire host and is what currently exercises the Building Blocks end to end.
+> The service and migration projects are still **skeletons without domain code**; the walking skeleton under `samples/` (see [WalkingSkeleton.md](./WalkingSkeleton.md)) has its own Aspire host and is what currently exercises the Thessera end to end.
 
 ## Testing
 
@@ -196,10 +196,10 @@ See [Testing strategy](./docs/architecture/testing-strategy.md).
 
 - [Architecture overview](./docs/architecture/overview.md)
 - [Communication](./docs/architecture/communication.md)
-- [Building Blocks](./docs/architecture/building-blocks.md)
-    - [GaWeCodes.Domain](./docs/architecture/building-blocks-domain.md)
-    - [GaWeCodes.Application](./docs/architecture/building-blocks-application.md)
-    - [GaWeCodes](./docs/architecture/building-blocks-infrastructure.md)
+- [Thessera](./docs/architecture/thessera.md)
+    - [GaWeCodes.Thessera.Domain](./docs/architecture/thessera-domain.md)
+    - [GaWeCodes.Thessera.Application](./docs/architecture/thessera-application.md)
+    - [GaWeCodes.Thessera.Core](./docs/architecture/thessera-core.md)
 - [Domain model](./docs/architecture/domain-model.md)
 - [CQRS & Event Sourcing](./docs/architecture/cqrs-and-event-sourcing.md)
 - [Testing strategy](./docs/architecture/testing-strategy.md)

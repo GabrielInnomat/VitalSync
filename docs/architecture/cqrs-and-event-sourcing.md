@@ -18,7 +18,7 @@ Every microservice implements **Command Query Responsibility Segregation (CQRS)*
 └────────────────────────┘         └───────────────────────┘
 ```
 
-The Application building block provides the `ICommand`, `IQuery`, and corresponding handler abstractions, a hand-rolled dispatcher, and the `Result` / `Failure` model. Domain exceptions (`BusinessRuleViolationException`, `DomainValidationException`) are translated to `Result.Failed` by an Application pipeline behavior.
+The Application package provides the `ICommand`, `IQuery`, and corresponding handler abstractions, a hand-rolled dispatcher, and the `Result` / `Failure` model. Domain exceptions (`BusinessRuleViolationException`, `DomainValidationException`) are translated to `Result.Failed` by an Application pipeline behavior.
 
 ## Persistence strategy
 
@@ -29,7 +29,7 @@ Two complementary approaches are used:
 
 > **Decision rule:** Event Sourcing is applied **only where it adds business value**. In all other cases, EF Core is used. The exact contexts that justify Event Sourcing are **to be determined** during the project.
 
-> **The choice is per bounded context, not per aggregate.** A microservice hosts exactly one bounded context, and a bounded context uses **exactly one** persistence strategy — either all state-stored (EF Core) or all event-sourced (Marten), never both. The two stores live in separate databases (see [ADR-0020](./decisions/0020-postgresql-for-state-stored-contexts.md)), so a single commit cannot span them atomically. A context that appears to need both an event-sourced and a state-stored aggregate is a sign it is **cut wrong** and should be split into two bounded contexts, each in its own microservice with its own single strategy. `AddBuildingBlocks` enforces this: selecting both `UseEfCorePersistence<TContext>(…)` and `UseMartenEventSourcing(...)` for the same host **throws at startup**.
+> **The choice is per bounded context, not per aggregate.** A microservice hosts exactly one bounded context, and a bounded context uses **exactly one** persistence strategy — either all state-stored (EF Core) or all event-sourced (Marten), never both. The two stores live in separate databases (see [ADR-0020](./decisions/0020-postgresql-for-state-stored-contexts.md)), so a single commit cannot span them atomically. A context that appears to need both an event-sourced and a state-stored aggregate is a sign it is **cut wrong** and should be split into two bounded contexts, each in its own microservice with its own single strategy. `AddThessera` enforces this: selecting both `UseEfCorePersistence<TContext>(…)` and `UseMartenEventSourcing(...)` for the same host **throws at startup**.
 
 ### When might Event Sourcing add value here?
 
@@ -112,7 +112,7 @@ that fails once the package reappears in Infrastructure or loses `PrivateAssets`
 
 When a context is event-sourced, its events are persisted in **Marten on
 PostgreSQL**, used as a **raw event store**: the event-sourced repository in
-`GaWeCodes.Composition` tracks the aggregates it hands out, and the unit
+`GaWeCodes.Thessera.Core` tracks the aggregates it hands out, and the unit
 of work appends their uncommitted domain events to the stream at commit (with
 optimistic concurrency asserted against the aggregate's `Version`); on load, the
 repository fetches the raw stream and folds it through the aggregate's own
@@ -139,7 +139,7 @@ event-sourced and state-stored contexts:
 2. In the **write transaction** those events are also written to a **transactional
    outbox** in the write database, so they are captured atomically with the change
    (no cross-database transaction is required).
-3. After commit, the **Publisher** (in `GaWeCodes.Composition`) drains the
+3. After commit, the **Publisher** (in `GaWeCodes.Thessera.Core`) drains the
    outbox and dispatches each event to **in-context projection handlers** (which
    update the read database) and, where selected, to the **integration-event path**
    on RabbitMQ/Wolverine ([ADR-0023](./decisions/0023-wolverine-messaging-transport.md), which supersedes [ADR-0004](./decisions/0004-asynchronous-messaging-between-services.md)).
@@ -158,7 +158,7 @@ be idempotent and per-aggregate order-aware** — the `DomainEventMetadata` a ha
 receives carries the aggregate's `Version`, so the handler keeps that number on its
 read model and ignores any event at or below it ([ADR-0030](./decisions/0030-persisted-names-and-aggregate-version.md)).
 Read models are **domain-shaped and owned by each service** — not
-a Building Block; Infrastructure ships only the plumbing (Publisher, outbox,
+a Thessera package; Infrastructure ships only the plumbing (Publisher, outbox,
 dispatch loop, projection runner, transport). Read models are **rebuildable**, but by
 different means per path: an event-sourced context replays its Marten stream, while a
 state-stored context has no surviving event history — its outbox row is deleted once

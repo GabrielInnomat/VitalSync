@@ -1,4 +1,4 @@
-using GaWeCodes.Testing;
+using GaWeCodes.Thessera.Testing;
 using VitalSync.Sample.StateStored.Domain;
 
 namespace VitalSync.Sample.StateStored.Tests;

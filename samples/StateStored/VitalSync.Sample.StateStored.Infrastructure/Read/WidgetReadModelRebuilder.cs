@@ -1,5 +1,5 @@
-using GaWeCodes.Application.ReadModels;
-using GaWeCodes.Domain.Aggregates;
+using GaWeCodes.Thessera.Application.ReadModels;
+using GaWeCodes.Thessera.Domain.Aggregates;
 using Microsoft.EntityFrameworkCore;
 using VitalSync.Sample.StateStored.Domain;
 

@@ -1,6 +1,6 @@
-using GaWeCodes.Application.DomainEvents;
-using GaWeCodes.Domain.Events;
-using GaWeCodes.Testing;
+using GaWeCodes.Thessera.Application.DomainEvents;
+using GaWeCodes.Thessera.Domain.Events;
+using GaWeCodes.Thessera.Testing;
 using Microsoft.EntityFrameworkCore;
 using VitalSync.Sample.StateStored.Domain;
 using VitalSync.Sample.StateStored.Infrastructure.Read;

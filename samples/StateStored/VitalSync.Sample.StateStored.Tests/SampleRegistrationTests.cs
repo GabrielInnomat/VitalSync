@@ -1,7 +1,7 @@
 using System.Reflection;
-using GaWeCodes.Application.Cqrs;
-using GaWeCodes.Application.DomainEvents;
-using GaWeCodes.Application.IntegrationEvents;
+using GaWeCodes.Thessera.Application.Cqrs;
+using GaWeCodes.Thessera.Application.DomainEvents;
+using GaWeCodes.Thessera.Application.IntegrationEvents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using VitalSync.Sample.StateStored.Application;

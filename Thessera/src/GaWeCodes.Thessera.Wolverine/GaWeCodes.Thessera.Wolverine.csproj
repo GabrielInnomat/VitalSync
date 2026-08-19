@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GaWeCodes.Thessera.Core.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Thessera.Persistence.EfCore.Postgres.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Thessera.Persistence.Marten.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Thessera.Wolverine.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Thessera.Messaging.RabbitMq.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Thessera.PackageConventions.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GaWeCodes.Thessera.Core\GaWeCodes.Thessera.Core.csproj" />
+  </ItemGroup>
+
+</Project>
