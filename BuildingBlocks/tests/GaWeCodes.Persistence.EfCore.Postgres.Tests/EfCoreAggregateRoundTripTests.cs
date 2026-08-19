@@ -1,9 +1,8 @@
 using GaWeCodes.Application.Cqrs;
 using GaWeCodes.Application.Persistence;
+using GaWeCodes.Core.DependencyInjection;
 using GaWeCodes.Domain.Aggregates;
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Messaging.DomainEvents;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes.Wolverine.Messaging.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

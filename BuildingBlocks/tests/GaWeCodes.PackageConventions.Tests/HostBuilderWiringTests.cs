@@ -1,6 +1,4 @@
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Persistence.EventSourced;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes.Core.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Wolverine.EntityFrameworkCore;

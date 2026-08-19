@@ -1,3 +1,5 @@
+using GaWeCodes.Domain.Rules;
+
 namespace VitalSync.Sample.StateStored.Domain;
 
 public sealed class WidgetPartLabelMustNotBeEmpty(string? label) : IDomainValidationRule

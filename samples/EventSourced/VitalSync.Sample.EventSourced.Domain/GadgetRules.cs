@@ -1,3 +1,5 @@
+using GaWeCodes.Domain.Rules;
+
 namespace VitalSync.Sample.EventSourced.Domain;
 
 public sealed class GadgetNameMustNotBeEmpty(string? name) : IDomainValidationRule

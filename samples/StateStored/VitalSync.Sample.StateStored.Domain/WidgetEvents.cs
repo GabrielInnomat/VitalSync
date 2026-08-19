@@ -1,3 +1,6 @@
+using GaWeCodes.Domain.Events;
+using GaWeCodes.Domain.Naming;
+
 namespace VitalSync.Sample.StateStored.Domain;
 
 [EventName("widget-created-v1")]

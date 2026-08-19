@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\GaWeCodes.Testing\GaWeCodes.Testing.csproj" />
+    <ProjectReference Include="..\ExternalAssemblies\HullFixture\HullFixture.csproj" />
     <ProjectReference Include="..\ExternalAssemblies\SchemaFixture\SchemaFixture.csproj" />
     <ProjectReference Include="..\ExternalAssemblies\SchemaGapFixture\SchemaGapFixture.csproj" />
   </ItemGroup>

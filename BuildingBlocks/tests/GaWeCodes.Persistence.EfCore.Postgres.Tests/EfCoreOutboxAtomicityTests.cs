@@ -1,9 +1,8 @@
 using System.Collections.Concurrent;
 using System.Data.Common;
 using GaWeCodes.Application.Cqrs;
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Messaging.DomainEvents;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes.Core.DependencyInjection;
+using GaWeCodes.Wolverine.Messaging.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;

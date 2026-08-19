@@ -1,6 +1,5 @@
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Persistence.EventSourced;
 using DeadLetterFixture;
+using GaWeCodes.Core.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RabbitMQ.Client;

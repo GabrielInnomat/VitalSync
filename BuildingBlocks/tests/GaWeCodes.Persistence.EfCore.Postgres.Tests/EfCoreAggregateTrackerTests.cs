@@ -1,5 +1,5 @@
 using GaWeCodes.Domain.Aggregates;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes.Persistence.EfCore.StateStored;
 
 namespace GaWeCodes.Tests;
 

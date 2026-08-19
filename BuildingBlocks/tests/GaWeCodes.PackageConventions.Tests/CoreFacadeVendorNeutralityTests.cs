@@ -1,6 +1,5 @@
 using System.Reflection;
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes.Core.DependencyInjection;
 
 namespace GaWeCodes.Tests;
 
@@ -79,7 +78,7 @@ public sealed class CoreFacadeVendorNeutralityTests
             coupled.Length == 0,
             $"The core has {coupled.Length} Wolverine-coupled files. Phase 2.5 brought this number to zero "
             + $"and it must stay there. Put the new code behind a core-owned contract and let "
-            + $"GaWeCodes.Runtime.Wolverine implement it.{Environment.NewLine}"
+            + $"GaWeCodes.Wolverine implement it.{Environment.NewLine}"
             + string.Join(Environment.NewLine, coupled));
     }
 
@@ -101,7 +100,7 @@ public sealed class CoreFacadeVendorNeutralityTests
         var core = Path.Combine(
             BuildingBlocksRoot(),
             "src",
-            "GaWeCodes.Composition");
+            "GaWeCodes.Core");
 
         Assert.True(Directory.Exists(core), $"'{core}' does not exist; the core source directory cannot be located.");
 

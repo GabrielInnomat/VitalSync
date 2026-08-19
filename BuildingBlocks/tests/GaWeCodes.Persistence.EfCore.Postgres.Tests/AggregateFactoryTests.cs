@@ -1,6 +1,4 @@
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Persistence;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes.Core.Persistence;
 using HullFixture;
 using Microsoft.Extensions.DependencyInjection;
 

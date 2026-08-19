@@ -1,10 +1,10 @@
-using GaWeCodes.Persistence;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes.Core.Persistence;
+using GaWeCodes.Persistence.EfCore.StateStored;
 using Microsoft.EntityFrameworkCore;
 using Wolverine;
 using Wolverine.Sqlite;
 
-namespace GaWeCodes.Persistence.EfCore.Tests;
+namespace GaWeCodes.Tests;
 
 public sealed class SqliteDatabaseDriver : IEfCoreDatabaseDriver
 {

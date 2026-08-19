@@ -1,5 +1,5 @@
 using System.Runtime.CompilerServices;
-using GaWeCodes.Schema;
+using GaWeCodes.Testing;
 using VitalSync.Sample.Contracts;
 using VitalSync.Sample.StateStored.Domain;
 

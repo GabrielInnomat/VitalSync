@@ -1,3 +1,6 @@
+using GaWeCodes.Domain.Entities;
+using GaWeCodes.Domain.Rules;
+
 namespace VitalSync.Sample.EventSourced.Domain;
 
 public sealed class GadgetComponent : Entity<GadgetComponentId, GadgetComponentState>

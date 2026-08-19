@@ -1,7 +1,6 @@
+using GaWeCodes;
 using GaWeCodes.Domain.Events;
 using GaWeCodes.Domain.Naming;
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Persistence.StateStored;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 

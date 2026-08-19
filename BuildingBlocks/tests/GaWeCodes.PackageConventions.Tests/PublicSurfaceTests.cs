@@ -1,12 +1,8 @@
 using System.Reflection;
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.DependencyInjection.Wiring;
-using GaWeCodes.Persistence;
-using GaWeCodes.Persistence.EventSourced;
-using GaWeCodes.Persistence.StateStored;
-using GaWeCodes.ReadModels;
-using GaWeCodes.Schema;
-using GaWeCodes.Startup;
+using GaWeCodes.Persistence.EfCore.StateStored;
+using GaWeCodes.Persistence.Npgsql;
+using GaWeCodes.Testing;
+using GaWeCodes.Wolverine.DependencyInjection.Wiring;
 
 namespace GaWeCodes.Tests;
 
@@ -14,11 +10,9 @@ public sealed class PublicSurfaceTests
 {
     private static readonly Assembly Core = typeof(ServiceCollectionExtensions).Assembly;
 
-    private static readonly Assembly RuntimeWolverine = typeof(WolverineRuntimeRegistration).Assembly;
+    private static readonly Assembly WolverineAdapter = typeof(WolverineRuntimeRegistration).Assembly;
 
-    private static readonly Assembly Adapters = typeof(ReadModelRebuildWriter).Assembly;
-
-    private static readonly Assembly Postgres = typeof(PostgresTransientFaults).Assembly;
+    private static readonly Assembly NpgsqlFaults = typeof(PostgresTransientFaults).Assembly;
 
     private static readonly Assembly EfCore = typeof(IEfCoreDatabaseDriver).Assembly;
 
@@ -31,161 +25,165 @@ public sealed class PublicSurfaceTests
     private static readonly Assembly Testing = typeof(PersistedSchema).Assembly;
 
     private static readonly Assembly[] AllAssemblies =
-        [Core, RuntimeWolverine, Adapters, Postgres, EfCore, EfCorePostgres, Marten, RabbitMq, Testing];
+        [Core, WolverineAdapter, NpgsqlFaults, EfCore, EfCorePostgres, Marten, RabbitMq, Testing];
 
     private static readonly string[] IntendedCoreApi =
     [
-        "GaWeCodes.DependencyInjection.BuildingBlocksOptions",
-        "GaWeCodes.DependencyInjection.HostApplicationBuilderExtensions",
-        "GaWeCodes.DependencyInjection.InfrastructureProvisioning",
-        "GaWeCodes.DependencyInjection.ServiceCollectionExtensions",
-        "GaWeCodes.Persistence.EntityKeyJsonOptions",
-        "GaWeCodes.Persistence.IPersistenceFaultTranslator",
-        "GaWeCodes.Startup.IStartupCheck",
-        "GaWeCodes.Startup.StartupPhase",
+        "GaWeCodes.Core.DependencyInjection.BuildingBlocksOptions",
+        "GaWeCodes.HostApplicationBuilderExtensions",
+        "GaWeCodes.Core.DependencyInjection.InfrastructureProvisioning",
+        "GaWeCodes.ServiceCollectionExtensions",
+        "GaWeCodes.Core.Persistence.EntityKeyJsonOptions",
+        "GaWeCodes.Core.Persistence.IPersistenceFaultTranslator",
+        "GaWeCodes.Core.Startup.IStartupCheck",
+        "GaWeCodes.Core.Startup.StartupPhase",
     ];
 
     private static readonly string[] IntendedCoreAdapterContract =
     [
-        "GaWeCodes.DependencyInjection.Extensibility.IRuntimeActivator",
-        "GaWeCodes.DependencyInjection.Extensibility.IWiringSnapshot",
-        "GaWeCodes.DependencyInjection.Extensibility.RuntimeActivation",
-        "GaWeCodes.DependencyInjection.Wiring.IntegrationEventSubscription",
-        "GaWeCodes.Messaging.DomainEvents.DomainEventMetadataFactory",
-        "GaWeCodes.Messaging.IntegrationEvents.TopicPatternMatcher",
-        "GaWeCodes.Messaging.IntegrationEvents.TopicResolver",
-        "GaWeCodes.Messaging.Transport.IMessageEmitter",
-        "GaWeCodes.Messaging.Transport.IMessagingTransportAdapter",
-        "GaWeCodes.Messaging.Transport.MessagingTransportRegistrationContext",
-        "GaWeCodes.Persistence.AggregateFactory",
-        "GaWeCodes.Persistence.AggregateStyle",
-        "GaWeCodes.Persistence.EntityKeyActivator",
-        "GaWeCodes.Persistence.IPersistenceAdapter",
-        "GaWeCodes.Persistence.PersistenceRegistrationContext",
-        "GaWeCodes.Startup.SynchronousStartupCheck",
+        "GaWeCodes.Core.DependencyInjection.Extensibility.IRuntimeActivator",
+        "GaWeCodes.Core.DependencyInjection.Extensibility.IWiringSnapshot",
+        "GaWeCodes.Core.DependencyInjection.Extensibility.RuntimeActivation",
+        "GaWeCodes.Core.DependencyInjection.Wiring.IntegrationEventSubscription",
+        "GaWeCodes.Core.Messaging.DomainEvents.DomainEventMetadataFactory",
+        "GaWeCodes.Core.Messaging.IntegrationEvents.TopicPatternMatcher",
+        "GaWeCodes.Core.Messaging.IntegrationEvents.TopicResolver",
+        "GaWeCodes.Core.Messaging.Transport.IMessageEmitter",
+        "GaWeCodes.Core.Messaging.Transport.IMessagingTransportAdapter",
+        "GaWeCodes.Core.Messaging.Transport.MessagingTransportRegistrationContext",
+        "GaWeCodes.Core.Persistence.AggregateFactory",
+        "GaWeCodes.Core.Persistence.AggregateStyle",
+        "GaWeCodes.Core.Persistence.EntityKeyActivator",
+        "GaWeCodes.Core.Persistence.IPersistenceAdapter",
+        "GaWeCodes.Core.Persistence.PersistenceRegistrationContext",
+        "GaWeCodes.Core.Startup.SynchronousStartupCheck",
     ];
 
     private static readonly string[] IntendedTestingApi =
     [
-        "GaWeCodes.Schema.PersistedSchema",
+        "GaWeCodes.Testing.AggregateConventions",
+        "GaWeCodes.Testing.PersistedSchema",
+        "GaWeCodes.Testing.TestMetadata",
     ];
 
-    private static readonly string[] IntendedRuntimeWolverineApi =
+    private static readonly string[] IntendedWolverineApi =
     [
-        "GaWeCodes.DependencyInjection.Wiring.WolverineRuntimeActivator",
-        "GaWeCodes.DependencyInjection.Wiring.WolverineRuntimeRegistration",
-        "GaWeCodes.DependencyInjection.WolverineRuntimeOptionsExtensions",
-        "GaWeCodes.Diagnostics.DeadLetterHealthCheckRegistration",
-        "GaWeCodes.Messaging.Transport.IWolverineMessagingTransport",
-        "GaWeCodes.Persistence.IOutboxDurabilityConfigurator",
+        "GaWeCodes.Wolverine.DependencyInjection.Wiring.WolverineRuntimeActivator",
+        "GaWeCodes.Wolverine.DependencyInjection.Wiring.WolverineRuntimeRegistration",
+        "GaWeCodes.WolverineRuntimeOptionsExtensions",
+        "GaWeCodes.Wolverine.Diagnostics.DeadLetterHealthCheckRegistration",
+        "GaWeCodes.Wolverine.Messaging.Transport.IWolverineMessagingTransport",
+        "GaWeCodes.Wolverine.Persistence.IOutboxDurabilityConfigurator",
     ];
 
-    private static readonly string[] IntendedAdaptersApi =
+    // What a store author writes against. This was its own package until the store toolkit was
+    // folded into the core; it stays a separate list because it is a distinct promise.
+    private static readonly string[] IntendedCoreStoreAuthorApi =
     [
-        "GaWeCodes.Persistence.AggregateTracker`1",
-        "GaWeCodes.Persistence.DomainEventEnvelopeFactory",
-        "GaWeCodes.Persistence.EntityKeyFormatter",
-        "GaWeCodes.Persistence.ITrackedAggregate",
-        "GaWeCodes.Persistence.PersistenceFailureCodes",
-        "GaWeCodes.ReadModels.ReadModelRebuildWriter",
+        "GaWeCodes.Core.Persistence.AggregateTracker`1",
+        "GaWeCodes.Core.Persistence.DomainEventEnvelopeFactory",
+        "GaWeCodes.Core.Persistence.EntityKeyFormatter",
+        "GaWeCodes.Core.Persistence.ITrackedAggregate",
+        "GaWeCodes.Core.Persistence.PersistenceFailureCodes",
+        "GaWeCodes.Core.ReadModels.ReadModelRebuildWriter",
     ];
 
-    private static readonly string[] IntendedPostgresApi =
+    private static readonly string[] IntendedNpgsqlApi =
     [
-        "GaWeCodes.Persistence.PostgresFaultTranslator",
-        "GaWeCodes.Persistence.PostgresTransientFaults",
+        "GaWeCodes.Persistence.Npgsql.PostgresFaultTranslator",
+        "GaWeCodes.Persistence.Npgsql.PostgresTransientFaults",
     ];
 
     private static readonly string[] IntendedEfCoreApi =
     [
-        "GaWeCodes.Persistence.EntityKeyModelBuilderExtensions",
-        "GaWeCodes.Persistence.StateStored.EfCorePersistenceAdapter`1",
-        "GaWeCodes.Persistence.StateStored.IEfCoreDatabaseDriver",
-        "GaWeCodes.ReadModels.StateStoredReadModelRebuildRunner`1",
+        "GaWeCodes.Persistence.EfCore.EntityKeyModelBuilderExtensions",
+        "GaWeCodes.Persistence.EfCore.StateStored.EfCorePersistenceAdapter`1",
+        "GaWeCodes.Persistence.EfCore.StateStored.IEfCoreDatabaseDriver",
+        "GaWeCodes.Persistence.EfCore.ReadModels.StateStoredReadModelRebuildRunner`1",
     ];
 
     private static readonly string[] IntendedEfCorePostgresApi =
     [
-        "GaWeCodes.Persistence.StateStored.EfCorePersistenceOptionsExtensions",
+        "GaWeCodes.EfCorePersistenceOptionsExtensions",
     ];
 
     private static readonly string[] IntendedMartenApi =
     [
-        "GaWeCodes.Persistence.EventSourced.MartenPersistenceOptionsExtensions",
-        "GaWeCodes.ReadModels.EventSourcedReadModelRebuildRunner",
+        "GaWeCodes.MartenPersistenceOptionsExtensions",
+        "GaWeCodes.Persistence.Marten.ReadModels.EventSourcedReadModelRebuildRunner",
     ];
 
     private static readonly string[] IntendedRabbitMqApi =
     [
-        "GaWeCodes.DependencyInjection.RabbitMqMessagingExtensions",
+        "GaWeCodes.RabbitMqMessagingExtensions",
     ];
 
     private static readonly string[] ExtensionPoints =
     [
-        "GaWeCodes.DependencyInjection.Extensibility.IRuntimeActivator",
-        "GaWeCodes.DependencyInjection.Extensibility.IWiringSnapshot",
-        "GaWeCodes.Messaging.Transport.IMessagingTransportAdapter",
-        "GaWeCodes.Messaging.Transport.IWolverineMessagingTransport",
-        "GaWeCodes.Persistence.AggregateStyle",
-        "GaWeCodes.Persistence.IOutboxDurabilityConfigurator",
-        "GaWeCodes.Persistence.IPersistenceAdapter",
-        "GaWeCodes.Persistence.IPersistenceFaultTranslator",
-        "GaWeCodes.Startup.IStartupCheck",
-        "GaWeCodes.Startup.StartupPhase",
-        "GaWeCodes.Startup.SynchronousStartupCheck",
+        "GaWeCodes.Core.DependencyInjection.Extensibility.IRuntimeActivator",
+        "GaWeCodes.Core.DependencyInjection.Extensibility.IWiringSnapshot",
+        "GaWeCodes.Core.Messaging.Transport.IMessagingTransportAdapter",
+        "GaWeCodes.Wolverine.Messaging.Transport.IWolverineMessagingTransport",
+        "GaWeCodes.Core.Persistence.AggregateStyle",
+        "GaWeCodes.Wolverine.Persistence.IOutboxDurabilityConfigurator",
+        "GaWeCodes.Core.Persistence.IPersistenceAdapter",
+        "GaWeCodes.Core.Persistence.IPersistenceFaultTranslator",
+        "GaWeCodes.Core.Startup.IStartupCheck",
+        "GaWeCodes.Core.Startup.StartupPhase",
+        "GaWeCodes.Core.Startup.SynchronousStartupCheck",
     ];
 
     private static readonly string[] RequiredByWolverineCodeGeneration =
     [
-        "GaWeCodes.Messaging.DomainEvents.DomainEventEnvelope",
-        "GaWeCodes.Messaging.DomainEvents.DomainEventEnvelopeHandler",
-        "GaWeCodes.Messaging.DomainEvents.DomainEventEnvelopeSerializer",
-        "GaWeCodes.Messaging.DomainEvents.DomainEventTypeRegistry",
-        "GaWeCodes.Messaging.DomainEvents.ProjectionEnvelope",
-        "GaWeCodes.Messaging.DomainEvents.ProjectionEnvelopeHandler",
-        "GaWeCodes.Messaging.DomainEvents.ProjectionRunner",
-        "GaWeCodes.Messaging.IntegrationEvents.IIntegrationEventSinkFactory",
-        "GaWeCodes.Messaging.IntegrationEvents.IntegrationEventSourceContext",
-        "GaWeCodes.Messaging.IntegrationEvents.OwnContextIntegrationEventFilter",
+        "GaWeCodes.Core.Messaging.DomainEvents.DomainEventEnvelope",
+        "GaWeCodes.Wolverine.Messaging.DomainEvents.DomainEventEnvelopeHandler",
+        "GaWeCodes.Core.Messaging.DomainEvents.DomainEventEnvelopeSerializer",
+        "GaWeCodes.Core.Messaging.DomainEvents.DomainEventTypeRegistry",
+        "GaWeCodes.Core.Messaging.DomainEvents.ProjectionEnvelope",
+        "GaWeCodes.Wolverine.Messaging.DomainEvents.ProjectionEnvelopeHandler",
+        "GaWeCodes.Core.Messaging.DomainEvents.ProjectionRunner",
+        "GaWeCodes.Core.Messaging.IntegrationEvents.IIntegrationEventSinkFactory",
+        "GaWeCodes.Core.Messaging.IntegrationEvents.IntegrationEventSourceContext",
+        "GaWeCodes.Wolverine.Messaging.IntegrationEvents.OwnContextIntegrationEventFilter",
     ];
 
     private static readonly string[] CodeGenerationTypesInTheCore =
     [
-        "GaWeCodes.Messaging.DomainEvents.DomainEventEnvelope",
-        "GaWeCodes.Messaging.DomainEvents.DomainEventEnvelopeSerializer",
-        "GaWeCodes.Messaging.DomainEvents.DomainEventTypeRegistry",
-        "GaWeCodes.Messaging.DomainEvents.ProjectionEnvelope",
-        "GaWeCodes.Messaging.DomainEvents.ProjectionRunner",
-        "GaWeCodes.Messaging.IntegrationEvents.IIntegrationEventSinkFactory",
-        "GaWeCodes.Messaging.IntegrationEvents.IntegrationEventSourceContext",
+        "GaWeCodes.Core.Messaging.DomainEvents.DomainEventEnvelope",
+        "GaWeCodes.Core.Messaging.DomainEvents.DomainEventEnvelopeSerializer",
+        "GaWeCodes.Core.Messaging.DomainEvents.DomainEventTypeRegistry",
+        "GaWeCodes.Core.Messaging.DomainEvents.ProjectionEnvelope",
+        "GaWeCodes.Core.Messaging.DomainEvents.ProjectionRunner",
+        "GaWeCodes.Core.Messaging.IntegrationEvents.IIntegrationEventSinkFactory",
+        "GaWeCodes.Core.Messaging.IntegrationEvents.IntegrationEventSourceContext",
     ];
 
-    private static readonly string[] CodeGenerationTypesInTheWolverineRuntime =
+    private static readonly string[] CodeGenerationTypesInTheWolverineAdapter =
     [
-        "GaWeCodes.Messaging.DomainEvents.DomainEventEnvelopeHandler",
-        "GaWeCodes.Messaging.DomainEvents.ProjectionEnvelopeHandler",
-        "GaWeCodes.Messaging.IntegrationEvents.OwnContextIntegrationEventFilter",
+        "GaWeCodes.Wolverine.Messaging.DomainEvents.DomainEventEnvelopeHandler",
+        "GaWeCodes.Wolverine.Messaging.DomainEvents.ProjectionEnvelopeHandler",
+        "GaWeCodes.Wolverine.Messaging.IntegrationEvents.OwnContextIntegrationEventFilter",
     ];
 
     public static TheoryData<string, string[]> PinnedSurfaces =>
         new()
         {
             {
-                "GaWeCodes.Composition",
+                "GaWeCodes.Core",
                 [.. IntendedCoreApi
                     .Concat(IntendedCoreAdapterContract)
+                    .Concat(IntendedCoreStoreAuthorApi)
                     .Concat(CodeGenerationTypesInTheCore)]
             },
             { "GaWeCodes.Testing", IntendedTestingApi },
             {
-                "GaWeCodes.Runtime.Wolverine",
-                [.. IntendedRuntimeWolverineApi.Concat(CodeGenerationTypesInTheWolverineRuntime)]
+                "GaWeCodes.Wolverine",
+                [.. IntendedWolverineApi.Concat(CodeGenerationTypesInTheWolverineAdapter)]
             },
-            { "GaWeCodes.Persistence", IntendedAdaptersApi },
-            { "GaWeCodes.Persistence.Postgres", IntendedPostgresApi },
+            { "GaWeCodes.Persistence.Npgsql", IntendedNpgsqlApi },
             { "GaWeCodes.Persistence.EfCore", IntendedEfCoreApi },
             { "GaWeCodes.Persistence.EfCore.Postgres", IntendedEfCorePostgresApi },
-            { "GaWeCodes.EventSourcing.Marten", IntendedMartenApi },
+            { "GaWeCodes.Persistence.Marten", IntendedMartenApi },
             { "GaWeCodes.Messaging.RabbitMq", IntendedRabbitMqApi },
         };
 
@@ -212,9 +210,9 @@ public sealed class PublicSurfaceTests
     {
         var intended = IntendedCoreApi
             .Concat(IntendedCoreAdapterContract)
-            .Concat(IntendedRuntimeWolverineApi)
-            .Concat(IntendedAdaptersApi)
-            .Concat(IntendedPostgresApi)
+            .Concat(IntendedWolverineApi)
+            .Concat(IntendedCoreStoreAuthorApi)
+            .Concat(IntendedNpgsqlApi)
             .Concat(IntendedEfCoreApi)
             .Concat(IntendedEfCorePostgresApi)
             .Concat(IntendedMartenApi)
@@ -242,7 +240,7 @@ public sealed class PublicSurfaceTests
     [Fact]
     public void TheCoreNamesNoSatelliteAssembly()
     {
-        var satellites = new[] { RuntimeWolverine, Adapters, EfCore, Marten, RabbitMq }
+        var satellites = new[] { WolverineAdapter, EfCore, Marten, RabbitMq }
             .Select(assembly => assembly.GetName().Name!)
             .ToArray();
 

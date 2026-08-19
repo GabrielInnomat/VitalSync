@@ -1,7 +1,6 @@
 using GaWeCodes.Application.IntegrationEvents;
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Messaging.DomainEvents;
-using GaWeCodes.Persistence.EventSourced;
+using GaWeCodes.Core.DependencyInjection;
+using GaWeCodes.Core.Messaging.DomainEvents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Wolverine;

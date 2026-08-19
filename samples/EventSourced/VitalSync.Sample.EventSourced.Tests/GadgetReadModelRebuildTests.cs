@@ -1,5 +1,6 @@
 using GaWeCodes.Application.DomainEvents;
 using GaWeCodes.Domain.Events;
+using GaWeCodes.Testing;
 using Microsoft.EntityFrameworkCore;
 using VitalSync.Sample.EventSourced.Domain;
 using VitalSync.Sample.EventSourced.Infrastructure.Read;
@@ -57,7 +58,7 @@ public sealed class GadgetReadModelRebuildTests
 
         await new GadgetRenamedProjection(context).HandleAsync(
             rename,
-            MetadataFor(gadget.Id, 2),
+            TestMetadata.For<Gadget>(gadget.Id, 2),
             TestContext.Current.CancellationToken);
 
         var row = await context.Gadgets.SingleAsync(TestContext.Current.CancellationToken);
@@ -84,7 +85,7 @@ public sealed class GadgetReadModelRebuildTests
         foreach (var domainEvent in gadget.DomainEvents)
         {
             version++;
-            var metadata = MetadataFor(gadget.Id, version);
+            var metadata = TestMetadata.For<Gadget>(gadget.Id, version);
 
             await DispatchAsync(context, domainEvent, metadata, TestContext.Current.CancellationToken);
         }
@@ -102,9 +103,6 @@ public sealed class GadgetReadModelRebuildTests
             GadgetComponentAdded => Task.CompletedTask,
             _ => throw new InvalidOperationException($"No projection is wired for '{domainEvent.GetType()}'."),
         };
-
-    private static DomainEventMetadata MetadataFor(GadgetId id, long version) =>
-        new(Guid.NewGuid(), "gadget", id.Value.ToString(), version, DateTimeOffset.UnixEpoch);
 
     private static GadgetReadDbContext NewContext() =>
         new(new DbContextOptionsBuilder<GadgetReadDbContext>()

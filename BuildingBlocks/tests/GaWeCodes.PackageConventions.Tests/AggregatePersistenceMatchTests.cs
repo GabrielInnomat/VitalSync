@@ -1,14 +1,12 @@
 using GaWeCodes.Application.Cqrs;
 using GaWeCodes.Application.Persistence;
 using GaWeCodes.Application.Results;
+using GaWeCodes.Core.DependencyInjection;
+using GaWeCodes.Core.Startup;
 using GaWeCodes.Domain.Aggregates;
 using GaWeCodes.Domain.Entities;
 using GaWeCodes.Domain.Events;
 using GaWeCodes.Domain.Naming;
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Persistence.EventSourced;
-using GaWeCodes.Persistence.StateStored;
-using GaWeCodes.Startup;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

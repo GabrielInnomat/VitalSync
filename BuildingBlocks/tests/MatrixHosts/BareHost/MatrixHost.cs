@@ -1,6 +1,6 @@
+using GaWeCodes;
 using GaWeCodes.Domain.Events;
 using GaWeCodes.Domain.Naming;
-using GaWeCodes.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace BareHost;

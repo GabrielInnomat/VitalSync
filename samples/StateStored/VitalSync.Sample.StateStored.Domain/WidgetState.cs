@@ -1,3 +1,6 @@
+using GaWeCodes.Domain.Aggregates;
+using GaWeCodes.Domain.Events;
+
 namespace VitalSync.Sample.StateStored.Domain;
 
 public sealed record WidgetState(WidgetId Id, string Name, int RenameCount)

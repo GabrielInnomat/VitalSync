@@ -1,4 +1,6 @@
 using GaWeCodes.Application.DomainEvents;
+using GaWeCodes.Application.Persistence;
+using GaWeCodes.Application.Results;
 
 namespace ContractsHost;
 

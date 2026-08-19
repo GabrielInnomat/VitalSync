@@ -1,6 +1,5 @@
 using GaWeCodes.Application.DomainEvents;
 using GaWeCodes.Application.IntegrationEvents;
-using GaWeCodes.Domain.Events;
 using VitalSync.Sample.EventSourced.Domain;
 
 namespace VitalSync.Sample.EventSourced.Infrastructure.Integration;

@@ -1,5 +1,5 @@
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes;
+using GaWeCodes.Core.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

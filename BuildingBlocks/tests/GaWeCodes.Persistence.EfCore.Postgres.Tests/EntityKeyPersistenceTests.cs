@@ -1,5 +1,5 @@
 using GaWeCodes.Domain.Entities;
-using GaWeCodes.Persistence;
+using GaWeCodes.Persistence.EfCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;

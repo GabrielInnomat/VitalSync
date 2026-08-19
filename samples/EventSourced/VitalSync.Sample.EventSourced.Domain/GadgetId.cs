@@ -1,3 +1,5 @@
+using GaWeCodes.Domain.Entities;
+
 namespace VitalSync.Sample.EventSourced.Domain;
 
 public readonly record struct GadgetId(Guid Value) : IEntityKey<Guid>

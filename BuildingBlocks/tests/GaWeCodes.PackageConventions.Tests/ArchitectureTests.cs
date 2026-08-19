@@ -2,7 +2,6 @@ using System.Reflection;
 using System.Text.Json;
 using GaWeCodes.Application.Results;
 using GaWeCodes.Domain.Events;
-using GaWeCodes.DependencyInjection;
 
 namespace GaWeCodes.Tests;
 
@@ -36,7 +35,7 @@ public sealed class ArchitectureTests
         var references = ReferencedAssemblyNames(Application);
 
         Assert.Contains("GaWeCodes.Domain", references);
-        Assert.DoesNotContain("GaWeCodes.Composition", references);
+        Assert.DoesNotContain("GaWeCodes.Core", references);
         Assert.DoesNotContain(references, IsForbiddenInfrastructureDependency);
     }
 
@@ -46,7 +45,7 @@ public sealed class ArchitectureTests
         var references = ReferencedAssemblyNames(Domain);
 
         Assert.DoesNotContain("GaWeCodes.Application", references);
-        Assert.DoesNotContain("GaWeCodes.Composition", references);
+        Assert.DoesNotContain("GaWeCodes.Core", references);
     }
 
     [Fact]

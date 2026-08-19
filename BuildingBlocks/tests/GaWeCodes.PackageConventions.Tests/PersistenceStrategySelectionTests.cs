@@ -1,7 +1,5 @@
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.DependencyInjection.Wiring;
-using GaWeCodes.Persistence.EventSourced;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes.Core.DependencyInjection;
+using GaWeCodes.Core.DependencyInjection.Wiring;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

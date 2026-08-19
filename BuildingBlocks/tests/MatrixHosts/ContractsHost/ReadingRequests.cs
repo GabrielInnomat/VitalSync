@@ -1,3 +1,7 @@
+using GaWeCodes.Application.Cqrs;
+using GaWeCodes.Application.Persistence;
+using GaWeCodes.Application.Results;
+
 namespace ContractsHost;
 
 public sealed record RecordReading(int Value) : ICommand<ReadingId>;

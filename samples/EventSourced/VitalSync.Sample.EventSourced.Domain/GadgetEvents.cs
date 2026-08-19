@@ -1,3 +1,6 @@
+using GaWeCodes.Domain.Events;
+using GaWeCodes.Domain.Naming;
+
 namespace VitalSync.Sample.EventSourced.Domain;
 
 [EventName("gadget-created-v1")]

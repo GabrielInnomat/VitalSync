@@ -1,11 +1,10 @@
 using GaWeCodes.Application.Cqrs;
-using GaWeCodes.Application.Results;
 using Grpc.Core;
 using ProtoBuf.Grpc;
+using static VitalSync.Sample.EventSourced.Api.FailureStatusMapping;
 using VitalSync.Sample.EventSourced.Application;
 using VitalSync.Sample.EventSourced.Contracts;
 using VitalSync.Sample.EventSourced.Domain;
-using static VitalSync.Sample.EventSourced.Api.FailureStatusMapping;
 
 namespace VitalSync.Sample.EventSourced.Api;
 

@@ -1,8 +1,7 @@
 using GaWeCodes.Application.Persistence;
-using GaWeCodes.Domain.Events;
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Persistence;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes.Domain.Entities;
+using GaWeCodes.Persistence.EfCore;
+using GaWeCodes.Persistence.EfCore.StateStored;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

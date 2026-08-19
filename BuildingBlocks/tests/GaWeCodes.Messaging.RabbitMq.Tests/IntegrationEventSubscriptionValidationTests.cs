@@ -1,7 +1,6 @@
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Messaging.IntegrationEvents;
-using GaWeCodes.Persistence.EventSourced;
 using DeadLetterFixture;
+using GaWeCodes.Core.DependencyInjection;
+using GaWeCodes.Core.Messaging.IntegrationEvents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Wolverine;

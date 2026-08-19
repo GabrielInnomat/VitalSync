@@ -1,3 +1,5 @@
+using GaWeCodes.Domain.Entities;
+
 namespace VitalSync.Sample.StateStored.Domain;
 
 public readonly record struct WidgetId(Guid Value) : IEntityKey<Guid>

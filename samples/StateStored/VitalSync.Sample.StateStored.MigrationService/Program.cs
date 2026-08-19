@@ -1,6 +1,6 @@
 using GaWeCodes.Application.ReadModels;
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.ReadModels;
+using GaWeCodes.Core.DependencyInjection;
+using GaWeCodes.Persistence.EfCore.ReadModels;
 using Microsoft.EntityFrameworkCore;
 using VitalSync.Sample.StateStored.Domain;
 using VitalSync.Sample.StateStored.Infrastructure;

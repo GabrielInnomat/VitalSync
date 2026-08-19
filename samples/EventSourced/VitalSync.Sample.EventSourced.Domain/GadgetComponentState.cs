@@ -1,3 +1,6 @@
+using GaWeCodes.Domain.Entities;
+using GaWeCodes.Domain.Events;
+
 namespace VitalSync.Sample.EventSourced.Domain;
 
 public sealed record GadgetComponentState(GadgetComponentId Id, string Label)

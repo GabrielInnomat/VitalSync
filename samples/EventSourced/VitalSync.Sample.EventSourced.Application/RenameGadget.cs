@@ -1,3 +1,6 @@
+using GaWeCodes.Application.Cqrs;
+using GaWeCodes.Application.Persistence;
+using GaWeCodes.Application.Results;
 using VitalSync.Sample.EventSourced.Domain;
 
 namespace VitalSync.Sample.EventSourced.Application;

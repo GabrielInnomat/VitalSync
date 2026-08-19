@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>GaWeCodes</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -9,7 +8,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GaWeCodes.Composition\GaWeCodes.Composition.csproj" />
+    <ProjectReference Include="..\GaWeCodes.Application\GaWeCodes.Application.csproj" />
+    <ProjectReference Include="..\GaWeCodes.Core\GaWeCodes.Core.csproj" />
+    <ProjectReference Include="..\GaWeCodes.Domain\GaWeCodes.Domain.csproj" />
   </ItemGroup>
 
 </Project>

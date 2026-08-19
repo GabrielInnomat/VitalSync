@@ -1,4 +1,5 @@
-using GaWeCodes.Persistence;
+using GaWeCodes.Domain.Entities;
+using GaWeCodes.Persistence.EfCore;
 using Microsoft.EntityFrameworkCore;
 using VitalSync.Sample.EventSourced.Domain;
 

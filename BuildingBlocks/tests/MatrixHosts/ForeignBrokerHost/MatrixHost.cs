@@ -1,8 +1,8 @@
+using GaWeCodes;
+using GaWeCodes.Core.Persistence;
 using GaWeCodes.Domain.Events;
 using GaWeCodes.Domain.Naming;
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Persistence;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes.Persistence.EfCore.StateStored;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Wolverine;

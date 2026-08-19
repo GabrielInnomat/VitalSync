@@ -1,8 +1,7 @@
 using GaWeCodes.Application.Cqrs;
 using GaWeCodes.Application.DomainEvents;
 using GaWeCodes.Application.IntegrationEvents;
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Persistence.EventSourced;
+using GaWeCodes.Core.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;

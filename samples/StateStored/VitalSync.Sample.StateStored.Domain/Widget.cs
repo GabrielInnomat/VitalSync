@@ -1,3 +1,8 @@
+using GaWeCodes.Domain.Aggregates;
+using GaWeCodes.Domain.Entities;
+using GaWeCodes.Domain.Naming;
+using GaWeCodes.Domain.Rules;
+
 namespace VitalSync.Sample.StateStored.Domain;
 
 [AggregateName("widget")]

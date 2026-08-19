@@ -1,4 +1,4 @@
-using GaWeCodes.Schema;
+using GaWeCodes.Testing;
 using SchemaFixture;
 using SchemaGapFixture;
 

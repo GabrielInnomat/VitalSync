@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>GaWeCodes</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,18 +10,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="GaWeCodes.Composition.Tests" />
-    <InternalsVisibleTo Include="GaWeCodes.Persistence.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Core.Tests" />
     <InternalsVisibleTo Include="GaWeCodes.Persistence.EfCore.Postgres.Tests" />
-    <InternalsVisibleTo Include="GaWeCodes.EventSourcing.Marten.Tests" />
-    <InternalsVisibleTo Include="GaWeCodes.Runtime.Wolverine.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Persistence.Marten.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Wolverine.Tests" />
     <InternalsVisibleTo Include="GaWeCodes.Messaging.RabbitMq.Tests" />
     <InternalsVisibleTo Include="GaWeCodes.PackageConventions.Tests" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\GaWeCodes.Persistence.EfCore\GaWeCodes.Persistence.EfCore.csproj" />
-    <ProjectReference Include="..\GaWeCodes.Persistence.Postgres\GaWeCodes.Persistence.Postgres.csproj" />
+    <ProjectReference Include="..\GaWeCodes.Persistence.Npgsql\GaWeCodes.Persistence.Npgsql.csproj" />
   </ItemGroup>
 
 </Project>

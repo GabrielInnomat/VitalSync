@@ -29,9 +29,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\GaWeCodes.Persistence.EfCore.Postgres\GaWeCodes.Persistence.EfCore.Postgres.csproj" />
-    <ProjectReference Include="..\GaWeCodes.TestSupport.EfCore\GaWeCodes.TestSupport.EfCore.csproj" />
-    <ProjectReference Include="..\..\src\GaWeCodes.Runtime.Wolverine\GaWeCodes.Runtime.Wolverine.csproj" />
-    <ProjectReference Include="..\GaWeCodes.TestSupport.Containers\GaWeCodes.TestSupport.Containers.csproj" />
+    <ProjectReference Include="..\GaWeCodes.Tests.EfCore\GaWeCodes.Tests.EfCore.csproj" />
+    <ProjectReference Include="..\..\src\GaWeCodes.Wolverine\GaWeCodes.Wolverine.csproj" />
+    <ProjectReference Include="..\GaWeCodes.Tests.Containers\GaWeCodes.Tests.Containers.csproj" />
     <ProjectReference Include="..\ExternalAssemblies\HullFixture\HullFixture.csproj" />
   </ItemGroup>
 

@@ -1,4 +1,5 @@
-namespace GaWeCodes;
+
+namespace GaWeCodes.Testing;
 
 internal static class TrimmingMessages
 {
@@ -11,4 +12,10 @@ internal static class TrimmingMessages
     internal const string DynamicGenerics =
         "BuildingBlocks builds dispatcher, projection and mapper types with MakeGenericType at run time. "
         + "Native AOT cannot create instantiations it has not seen statically. Publish without PublishAot.";
+
+    internal const string TypedKeyReflection =
+        "Typed entity keys are read through reflection over IEntityKey<TValue> and through an expression tree that " +
+        "is compiled at run time. Trimming removes the value property that the accessor reads and ahead-of-time " +
+        "compilation cannot build the generic accessor at all, so writing or reading an aggregate fails. Publish " +
+        "without PublishTrimmed and without PublishAot.";
 }

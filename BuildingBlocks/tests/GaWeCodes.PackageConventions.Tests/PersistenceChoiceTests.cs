@@ -1,7 +1,8 @@
-using GaWeCodes.DependencyInjection.Wiring;
-using GaWeCodes.Persistence;
-using GaWeCodes.Persistence.EventSourced;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes.Core.DependencyInjection.Wiring;
+using GaWeCodes.Core.Persistence;
+using GaWeCodes.Persistence.EfCore.Postgres;
+using GaWeCodes.Persistence.EfCore.StateStored;
+using GaWeCodes.Persistence.Marten;
 using Microsoft.EntityFrameworkCore;
 
 namespace GaWeCodes.Tests;

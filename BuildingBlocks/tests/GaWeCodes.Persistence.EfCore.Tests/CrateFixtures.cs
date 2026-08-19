@@ -2,10 +2,10 @@ using GaWeCodes.Domain.Aggregates;
 using GaWeCodes.Domain.Entities;
 using GaWeCodes.Domain.Events;
 using GaWeCodes.Domain.Naming;
-using GaWeCodes.Persistence;
+using GaWeCodes.Persistence.EfCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace GaWeCodes.Persistence.EfCore.Tests;
+namespace GaWeCodes.Tests;
 
 public readonly record struct CrateId(Guid Value) : IEntityKey<Guid>
 {

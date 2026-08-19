@@ -32,7 +32,7 @@ Building Block allowed to reference third-party packages.
   `Domain` and `Application` stay dependency-free (ADR-0018). Since the persistence and
   transport splits, "here" means five assemblies: the core plus
   `GaWeCodes.Persistence`, `GaWeCodes.Persistence.EfCore.Postgres`,
-  `GaWeCodes.EventSourcing.Marten` and `GaWeCodes.Messaging.RabbitMq`.
+  `GaWeCodes.Persistence.Marten` and `GaWeCodes.Messaging.RabbitMq`.
   The core itself references neither EF Core, Marten, Npgsql nor RabbitMQ; Wolverine stays in
   the core because it is the in-process backbone for domain events, projections and the outbox,
   not an optional transport.

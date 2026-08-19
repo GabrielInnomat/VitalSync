@@ -1,4 +1,5 @@
-namespace GaWeCodes;
+
+namespace GaWeCodes.Persistence.EfCore;
 
 internal static class TrimmingMessages
 {

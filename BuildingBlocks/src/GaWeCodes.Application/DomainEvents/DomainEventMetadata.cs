@@ -1,3 +1,5 @@
+using GaWeCodes.Domain.Naming;
+
 namespace GaWeCodes.Application.DomainEvents;
 
 public sealed record DomainEventMetadata(

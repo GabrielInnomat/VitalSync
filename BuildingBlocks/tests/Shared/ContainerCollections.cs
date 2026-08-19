@@ -1,3 +1,7 @@
+// Linked into each consuming test project with <Compile Include>, not shared through a project
+// reference. That is deliberate and required: an xUnit [CollectionDefinition] is discovered per
+// assembly, so a definition sitting in a referenced assembly is invisible to the referencing one.
+// GaWeCodes.Tests.Containers holds the fixtures themselves, which a project reference does carry.
 namespace GaWeCodes.Tests;
 
 [CollectionDefinition(Name)]

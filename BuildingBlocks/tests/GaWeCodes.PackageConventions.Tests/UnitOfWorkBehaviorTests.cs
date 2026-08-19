@@ -1,11 +1,11 @@
 using GaWeCodes.Application.Cqrs;
 using GaWeCodes.Application.Persistence;
 using GaWeCodes.Application.Results;
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Dispatching;
-using GaWeCodes.Persistence;
-using GaWeCodes.Persistence.EventSourced;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes.Core.Dispatching;
+using GaWeCodes.Core.Persistence;
+using GaWeCodes.Persistence.EfCore.StateStored;
+using GaWeCodes.Persistence.Marten;
+using GaWeCodes.Persistence.Npgsql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;

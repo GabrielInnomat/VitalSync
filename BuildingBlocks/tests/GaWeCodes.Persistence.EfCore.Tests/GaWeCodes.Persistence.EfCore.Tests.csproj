@@ -5,7 +5,7 @@
     <IsTestProject>true</IsTestProject>
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
-    <RootNamespace>GaWeCodes.Persistence.EfCore.Tests</RootNamespace>
+    <RootNamespace>GaWeCodes.Tests</RootNamespace>
     <NoWarn>$(NoWarn);CA2007</NoWarn>
   </PropertyGroup>
 

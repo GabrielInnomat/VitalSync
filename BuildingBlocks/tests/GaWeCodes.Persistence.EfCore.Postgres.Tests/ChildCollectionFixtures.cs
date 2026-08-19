@@ -2,7 +2,7 @@ using GaWeCodes.Domain.Aggregates;
 using GaWeCodes.Domain.Entities;
 using GaWeCodes.Domain.Events;
 using GaWeCodes.Domain.Naming;
-using GaWeCodes.Persistence;
+using GaWeCodes.Persistence.EfCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace GaWeCodes.Tests;

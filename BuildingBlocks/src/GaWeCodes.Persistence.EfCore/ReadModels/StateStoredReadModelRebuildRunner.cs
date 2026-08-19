@@ -1,10 +1,11 @@
+using GaWeCodes.Core.Persistence;
+using GaWeCodes.Core.ReadModels;
 using GaWeCodes.Domain.Aggregates;
 using GaWeCodes.Domain.Entities;
-using GaWeCodes.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace GaWeCodes.ReadModels;
+namespace GaWeCodes.Persistence.EfCore.ReadModels;
 
 public sealed class StateStoredReadModelRebuildRunner<TContext>(IServiceScopeFactory scopeFactory)
     where TContext : DbContext

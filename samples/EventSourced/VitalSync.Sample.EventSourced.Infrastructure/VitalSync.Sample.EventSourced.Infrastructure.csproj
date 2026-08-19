@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\BuildingBlocks\src\GaWeCodes.EventSourcing.Marten\GaWeCodes.EventSourcing.Marten.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\src\GaWeCodes.Persistence.Marten\GaWeCodes.Persistence.Marten.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\src\GaWeCodes.Persistence.EfCore.Postgres\GaWeCodes.Persistence.EfCore.Postgres.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\src\GaWeCodes.Messaging.RabbitMq\GaWeCodes.Messaging.RabbitMq.csproj" />
     <ProjectReference Include="..\..\VitalSync.Sample.Contracts\VitalSync.Sample.Contracts.csproj" />

@@ -1,3 +1,6 @@
+using GaWeCodes.Domain.Entities;
+using GaWeCodes.Domain.Rules;
+
 namespace VitalSync.Sample.StateStored.Domain;
 
 public sealed class WidgetPart : Entity<WidgetPartId, WidgetPartState>

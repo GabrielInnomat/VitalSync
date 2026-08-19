@@ -9,7 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\GaWeCodes.Composition\GaWeCodes.Composition.csproj" />
+    <ProjectReference Include="..\..\..\src\GaWeCodes.Core\GaWeCodes.Core.csproj" />
   </ItemGroup>
 
 </Project>

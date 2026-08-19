@@ -1,3 +1,6 @@
+using GaWeCodes.Domain.Aggregates;
+using GaWeCodes.Domain.Events;
+
 namespace VitalSync.Sample.EventSourced.Domain;
 
 public sealed record GadgetState(GadgetId Id, string Name, int RenameCount, bool IsRetired)

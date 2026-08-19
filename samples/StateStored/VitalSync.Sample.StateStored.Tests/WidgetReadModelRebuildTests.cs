@@ -1,5 +1,6 @@
 using GaWeCodes.Application.DomainEvents;
 using GaWeCodes.Domain.Events;
+using GaWeCodes.Testing;
 using Microsoft.EntityFrameworkCore;
 using VitalSync.Sample.StateStored.Domain;
 using VitalSync.Sample.StateStored.Infrastructure.Read;
@@ -60,7 +61,7 @@ public sealed class WidgetReadModelRebuildTests
 
         await new WidgetRenamedProjection(context).HandleAsync(
             rename,
-            MetadataFor(widget.Id, 7),
+            TestMetadata.For<Widget>(widget.Id, 7),
             TestContext.Current.CancellationToken);
 
         var row = await context.Widgets.SingleAsync(TestContext.Current.CancellationToken);
@@ -90,7 +91,7 @@ public sealed class WidgetReadModelRebuildTests
         foreach (var domainEvent in widget.DomainEvents)
         {
             version++;
-            var metadata = MetadataFor(widget.Id, version);
+            var metadata = TestMetadata.For<Widget>(widget.Id, version);
             var token = TestContext.Current.CancellationToken;
 
             await DispatchAsync(context, domainEvent, metadata, token);
@@ -111,9 +112,6 @@ public sealed class WidgetReadModelRebuildTests
             WidgetPartRemoved removed => new WidgetPartRemovedProjection(context).HandleAsync(removed, metadata, cancellationToken),
             _ => throw new InvalidOperationException($"No projection is wired for '{domainEvent.GetType()}'."),
         };
-
-    private static DomainEventMetadata MetadataFor(WidgetId id, long version) =>
-        new(Guid.NewGuid(), "widget", id.Value.ToString(), version, DateTimeOffset.UnixEpoch);
 
     private static WidgetReadDbContext NewContext() =>
         new(new DbContextOptionsBuilder<WidgetReadDbContext>()

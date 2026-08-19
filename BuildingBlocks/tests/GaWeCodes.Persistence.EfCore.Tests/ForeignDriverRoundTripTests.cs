@@ -1,13 +1,13 @@
 using GaWeCodes.Application.Persistence;
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.Messaging.DomainEvents;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes.Core.DependencyInjection;
+using GaWeCodes.Persistence.EfCore.StateStored;
+using GaWeCodes.Wolverine.Messaging.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Wolverine;
 
-namespace GaWeCodes.Persistence.EfCore.Tests;
+namespace GaWeCodes.Tests;
 
 public sealed class ForeignDriverRoundTripTests : IDisposable
 {

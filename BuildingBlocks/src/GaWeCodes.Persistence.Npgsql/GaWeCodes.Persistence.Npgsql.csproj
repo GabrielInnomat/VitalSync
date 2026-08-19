@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GaWeCodes.Core.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Persistence.EfCore.Postgres.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Persistence.Marten.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Wolverine.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Messaging.RabbitMq.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.PackageConventions.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GaWeCodes.Core\GaWeCodes.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,11 +1,12 @@
 using System.Reflection;
 using GaWeCodes.Application.Cqrs;
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.DependencyInjection.Wiring;
-using GaWeCodes.Dispatching;
-using GaWeCodes.Messaging.DomainEvents;
-using GaWeCodes.Persistence.EventSourced;
-using GaWeCodes.Persistence.StateStored;
+using GaWeCodes.Core.DependencyInjection;
+using GaWeCodes.Core.DependencyInjection.Wiring;
+using GaWeCodes.Core.Dispatching;
+using GaWeCodes.Core.Messaging.DomainEvents;
+using GaWeCodes.Messaging.RabbitMq;
+using GaWeCodes.Persistence.Marten;
+using GaWeCodes.Wolverine.DependencyInjection.Wiring;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -13,7 +14,7 @@ using Wolverine;
 using Wolverine.Configuration;
 using Wolverine.RabbitMQ;
 using Wolverine.RabbitMQ.Internal;
-using BuildingBlocksWiring = GaWeCodes.DependencyInjection.Wiring.WolverineOptionsExtensions;
+using BuildingBlocksWiring = GaWeCodes.Wolverine.DependencyInjection.Wiring.WolverineOptionsExtensions;
 
 namespace GaWeCodes.Tests;
 
@@ -330,7 +331,7 @@ public sealed class WolverineExtensionTests
     {
         Assert.NotEqual(
             new DurabilitySettings().KeepAfterMessageHandling,
-            DependencyInjection.Wiring.WolverineOptionsExtensions.IdempotencyWindow);
+            BuildingBlocksWiring.IdempotencyWindow);
     }
 
     [Fact]

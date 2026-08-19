@@ -1,6 +1,8 @@
 using GaWeCodes.Application.IntegrationEvents;
-using GaWeCodes.DependencyInjection.Wiring;
-using GaWeCodes.Messaging.Transport;
+using GaWeCodes.Core.DependencyInjection.Wiring;
+using GaWeCodes.Core.Messaging.Transport;
+using GaWeCodes.Wolverine.DependencyInjection.Wiring;
+using GaWeCodes.Wolverine.Messaging.Transport;
 using Wolverine;
 using Wolverine.Kafka;
 

@@ -1,7 +1,6 @@
-using GaWeCodes.DependencyInjection;
-using GaWeCodes.DependencyInjection.Validation;
-using GaWeCodes.Persistence.EventSourced;
-using GaWeCodes.Startup;
+using GaWeCodes.Core.DependencyInjection;
+using GaWeCodes.Core.Startup;
+using GaWeCodes.Persistence.Marten;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 

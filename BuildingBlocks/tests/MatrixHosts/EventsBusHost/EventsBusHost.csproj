@@ -9,7 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\GaWeCodes.EventSourcing.Marten\GaWeCodes.EventSourcing.Marten.csproj" />
+    <ProjectReference Include="..\..\..\src\GaWeCodes.Persistence.Marten\GaWeCodes.Persistence.Marten.csproj" />
     <ProjectReference Include="..\..\..\src\GaWeCodes.Messaging.RabbitMq\GaWeCodes.Messaging.RabbitMq.csproj" />
   </ItemGroup>
 
