@@ -98,7 +98,7 @@ public sealed class CoreFacadeVendorNeutralityTests
     private static string[] WolverineCoupledCoreFiles()
     {
         var core = Path.Combine(
-            ThesseraRoot(),
+            ThesseraLayout.Root,
             "src",
             "GaWeCodes.Thessera.Core");
 
@@ -106,10 +106,8 @@ public sealed class CoreFacadeVendorNeutralityTests
 
         return
         [
-            .. Directory
-                .EnumerateFiles(core, "*.cs", SearchOption.AllDirectories)
-                .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-                .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .. ThesseraLayout
+                .SourceFiles(core)
                 .Where(file => File.ReadLines(file).Any(NamesAVendorNamespace))
                 .Select(file => Path.GetRelativePath(core, file))
                 .Order(StringComparer.Ordinal),
@@ -121,22 +119,6 @@ public sealed class CoreFacadeVendorNeutralityTests
         && Array.Exists(
             MessagingVendorNamespaces,
             vendor => line.Contains(vendor, StringComparison.Ordinal));
-
-    private static string ThesseraRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !Directory.EnumerateFiles(directory.FullName, "*.slnx").Any())
-        {
-            directory = directory.Parent;
-        }
-
-        Assert.True(
-            directory is not null,
-            "No directory containing a '*.slnx' file was found above "
-            + $"'{AppContext.BaseDirectory}'; the Thessera root cannot be located.");
-
-        return directory!.FullName;
-    }
 
     [Fact]
     public void TheDetectorRecognisesAVendorTypeWhereOneIsExpected()

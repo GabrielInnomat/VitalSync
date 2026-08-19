@@ -16,13 +16,11 @@ public sealed class SolutionCompletenessTests
     [Fact]
     public void EveryProjectUnderSrcAndTests_IsListedInTheSolution()
     {
-        var root = ThesseraRoot();
+        var root = ThesseraLayout.Root;
 
-        var onDisk = Directory
-            .EnumerateFiles(root, "*.csproj", SearchOption.AllDirectories)
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
-                && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-            .Select(path => Relative(root, path))
+        var onDisk = ThesseraLayout
+            .ProjectFiles(root)
+            .Select(path => ThesseraLayout.Relative(root, path))
             .Order(StringComparer.Ordinal)
             .ToArray();
 
@@ -34,7 +32,7 @@ public sealed class SolutionCompletenessTests
     [Fact]
     public void TheSolutionNamesNoProjectThatIsGone()
     {
-        var root = ThesseraRoot();
+        var root = ThesseraLayout.Root;
 
         var missing = ListedProjects(root)
             .Where(project => !File.Exists(Path.Combine(root, project.Replace('/', Path.DirectorySeparatorChar))))
@@ -49,23 +47,4 @@ public sealed class SolutionCompletenessTests
             .Descendants("Project")
             .Select(project => project.Attribute("Path")!.Value),
     ];
-
-    private static string Relative(string root, string path) =>
-        Path.GetRelativePath(root, path).Replace(Path.DirectorySeparatorChar, '/');
-
-    private static string ThesseraRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !Directory.EnumerateFiles(directory.FullName, "*.slnx").Any())
-        {
-            directory = directory.Parent;
-        }
-
-        Assert.True(
-            directory is not null,
-            "No directory containing a '*.slnx' file was found above "
-            + $"'{AppContext.BaseDirectory}'; the Thessera root cannot be located.");
-
-        return directory!.FullName;
-    }
 }

@@ -70,10 +70,23 @@ The SDK is pinned by `global.json` (`rollForward: latestFeature`). No Aspire wor
 
 ## Where tests live
 
-Test projects mirror the source structure 1:1 and sit in the `tests/` folder next to what they
-cover: `Thessera/tests/<Package>.Tests` for the Thessera, and `tests/<Project>.Tests`
-for everything under `src/` (e.g. `tests/VitalSync.ServiceDefaults.Tests`). Every test project
-belongs in `VitalSync.slnx`, otherwise `dotnet test` never sees it.
+Test projects sit in the `tests/` folder next to what they cover. Under `Thessera/tests/` a project
+takes **one of two forms**, and which one it takes is the statement:
+
+- `GaWeCodes.Thessera.<Package>.Tests` — mirrors **exactly one** package under `Thessera/src`, and
+  the package must exist.
+- `GaWeCodes.Thessera.Tests.<Suite>` — mirrors **no single** package. This covers both test
+  infrastructure (`Tests.Support`, `Tests.Containers`, `Tests.EfCore`) and cross-cutting suites
+  (`Tests.PackageConventions`). Nothing under this form is ever published.
+
+Everything under `src/` keeps `tests/<Project>.Tests` (e.g. `tests/VitalSync.ServiceDefaults.Tests`).
+Every test project belongs in `VitalSync.slnx`, otherwise `dotnet test` never sees it.
+
+The two forms and the exemption below are **enforced**, not merely documented: `ProjectNamingTests`
+in `Tests.PackageConventions` fails on a project that matches neither, and on a `.csproj` whose name
+has drifted from its directory. A project name is a file name, so nothing else would catch it — a
+wrongly named project compiles, runs and ships. See
+[ADR-0038](./decisions/0038-thessera-is-the-product-name.md).
 
 `VitalSync.ServiceDefaults.Tests` disables xUnit's parallelisation
 (`[assembly: CollectionBehavior(DisableTestParallelization = true)]`). Its OpenTelemetry tests
@@ -92,10 +105,14 @@ the results. For these cases:
   `Thessera/tests/ExternalAssemblies/<FixtureName>/` — one small project per fixture
   scenario. Reference it from the consuming test project via `ProjectReference` and add it
   to `VitalSync.slnx` (under the `ExternalAssemblies` solution folder).
-- **Naming:** keep folder and project names **short** (e.g. `ValidHandlersFixture`, *not*
-  `GaWeCodes.Thessera.Tests.ValidHandlersFixture`). Long duplicated names have
-  broken the Windows 260-character `MAX_PATH` limit before (build failure on checkout and
-  compile). The root namespace equals the project name.
+- **Naming:** fixtures and matrix hosts carry **no family prefix** (e.g. `ValidHandlersFixture`,
+  *not* `GaWeCodes.Thessera.Tests.ValidHandlersFixture`). Two reasons, and the first is the one that
+  matters: they stand in for a **stranger's** code, so prefixing one turns the proof that a package
+  can be consumed from outside into a proof that it can be consumed from inside. The second is
+  practical — long duplicated names have broken the Windows 260-character `MAX_PATH` limit before
+  (build failure on checkout and compile). The root namespace equals the project name. This is the
+  one exemption from the two forms above, it applies to `Thessera/tests/ExternalAssemblies/` and
+  `Thessera/tests/MatrixHosts/`, and `ProjectNamingTests` enforces it in both directions.
 - **Rules:** fixture projects set `IsPackable=false`, reference only what the scenario needs
   (typically `GaWeCodes.Thessera.Domain` / `GaWeCodes.Thessera.Application`), and contain **no tests**
   themselves.

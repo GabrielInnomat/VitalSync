@@ -67,7 +67,7 @@ public sealed class ConsumerNeutralityTests
 
     private static (string FullName, string Relative)[] SourceFiles()
     {
-        var source = Path.Combine(ThesseraRoot(), "src");
+        var source = Path.Combine(ThesseraLayout.Root, "src");
 
         Assert.True(
             Directory.Exists(source),
@@ -75,28 +75,10 @@ public sealed class ConsumerNeutralityTests
 
         return
         [
-            .. Directory
-                .EnumerateFiles(source, "*.cs", SearchOption.AllDirectories)
-                .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-                .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .. ThesseraLayout
+                .SourceFiles(source)
                 .Select(file => (file, Path.GetRelativePath(source, file)))
                 .OrderBy(file => file.Item2, StringComparer.Ordinal),
         ];
-    }
-
-    private static string ThesseraRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !Directory.EnumerateFiles(directory.FullName, "*.slnx").Any())
-        {
-            directory = directory.Parent;
-        }
-
-        Assert.True(
-            directory is not null,
-            "No directory containing a '*.slnx' file was found above "
-            + $"'{AppContext.BaseDirectory}'; the Thessera root cannot be located.");
-
-        return directory!.FullName;
     }
 }

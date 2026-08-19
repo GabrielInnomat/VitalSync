@@ -175,7 +175,7 @@ public sealed class PackageMatrixTests
     private static string[] RestoredPackages(string host)
     {
         var assets = Path.Combine(
-            ThesseraRoot(),
+            ThesseraLayout.Root,
             "tests",
             "MatrixHosts",
             host,
@@ -193,21 +193,5 @@ public sealed class PackageMatrixTests
                 .EnumerateObject()
                 .Select(library => library.Name),
         ];
-    }
-
-    private static string ThesseraRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !Directory.EnumerateFiles(directory.FullName, "*.slnx").Any())
-        {
-            directory = directory.Parent;
-        }
-
-        Assert.True(
-            directory is not null,
-            "No directory containing a '*.slnx' file was found above "
-            + $"'{AppContext.BaseDirectory}'; the Thessera root cannot be located.");
-
-        return directory!.FullName;
     }
 }

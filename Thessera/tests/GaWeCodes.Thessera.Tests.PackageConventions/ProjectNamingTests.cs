@@ -19,10 +19,12 @@ public sealed class ProjectNamingTests
     private const string SuiteProjectPrefix = "GaWeCodes.Thessera.Tests.";
     private const string MirrorSuffix = ".Tests";
 
+    private static readonly string[] ForeignConsumerDirectories = ["ExternalAssemblies/", "MatrixHosts/"];
+
     [Fact]
     public void EverySourceProject_IsTheFamilyPrefixPlusAPackageName()
     {
-        var projects = ProjectNames(Path.Combine(ThesseraRoot(), "src"));
+        var projects = PackageNames();
 
         Assert.NotEmpty(projects);
 
@@ -38,8 +40,8 @@ public sealed class ProjectNamingTests
     [Fact]
     public void EveryTestProject_EitherMirrorsOnePackageOrSaysThatItMirrorsNone()
     {
-        var packages = ProjectNames(Path.Combine(ThesseraRoot(), "src"));
-        var projects = TestProjectNames();
+        var packages = PackageNames();
+        var projects = TestProjectNames(foreignConsumers: false);
 
         Assert.NotEmpty(packages);
         Assert.NotEmpty(projects);
@@ -50,14 +52,16 @@ public sealed class ProjectNamingTests
             offenders.Length == 0,
             Describe(
                 $"A test project is either '{Prefix}<Package>{MirrorSuffix}' naming an existing package "
-                + $"under 'src', or '{SuiteProjectPrefix}<Suite>' when it mirrors no single package.",
+                + $"under 'src', or '{SuiteProjectPrefix}<Suite>' when it mirrors no single package. A "
+                + $"project that stands in for a stranger's code belongs under one of "
+                + $"{string.Join(" or ", ForeignConsumerDirectories)} instead, where no prefix is expected.",
                 offenders));
     }
 
     [Fact]
     public void TheFixturesAndMatrixHosts_CarryNoFamilyPrefix()
     {
-        var projects = ExemptProjectNames();
+        var projects = TestProjectNames(foreignConsumers: true);
 
         Assert.NotEmpty(projects);
 
@@ -74,16 +78,14 @@ public sealed class ProjectNamingTests
     [Fact]
     public void EveryProjectFile_IsNamedAfterItsDirectory()
     {
-        var root = ThesseraRoot();
-
-        var projects = ProjectFiles(root);
+        var projects = ThesseraLayout.ProjectFiles(ThesseraLayout.Root);
 
         Assert.NotEmpty(projects);
 
         var offenders = projects
             .Where(path => Path.GetFileNameWithoutExtension(path)
                 != Path.GetFileName(Path.GetDirectoryName(path)!))
-            .Select(path => Path.GetRelativePath(root, path).Replace(Path.DirectorySeparatorChar, '/'))
+            .Select(path => ThesseraLayout.Relative(ThesseraLayout.Root, path))
             .ToArray();
 
         Assert.True(
@@ -101,69 +103,30 @@ public sealed class ProjectNamingTests
     private static bool IsSuite(string name) =>
         name.StartsWith(SuiteProjectPrefix, StringComparison.Ordinal) && name.Length > SuiteProjectPrefix.Length;
 
-    private static string[] TestProjectNames()
-    {
-        var tests = Path.Combine(ThesseraRoot(), "tests");
+    private static string[] PackageNames() => ProjectNames(Path.Combine(ThesseraLayout.Root, "src"));
 
-        return
-        [
-            .. ProjectFiles(tests)
-                .Where(path => !IsExempt(tests, path))
-                .Select(Path.GetFileNameWithoutExtension)
-                .Select(name => name!)
-                .Order(StringComparer.Ordinal),
-        ];
+    private static string[] TestProjectNames(bool foreignConsumers)
+    {
+        var tests = Path.Combine(ThesseraLayout.Root, "tests");
+
+        return ProjectNames(tests, path => StandsInForAStranger(tests, path) == foreignConsumers);
     }
 
-    private static string[] ExemptProjectNames()
+    private static bool StandsInForAStranger(string tests, string path)
     {
-        var tests = Path.Combine(ThesseraRoot(), "tests");
+        var relative = ThesseraLayout.Relative(tests, path);
 
-        return
-        [
-            .. ProjectFiles(tests)
-                .Where(path => IsExempt(tests, path))
-                .Select(Path.GetFileNameWithoutExtension)
-                .Select(name => name!)
-                .Order(StringComparer.Ordinal),
-        ];
+        return ForeignConsumerDirectories.Any(directory => relative.StartsWith(directory, StringComparison.Ordinal));
     }
 
-    private static bool IsExempt(string tests, string path) =>
-        Path.GetRelativePath(tests, path).Replace(Path.DirectorySeparatorChar, '/')
-            .StartsWith("ExternalAssemblies/", StringComparison.Ordinal)
-        || Path.GetRelativePath(tests, path).Replace(Path.DirectorySeparatorChar, '/')
-            .StartsWith("MatrixHosts/", StringComparison.Ordinal);
-
-    private static string[] ProjectNames(string directory) =>
+    private static string[] ProjectNames(string directory, Func<string, bool>? include = null) =>
     [
-        .. ProjectFiles(directory).Select(Path.GetFileNameWithoutExtension).Select(name => name!).Order(StringComparer.Ordinal),
-    ];
-
-    private static string[] ProjectFiles(string directory) =>
-    [
-        .. Directory
-            .EnumerateFiles(directory, "*.csproj", SearchOption.AllDirectories)
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
-                && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)),
+        .. ThesseraLayout.ProjectFiles(directory)
+            .Where(path => include is null || include(path))
+            .Select(path => Path.GetFileNameWithoutExtension(path))
+            .Order(StringComparer.Ordinal),
     ];
 
     private static string Describe(string rule, string[] offenders) =>
         $"{rule}{Environment.NewLine}Offending: {string.Join(", ", offenders)}";
-
-    private static string ThesseraRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !Directory.EnumerateFiles(directory.FullName, "*.slnx").Any())
-        {
-            directory = directory.Parent;
-        }
-
-        Assert.True(
-            directory is not null,
-            "No directory containing a '*.slnx' file was found above "
-            + $"'{AppContext.BaseDirectory}'; the Thessera root cannot be located.");
-
-        return directory!.FullName;
-    }
 }

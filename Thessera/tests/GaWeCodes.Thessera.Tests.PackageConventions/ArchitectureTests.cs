@@ -76,7 +76,7 @@ public sealed class ArchitectureTests
     private static IReadOnlyCollection<string> ResolvedPackages(string projectDirectory)
     {
         var assets = Path.Combine(
-            ThesseraRoot(),
+            ThesseraLayout.Root,
             projectDirectory.Replace('/', Path.DirectorySeparatorChar),
             "obj",
             "project.assets.json");
@@ -93,22 +93,6 @@ public sealed class ArchitectureTests
                     .Select(library => library.Name.Split('/')[0]),
             ]
             : [];
-    }
-
-    private static string ThesseraRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !Directory.EnumerateFiles(directory.FullName, "*.slnx").Any())
-        {
-            directory = directory.Parent;
-        }
-
-        Assert.True(
-            directory is not null,
-            "No directory containing a '*.slnx' file was found above "
-            + $"'{AppContext.BaseDirectory}'; the Thessera root cannot be located.");
-
-        return directory!.FullName;
     }
 
     private static IReadOnlyCollection<string> ReferencedAssemblyNames(Assembly assembly) =>
