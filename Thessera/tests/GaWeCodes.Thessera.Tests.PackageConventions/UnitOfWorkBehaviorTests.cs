@@ -5,7 +5,7 @@ using GaWeCodes.Thessera.Core.Dispatching;
 using GaWeCodes.Thessera.Core.Persistence;
 using GaWeCodes.Thessera.Persistence.EfCore.StateStored;
 using GaWeCodes.Thessera.Persistence.Marten;
-using GaWeCodes.Thessera.Persistence.Npgsql;
+using GaWeCodes.Thessera.Npgsql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;

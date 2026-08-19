@@ -21,10 +21,10 @@ public sealed class AggregatePersistenceMatchTests
     public async Task EventSourcingWithAStateStoredAggregate_FailsTheStartWithTheReason()
     {
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => RunChecksAsync(
-            options => options.UseMartenEventSourcing(WriteConnectionString),
+            options => options.UseMartenEventStore(WriteConnectionString),
             services => services.AddScoped<ICommandHandler<RecordDeposit>, RecordDepositHandler>()));
 
-        Assert.Contains("UseMartenEventSourcing", thrown.Message, StringComparison.Ordinal);
+        Assert.Contains("UseMartenEventStore", thrown.Message, StringComparison.Ordinal);
         Assert.Contains(nameof(Ledger), thrown.Message, StringComparison.Ordinal);
         Assert.Contains("keep no history", thrown.Message, StringComparison.Ordinal);
     }
@@ -33,10 +33,10 @@ public sealed class AggregatePersistenceMatchTests
     public async Task StateStorageWithAnEventSourcedAggregate_FailsTheStartWithTheReason()
     {
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => RunChecksAsync(
-            options => options.UseEfCorePersistence<MatchDbContext>(WriteConnectionString),
+            options => options.UseEfCoreStateStore<MatchDbContext>(WriteConnectionString),
             services => services.AddScoped<ICommandHandler<OpenJournal>, OpenJournalHandler>()));
 
-        Assert.Contains("UseEfCorePersistence", thrown.Message, StringComparison.Ordinal);
+        Assert.Contains("UseEfCoreStateStore", thrown.Message, StringComparison.Ordinal);
         Assert.Contains(nameof(Journal), thrown.Message, StringComparison.Ordinal);
         Assert.Contains("record of truth", thrown.Message, StringComparison.Ordinal);
         Assert.Contains("WithoutEventHistory", thrown.Message, StringComparison.Ordinal);
@@ -46,7 +46,7 @@ public sealed class AggregatePersistenceMatchTests
     public async Task StateStorageWithAnEventSourcedAggregate_PassesTheStartWhenTheHistoryIsWaived() =>
         await RunChecksAsync(
             options => options
-                .UseEfCorePersistence<MatchDbContext>(WriteConnectionString)
+                .UseEfCoreStateStore<MatchDbContext>(WriteConnectionString)
                 .WithoutEventHistory(),
             services => services.AddScoped<ICommandHandler<OpenJournal>, OpenJournalHandler>());
 
@@ -55,12 +55,12 @@ public sealed class AggregatePersistenceMatchTests
     {
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => RunChecksAsync(
             options => options
-                .UseMartenEventSourcing(WriteConnectionString)
+                .UseMartenEventStore(WriteConnectionString)
                 .WithoutEventHistory(),
             services => services.AddScoped<ICommandHandler<OpenJournal>, OpenJournalHandler>()));
 
         Assert.Contains("WithoutEventHistory", thrown.Message, StringComparison.Ordinal);
-        Assert.Contains("UseMartenEventSourcing", thrown.Message, StringComparison.Ordinal);
+        Assert.Contains("UseMartenEventStore", thrown.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -77,18 +77,18 @@ public sealed class AggregatePersistenceMatchTests
     [Fact]
     public async Task EventSourcingWithAnEventSourcedAggregate_PassesTheStart() =>
         await RunChecksAsync(
-            options => options.UseMartenEventSourcing(WriteConnectionString),
+            options => options.UseMartenEventStore(WriteConnectionString),
             services => services.AddScoped<ICommandHandler<OpenJournal>, OpenJournalHandler>());
 
     [Fact]
     public async Task StateStorageWithAStateStoredAggregate_PassesTheStart() =>
         await RunChecksAsync(
-            options => options.UseEfCorePersistence<MatchDbContext>(WriteConnectionString),
+            options => options.UseEfCoreStateStore<MatchDbContext>(WriteConnectionString),
             services => services.AddScoped<ICommandHandler<RecordDeposit>, RecordDepositHandler>());
 
     [Fact]
     public async Task AnAggregateNoHandlerAsksFor_IsNotJudged() =>
-        await RunChecksAsync(options => options.UseMartenEventSourcing(WriteConnectionString), _ => { });
+        await RunChecksAsync(options => options.UseMartenEventStore(WriteConnectionString), _ => { });
 
     private static async Task RunChecksAsync(
         Action<ThesseraOptions> configure,

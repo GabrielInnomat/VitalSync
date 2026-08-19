@@ -36,7 +36,7 @@ public sealed class WriteDbContextLifetimeCheckTests
     public async Task AScopedWriteContext_PassesTheStart() => await RunCheckAsync(ServiceLifetime.Scoped);
 
     [Fact]
-    public async Task AWriteContextLeftToUseEfCorePersistence_PassesTheStart() => await RunCheckAsync(null);
+    public async Task AWriteContextLeftToUseEfCoreStateStore_PassesTheStart() => await RunCheckAsync(null);
 
     private static async Task RunCheckAsync(ServiceLifetime? preRegisteredLifetime)
     {
@@ -51,7 +51,7 @@ public sealed class WriteDbContextLifetimeCheckTests
 
         builder.AddThessera(options => options
             .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
-            .UseEfCorePersistence<FlushProbeContext>(UnusedConnectionString));
+            .UseEfCoreStateStore<FlushProbeContext>(UnusedConnectionString));
 
         using var host = builder.Build();
 

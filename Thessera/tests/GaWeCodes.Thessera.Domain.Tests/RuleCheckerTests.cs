@@ -1,7 +1,7 @@
 using GaWeCodes.Thessera.Domain.Rules;
-using GaWeCodes.Thessera.Domain.Tests.TestDoubles;
+using GaWeCodes.Thessera.Tests.TestDoubles;
 
-namespace GaWeCodes.Thessera.Domain.Tests;
+namespace GaWeCodes.Thessera.Tests;
 
 public sealed class RuleCheckerTests
 {

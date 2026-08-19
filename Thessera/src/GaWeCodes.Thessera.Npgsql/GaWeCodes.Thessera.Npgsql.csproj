@@ -13,7 +13,7 @@
     <InternalsVisibleTo Include="GaWeCodes.Thessera.Persistence.Marten.Tests" />
     <InternalsVisibleTo Include="GaWeCodes.Thessera.Wolverine.Tests" />
     <InternalsVisibleTo Include="GaWeCodes.Thessera.Messaging.RabbitMq.Tests" />
-    <InternalsVisibleTo Include="GaWeCodes.Thessera.PackageConventions.Tests" />
+    <InternalsVisibleTo Include="GaWeCodes.Thessera.Tests.PackageConventions" />
   </ItemGroup>
 
   <ItemGroup>

@@ -29,7 +29,7 @@ public sealed class PersistenceChoiceTests
 
         Assert.True(choice.IsSelected);
         Assert.Equal(ConnectionString, choice.WriteConnectionString);
-        Assert.Equal("UseMartenEventSourcing", choice.Description);
+        Assert.Equal("UseMartenEventStore", choice.Description);
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class PersistenceChoiceTests
 
         Assert.True(choice.IsSelected);
         Assert.Equal(ConnectionString, choice.WriteConnectionString);
-        Assert.Equal("UseEfCorePersistence", choice.Description);
+        Assert.Equal("UseEfCoreStateStore", choice.Description);
     }
 
     [Fact]
@@ -113,7 +113,7 @@ public sealed class PersistenceChoiceTests
             () => settings.Persistence.Select(PersistenceChoice.NoPersistence));
 
         Assert.Contains("UseNoPersistence", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("UseMartenEventSourcing", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("UseMartenEventStore", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

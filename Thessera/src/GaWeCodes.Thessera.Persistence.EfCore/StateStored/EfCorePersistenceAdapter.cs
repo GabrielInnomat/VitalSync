@@ -30,7 +30,7 @@ public sealed record EfCorePersistenceAdapter<TContext> : IPersistenceAdapter
         WriteConnectionString = writeConnectionString;
     }
 
-    public string Description => "UseEfCorePersistence";
+    public string Description => "UseEfCoreStateStore";
 
     public string WriteConnectionString { get; }
 

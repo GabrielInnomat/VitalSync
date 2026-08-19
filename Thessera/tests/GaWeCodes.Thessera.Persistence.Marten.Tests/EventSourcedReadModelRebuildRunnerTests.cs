@@ -103,7 +103,7 @@ public sealed class EventSourcedReadModelRebuildRunnerTests(PostgreSqlFixture fi
         builder.AddThessera(
             options => options
                 .AddDomainEventsFrom(typeof(RebuildProbeStarted).Assembly)
-                .UseMartenEventSourcing(fixture.ConnectionString)
+                .UseMartenEventStore(fixture.ConnectionString)
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
                 .CustomizeWolverine(wolverine =>
                 {

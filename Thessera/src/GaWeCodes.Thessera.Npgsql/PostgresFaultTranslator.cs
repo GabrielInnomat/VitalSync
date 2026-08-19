@@ -3,7 +3,7 @@ using GaWeCodes.Thessera.Application.Results;
 using GaWeCodes.Thessera.Core.Persistence;
 using Npgsql;
 
-namespace GaWeCodes.Thessera.Persistence.Npgsql;
+namespace GaWeCodes.Thessera.Npgsql;
 
 public sealed class PostgresFaultTranslator : IPersistenceFaultTranslator
 {

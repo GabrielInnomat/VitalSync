@@ -1,6 +1,6 @@
 using GaWeCodes.Thessera.Domain.Events;
 
-namespace GaWeCodes.Thessera.Domain.Tests.TestDoubles;
+namespace GaWeCodes.Thessera.Tests.TestDoubles;
 
 internal sealed record TestDomainEvent(int NewValue) : DomainEvent;
 

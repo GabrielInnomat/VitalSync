@@ -1,33 +1,30 @@
 using System.Reflection;
-using GaWeCodes.Thessera.Application.Persistence;
 using GaWeCodes.Thessera.Domain.Entities;
 
-namespace GaWeCodes.Thessera.Application.Tests;
+namespace GaWeCodes.Thessera.Tests;
 
-public sealed class EntityKeyConstraintTests
+public sealed class DomainEntityKeyConstraintTests
 {
     [Fact]
     public void EveryEntityKeyTypeParameter_AlsoRequiresValueEquality()
     {
-        Assert.Empty(KeyParametersWithoutValueEquality(typeof(IUnitOfWork).Assembly));
+        Assert.Empty(KeyParametersWithoutValueEquality(typeof(IEntityKey).Assembly));
     }
 
     [Fact]
     public void TheDetector_FindsAParameterThatOnlyRequiresIEntityKey()
     {
-        Assert.Equal(
-            [$"{typeof(WithoutValueEqualityOnTheType<>).FullName}.TKey"],
-            KeyParametersWithoutValueEquality(typeof(EntityKeyConstraintTests).Assembly)
-                .Where(offender => offender.Contains("OnTheType", StringComparison.Ordinal))
-                .ToArray());
+        Assert.Contains(
+            $"{typeof(DomainWithoutValueEqualityOnTheType<>).FullName}.TKey",
+            KeyParametersWithoutValueEquality(typeof(DomainEntityKeyConstraintTests).Assembly));
     }
 
     [Fact]
     public void TheDetector_AlsoLooksAtGenericMethods()
     {
         Assert.Contains(
-            $"{typeof(WithoutValueEqualityOnAMethod).FullName}.{nameof(WithoutValueEqualityOnAMethod.Take)}.TKey",
-            KeyParametersWithoutValueEquality(typeof(EntityKeyConstraintTests).Assembly));
+            $"{typeof(DomainWithoutValueEqualityOnAMethod).FullName}.{nameof(DomainWithoutValueEqualityOnAMethod.Take)}.TKey",
+            KeyParametersWithoutValueEquality(typeof(DomainEntityKeyConstraintTests).Assembly));
     }
 
     internal static string[] KeyParametersWithoutValueEquality(Assembly assembly)
@@ -68,13 +65,13 @@ public sealed class EntityKeyConstraintTests
     }
 }
 
-public sealed class WithoutValueEqualityOnTheType<TKey>
+public sealed class DomainWithoutValueEqualityOnTheType<TKey>
     where TKey : struct, IEntityKey
 {
     public TKey Key { get; init; }
 }
 
-public sealed class WithoutValueEqualityOnAMethod
+public sealed class DomainWithoutValueEqualityOnAMethod
 {
     public static TKey Take<TKey>(TKey key)
         where TKey : struct, IEntityKey => key;

@@ -1,6 +1,6 @@
 using System.Reflection;
 using GaWeCodes.Thessera.Persistence.EfCore.StateStored;
-using GaWeCodes.Thessera.Persistence.Npgsql;
+using GaWeCodes.Thessera.Npgsql;
 using GaWeCodes.Thessera.Testing;
 using GaWeCodes.Thessera.Wolverine.DependencyInjection.Wiring;
 
@@ -16,9 +16,9 @@ public sealed class PublicSurfaceTests
 
     private static readonly Assembly EfCore = typeof(IEfCoreDatabaseDriver).Assembly;
 
-    private static readonly Assembly EfCorePostgres = typeof(EfCorePersistenceOptionsExtensions).Assembly;
+    private static readonly Assembly EfCorePostgres = typeof(EfCoreStateStoreExtensions).Assembly;
 
-    private static readonly Assembly Marten = typeof(MartenPersistenceOptionsExtensions).Assembly;
+    private static readonly Assembly Marten = typeof(MartenEventStoreExtensions).Assembly;
 
     private static readonly Assembly RabbitMq = typeof(RabbitMqMessagingExtensions).Assembly;
 
@@ -90,8 +90,8 @@ public sealed class PublicSurfaceTests
 
     private static readonly string[] IntendedNpgsqlApi =
     [
-        "GaWeCodes.Thessera.Persistence.Npgsql.PostgresFaultTranslator",
-        "GaWeCodes.Thessera.Persistence.Npgsql.PostgresTransientFaults",
+        "GaWeCodes.Thessera.Npgsql.PostgresFaultTranslator",
+        "GaWeCodes.Thessera.Npgsql.PostgresTransientFaults",
     ];
 
     private static readonly string[] IntendedEfCoreApi =
@@ -104,12 +104,12 @@ public sealed class PublicSurfaceTests
 
     private static readonly string[] IntendedEfCorePostgresApi =
     [
-        "GaWeCodes.Thessera.EfCorePersistenceOptionsExtensions",
+        "GaWeCodes.Thessera.EfCoreStateStoreExtensions",
     ];
 
     private static readonly string[] IntendedMartenApi =
     [
-        "GaWeCodes.Thessera.MartenPersistenceOptionsExtensions",
+        "GaWeCodes.Thessera.MartenEventStoreExtensions",
         "GaWeCodes.Thessera.Persistence.Marten.ReadModels.EventSourcedReadModelRebuildRunner",
     ];
 
@@ -180,7 +180,7 @@ public sealed class PublicSurfaceTests
                 "GaWeCodes.Thessera.Wolverine",
                 [.. IntendedWolverineApi.Concat(CodeGenerationTypesInTheWolverineAdapter)]
             },
-            { "GaWeCodes.Thessera.Persistence.Npgsql", IntendedNpgsqlApi },
+            { "GaWeCodes.Thessera.Npgsql", IntendedNpgsqlApi },
             { "GaWeCodes.Thessera.Persistence.EfCore", IntendedEfCoreApi },
             { "GaWeCodes.Thessera.Persistence.EfCore.Postgres", IntendedEfCorePostgresApi },
             { "GaWeCodes.Thessera.Persistence.Marten", IntendedMartenApi },

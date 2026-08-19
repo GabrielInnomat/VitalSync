@@ -16,7 +16,7 @@ public static class MatrixHost
 
         builder.AddThessera(options => options
             .AddDomainEventsFrom(typeof(MatrixHost).Assembly)
-            .UseEfCorePersistence<MatrixDbContext>(WriteConnectionString));
+            .UseEfCoreStateStore<MatrixDbContext>(WriteConnectionString));
 
         return builder.Build();
     }

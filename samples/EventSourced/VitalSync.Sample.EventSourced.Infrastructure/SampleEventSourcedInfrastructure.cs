@@ -32,7 +32,7 @@ public static class SampleEventSourcedInfrastructure
             options.AddHandlersFrom(typeof(SampleEventSourcedInfrastructure).Assembly);
             options.AddDomainEventsFrom(typeof(Gadget).Assembly);
 
-            options.UseMartenEventSourcing(writeConnectionString);
+            options.UseMartenEventStore(writeConnectionString);
             options.UseWolverineMessaging(rabbitMqUri, exchangeName, ContextName);
             options.ProvisionInfrastructure(provisioning);
 

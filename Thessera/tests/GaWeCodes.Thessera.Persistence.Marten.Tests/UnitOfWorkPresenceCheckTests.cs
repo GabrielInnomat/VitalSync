@@ -77,7 +77,7 @@ public sealed class UnitOfWorkPresenceCheckTests
 
         var exception = Assert.Throws<InvalidOperationException>(() => services.AddThessera(options => options
             .UseNoPersistence()
-            .UseMartenEventSourcing("Host=localhost;Database=probe;Username=test;Password=test")));
+            .UseMartenEventStore("Host=localhost;Database=probe;Username=test;Password=test")));
 
         Assert.Contains("UseNoPersistence", exception.Message, StringComparison.Ordinal);
     }

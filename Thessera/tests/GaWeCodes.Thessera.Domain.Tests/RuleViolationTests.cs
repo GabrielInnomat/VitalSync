@@ -1,6 +1,6 @@
 using GaWeCodes.Thessera.Domain.Rules;
 
-namespace GaWeCodes.Thessera.Domain.Tests;
+namespace GaWeCodes.Thessera.Tests;
 
 public sealed class RuleViolationTests
 {

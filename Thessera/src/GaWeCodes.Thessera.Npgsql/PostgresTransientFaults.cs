@@ -1,6 +1,6 @@
 using Npgsql;
 
-namespace GaWeCodes.Thessera.Persistence.Npgsql;
+namespace GaWeCodes.Thessera.Npgsql;
 
 public static class PostgresTransientFaults
 {

@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-19
+- **Amended:** 2026-08-19 (the persistence names this ADR left alone were measured; see the amendment at the end)
 
 ## Context
 
@@ -129,3 +130,64 @@ Evans' generic term "building block" remains correct English in prose and stays 
 - **Product segment only in the namespace, not in the package ID.** Would have kept IDs short.
   Rejected because it breaks the rule that namespace equals package ID plus folder path — the rule
   that makes `IDE0130` a real guard rather than a formality satisfied by construction.
+
+## Amendment (2026-08-19) — the persistence names, measured
+
+The decision above renamed the family and deliberately left the persistence packages' own names
+alone. Reviewing them afterwards produced one correction, one entry-point fix, and one rejection
+that is worth recording because the proposal was reasonable and the measurement killed it.
+
+**The defect was real.** Four packages carried the `Persistence.` prefix and read as four choices.
+They are two choices, one substrate and one piece of cross-cutting vendor knowledge:
+
+| Package | Role | Consumer chooses it? |
+| ------- | ---- | -------------------- |
+| `Persistence.EfCore.Postgres` | the state-stored store | yes |
+| `Persistence.Marten` | the event-sourced store | yes |
+| `Persistence.EfCore` | substrate; **defines** `IEfCoreDatabaseDriver` | no, arrives with the above |
+| `Persistence.Npgsql` | Npgsql fault knowledge both stores share | no, arrives with both |
+
+**Two things changed.**
+
+`Persistence.Npgsql` becomes **`GaWeCodes.Thessera.Npgsql`** — out of the `Persistence.*` family
+rather than renamed inside it, taking the same shape as `GaWeCodes.Thessera.Wolverine`. Both are
+vendor-support packages and neither is a choice. It is also the only one of the four that **no
+consumer references directly**; it arrives transitively through both stores. Three `Persistence.*`
+packages remain: two choices and one substrate.
+
+The two entry points were asymmetric — `UseEfCorePersistence` named the technology,
+`UseMartenEventSourcing` named the technology *and* the style — at exactly the line every consumer
+writes. They are now `UseEfCoreStateStore<TContext>(connectionString)` and
+`UseMartenEventStore(connectionString)`: vendor first, role second, built the same way. Their
+carrier types follow (`EfCoreStateStoreExtensions`, `MartenEventStoreExtensions`), which also makes
+them parallel to the existing `RabbitMqMessagingExtensions` — vendor, role, `Extensions`. The vendor
+stays in the method name deliberately: a later `Persistence.EfCore.SqlServer` would otherwise offer
+a second `UseStateStore` with the same signature, and a host referencing both would get `CS0121`.
+
+**Rejected, and this is the part worth keeping.** The proposal was to put the storage style in the
+first segment — `StateStored.EfCore.Postgres` beside `EventSourced.Marten` — so a stranger browsing
+nuget.org sees the two choices immediately. Three measurements sank it:
+
+- **`Persistence.EfCore` is not state-stored-only.** Thirteen of its sixteen files sit under
+  `StateStored/`, but `EntityKeyModelBuilderExtensions` and `EntityKeyValueConverter` are
+  style-neutral, and the event-sourced sample calls `ApplyEntityKeyConversions()` on its **read**
+  context. An event-sourced consumer needs the package. A name saying `StateStored` tells them the
+  opposite — worse than a name that says too little.
+- **Marten *is* Postgres**, so a `Postgres` segment beside `Marten` separates nothing from nothing.
+  That is precisely the segment-without-meaning the naming rule exists to prevent, and it is why the
+  EF Core side can carry a vendor segment while the Marten side cannot.
+- **The two sides are not structurally parallel.** EF Core has two independent axes — ORM and
+  database — and Marten has one. Parallel names over non-parallel structures make the names lie.
+  Renaming would also break the visible pairing of `Persistence.EfCore` with
+  `Persistence.EfCore.Postgres`, which this ADR's parent decision kept on purpose.
+
+The gap the proposal aimed at is genuine and stays open: **a package name cannot say which two of
+the family are a choice.** It is answered where it fits — the first line of each package README and
+the `PackageDescription` that stands beside the name on nuget.org.
+
+**One consequence of the rename is a new guard rather than a note.** Three renames have passed over
+this repository and none of them could have gone red, because a project name is a file name.
+`ProjectNamingTests` now pins all four forms — the family prefix on `src`, the two permitted test
+forms, the deliberate absence of a prefix on fixtures and matrix hosts, and that a `.csproj` carries
+its directory's name. Each rule was verified by breaking it: all four go red, each naming its own
+offender.

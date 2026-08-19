@@ -42,7 +42,7 @@ public sealed class IntegrationEventMapperCheckTests
     {
         using var provider = BuildProvider(options => options
             .AddHandlersFrom(typeof(RegistrationMapper).Assembly)
-            .UseMartenEventSourcing(ConnectionString)
+            .UseMartenEventStore(ConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
 
         await Check(provider).RunAsync(TestContext.Current.CancellationToken);

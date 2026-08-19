@@ -21,7 +21,7 @@ public static class MatrixHost
 
         builder.AddThessera(options => options
             .AddDomainEventsFrom(typeof(MatrixHost).Assembly)
-            .UseMartenEventSourcing(WriteConnectionString)
+            .UseMartenEventStore(WriteConnectionString)
             .UseWolverineMessaging(BrokerUri, ExchangeName, ContextName));
 
         return builder.Build();

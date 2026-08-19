@@ -684,8 +684,8 @@ for hosts, e.g.:
 services.AddThessera(options =>
 {
     options.AddHandlersFrom(typeof(SomeHandler).Assembly);
-    options.UseEfCorePersistence<NutritionWriteDbContext>(writeConnectionString);
-    options.UseMartenEventSourcing(writeConnectionString);
+    options.UseEfCoreStateStore<NutritionWriteDbContext>(writeConnectionString);
+    options.UseMartenEventStore(writeConnectionString);
     options.UseWolverineMessaging(rabbitMqUri, exchangeName, "nutrition");
 });
 ```
@@ -693,7 +693,7 @@ services.AddThessera(options =>
 - Registers `ISender`, the behaviors **in the canonical order** (§1), the unit
   of work, repositories, the Publisher/outbox, the projection runner, the
   Wolverine transport, and the clock (§8).
-- `UseEfCorePersistence<TContext>(connectionString, configureContext?)`
+- `UseEfCoreStateStore<TContext>(connectionString, configureContext?)`
   **registers the write-database context itself** via Wolverine's
   `AddDbContextWithWolverineIntegration` on the Npgsql provider (ADR-0027) —
   the host never registers the context and therefore cannot break the
@@ -707,7 +707,7 @@ services.AddThessera(options =>
   which database the repository wrote to, silently. The accessor is filled by this
   registration and used by nobody else, so the question no longer arises — and
   unlike a marker interface it puts no requirement on the host's own context type.
-- `UseMartenEventSourcing` configures Marten with **string stream identities**
+- `UseMartenEventStore` configures Marten with **string stream identities**
   (`StreamIdentity.AsString`, required by the `EntityKeyFormatter` stream-key
   scheme, §3) and **lightweight sessions** (no identity-map/change-tracking
   overhead — appends are staged explicitly by the repository), and integrates
@@ -721,7 +721,7 @@ services.AddThessera(options =>
   word; a value containing a dot is rejected, because it is almost certainly the
   exchange name in the wrong position. The call **requires a persistence selection**:
   `AddThessera` throws when a broker URI was given without
-  `UseEfCorePersistence` or `UseMartenEventSourcing`, because the durable sending
+  `UseEfCoreStateStore` or `UseMartenEventStore`, because the durable sending
   endpoint has no message store to write to and Wolverine would degrade quietly to
   a host that only looks durable (ADR-0023 amendment 2026-08-04). The check runs
   after the whole options lambda, so either call order is accepted.
@@ -762,13 +762,13 @@ both steps to Thessera:
 builder.AddThessera(options =>
 {
     options.AddHandlersFrom(typeof(CreateRecipe).Assembly);
-    options.UseEfCorePersistence<NutritionWriteDbContext>(writeConnectionString);
+    options.UseEfCoreStateStore<NutritionWriteDbContext>(writeConnectionString);
     options.UseWolverineMessaging(rabbitMqUri, exchangeName, "nutrition");
 });
 ```
 
 - It calls `UseWolverine` when the selection needs a runtime and applies the EF
-  Core outbox against the **same** connection string `UseEfCorePersistence`
+  Core outbox against the **same** connection string `UseEfCoreStateStore`
   recorded, so outbox rows and aggregate state cannot end up in different
   databases. Wolverine allows exactly one `UseWolverine`, so host-specific
   transport settings belong in the overload's optional
@@ -817,12 +817,12 @@ methods validates its own arguments and delegates to one internal collaborator i
 
 The split is what keeps the options type honest: it references neither EF Core, Npgsql
 nor Marten, so a third-party concern has exactly one file it can be changed in.
-`UseEfCorePersistence<TContext>` and `UseMartenEventSourcing` are **extension methods**
+`UseEfCoreStateStore<TContext>` and `UseMartenEventStore` are **extension methods**
 that live with their adapter (`Persistence/StateStored/`, `Persistence/EventSourced/`)
 and hand an `IPersistenceAdapter` to the core; a caller therefore adds a `using` for the
 namespace of the store it chose, which is what will name the package once the family is
 split. The fluent chain itself is unchanged — it still reads
-`options.AddHandlersFrom(...).UseEfCorePersistence<T>(...)`, and each method still
+`options.AddHandlersFrom(...).UseEfCoreStateStore<T>(...)`, and each method still
 returns `this`. The one vendor the facade still names is Wolverine, in the host-builder
 overload below.
 
@@ -1027,7 +1027,7 @@ fallback is acceptable:
 | commands are scanned and only the fallback resolves  | **throws**, naming the commands |
 
 `UseNoPersistence()` is a positive selection on `PersistenceChoice`, not an opt-out
-flag: it is mutually exclusive with `UseEfCorePersistence`/`UseMartenEventSourcing`
+flag: it is mutually exclusive with `UseEfCoreStateStore`/`UseMartenEventStore`
 (combining them throws) and it requires no message store, no Wolverine, and no domain
 event assembly. `PersistenceChoice` carries the chosen adapter, and `NoPersistence` is one
 of its two sentinel states, which is why the choice distinguishes `IsChosen` (something was

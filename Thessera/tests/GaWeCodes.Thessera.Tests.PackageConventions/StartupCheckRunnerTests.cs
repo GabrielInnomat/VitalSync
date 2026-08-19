@@ -112,7 +112,7 @@ public sealed class StartupCheckRunnerTests
         services.AddThessera(options =>
         {
             options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
-            options.UseMartenEventSourcing("Host=localhost;Database=test;Username=test;******");
+            options.UseMartenEventStore("Host=localhost;Database=test;Username=test;******");
         });
 
         using var provider = services.BuildServiceProvider();

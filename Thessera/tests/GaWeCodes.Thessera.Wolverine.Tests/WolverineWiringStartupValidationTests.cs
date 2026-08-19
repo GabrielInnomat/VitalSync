@@ -16,7 +16,7 @@ public sealed class WolverineWiringStartupValidationTests
     public async Task PersistenceSelected_WithoutWolverine_FailsAtStartupNamingUseWolverine()
     {
         using var provider = BuildProvider(options =>
-            options.UseEfCorePersistence<TestDbContext>(ConnectionString));
+            options.UseEfCoreStateStore<TestDbContext>(ConnectionString));
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => GetValidator(provider).RunAsync(TestContext.Current.CancellationToken));
@@ -28,7 +28,7 @@ public sealed class WolverineWiringStartupValidationTests
     public async Task PersistenceSelected_WithWolverineRuntime_Passes()
     {
         using var provider = BuildProvider(
-            options => options.UseEfCorePersistence<TestDbContext>(ConnectionString),
+            options => options.UseEfCoreStateStore<TestDbContext>(ConnectionString),
             services => services.AddSingleton(Substitute.For<IWolverineRuntime>()));
 
         await GetValidator(provider).RunAsync(TestContext.Current.CancellationToken);
@@ -46,7 +46,7 @@ public sealed class WolverineWiringStartupValidationTests
     public void ACapabilityNeedingWolverine_RegistersTheCheck()
     {
         using var provider = BuildProvider(options =>
-            options.UseEfCorePersistence<TestDbContext>(ConnectionString));
+            options.UseEfCoreStateStore<TestDbContext>(ConnectionString));
 
         Assert.Single(provider.GetServices<IStartupCheck>(), check => check is WolverineRuntimeCheck);
     }

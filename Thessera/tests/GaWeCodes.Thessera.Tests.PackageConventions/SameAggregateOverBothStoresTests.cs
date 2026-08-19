@@ -116,7 +116,7 @@ public sealed class SameAggregateOverBothStoresTests(PostgreSqlFixture fixture)
         builder.AddThessera(
             options => options
                 .AddDomainEventsFrom(typeof(ThermostatInstalled).Assembly)
-                .UseEfCorePersistence<ThermostatContext>(fixture.ConnectionString)
+                .UseEfCoreStateStore<ThermostatContext>(fixture.ConnectionString)
                     .WithoutEventHistory()
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
                 .CustomizeWolverine(Solo));
@@ -141,7 +141,7 @@ public sealed class SameAggregateOverBothStoresTests(PostgreSqlFixture fixture)
         builder.AddThessera(
             options => options
                 .AddDomainEventsFrom(typeof(ThermostatInstalled).Assembly)
-                .UseMartenEventSourcing(fixture.ConnectionString)
+                .UseMartenEventStore(fixture.ConnectionString)
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
                 .CustomizeWolverine(Solo));
 

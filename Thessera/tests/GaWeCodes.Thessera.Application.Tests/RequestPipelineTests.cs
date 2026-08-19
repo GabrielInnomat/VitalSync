@@ -1,7 +1,7 @@
 using GaWeCodes.Thessera.Application.Cqrs;
 using GaWeCodes.Thessera.Application.Results;
 
-namespace GaWeCodes.Thessera.Application.Tests;
+namespace GaWeCodes.Thessera.Tests;
 
 public sealed class RequestPipelineTests
 {

@@ -158,7 +158,7 @@ public sealed class IntegrationEventSubscriptionValidationTests(PostgreSqlFixtur
                 services.AddThessera(options =>
                 {
                     options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
-                    options.UseMartenEventSourcing(postgres.ConnectionString)
+                    options.UseMartenEventStore(postgres.ConnectionString)
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup);
                     options.UseWolverineMessaging(rabbit.ConnectionUri, exchangeName, contextName);
                     options.SubscribeToIntegrationEvents(

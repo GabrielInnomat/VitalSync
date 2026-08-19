@@ -15,7 +15,7 @@ public sealed class MartenEventAliasTests(PostgreSqlFixture fixture)
         var services = new ServiceCollection();
         services.AddThessera(options => options
             .AddDomainEventsFrom(typeof(FlushCounterCreated).Assembly)
-            .UseMartenEventSourcing(fixture.ConnectionString)
+            .UseMartenEventStore(fixture.ConnectionString)
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup));
 
         await using var provider = services.BuildServiceProvider();

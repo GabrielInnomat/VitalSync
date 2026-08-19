@@ -1,7 +1,7 @@
 using GaWeCodes.Thessera.Domain.Entities;
 using GaWeCodes.Thessera.Domain.Events;
 
-namespace GaWeCodes.Thessera.Domain.Tests.TestDoubles;
+namespace GaWeCodes.Thessera.Tests.TestDoubles;
 
 internal sealed class NoOpRaiser : IDomainEventRaiser
 {

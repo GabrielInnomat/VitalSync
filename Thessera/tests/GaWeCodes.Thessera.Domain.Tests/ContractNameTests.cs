@@ -1,6 +1,6 @@
 using GaWeCodes.Thessera.Domain.Naming;
 
-namespace GaWeCodes.Thessera.Domain.Tests;
+namespace GaWeCodes.Thessera.Tests;
 
 public sealed class ContractNameTests
 {

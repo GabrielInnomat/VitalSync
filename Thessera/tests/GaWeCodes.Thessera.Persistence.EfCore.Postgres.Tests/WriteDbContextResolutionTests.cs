@@ -34,7 +34,7 @@ public sealed class WriteDbContextResolutionTests
     }
 
     [Fact]
-    public void WriteDbContextAccessor_HoldsTheContextNamedByUseEfCorePersistence()
+    public void WriteDbContextAccessor_HoldsTheContextNamedByUseEfCoreStateStore()
     {
         using var host = BuildHostWithReadContextUnderTheBareKey();
         using var scope = host.Services.CreateScope();
@@ -56,7 +56,7 @@ public sealed class WriteDbContextResolutionTests
         builder.AddThessera(options =>
         {
             options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
-            options.UseEfCorePersistence<FlushProbeContext>(UnusedConnectionString);
+            options.UseEfCoreStateStore<FlushProbeContext>(UnusedConnectionString);
         });
 
         return builder.Build();

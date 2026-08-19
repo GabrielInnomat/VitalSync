@@ -33,7 +33,7 @@ public sealed class WolverineExtensionTests
     public void AddThessera_WithAPersistenceStrategy_RegistersTheWolverineExtension()
     {
         using var provider = BuildProvider(options =>
-            options.UseEfCorePersistence<TestDbContext>(ConnectionString));
+            options.UseEfCoreStateStore<TestDbContext>(ConnectionString));
 
         Assert.Single(
             provider.GetServices<IWolverineExtension>(),
@@ -65,7 +65,7 @@ public sealed class WolverineExtensionTests
     public void EfCoreSelection_RequestsRoutingAndEfCoreOutbox()
     {
         using var provider = BuildProvider(options =>
-            options.UseEfCorePersistence<TestDbContext>(ConnectionString));
+            options.UseEfCoreStateStore<TestDbContext>(ConnectionString));
 
         var settings = provider.GetRequiredService<ThesseraWiringSettings>();
 
@@ -78,7 +78,7 @@ public sealed class WolverineExtensionTests
     public void MartenSelection_RequestsRoutingWithoutEfCoreOutbox()
     {
         using var provider = BuildProvider(options =>
-            options.UseMartenEventSourcing(ConnectionString));
+            options.UseMartenEventStore(ConnectionString));
 
         var settings = provider.GetRequiredService<ThesseraWiringSettings>();
 
@@ -91,7 +91,7 @@ public sealed class WolverineExtensionTests
     public void MessagingSelection_RecordsTheBrokerUri()
     {
         using var provider = BuildProvider(options => options
-            .UseMartenEventSourcing(ConnectionString)
+            .UseMartenEventStore(ConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
 
         var settings = provider.GetRequiredService<ThesseraWiringSettings>();
@@ -107,7 +107,7 @@ public sealed class WolverineExtensionTests
             BuildProvider(options => options.UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)));
 
         Assert.Contains("durable", thrown.Message, StringComparison.Ordinal);
-        Assert.Contains("UseMartenEventSourcing", thrown.Message, StringComparison.Ordinal);
+        Assert.Contains("UseMartenEventStore", thrown.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public sealed class WolverineExtensionTests
     {
         using var provider = BuildProvider(options => options
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
-            .UseMartenEventSourcing(ConnectionString));
+            .UseMartenEventStore(ConnectionString));
 
         Assert.True(provider.GetRequiredService<ThesseraWiringSettings>().Persistence.IsSelected);
     }
@@ -124,7 +124,7 @@ public sealed class WolverineExtensionTests
     public void EfCoreSelection_RegistersTheDbContext()
     {
         using var provider = BuildProvider(options =>
-            options.UseEfCorePersistence<TestDbContext>(ConnectionString));
+            options.UseEfCoreStateStore<TestDbContext>(ConnectionString));
 
         using var scope = provider.CreateScope();
 
@@ -236,7 +236,7 @@ public sealed class WolverineExtensionTests
     public void SubscriptionSelection_RecordsQueueBindingsAndConsumerAssembly()
     {
         using var provider = BuildProvider(options => options
-            .UseMartenEventSourcing(ConnectionString)
+            .UseMartenEventStore(ConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
             .SubscribeToIntegrationEvents("billing.integration-events", TestAssembly, "orders.*", "reporting.*"));
 
@@ -263,7 +263,7 @@ public sealed class WolverineExtensionTests
     {
         var thrown = Assert.Throws<InvalidOperationException>(() =>
             BuildProvider(options => options
-                .UseMartenEventSourcing(ConnectionString)
+                .UseMartenEventStore(ConnectionString)
                 .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
                 .SubscribeToIntegrationEvents("first", TestAssembly, "orders.*")
                 .SubscribeToIntegrationEvents("second", TestAssembly, "billing.*")));
@@ -276,7 +276,7 @@ public sealed class WolverineExtensionTests
     {
         Assert.Throws<ArgumentException>(() =>
             BuildProvider(options => options
-                .UseMartenEventSourcing(ConnectionString)
+                .UseMartenEventStore(ConnectionString)
                 .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
                 .SubscribeToIntegrationEvents("billing.integration-events", TestAssembly)));
     }
@@ -286,7 +286,7 @@ public sealed class WolverineExtensionTests
     {
         Assert.Throws<ArgumentException>(() =>
             BuildProvider(options => options
-                .UseMartenEventSourcing(ConnectionString)
+                .UseMartenEventStore(ConnectionString)
                 .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
                 .SubscribeToIntegrationEvents("billing.integration-events", TestAssembly, "  ")));
     }

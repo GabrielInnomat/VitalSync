@@ -1,9 +1,9 @@
 using GaWeCodes.Thessera.Domain.Aggregates;
 using GaWeCodes.Thessera.Domain.Events;
 using GaWeCodes.Thessera.Domain.Rules;
-using GaWeCodes.Thessera.Domain.Tests.TestDoubles;
+using GaWeCodes.Thessera.Tests.TestDoubles;
 
-namespace GaWeCodes.Thessera.Domain.Tests;
+namespace GaWeCodes.Thessera.Tests;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code", Justification = "Need to check if the overwritten equality operator handles null correctly")]
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Assertions", "xUnit2024:Do not use boolean asserts for simple equality tests", Justification = "Need to check if the overwritten equality operator handles null correctly")]

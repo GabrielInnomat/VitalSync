@@ -1,7 +1,7 @@
 using GaWeCodes.Thessera.Domain.Aggregates;
 using GaWeCodes.Thessera.Domain.Events;
 
-namespace GaWeCodes.Thessera.Domain.Tests.TestDoubles;
+namespace GaWeCodes.Thessera.Tests.TestDoubles;
 
 internal sealed record TestState(TestId Id, int Value) : AggregateState<TestState, TestId>
 {

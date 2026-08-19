@@ -1,6 +1,6 @@
 using GaWeCodes.Thessera.Domain.Rules;
 
-namespace GaWeCodes.Thessera.Domain.Tests.TestDoubles;
+namespace GaWeCodes.Thessera.Tests.TestDoubles;
 
 internal sealed class FakeBusinessRule(
     bool isBroken,

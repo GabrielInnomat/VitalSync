@@ -1,8 +1,9 @@
 using System.Reflection;
+using GaWeCodes.Thessera.Domain;
 
-namespace GaWeCodes.Thessera.Domain.Tests;
+namespace GaWeCodes.Thessera.Tests;
 
-public sealed class PublicSurfaceTests
+public sealed class DomainPublicSurfaceTests
 {
     private static readonly string[] PublishedApi =
     [

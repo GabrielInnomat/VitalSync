@@ -15,7 +15,7 @@ public sealed class PersistenceStrategySelectionTests
         var services = new ServiceCollection();
 
         var exception = Record.Exception(() =>
-            services.AddThessera(options => WithDomainEvents(options).UseEfCorePersistence<TestDbContext>(ConnectionString)));
+            services.AddThessera(options => WithDomainEvents(options).UseEfCoreStateStore<TestDbContext>(ConnectionString)));
 
         Assert.Null(exception);
     }
@@ -26,7 +26,7 @@ public sealed class PersistenceStrategySelectionTests
         var services = new ServiceCollection();
 
         var exception = Record.Exception(() =>
-            services.AddThessera(options => WithDomainEvents(options).UseMartenEventSourcing(ConnectionString)));
+            services.AddThessera(options => WithDomainEvents(options).UseMartenEventStore(ConnectionString)));
 
         Assert.Null(exception);
     }
@@ -38,8 +38,8 @@ public sealed class PersistenceStrategySelectionTests
 
         var exception = Record.Exception(() =>
             services.AddThessera(options => WithDomainEvents(options)
-                .UseEfCorePersistence<TestDbContext>(ConnectionString)
-                .UseEfCorePersistence<TestDbContext>(ConnectionString)));
+                .UseEfCoreStateStore<TestDbContext>(ConnectionString)
+                .UseEfCoreStateStore<TestDbContext>(ConnectionString)));
 
         Assert.Null(exception);
     }
@@ -51,8 +51,8 @@ public sealed class PersistenceStrategySelectionTests
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
             services.AddThessera(options => WithDomainEvents(options)
-                .UseEfCorePersistence<TestDbContext>(ConnectionString)
-                .UseEfCorePersistence<TestDbContext>("Host=elsewhere;Database=other;Username=test;******")));
+                .UseEfCoreStateStore<TestDbContext>(ConnectionString)
+                .UseEfCoreStateStore<TestDbContext>("Host=elsewhere;Database=other;Username=test;******")));
 
         Assert.Contains("different databases", exception.Message, StringComparison.Ordinal);
     }
@@ -64,8 +64,8 @@ public sealed class PersistenceStrategySelectionTests
 
         var exception = Record.Exception(() =>
             services.AddThessera(options => WithDomainEvents(options)
-                .UseMartenEventSourcing(ConnectionString)
-                .UseMartenEventSourcing(ConnectionString)));
+                .UseMartenEventStore(ConnectionString)
+                .UseMartenEventStore(ConnectionString)));
 
         Assert.Null(exception);
     }
@@ -77,12 +77,12 @@ public sealed class PersistenceStrategySelectionTests
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
             services.AddThessera(options => options
-                .UseEfCorePersistence<TestDbContext>(ConnectionString)
-                .UseMartenEventSourcing(ConnectionString)));
+                .UseEfCoreStateStore<TestDbContext>(ConnectionString)
+                .UseMartenEventStore(ConnectionString)));
 
         Assert.Contains("persistence strateg", exception.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("UseEfCorePersistence", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("UseMartenEventSourcing", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("UseEfCoreStateStore", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("UseMartenEventStore", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -92,8 +92,8 @@ public sealed class PersistenceStrategySelectionTests
 
         Assert.Throws<InvalidOperationException>(() =>
             services.AddThessera(options => options
-                .UseMartenEventSourcing(ConnectionString)
-                .UseEfCorePersistence<TestDbContext>(ConnectionString)));
+                .UseMartenEventStore(ConnectionString)
+                .UseEfCoreStateStore<TestDbContext>(ConnectionString)));
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public sealed class PersistenceStrategySelectionTests
         var services = new ServiceCollection();
 
         services.AddThessera(options => WithDomainEvents(options)
-            .UseEfCorePersistence<TestDbContext>(ConnectionString)
+            .UseEfCoreStateStore<TestDbContext>(ConnectionString)
             .UseWolverineMessaging(
                 new Uri("amqp://localhost:5672"),
                 TestMessaging.ExchangeName,

@@ -11,9 +11,9 @@ using Microsoft.EntityFrameworkCore;
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace GaWeCodes.Thessera;
 #pragma warning restore IDE0130
-public static class EfCorePersistenceOptionsExtensions
+public static class EfCoreStateStoreExtensions
 {
-    public static ThesseraOptions UseEfCorePersistence<TContext>(
+    public static ThesseraOptions UseEfCoreStateStore<TContext>(
         this ThesseraOptions options,
         string connectionString,
         Action<DbContextOptionsBuilder>? configureContext = null)

@@ -1,6 +1,6 @@
 using GaWeCodes.Thessera.Domain.Aggregates;
 
-namespace GaWeCodes.Thessera.Domain.Tests.TestDoubles;
+namespace GaWeCodes.Thessera.Tests.TestDoubles;
 
 internal sealed class ReconstitutedAggregate
     : AggregateRoot<TestId, TestState>

@@ -1,6 +1,6 @@
 using GaWeCodes.Thessera.Application.IntegrationEvents;
 
-namespace GaWeCodes.Thessera.Application.Tests;
+namespace GaWeCodes.Thessera.Tests;
 
 public class IntegrationEventTopicAttributeTests
 {

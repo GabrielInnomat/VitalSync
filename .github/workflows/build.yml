@@ -30,7 +30,7 @@ jobs:
 
       - name: Test
         env:
-          GAWECODES_REQUIRE_CONTAINERS: "1"
+          THESSERA_REQUIRE_CONTAINERS: "1"
         run: dotnet test --configuration Release --no-build -- --output Detailed --report-xunit-trx
 
       - name: Failed test detail
@@ -90,7 +90,7 @@ jobs:
           SAMPLE_STATESTORED_API_URL: https://localhost:54230
           SAMPLE_EVENTSOURCED_API_URL: https://localhost:54240
           VITALSYNC_REQUIRE_SMOKE: "1"
-          GAWECODES_REQUIRE_CONTAINERS: "1"
+          THESSERA_REQUIRE_CONTAINERS: "1"
         run: |
           dotnet test samples/StateStored/VitalSync.Sample.StateStored.Tests \
             --configuration Release --no-build -- --output Detailed --report-xunit-trx

@@ -81,8 +81,8 @@ internal static class ThesseraComposition
                 "A messaging transport was selected without a persistence strategy. Integration events are sent " +
                 "through a durable endpoint so that they survive a broker restart and a crash between commit and " +
                 "broker acknowledgement, and a durable endpoint needs Wolverine's message store. " +
-                "Without one the host would look durable and silently not be. Select UseEfCorePersistence<TContext>" +
-                "(writeConnectionString) or UseMartenEventSourcing(writeConnectionString) as well.");
+                "Without one the host would look durable and silently not be. Select UseEfCoreStateStore<TContext>" +
+                "(writeConnectionString) or UseMartenEventStore(writeConnectionString) as well.");
         }
 
         if (!wiring.Persistence.IsSelected)

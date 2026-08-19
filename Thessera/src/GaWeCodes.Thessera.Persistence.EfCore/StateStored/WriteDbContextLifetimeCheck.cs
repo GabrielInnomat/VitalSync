@@ -31,6 +31,6 @@ internal sealed class WriteDbContextLifetimeCheck<TContext>(IServiceCollection s
                 : "As Singleton every request shares one change tracker that is never cleared, and concurrent "
                 + "requests use it without any thread safety.")
             + $" Remove the AddDbContext<{typeof(TContext).Name}> call and let "
-            + $"UseEfCorePersistence<{typeof(TContext).Name}> register it, or register it as Scoped.");
+            + $"UseEfCoreStateStore<{typeof(TContext).Name}> register it, or register it as Scoped.");
     }
 }

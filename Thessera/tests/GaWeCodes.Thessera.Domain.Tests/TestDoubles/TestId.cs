@@ -1,6 +1,6 @@
 using GaWeCodes.Thessera.Domain.Entities;
 
-namespace GaWeCodes.Thessera.Domain.Tests.TestDoubles;
+namespace GaWeCodes.Thessera.Tests.TestDoubles;
 
 internal readonly record struct TestId(int Value) : IEntityKey<int>
 {

@@ -141,7 +141,7 @@ public sealed class CoreFacadeVendorNeutralityTests
     [Fact]
     public void TheDetectorRecognisesAVendorTypeWhereOneIsExpected()
     {
-        Assert.NotEmpty(FindVendorTypes(typeof(EfCorePersistenceOptionsExtensions)));
+        Assert.NotEmpty(FindVendorTypes(typeof(EfCoreStateStoreExtensions)));
     }
 
     private static string[] FindVendorTypes(Type declaringType) =>

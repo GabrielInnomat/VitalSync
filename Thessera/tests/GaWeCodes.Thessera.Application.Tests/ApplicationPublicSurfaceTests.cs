@@ -1,9 +1,9 @@
 using System.Reflection;
 using GaWeCodes.Thessera.Application.Cqrs;
 
-namespace GaWeCodes.Thessera.Application.Tests;
+namespace GaWeCodes.Thessera.Tests;
 
-public sealed class PublicSurfaceTests
+public sealed class ApplicationPublicSurfaceTests
 {
     private static readonly string[] PublishedApi =
     [

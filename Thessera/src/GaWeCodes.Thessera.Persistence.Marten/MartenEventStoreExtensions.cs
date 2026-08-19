@@ -9,9 +9,9 @@ using GaWeCodes.Thessera.Persistence.Marten;
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace GaWeCodes.Thessera;
 #pragma warning restore IDE0130
-public static class MartenPersistenceOptionsExtensions
+public static class MartenEventStoreExtensions
 {
-    public static ThesseraOptions UseMartenEventSourcing(
+    public static ThesseraOptions UseMartenEventStore(
         this ThesseraOptions options,
         string connectionString)
     {

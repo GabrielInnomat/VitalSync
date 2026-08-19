@@ -1,6 +1,6 @@
 using GaWeCodes.Thessera.Core.Persistence;
 using GaWeCodes.Thessera.Persistence.EfCore.StateStored;
-using GaWeCodes.Thessera.Persistence.Npgsql;
+using GaWeCodes.Thessera.Npgsql;
 using Microsoft.EntityFrameworkCore;
 using Wolverine;
 using Wolverine.Postgresql;

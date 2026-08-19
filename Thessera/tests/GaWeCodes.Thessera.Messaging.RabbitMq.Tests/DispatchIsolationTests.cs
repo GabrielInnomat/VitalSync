@@ -152,7 +152,7 @@ public sealed class DispatchIsolationTests(PostgreSqlFixture postgres, RabbitMqF
                 services.AddThessera(options =>
                 {
                     options.AddDomainEventsFrom(typeof(IsolationProbeStarted).Assembly);
-                    options.UseMartenEventSourcing(postgres.ConnectionString)
+                    options.UseMartenEventStore(postgres.ConnectionString)
                         .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup);
                     options.UseWolverineMessaging(rabbit.ConnectionUri, exchangeName, TestMessaging.ContextName);
                 });

@@ -31,7 +31,7 @@ public sealed class ConcurrencyConflictScenarioTests(PostgreSqlFixture fixture)
         builder.AddThessera(
             options => options
                 .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
-                .UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString)
+                .UseEfCoreStateStore<FlushProbeContext>(fixture.ConnectionString)
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
                 .AddPipelineBehavior(typeof(CompetingWriteBehavior<,>), InsideTheUnitOfWork)
                 .CustomizeWolverine(ConfigureSoloDurability));
@@ -88,7 +88,7 @@ public sealed class ConcurrencyConflictScenarioTests(PostgreSqlFixture fixture)
         builder.AddThessera(
             options => options
                 .AddDomainEventsFrom(typeof(TallyOpened).Assembly)
-                .UseMartenEventSourcing(fixture.ConnectionString)
+                .UseMartenEventStore(fixture.ConnectionString)
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
                 .AddPipelineBehavior(typeof(CompetingWriteBehavior<,>), InsideTheUnitOfWork)
                 .CustomizeWolverine(ConfigureSoloDurability));

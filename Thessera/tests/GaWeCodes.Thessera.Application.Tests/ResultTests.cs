@@ -1,6 +1,6 @@
 using GaWeCodes.Thessera.Application.Results;
 
-namespace GaWeCodes.Thessera.Application.Tests;
+namespace GaWeCodes.Thessera.Tests;
 
 public sealed class ResultTests
 {

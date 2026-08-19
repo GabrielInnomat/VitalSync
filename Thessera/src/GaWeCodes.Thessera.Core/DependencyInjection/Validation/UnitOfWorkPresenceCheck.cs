@@ -47,7 +47,7 @@ internal sealed partial class UnitOfWorkPresenceCheck(
             "is registered. Every one of these commands would report success while nothing is committed, and " +
             $"nothing at run time would say so: {string.Join(", ", commands.Take(5))}" +
             $"{(commands.Count > 5 ? $" and {commands.Count - 5} more" : string.Empty)}. Select " +
-            "UseEfCorePersistence<TContext>(writeConnectionString) or UseMartenEventSourcing(writeConnectionString), " +
+            "UseEfCoreStateStore<TContext>(writeConnectionString) or UseMartenEventStore(writeConnectionString), " +
             "register the host's own IUnitOfWork, or state the intent with UseNoPersistence().");
     }
 

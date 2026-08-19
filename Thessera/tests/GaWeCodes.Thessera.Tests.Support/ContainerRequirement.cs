@@ -2,7 +2,7 @@ namespace GaWeCodes.Thessera.Tests;
 
 public static class ContainerRequirement
 {
-    public const string EnvironmentVariable = "GAWECODES_REQUIRE_CONTAINERS";
+    public const string EnvironmentVariable = "THESSERA_REQUIRE_CONTAINERS";
 
     public const string LegacyEnvironmentVariable = "VITALSYNC_REQUIRE_CONTAINERS";
 

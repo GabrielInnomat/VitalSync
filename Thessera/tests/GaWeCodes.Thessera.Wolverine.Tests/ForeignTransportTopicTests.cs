@@ -86,7 +86,7 @@ public sealed class ForeignTransportTopicTests(PostgreSqlFixture postgres, Kafka
         builder.AddThessera(options =>
         {
             options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
-            options.UseMartenEventSourcing(postgres.ConnectionString)
+            options.UseMartenEventStore(postgres.ConnectionString)
                 .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup);
             options.UseMessagingTransport(new KafkaTransportAdapter(kafka.BootstrapServers, "probe"));
         });

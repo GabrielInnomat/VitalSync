@@ -51,7 +51,7 @@ public sealed class IntegrationEventContextTests
     public void TheHostGivenNames_AreRecorded()
     {
         var settings = Configure(options => options
-            .UseMartenEventSourcing(ConnectionString)
+            .UseMartenEventStore(ConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
 
         Assert.Equal(
@@ -89,7 +89,7 @@ public sealed class IntegrationEventContextTests
         services.AddLogging();
         services.AddThessera(options => options
             .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
-            .UseMartenEventSourcing(ConnectionString)
+            .UseMartenEventStore(ConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
 
         using var provider = services.BuildServiceProvider();

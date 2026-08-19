@@ -126,7 +126,7 @@ public sealed class BrokerTopologyCheckTests(PostgreSqlFixture postgres, RabbitM
             .ConfigureServices(services => services.AddThessera(options =>
             {
                 options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
-                options.UseMartenEventSourcing(postgres.ConnectionString)
+                options.UseMartenEventStore(postgres.ConnectionString)
                     .ProvisionInfrastructure(provisioning);
                 options.UseWolverineMessaging(
                     rabbit.ConnectionUri,

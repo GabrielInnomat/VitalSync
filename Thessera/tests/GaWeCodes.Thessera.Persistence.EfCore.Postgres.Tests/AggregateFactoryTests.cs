@@ -48,7 +48,7 @@ public sealed class AggregateFactoryTests
         var exception = Assert.Throws<InvalidOperationException>(() =>
             services.AddThessera(options => options
                 .AddDomainEventsFrom(typeof(SealedHull).Assembly)
-                .UseEfCorePersistence<FlushProbeContext>("Host=design-time")));
+                .UseEfCoreStateStore<FlushProbeContext>("Host=design-time")));
 
         Assert.Contains(nameof(SealedHull), exception.Message, StringComparison.Ordinal);
     }

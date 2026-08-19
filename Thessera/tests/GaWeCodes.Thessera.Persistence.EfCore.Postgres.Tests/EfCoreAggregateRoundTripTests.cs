@@ -108,7 +108,7 @@ public sealed class EfCoreAggregateRoundTripTests(PostgreSqlFixture fixture)
         builder.AddThessera(
             options => options
                 .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
-                .UseEfCorePersistence<FlushProbeContext>(fixture.ConnectionString)
+                .UseEfCoreStateStore<FlushProbeContext>(fixture.ConnectionString)
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
                 .CustomizeWolverine(wolverine =>
                 {

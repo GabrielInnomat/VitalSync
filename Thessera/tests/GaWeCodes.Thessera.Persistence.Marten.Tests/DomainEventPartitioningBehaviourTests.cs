@@ -72,7 +72,7 @@ public sealed class DomainEventPartitioningBehaviourTests(PostgreSqlFixture post
             .ConfigureServices(services => services.AddThessera(options =>
             {
                 options.AddDomainEventsFrom(typeof(DomainEventPartitioningBehaviourTests).Assembly);
-                options.UseMartenEventSourcing(postgres.ConnectionString)
+                options.UseMartenEventStore(postgres.ConnectionString)
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup);
             }))
             .UseWolverine(options => options.Durability.Mode = DurabilityMode.Solo)

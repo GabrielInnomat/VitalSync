@@ -16,7 +16,7 @@ public sealed class HostBuilderWiringTests
     [Fact]
     public void EfCoreSelection_PointsWolverinesMessageStoreAtTheSelectedWriteDatabase()
     {
-        var builder = BuildHost(options => options.UseEfCorePersistence<TestDbContext>(WriteConnectionString));
+        var builder = BuildHost(options => options.UseEfCoreStateStore<TestDbContext>(WriteConnectionString));
 
         var settings = Assert.Single(
             builder.Services
@@ -29,7 +29,7 @@ public sealed class HostBuilderWiringTests
     [Fact]
     public void EfCoreSelection_AppliesTheEntityFrameworkCoreTransactionalMiddleware()
     {
-        var builder = BuildHost(options => options.UseEfCorePersistence<TestDbContext>(WriteConnectionString));
+        var builder = BuildHost(options => options.UseEfCoreStateStore<TestDbContext>(WriteConnectionString));
 
         Assert.Contains(builder.Services, descriptor => descriptor.ServiceType == typeof(IDbContextOutbox));
     }
@@ -37,7 +37,7 @@ public sealed class HostBuilderWiringTests
     [Fact]
     public void MartenSelection_ConfiguresWolverineWithoutThePostgresqlMessageStore()
     {
-        var builder = BuildHost(options => options.UseMartenEventSourcing(WriteConnectionString));
+        var builder = BuildHost(options => options.UseMartenEventStore(WriteConnectionString));
 
         Assert.Contains(builder.Services, descriptor => descriptor.ServiceType == typeof(IWolverineRuntime));
         Assert.DoesNotContain(
@@ -49,7 +49,7 @@ public sealed class HostBuilderWiringTests
     public void MessagingSelection_ConfiguresWolverine()
     {
         var builder = BuildHost(options => options
-            .UseMartenEventSourcing(WriteConnectionString)
+            .UseMartenEventStore(WriteConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
 
         Assert.Contains(builder.Services, descriptor => descriptor.ServiceType == typeof(IWolverineRuntime));
@@ -71,7 +71,7 @@ public sealed class HostBuilderWiringTests
 
         builder.AddThessera(options => options
             .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
-            .UseEfCorePersistence<TestDbContext>(WriteConnectionString)
+            .UseEfCoreStateStore<TestDbContext>(WriteConnectionString)
             .CustomizeWolverine(_ => applied = true));
 
         Assert.True(applied);

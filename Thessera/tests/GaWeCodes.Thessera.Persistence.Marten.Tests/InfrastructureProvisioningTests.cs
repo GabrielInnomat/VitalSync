@@ -101,7 +101,7 @@ public sealed class InfrastructureProvisioningTests
     public void TheBrokerTopologyCheck_IsRegisteredWhenMessagingIsSelected()
     {
         using var provider = BuildProvider(options => options
-            .UseMartenEventSourcing(ConnectionString)
+            .UseMartenEventStore(ConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
 
         Assert.Single(provider.GetServices<IStartupCheck>(), check => check is BrokerTopologyCheck);
@@ -111,7 +111,7 @@ public sealed class InfrastructureProvisioningTests
     public async Task TheBrokerTopologyCheck_PassesOnAProvisioningHost()
     {
         using var provider = BuildProvider(options => options
-            .UseMartenEventSourcing(ConnectionString)
+            .UseMartenEventStore(ConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
             .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup));
 
@@ -121,7 +121,7 @@ public sealed class InfrastructureProvisioningTests
     [Fact]
     public void WithoutProvisioning_MartenCreatesNoSchema()
     {
-        using var provider = BuildProvider(options => options.UseMartenEventSourcing(ConnectionString));
+        using var provider = BuildProvider(options => options.UseMartenEventStore(ConnectionString));
 
         Assert.Equal(
             JasperFx.AutoCreate.None,
@@ -132,7 +132,7 @@ public sealed class InfrastructureProvisioningTests
     public void WithProvisioning_MartenCreatesItsSchema()
     {
         using var provider = BuildProvider(options => options
-            .UseMartenEventSourcing(ConnectionString)
+            .UseMartenEventStore(ConnectionString)
             .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup));
 
         Assert.Equal(
@@ -151,7 +151,7 @@ public sealed class InfrastructureProvisioningTests
     [Fact]
     public void ThePresenceCheck_IsRegisteredAsSoonAsPersistenceIsSelected()
     {
-        using var provider = BuildProvider(options => options.UseMartenEventSourcing(ConnectionString));
+        using var provider = BuildProvider(options => options.UseMartenEventStore(ConnectionString));
 
         Assert.Single(provider.GetServices<IStartupCheck>(), check => check is InfrastructurePresenceCheck);
     }
@@ -160,7 +160,7 @@ public sealed class InfrastructureProvisioningTests
     public async Task ThePresenceCheck_PassesOnAProvisioningHost()
     {
         using var provider = BuildProvider(options => options
-            .UseMartenEventSourcing(ConnectionString)
+            .UseMartenEventStore(ConnectionString)
             .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup));
 
         await Check(provider).RunAsync(TestContext.Current.CancellationToken);

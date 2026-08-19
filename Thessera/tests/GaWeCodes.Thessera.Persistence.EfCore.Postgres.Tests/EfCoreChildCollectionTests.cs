@@ -180,7 +180,7 @@ public sealed class EfCoreChildCollectionTests(PostgreSqlFixture fixture)
         builder.AddThessera(
             options => options
                 .AddDomainEventsFrom(typeof(BasketOpened).Assembly)
-                .UseEfCorePersistence<LooseContext>(fixture.ConnectionString)
+                .UseEfCoreStateStore<LooseContext>(fixture.ConnectionString)
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
                 .CustomizeWolverine(wolverine =>
                 {
@@ -207,7 +207,7 @@ public sealed class EfCoreChildCollectionTests(PostgreSqlFixture fixture)
         builder.AddThessera(
             options => options
                 .AddDomainEventsFrom(typeof(BasketOpened).Assembly)
-                .UseEfCorePersistence<DerivedNameContext>(fixture.ConnectionString)
+                .UseEfCoreStateStore<DerivedNameContext>(fixture.ConnectionString)
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
                 .CustomizeWolverine(wolverine =>
                 {
@@ -448,7 +448,7 @@ public sealed class EfCoreChildCollectionTests(PostgreSqlFixture fixture)
         builder.AddThessera(
             options => options
                 .AddDomainEventsFrom(typeof(BasketOpened).Assembly)
-                .UseEfCorePersistence<BasketContext>(fixture.ConnectionString)
+                .UseEfCoreStateStore<BasketContext>(fixture.ConnectionString)
                     .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
                 .CustomizeWolverine(wolverine =>
                 {

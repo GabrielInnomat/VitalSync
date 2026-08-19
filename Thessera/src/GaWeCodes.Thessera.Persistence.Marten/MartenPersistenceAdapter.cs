@@ -3,7 +3,7 @@ using GaWeCodes.Thessera.Core.Messaging.DomainEvents;
 using GaWeCodes.Thessera.Core.Persistence;
 using GaWeCodes.Thessera.Core.Startup;
 using GaWeCodes.Thessera.Persistence.Marten.ReadModels;
-using GaWeCodes.Thessera.Persistence.Npgsql;
+using GaWeCodes.Thessera.Npgsql;
 using GaWeCodes.Thessera.Wolverine.DependencyInjection.Wiring;
 using GaWeCodes.Thessera.Wolverine.Diagnostics;
 using JasperFx;
@@ -17,7 +17,7 @@ namespace GaWeCodes.Thessera.Persistence.Marten;
 
 internal sealed record MartenPersistenceAdapter(string WriteConnectionString) : IPersistenceAdapter
 {
-    public string Description => "UseMartenEventSourcing";
+    public string Description => "UseMartenEventStore";
 
     public AggregateStyle AggregateStyle => AggregateStyle.EventSourced;
 
