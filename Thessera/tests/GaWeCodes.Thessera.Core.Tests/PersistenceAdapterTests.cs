@@ -1,6 +1,5 @@
 using GaWeCodes.Thessera.Core.DependencyInjection;
 using GaWeCodes.Thessera.Core.DependencyInjection.Extensibility;
-using GaWeCodes.Thessera.Core.DependencyInjection.Registration;
 using GaWeCodes.Thessera.Core.DependencyInjection.Wiring;
 using GaWeCodes.Thessera.Core.Persistence;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,44 +14,52 @@ public sealed class PersistenceAdapterTests
     [Fact]
     public void TheRegistrarLetsTheAdapterRegisterItsOwnServices()
     {
-        var services = new ServiceCollection();
-        var persistence = new PersistenceSelection();
         var adapter = new RecordingAdapter(ConnectionString);
+        using var provider = BuildProvider(
+            options => options.UsePersistence(adapter),
+            out _);
 
-        new PersistenceRegistrar(services, persistence, new ProvisioningSelection(), new RuntimeActivation())
-            .Use(adapter);
-
+        var wiring = provider.GetRequiredService<IWiringSnapshot>();
         Assert.True(adapter.WasRegistered);
-        Assert.Same(services, adapter.SeenServices);
-        Assert.True(persistence.IsSelected);
-        Assert.Same(adapter, persistence.Choice.Adapter);
+        Assert.NotNull(adapter.SeenServices);
+        Assert.True(wiring.PersistenceSelected);
     }
 
     [Fact]
-    public void TheAdapterSeesTheProvisioningDecisionOfTheHost()
+    public void TheAdapterSeesProvisioningDisabledByDefault()
     {
-        var provisioning = new ProvisioningSelection();
         var adapter = new RecordingAdapter(ConnectionString);
-
-        new PersistenceRegistrar(new ServiceCollection(), new PersistenceSelection(), provisioning, new RuntimeActivation())
-            .Use(adapter);
+        using var provider = BuildProvider(
+            options => options.UsePersistence(adapter),
+            out _);
 
         Assert.False(adapter.SeenContext!.ProvisionsInfrastructure);
+        Assert.False(provider.GetRequiredService<IWiringSnapshot>().ProvisionsInfrastructure);
+    }
 
-        provisioning.Select(InfrastructureProvisioning.AtStartup);
+    [Fact]
+    public void TheAdapterSeesProvisioningEnabledWhenSelected()
+    {
+        var adapter = new RecordingAdapter(ConnectionString);
+        using var provider = BuildProvider(
+            options => options
+                .UsePersistence(adapter)
+                .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup),
+            out _);
 
-        Assert.True(adapter.SeenContext.ProvisionsInfrastructure);
+        Assert.True(adapter.SeenContext!.ProvisionsInfrastructure);
+        Assert.True(provider.GetRequiredService<IWiringSnapshot>().ProvisionsInfrastructure);
     }
 
     [Fact]
     public void TheRuntimeContributedByTheAdapter_ReachesTheWiring()
     {
-        var runtime = new RuntimeActivation();
-
-        new PersistenceRegistrar(new ServiceCollection(), new PersistenceSelection(), new ProvisioningSelection(), runtime)
-            .Use(new RecordingAdapter(ConnectionString) { ContributesRuntime = true });
+        using var provider = BuildProvider(
+            options => options.UsePersistence(new RecordingAdapter(ConnectionString) { ContributesRuntime = true }),
+            out var runtime);
 
         Assert.IsType<RecordingActivator>(runtime.Activator);
+        Assert.NotNull(provider.GetRequiredService<IWiringSnapshot>());
     }
 
     [Fact]
@@ -81,16 +88,34 @@ public sealed class PersistenceAdapterTests
     [Fact]
     public void TheTransientFaultDecision_ComesFromTheChosenAdapter()
     {
-        var persistence = new PersistenceSelection();
         var transient = new TimeoutException();
+        var adapter = new RecordingAdapter(ConnectionString) { TransientFault = transient };
+        using var provider = BuildProvider(
+            options => options.UsePersistence(adapter),
+            out _);
+        var wiring = provider.GetRequiredService<IWiringSnapshot>();
 
-        Assert.False(persistence.IsTransientFault(transient));
+        Assert.True(wiring.IsTransientFault(transient));
+        Assert.False(wiring.IsTransientFault(new InvalidOperationException()));
+    }
 
-        new PersistenceRegistrar(new ServiceCollection(), persistence, new ProvisioningSelection(), new RuntimeActivation())
-            .Use(new RecordingAdapter(ConnectionString) { TransientFault = transient });
+    private static ServiceProvider BuildProvider(
+        Action<ThesseraOptions> configure,
+        out RuntimeActivation runtime)
+    {
+        RuntimeActivation? capturedRuntime = null;
 
-        Assert.True(persistence.IsTransientFault(transient));
-        Assert.False(persistence.IsTransientFault(new InvalidOperationException()));
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddThessera(options =>
+        {
+            options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
+            capturedRuntime = options.Runtime;
+            configure(options);
+        });
+
+        runtime = capturedRuntime ?? throw new InvalidOperationException("Thessera runtime was not captured.");
+        return services.BuildServiceProvider();
     }
 
     private sealed record RecordingAdapter(string WriteConnectionString) : IPersistenceAdapter

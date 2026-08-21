@@ -1,7 +1,6 @@
 using GaWeCodes.Thessera.Application.Cqrs;
 using GaWeCodes.Thessera.Application.Persistence;
 using GaWeCodes.Thessera.Application.Results;
-using GaWeCodes.Thessera.Core.Dispatching;
 using GaWeCodes.Thessera.Domain.Rules;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,7 +16,7 @@ public sealed class FailureTranslationTests
         Assert.True(result.IsFailure);
         var failure = Assert.Single(result.Failures);
         Assert.Equal(FailureCategory.Validation, failure.Category);
-        Assert.Equal(ExceptionToResultBehavior<ThrowingCommand, Result>.ValidationFailureCode, failure.Code);
+        Assert.Equal(DomainValidationException.FallbackCode, failure.Code);
     }
 
     [Fact]
@@ -28,7 +27,7 @@ public sealed class FailureTranslationTests
         Assert.True(result.IsFailure);
         var failure = Assert.Single(result.Failures);
         Assert.Equal(FailureCategory.BusinessRule, failure.Category);
-        Assert.Equal(ExceptionToResultBehavior<ThrowingCommand, Result>.BusinessRuleFailureCode, failure.Code);
+        Assert.Equal(BusinessRuleViolationException.FallbackCode, failure.Code);
     }
 
     [Fact]
@@ -97,7 +96,7 @@ public sealed class FailureTranslationTests
         var result = await SendThrowing(new BusinessRuleViolationException("Recipe already published."));
 
         var failure = Assert.Single(result.Failures);
-        Assert.Equal(ExceptionToResultBehavior<ThrowingCommand, Result>.BusinessRuleFailureCode, failure.Code);
+        Assert.Equal(BusinessRuleViolationException.FallbackCode, failure.Code);
     }
 
     [Fact]

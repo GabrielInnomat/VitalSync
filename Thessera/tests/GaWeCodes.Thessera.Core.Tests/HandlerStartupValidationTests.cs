@@ -1,6 +1,5 @@
 using AmbiguousRequestsFixture;
 using GaWeCodes.Thessera.Core.DependencyInjection;
-using GaWeCodes.Thessera.Core.DependencyInjection.Validation;
 using GaWeCodes.Thessera.Core.Startup;
 using Microsoft.Extensions.DependencyInjection;
 using OrphanRequestsFixture;
@@ -51,7 +50,7 @@ public sealed class HandlerStartupValidationTests
     {
         using var provider = BuildProvider(_ => { });
 
-        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is HandlerRegistrationCheck);
+        Assert.Single(provider.GetServices<IStartupCheck>(), check => check.GetType().Name == "HandlerRegistrationCheck");
     }
 
     [Fact]
@@ -74,5 +73,5 @@ public sealed class HandlerStartupValidationTests
     }
 
     private static IStartupCheck GetValidator(ServiceProvider provider) =>
-        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is HandlerRegistrationCheck);
+        Assert.Single(provider.GetServices<IStartupCheck>(), check => check.GetType().Name == "HandlerRegistrationCheck");
 }
