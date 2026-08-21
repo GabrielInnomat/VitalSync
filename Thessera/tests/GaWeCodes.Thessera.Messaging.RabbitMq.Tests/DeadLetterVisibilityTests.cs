@@ -13,7 +13,7 @@ namespace GaWeCodes.Thessera.Tests;
 [Collection(BrokerAndDatabaseCollection.Name)]
 public sealed class DeadLetterVisibilityTests(PostgreSqlFixture postgres, RabbitMqFixture rabbit)
 {
-    private const string CheckName = "building-blocks-dead-letters";
+    private const string CheckName = "thessera-dead-letters";
 
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(90);
 

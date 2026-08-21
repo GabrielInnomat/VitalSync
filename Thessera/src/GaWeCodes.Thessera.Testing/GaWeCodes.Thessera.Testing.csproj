@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <PackageTags>testing;test-doubles;fixtures;xunit</PackageTags>
+    <Description>Test helpers for a Thessera domain: aggregate convention checks that move the runtime rules into your build, projection metadata built with the runtime's own formatter, and an approval snapshot of the persisted event schema. Depends on no test framework.</Description>
+    <PackageTags>testing;ddd;aggregate;domain-events;convention-tests;approval-tests;snapshot-testing</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

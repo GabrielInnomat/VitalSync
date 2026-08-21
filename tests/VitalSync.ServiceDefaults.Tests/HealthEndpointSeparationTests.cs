@@ -8,7 +8,7 @@ namespace VitalSync.ServiceDefaults.Tests;
 
 public class HealthEndpointSeparationTests
 {
-    private const string DeadLetterCheckName = "building-blocks-dead-letters";
+    private const string DeadLetterCheckName = "thessera-dead-letters";
 
     [Fact]
     public async Task ReadinessExcludesTheDeadLetterCheck_WhichKeepsItsOwnEndpoint()

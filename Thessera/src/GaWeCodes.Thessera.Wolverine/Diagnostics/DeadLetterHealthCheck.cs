@@ -7,7 +7,7 @@ namespace GaWeCodes.Thessera.Wolverine.Diagnostics;
 
 internal sealed class DeadLetterHealthCheck(DeadLetterInspector inspector) : IHealthCheck
 {
-    public const string Name = "building-blocks-dead-letters";
+    public const string Name = "thessera-dead-letters";
 
     public const string Tag = "dead-letters";
 

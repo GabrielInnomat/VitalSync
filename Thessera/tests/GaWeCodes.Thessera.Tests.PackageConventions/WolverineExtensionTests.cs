@@ -140,7 +140,7 @@ public sealed class WolverineExtensionTests
 
         Assert.Contains(
             endpoints,
-            endpoint => endpoint.Uri.ToString().Contains("building-blocks-domain-events", StringComparison.Ordinal));
+            endpoint => endpoint.Uri.ToString().Contains("thessera-domain-events", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -314,7 +314,7 @@ public sealed class WolverineExtensionTests
         Assert.DoesNotContain(options.Transports, transport => transport.Protocol == "rabbitmq");
         Assert.DoesNotContain(
             options.Transports.SelectMany(transport => transport.Endpoints()),
-            endpoint => endpoint.Uri.ToString().Contains("building-blocks-domain-events", StringComparison.Ordinal));
+            endpoint => endpoint.Uri.ToString().Contains("thessera-domain-events", StringComparison.Ordinal));
     }
 
     [Fact]

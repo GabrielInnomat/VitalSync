@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>The database-agnostic half of Thessera state-stored persistence: state reconciliation, repository, aggregate tracker, unit of work, typed-key conversions and read-model rebuild. It defines IEfCoreDatabaseDriver and implements none - for PostgreSQL install GaWeCodes.Thessera.Persistence.EfCore.Postgres.</Description>
     <PackageTags>efcore;entity-framework;persistence;unit-of-work;repository;wolverine</PackageTags>
   </PropertyGroup>
 

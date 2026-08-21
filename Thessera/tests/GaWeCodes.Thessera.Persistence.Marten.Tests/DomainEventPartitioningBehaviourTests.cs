@@ -80,7 +80,7 @@ public sealed class DomainEventPartitioningBehaviourTests(PostgreSqlFixture post
 
         var wolverine = host.Services.GetRequiredService<WolverineOptions>();
 
-        foreach (var queueName in new[] { "building-blocks-domain-events", "building-blocks-projections" })
+        foreach (var queueName in new[] { "thessera-domain-events", "thessera-projections" })
         {
             var endpoint = wolverine.Transports
                 .SelectMany(transport => transport.Endpoints())

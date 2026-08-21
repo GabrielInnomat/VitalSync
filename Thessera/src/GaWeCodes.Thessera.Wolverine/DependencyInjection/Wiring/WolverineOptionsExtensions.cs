@@ -16,9 +16,9 @@ namespace GaWeCodes.Thessera.Wolverine.DependencyInjection.Wiring;
 
 internal static class WolverineOptionsExtensions
 {
-    public const string DomainEventLocalQueueName = "building-blocks-domain-events";
+    public const string DomainEventLocalQueueName = "thessera-domain-events";
 
-    public const string ProjectionLocalQueueName = "building-blocks-projections";
+    public const string ProjectionLocalQueueName = "thessera-projections";
 
     public const PartitionSlots DomainEventPartitionSlots = PartitionSlots.Five;
 

@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>The Wolverine runtime leg of Thessera: durable local queues for domain events and projections, the transactional outbox, retry and idempotency policies, integration-event topics and a dead-letter health check. Not a store choice - it arrives with either Persistence.EfCore.Postgres or Persistence.Marten.</Description>
     <PackageTags>wolverine;cqrs;dispatcher;messaging;outbox;host-builder</PackageTags>
   </PropertyGroup>
 

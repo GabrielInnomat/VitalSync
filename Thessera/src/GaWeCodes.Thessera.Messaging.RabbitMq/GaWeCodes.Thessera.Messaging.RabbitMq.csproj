@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>Publishes Thessera integration events to RabbitMQ and subscribes to other bounded contexts, over Wolverine. The transport is opt-in: without one, no integration event leaves the service. Not a store choice - add one of the two store packages as well.</Description>
     <PackageTags>rabbitmq;messaging;integration-events;wolverine</PackageTags>
   </PropertyGroup>
 
