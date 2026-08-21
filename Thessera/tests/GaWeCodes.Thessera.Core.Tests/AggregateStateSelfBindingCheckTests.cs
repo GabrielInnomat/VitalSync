@@ -1,7 +1,8 @@
-using GaWeCodes.Thessera.Core.DependencyInjection.Validation;
+using GaWeCodes.Thessera.Core.Startup;
 using GaWeCodes.Thessera.Domain.Aggregates;
 using GaWeCodes.Thessera.Domain.Entities;
 using GaWeCodes.Thessera.Domain.Events;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GaWeCodes.Thessera.Tests;
 
@@ -10,10 +11,10 @@ public sealed class AggregateStateSelfBindingCheckTests
     [Fact]
     public async Task AStateNamingAnotherTypeAsItself_FailsTheStartWithTheReason()
     {
-        var check = new AggregateStateSelfBindingCheck([typeof(AggregateStateSelfBindingCheckTests).Assembly]);
+        using var provider = BuildProvider(typeof(AggregateStateSelfBindingCheckTests).Assembly);
 
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => check.RunAsync(TestContext.Current.CancellationToken));
+            () => RunAggregateStateSelfBindingCheck(provider));
 
         Assert.Contains(nameof(MisboundState), thrown.Message, StringComparison.Ordinal);
         Assert.Contains(nameof(WellBoundState), thrown.Message, StringComparison.Ordinal);
@@ -23,7 +24,23 @@ public sealed class AggregateStateSelfBindingCheckTests
     [Fact]
     public async Task AStateNamingItself_PassesTheStart()
     {
-        var check = new AggregateStateSelfBindingCheck([typeof(AggregateState<,>).Assembly]);
+        using var provider = BuildProvider(typeof(AggregateState<,>).Assembly);
+
+        await RunAggregateStateSelfBindingCheck(provider);
+    }
+
+    private static ServiceProvider BuildProvider(System.Reflection.Assembly assembly)
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddThessera(options => options.AddHandlersFrom(assembly));
+        return services.BuildServiceProvider();
+    }
+
+    private static async Task RunAggregateStateSelfBindingCheck(ServiceProvider provider)
+    {
+        var check = provider.GetServices<IStartupCheck>()
+            .Single(candidate => candidate.GetType().Name == "AggregateStateSelfBindingCheck");
 
         await check.RunAsync(TestContext.Current.CancellationToken);
     }
