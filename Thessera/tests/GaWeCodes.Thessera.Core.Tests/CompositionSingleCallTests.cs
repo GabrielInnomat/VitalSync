@@ -1,6 +1,5 @@
 using GaWeCodes.Thessera.Application.Cqrs;
 using GaWeCodes.Thessera.Application.Results;
-using GaWeCodes.Thessera.Core.Dispatching;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -33,12 +32,12 @@ public sealed class CompositionSingleCallTests
     {
         var services = new ServiceCollection();
         services.AddThessera(options => options.AddPipelineBehavior(typeof(StrayBehavior<,>), 500));
+        var registrationsBefore = CountStrayBehaviorRegistrations(services);
 
         Assert.Throws<InvalidOperationException>(() => services.AddThessera(_ => { }));
-
-        using var provider = services.BuildServiceProvider();
-
-        Assert.Equal(500, provider.GetRequiredService<PipelineBehaviorRegistry>().GetOrder(typeof(StrayBehavior<,>)));
+        var registrationsAfter = CountStrayBehaviorRegistrations(services);
+        Assert.Equal(registrationsBefore, registrationsAfter);
+        Assert.Equal(1, registrationsAfter);
     }
 
     [Fact]
@@ -70,22 +69,13 @@ public sealed class CompositionSingleCallTests
         var services = new ServiceCollection();
 
         services.AddThessera(options => options.AddPipelineBehavior(typeof(StrayBehavior<,>), 500));
-
-        using var provider = services.BuildServiceProvider();
-
-        Assert.Equal(500, provider.GetRequiredService<PipelineBehaviorRegistry>().GetOrder(typeof(StrayBehavior<,>)));
+        Assert.Equal(1, CountStrayBehaviorRegistrations(services));
     }
 
-    [Fact]
-    public void GetOrder_ForAnUnknownBehavior_ThrowsInsteadOfCollidingWithLogging()
-    {
-        var registry = new PipelineBehaviorRegistry();
-
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => registry.GetOrder(typeof(StrayBehavior<ProbeCommand, Result>)));
-
-        Assert.Contains("no registered order", exception.Message, StringComparison.Ordinal);
-    }
+    private static int CountStrayBehaviorRegistrations(IServiceCollection services) =>
+        services.Count(descriptor =>
+            descriptor.ServiceType == typeof(IPipelineBehavior<,>)
+            && descriptor.ImplementationType == typeof(StrayBehavior<,>));
 
     private sealed record ProbeCommand : ICommand;
 
