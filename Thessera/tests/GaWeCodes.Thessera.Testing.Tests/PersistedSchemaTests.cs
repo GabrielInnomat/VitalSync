@@ -1,3 +1,4 @@
+using GaWeCodes.Thessera.Application.IntegrationEvents;
 using GaWeCodes.Thessera.Testing;
 using SchemaFixture;
 using SchemaGapFixture;
@@ -42,7 +43,7 @@ public sealed class PersistedSchemaTests
     [Fact]
     public void Render_ReportsTheEffectiveJsonName_NotTheClrPropertyName()
     {
-        var schema = PersistedSchemaRenderer.Render([typeof(SampleDetailed)]);
+        var schema = PersistedSchema.Render([typeof(SampleDetailed).Assembly]);
 
         Assert.Contains("comment : string", schema, StringComparison.Ordinal);
         Assert.DoesNotContain("Note", schema, StringComparison.Ordinal);
@@ -51,7 +52,7 @@ public sealed class PersistedSchemaTests
     [Fact]
     public void Render_ReportsATypedKeyAsTheBareValueItSerializesTo()
     {
-        var schema = PersistedSchemaRenderer.Render([typeof(SampleCreated), typeof(SampleDetailed)]);
+        var schema = PersistedSchema.Render([typeof(SampleCreated).Assembly]);
 
         Assert.Contains("SampleId : guid", schema, StringComparison.Ordinal);
         Assert.Contains("LineId : int", schema, StringComparison.Ordinal);
@@ -61,7 +62,7 @@ public sealed class PersistedSchemaTests
     public void Render_ThrowsForADomainEventWithoutAPersistedName()
     {
         var exception = Assert.Throws<InvalidOperationException>(
-            () => PersistedSchemaRenderer.Render([typeof(UnnamedEvent)]));
+            () => PersistedSchema.Render([typeof(UnnamedEvent).Assembly]));
 
         Assert.Contains("[EventName]", exception.Message, StringComparison.Ordinal);
     }
@@ -70,7 +71,7 @@ public sealed class PersistedSchemaTests
     public void Render_ThrowsForAnIntegrationEventWithoutATopic()
     {
         var exception = Assert.Throws<InvalidOperationException>(
-            () => PersistedSchemaRenderer.Render([typeof(UntopicedIntegrationEvent)]));
+            () => PersistedSchema.Render([typeof(UntopicedIntegrationEventProbe).Assembly]));
 
         Assert.Contains("[IntegrationEventTopic]", exception.Message, StringComparison.Ordinal);
     }
@@ -141,4 +142,6 @@ public sealed class PersistedSchemaTests
 
         public void Dispose() => Directory.Delete(_directory, recursive: true);
     }
+
+    private sealed record UntopicedIntegrationEventProbe(Guid EventId, DateTimeOffset OccurredAt) : IIntegrationEvent;
 }
