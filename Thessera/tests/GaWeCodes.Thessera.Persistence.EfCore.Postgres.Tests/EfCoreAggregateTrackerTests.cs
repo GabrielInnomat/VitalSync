@@ -1,94 +1,130 @@
-using GaWeCodes.Thessera.Domain.Aggregates;
-using GaWeCodes.Thessera.Persistence.EfCore.StateStored;
+using GaWeCodes.Thessera.Application.Persistence;
+using GaWeCodes.Thessera.Core.DependencyInjection;
+using GaWeCodes.Thessera.Wolverine.Messaging.DomainEvents;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Wolverine;
 
 namespace GaWeCodes.Thessera.Tests;
 
-public sealed class EfCoreAggregateTrackerTests
+[Collection(PostgreSqlCollection.Name)]
+public sealed class EfCoreAggregateTrackerTests(PostgreSqlFixture fixture)
 {
     [Fact]
-    public void Track_RecordsTheAggregateWithItsStateAccessorAndPersistedState()
+    public async Task Commit_UsesTheAggregateCurrentState_NotTheStateCapturedAtAddTime()
     {
-        var tracker = new EfCoreAggregateTracker();
-        var probe = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
-        var stateOwner = (IStateOwner)probe;
-        var persisted = stateOwner.State;
+        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
 
-        tracker.Track(probe, stateOwner, persisted, "flush-probe", probe.Id.Value.ToString());
+        using var host = await StartHostAsync();
+        var id = new FlushProbeId(Guid.NewGuid());
 
-        var entry = Assert.Single(tracker.Entries);
-        Assert.Same(probe, entry.Aggregate);
-        Assert.Same(stateOwner, entry.StateOwner);
-        Assert.Same(persisted, entry.PersistedState);
+        using (var scope = host.Services.CreateScope())
+        {
+            var repository = scope.ServiceProvider.GetRequiredService<IRepository<FlushProbe, FlushProbeId>>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+            var probe = FlushProbe.Create(id);
+            await repository.AddAsync(probe, TestContext.Current.CancellationToken);
+            probe.Rename("renamed-before-commit");
+            await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
+        }
+
+        using (var verification = host.Services.CreateScope())
+        {
+            var context = verification.ServiceProvider.GetRequiredService<FlushProbeContext>();
+            var row = await context.Probes.SingleAsync(state => state.Id == id, TestContext.Current.CancellationToken);
+            Assert.Equal("renamed-before-commit", row.Name);
+        }
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public void Track_SameAggregateTwice_RegistersItOnce()
+    public async Task Commit_AfterSuccess_ClearsTheAggregatesDomainEvents()
     {
-        var tracker = new EfCoreAggregateTracker();
-        var probe = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
-        var stateOwner = (IStateOwner)probe;
+        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
 
-        tracker.Track(probe, stateOwner, stateOwner.State, "flush-probe", probe.Id.Value.ToString());
-        tracker.Track(probe, stateOwner, stateOwner.State, "flush-probe", probe.Id.Value.ToString());
+        using var host = await StartHostAsync();
 
-        Assert.Single(tracker.Entries);
+        using (var scope = host.Services.CreateScope())
+        {
+            var repository = scope.ServiceProvider.GetRequiredService<IRepository<FlushProbe, FlushProbeId>>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var probe = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
+
+            await repository.AddAsync(probe, TestContext.Current.CancellationToken);
+            Assert.NotEmpty(probe.DomainEvents);
+            await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
+            Assert.Empty(probe.DomainEvents);
+        }
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public void Track_DistinctAggregates_KeepsInsertionOrder()
+    public async Task Commit_WhenSaveFails_KeepsTheAggregatesDomainEvents()
     {
-        var tracker = new EfCoreAggregateTracker();
-        var first = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
-        var second = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
+        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
 
-        tracker.Track(first, (IStateOwner)first, ((IStateOwner)first).State, "flush-probe", first.Id.Value.ToString());
-        tracker.Track(second, (IStateOwner)second, ((IStateOwner)second).State, "flush-probe", second.Id.Value.ToString());
+        using var host = await StartHostAsync();
+        var id = new FlushProbeId(Guid.NewGuid());
 
-        Assert.Equal([first, second], tracker.Entries.Select(entry => entry.Aggregate));
+        using (var seed = host.Services.CreateScope())
+        {
+            var repository = seed.ServiceProvider.GetRequiredService<IRepository<FlushProbe, FlushProbeId>>();
+            var unitOfWork = seed.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var probe = FlushProbe.Create(id);
+            await repository.AddAsync(probe, TestContext.Current.CancellationToken);
+            await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
+        }
+
+        using var first = host.Services.CreateScope();
+        using var second = host.Services.CreateScope();
+
+        var firstRepository = first.ServiceProvider.GetRequiredService<IRepository<FlushProbe, FlushProbeId>>();
+        var secondRepository = second.ServiceProvider.GetRequiredService<IRepository<FlushProbe, FlushProbeId>>();
+
+        var firstProbe = await firstRepository.GetByIdAsync(id, TestContext.Current.CancellationToken);
+        var secondProbe = await secondRepository.GetByIdAsync(id, TestContext.Current.CancellationToken);
+
+        firstProbe!.Rename("first");
+        secondProbe!.Rename("second");
+
+        await first.ServiceProvider.GetRequiredService<IUnitOfWork>()
+            .CommitAsync(TestContext.Current.CancellationToken);
+
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(
+            () => second.ServiceProvider.GetRequiredService<IUnitOfWork>()
+                .CommitAsync(TestContext.Current.CancellationToken));
+
+        Assert.NotEmpty(secondProbe.DomainEvents);
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
-    [Fact]
-    public void Track_NullArgument_ThrowsArgumentNullException()
+    private async Task<IHost> StartHostAsync()
     {
-        var tracker = new EfCoreAggregateTracker();
-        var probe = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
-        var stateOwner = (IStateOwner)probe;
+        var builder = Host.CreateApplicationBuilder();
 
-        Assert.Throws<ArgumentNullException>(() => tracker.Track(null!, stateOwner, stateOwner.State, "flush-probe", "1"));
-        Assert.Throws<ArgumentNullException>(() => tracker.Track(probe, null!, stateOwner.State, "flush-probe", "1"));
-        Assert.Throws<ArgumentNullException>(() => tracker.Track(probe, stateOwner, null!, "flush-probe", "1"));
-    }
+        builder.AddThessera(options => options
+            .AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly)
+            .UseEfCoreStateStore<FlushProbeContext>(fixture.ConnectionString)
+            .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
+            .CustomizeWolverine(wolverine =>
+            {
+                wolverine.Durability.Mode = DurabilityMode.Solo;
+                wolverine.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
+            }));
 
-    [Fact]
-    public void ClearDomainEvents_ClearsTheAggregatesAndForgetsThem()
-    {
-        var tracker = new EfCoreAggregateTracker();
-        var probe = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
-        var stateOwner = (IStateOwner)probe;
-        tracker.Track(probe, stateOwner, stateOwner.State, "flush-probe", probe.Id.Value.ToString());
+        var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
 
-        Assert.NotEmpty(probe.DomainEvents);
+        using var scope = host.Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<FlushProbeContext>().Database.ExecuteSqlRawAsync(
+            "create table if not exists flush_probe_rows (id uuid primary key, name text not null, version bigint not null)",
+            TestContext.Current.CancellationToken);
 
-        tracker.ClearDomainEvents();
-
-        Assert.Empty(probe.DomainEvents);
-        Assert.Empty(tracker.Entries);
-    }
-
-    [Fact]
-    public void StateAccessor_ReflectsTheCurrentStateAfterAnEventWasRaised()
-    {
-        var tracker = new EfCoreAggregateTracker();
-        var probe = FlushProbe.Create(new FlushProbeId(Guid.NewGuid()));
-        var stateOwner = (IStateOwner)probe;
-        var persisted = stateOwner.State;
-        tracker.Track(probe, stateOwner, persisted, "flush-probe", probe.Id.Value.ToString());
-
-        probe.Rename("renamed");
-
-        var entry = Assert.Single(tracker.Entries);
-        Assert.NotSame(persisted, entry.StateOwner.State);
-        Assert.Equal("renamed", Assert.IsType<FlushProbeState>(entry.StateOwner.State).Name);
+        return host;
     }
 }
-

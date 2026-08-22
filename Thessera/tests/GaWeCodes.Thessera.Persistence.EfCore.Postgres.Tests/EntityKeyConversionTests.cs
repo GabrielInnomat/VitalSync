@@ -8,12 +8,17 @@ namespace GaWeCodes.Thessera.Tests;
 public sealed class EntityKeyConversionTests
 {
     [Fact]
-    public void EntityKeyValueConverter_ConvertsBetweenKeyAndPrimitive()
+    public void EntityKeyConversion_ConvertsBetweenKeyAndPrimitive()
     {
-        var converter = new EntityKeyValueConverter<RecipeId, int>();
+        using var context = new SampleContext();
+        var converter = context.Model
+            .FindEntityType(typeof(RecipeRow))!
+            .FindProperty(nameof(RecipeRow.Id))!
+            .GetValueConverter();
 
-        Assert.Equal(5, converter.ConvertToProvider(new RecipeId(5)));
-        Assert.Equal(new RecipeId(5), converter.ConvertFromProvider(5));
+        Assert.NotNull(converter);
+        Assert.Equal(5, Assert.IsType<int>(converter.ConvertToProvider(new RecipeId(5))));
+        Assert.Equal(new RecipeId(5), Assert.IsType<RecipeId>(converter.ConvertFromProvider(5)));
     }
 
     [Fact]
@@ -26,7 +31,9 @@ public sealed class EntityKeyConversionTests
             .FindProperty(nameof(RecipeRow.Id))!
             .GetValueConverter();
 
-        Assert.IsType<EntityKeyValueConverter<RecipeId, int>>(converter);
+        Assert.NotNull(converter);
+        Assert.Equal(9, Assert.IsType<int>(converter.ConvertToProvider(new RecipeId(9))));
+        Assert.Equal(new RecipeId(9), Assert.IsType<RecipeId>(converter.ConvertFromProvider(9)));
     }
 
     [Fact]
@@ -41,7 +48,9 @@ public sealed class EntityKeyConversionTests
             .FindProperty(nameof(RecipeStepRow.Id))!
             .GetValueConverter();
 
-        Assert.IsType<EntityKeyValueConverter<RecipeStepId, int>>(converter);
+        Assert.NotNull(converter);
+        Assert.Equal(3, Assert.IsType<int>(converter.ConvertToProvider(new RecipeStepId(3))));
+        Assert.Equal(new RecipeStepId(3), Assert.IsType<RecipeStepId>(converter.ConvertFromProvider(3)));
     }
 
     [Fact]
@@ -56,7 +65,9 @@ public sealed class EntityKeyConversionTests
             .FindProperty(nameof(AuthorInfo.UserId))!
             .GetValueConverter();
 
-        Assert.IsType<EntityKeyValueConverter<RecipeId, int>>(converter);
+        Assert.NotNull(converter);
+        Assert.Equal(11, Assert.IsType<int>(converter.ConvertToProvider(new RecipeId(11))));
+        Assert.Equal(new RecipeId(11), Assert.IsType<RecipeId>(converter.ConvertFromProvider(11)));
     }
 
     [Fact]
@@ -73,7 +84,9 @@ public sealed class EntityKeyConversionTests
             .FindProperty(nameof(AuditInfo.ChangedBy))!
             .GetValueConverter();
 
-        Assert.IsType<EntityKeyValueConverter<RecipeId, int>>(converter);
+        Assert.NotNull(converter);
+        Assert.Equal(7, Assert.IsType<int>(converter.ConvertToProvider(new RecipeId(7))));
+        Assert.Equal(new RecipeId(7), Assert.IsType<RecipeId>(converter.ConvertFromProvider(7)));
     }
 
     [Fact]

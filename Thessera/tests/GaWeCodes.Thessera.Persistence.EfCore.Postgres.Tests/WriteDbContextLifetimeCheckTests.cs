@@ -1,5 +1,4 @@
 using GaWeCodes.Thessera.Core.Startup;
-using GaWeCodes.Thessera.Persistence.EfCore.StateStored;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -56,8 +55,9 @@ public sealed class WriteDbContextLifetimeCheckTests
         using var host = builder.Build();
 
         var check = host.Services.GetServices<IStartupCheck>()
-            .OfType<WriteDbContextLifetimeCheck<FlushProbeContext>>()
-            .Single();
+            .Single(candidate =>
+                candidate.GetType().Name == "WriteDbContextLifetimeCheck`1"
+                && candidate.GetType().GenericTypeArguments.SingleOrDefault() == typeof(FlushProbeContext));
 
         await check.RunAsync(TestContext.Current.CancellationToken);
     }

@@ -1,7 +1,6 @@
 using GaWeCodes.Thessera.Application.Persistence;
 using GaWeCodes.Thessera.Domain.Entities;
 using GaWeCodes.Thessera.Persistence.EfCore;
-using GaWeCodes.Thessera.Persistence.EfCore.StateStored;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -34,15 +33,26 @@ public sealed class WriteDbContextResolutionTests
     }
 
     [Fact]
-    public void WriteDbContextAccessor_HoldsTheContextNamedByUseEfCoreStateStore()
+    public async Task Repository_ResolutionsWithinOneScope_UseTheSameWriteContext()
     {
         using var host = BuildHostWithReadContextUnderTheBareKey();
         using var scope = host.Services.CreateScope();
 
-        var accessor = scope.ServiceProvider.GetRequiredService<WriteDbContextAccessor>();
+        var firstRepository = scope.ServiceProvider.GetRequiredService<IRepository<FlushProbe, FlushProbeId>>();
+        var secondRepository = scope.ServiceProvider.GetRequiredService<IRepository<FlushProbe, FlushProbeId>>();
 
-        Assert.IsType<FlushProbeContext>(accessor.Context);
-        Assert.Same(scope.ServiceProvider.GetRequiredService<FlushProbeContext>(), accessor.Context);
+        await firstRepository.AddAsync(
+            FlushProbe.Create(new FlushProbeId(Guid.NewGuid())),
+            TestContext.Current.CancellationToken);
+        await secondRepository.AddAsync(
+            FlushProbe.Create(new FlushProbeId(Guid.NewGuid())),
+            TestContext.Current.CancellationToken);
+
+        var writeContext = scope.ServiceProvider.GetRequiredService<FlushProbeContext>();
+        var readContext = scope.ServiceProvider.GetRequiredService<ReadProbeContext>();
+
+        Assert.Equal(2, writeContext.ChangeTracker.Entries<FlushProbeState>().Count());
+        Assert.Empty(readContext.ChangeTracker.Entries<FlushProbeState>());
     }
 
     private static IHost BuildHostWithReadContextUnderTheBareKey()
