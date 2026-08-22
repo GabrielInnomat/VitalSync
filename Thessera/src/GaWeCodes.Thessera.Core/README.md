@@ -154,7 +154,7 @@ Typed keys serialize as their bare value; apply `EntityKeyJsonOptions.Apply(...)
 
 The seams below are the whole contract for a store or transport author. They were measured against a
 throwaway EF Core adapter for SQLite and SQL Server and a throwaway Kafka transport, both written
-outside the family's `InternalsVisibleTo` reach, and both compiled against exactly these types.
+strictly against the public API and both compiled against exactly these types.
 
 - `IPersistenceAdapter` + `PersistenceRegistrationContext` — announce a store, register its services.
 - `IMessagingTransportAdapter` + `MessagingTransportRegistrationContext` — announce a transport.

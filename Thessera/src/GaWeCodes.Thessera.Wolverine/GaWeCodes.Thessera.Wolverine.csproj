@@ -13,15 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="GaWeCodes.Thessera.Core.Tests" />
-    <InternalsVisibleTo Include="GaWeCodes.Thessera.Persistence.EfCore.Postgres.Tests" />
-    <InternalsVisibleTo Include="GaWeCodes.Thessera.Persistence.Marten.Tests" />
-    <InternalsVisibleTo Include="GaWeCodes.Thessera.Wolverine.Tests" />
-    <InternalsVisibleTo Include="GaWeCodes.Thessera.Messaging.RabbitMq.Tests" />
-    <InternalsVisibleTo Include="GaWeCodes.Thessera.Tests.PackageConventions" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\GaWeCodes.Thessera.Core\GaWeCodes.Thessera.Core.csproj" />
   </ItemGroup>
 
