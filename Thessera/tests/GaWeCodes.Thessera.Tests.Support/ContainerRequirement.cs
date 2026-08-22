@@ -25,7 +25,7 @@ public static class ContainerRequirement
 
     private static string? RequiringVariable() => RequiringVariable(Environment.GetEnvironmentVariable);
 
-    internal static string? RequiringVariable(Func<string, string?> read) =>
+    public static string? RequiringVariable(Func<string, string?> read) =>
         Array.Find(RecognizedVariables, name => IsEnabled(read(name)));
 
     private static bool IsEnabled(string? value) =>

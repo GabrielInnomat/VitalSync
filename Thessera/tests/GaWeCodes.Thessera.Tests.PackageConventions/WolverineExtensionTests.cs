@@ -199,14 +199,11 @@ public sealed class WolverineExtensionTests
     {
         using var host = await Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
-            {
-                services.AddScoped<ISender, RequestSender>();
                 services.AddThessera(options =>
                 {
                     options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
                     options.UseEfCoreStateStore<TestDbContext>(ConnectionString);
-                });
-            })
+                }))
             .UseWolverine(options =>
             {
                 options.Durability.Mode = DurabilityMode.Solo;

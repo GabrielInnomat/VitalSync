@@ -72,10 +72,14 @@ public sealed class EntityKeyJsonConverterTests
     }
 
     [Fact]
-    public void ATypeThatIsNoEntityKey_IsLeftToTheDefaultConverters()
+    public void ATypeThatIsNoEntityKey_IsSerializedByTheDefaultConverter()
     {
-        Assert.False(new EntityKeyJsonConverterFactory().CanConvert(typeof(Guid)));
-        Assert.True(new EntityKeyJsonConverterFactory().CanConvert(typeof(SampleGuidKey)));
+        var guid = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+        var withEntityKeyOptions = JsonSerializer.Serialize(guid, Options);
+        var withDefaultOptions = JsonSerializer.Serialize(guid);
+
+        Assert.Equal(withDefaultOptions, withEntityKeyOptions);
     }
 
     private readonly record struct SampleGuidKey(Guid Value) : IEntityKey<Guid>
