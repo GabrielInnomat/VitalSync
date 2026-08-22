@@ -25,22 +25,6 @@ public sealed class AggregateFactoryTests
     }
 
     [Fact]
-    public void EnsureAggregatesAreReconstitutable_WithConformingAggregates_DoesNotThrow()
-    {
-        AggregateFactory.EnsureAggregatesAreReconstitutable([typeof(FlushProbe).Assembly]);
-    }
-
-    [Fact]
-    public void EnsureAggregatesAreReconstitutable_WithoutParameterlessConstructor_Throws()
-    {
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => AggregateFactory.EnsureAggregatesAreReconstitutable([typeof(SealedHull).Assembly]));
-
-        Assert.Contains(nameof(SealedHull), exception.Message, StringComparison.Ordinal);
-        Assert.Contains("parameterless constructor", exception.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void AddThessera_WithAnUnreconstitutableAggregate_FailsAtRegistration()
     {
         var services = new ServiceCollection();
@@ -51,5 +35,6 @@ public sealed class AggregateFactoryTests
                 .UseEfCoreStateStore<FlushProbeContext>("Host=design-time")));
 
         Assert.Contains(nameof(SealedHull), exception.Message, StringComparison.Ordinal);
+        Assert.Contains("parameterless constructor", exception.Message, StringComparison.Ordinal);
     }
 }

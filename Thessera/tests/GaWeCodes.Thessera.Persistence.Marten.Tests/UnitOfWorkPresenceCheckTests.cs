@@ -1,7 +1,7 @@
 using GaWeCodes.Thessera.Application.Persistence;
 using GaWeCodes.Thessera.Core.DependencyInjection;
+using GaWeCodes.Thessera.Core.DependencyInjection.Extensibility;
 using GaWeCodes.Thessera.Core.DependencyInjection.Validation;
-using GaWeCodes.Thessera.Core.DependencyInjection.Wiring;
 using GaWeCodes.Thessera.Core.Startup;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -87,12 +87,16 @@ public sealed class UnitOfWorkPresenceCheckTests
     {
         using var provider = BuildProvider(options => options.UseNoPersistence());
 
-        Assert.False(provider.GetRequiredService<ThesseraWiringSettings>().Persistence.IsSelected);
-        Assert.False(provider.GetRequiredService<ThesseraWiringSettings>().RequiresRuntime);
+        var wiring = provider.GetRequiredService<IWiringSnapshot>();
+
+        Assert.False(wiring.PersistenceSelected);
+        Assert.False(wiring.RequiresRuntime);
     }
 
     private static IStartupCheck Check(ServiceProvider provider) =>
-        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is UnitOfWorkPresenceCheck);
+        Assert.Single(
+            provider.GetServices<IStartupCheck>(),
+            check => check.GetType().Name == "UnitOfWorkPresenceCheck");
 
     private static ServiceProvider BuildProvider(
         Action<ThesseraOptions> configure,

@@ -1,6 +1,8 @@
+using GaWeCodes.Thessera.Application.IntegrationEvents;
 using GaWeCodes.Thessera.Core.DependencyInjection;
 using GaWeCodes.Thessera.Core.DependencyInjection.Validation;
 using GaWeCodes.Thessera.Core.Messaging.IntegrationEvents;
+using GaWeCodes.Thessera.Core.Messaging.Transport;
 using GaWeCodes.Thessera.Core.Startup;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -54,13 +56,15 @@ public sealed class IntegrationEventMapperCheckTests
         using var provider = BuildProvider(
             options => options.AddHandlersFrom(typeof(RegistrationMapper).Assembly),
             services => services.Replace(ServiceDescriptor.Singleton<IIntegrationEventSinkFactory>(
-                new IntegrationEventSinkFactory(TestMessaging.ContextName))));
+                new ProbeIntegrationEventSinkFactory())));
 
         await Check(provider).RunAsync(TestContext.Current.CancellationToken);
     }
 
     private static IStartupCheck Check(ServiceProvider provider) =>
-        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is IntegrationEventMapperCheck);
+        Assert.Single(
+            provider.GetServices<IStartupCheck>(),
+            check => check.GetType().Name == "IntegrationEventMapperCheck");
 
     private static ServiceProvider BuildProvider(
         Action<ThesseraOptions> configure,
@@ -76,5 +80,16 @@ public sealed class IntegrationEventMapperCheckTests
         });
         configureServices?.Invoke(services);
         return services.BuildServiceProvider();
+    }
+
+    private sealed class ProbeIntegrationEventSinkFactory : IIntegrationEventSinkFactory
+    {
+        public IIntegrationEventSink Create(IMessageEmitter emitter) => new ProbeIntegrationEventSink();
+    }
+
+    private sealed class ProbeIntegrationEventSink : IIntegrationEventSink
+    {
+        public Task PublishAsync(IIntegrationEvent integrationEvent, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
     }
 }

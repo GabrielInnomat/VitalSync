@@ -1,7 +1,9 @@
 using GaWeCodes.Thessera.Application.Persistence;
 using GaWeCodes.Thessera.Core.DependencyInjection;
+using GaWeCodes.Thessera.Core.Persistence;
 using GaWeCodes.Thessera.Domain.Aggregates;
 using GaWeCodes.Thessera.Wolverine.Messaging.DomainEvents;
+using JasperFx.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Wolverine;
@@ -103,7 +105,25 @@ public sealed class MartenEventSourcedRepositoryTests(PostgreSqlFixture fixture)
                 .CommitAsync(TestContext.Current.CancellationToken));
 
         Assert.NotNull(exception);
-        Assert.Contains("Concurrency", exception.GetType().Name, StringComparison.Ordinal);
+        Assert.IsAssignableFrom<EventStreamUnexpectedMaxEventIdException>(exception);
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task AddAsync_WithEmptyIdentity_Throws()
+    {
+        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
+
+        using var host = await StartHostAsync();
+        using var scope = host.Services.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<Counter, CounterId>>();
+        var emptyHull = AggregateFactory.CreateEmpty<Counter>();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => repository.AddAsync(emptyHull, TestContext.Current.CancellationToken));
+
+        Assert.Contains("has no identity", exception.Message, StringComparison.Ordinal);
 
         await host.StopAsync(TestContext.Current.CancellationToken);
     }

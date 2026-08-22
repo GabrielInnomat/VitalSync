@@ -1,5 +1,6 @@
 using GaWeCodes.Thessera.Core.DependencyInjection;
-using GaWeCodes.Thessera.Core.DependencyInjection.Wiring;
+using GaWeCodes.Thessera.Core.DependencyInjection.Extensibility;
+using GaWeCodes.Thessera.Core.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -97,6 +98,89 @@ public sealed class PersistenceStrategySelectionTests
     }
 
     [Fact]
+    public void AddThessera_WithMartenSelectedTwiceUnderDifferentConnectionStrings_Throws()
+    {
+        var services = new ServiceCollection();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            services.AddThessera(options => WithDomainEvents(options)
+                .UseMartenEventStore(ConnectionString)
+                .UseMartenEventStore("Host=elsewhere;Database=other;Username=test;******")));
+
+        Assert.Contains("different databases", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AddThessera_UseNoPersistenceCombinedWithAStrategy_Throws()
+    {
+        var services = new ServiceCollection();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            services.AddThessera(options => WithDomainEvents(options)
+                .UseMartenEventStore(ConnectionString)
+                .UseNoPersistence()));
+
+        Assert.Contains("UseNoPersistence", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("UseMartenEventStore", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AddThessera_WithoutAnyPersistenceChoice_IsNotSelectedAndDoesNotRequireRuntime()
+    {
+        var services = new ServiceCollection();
+
+        services.AddThessera(_ => { });
+
+        using var provider = services.BuildServiceProvider();
+        var wiring = provider.GetRequiredService<IWiringSnapshot>();
+
+        Assert.False(wiring.PersistenceSelected);
+        Assert.False(wiring.RequiresRuntime);
+    }
+
+    [Fact]
+    public void AddThessera_WithADeliberateNoPersistenceChoice_IsNotSelectedAndDoesNotRequireRuntime()
+    {
+        var services = new ServiceCollection();
+
+        services.AddThessera(options => WithDomainEvents(options).UseNoPersistence());
+
+        using var provider = services.BuildServiceProvider();
+        var wiring = provider.GetRequiredService<IWiringSnapshot>();
+
+        Assert.False(wiring.PersistenceSelected);
+        Assert.False(wiring.RequiresRuntime);
+    }
+
+    [Fact]
+    public void AddThessera_WithAForeignPersistenceAdapter_IsSelectedAndRequiresRuntime()
+    {
+        var services = new ServiceCollection();
+
+        services.AddThessera(options => WithDomainEvents(options).UsePersistence(new ForeignAdapter(ConnectionString)));
+
+        using var provider = services.BuildServiceProvider();
+        var wiring = provider.GetRequiredService<IWiringSnapshot>();
+
+        Assert.True(wiring.PersistenceSelected);
+        Assert.True(wiring.RequiresRuntime);
+    }
+
+    [Fact]
+    public void AddThessera_WithAForeignPersistenceAdapterAlongsideEfCore_Throws()
+    {
+        var services = new ServiceCollection();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            services.AddThessera(options => WithDomainEvents(options)
+                .UseEfCoreStateStore<TestDbContext>(ConnectionString)
+                .UsePersistence(new ForeignAdapter(ConnectionString))));
+
+        Assert.Contains("persistence strateg", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("UseForeignPersistence", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AddThessera_CombinesSelectionsFromSeparateSatellitePackages()
     {
         var services = new ServiceCollection();
@@ -109,15 +193,28 @@ public sealed class PersistenceStrategySelectionTests
                 TestMessaging.ContextName));
 
         using var provider = services.BuildServiceProvider();
-        var wiring = provider.GetRequiredService<ThesseraWiringSettings>();
+        var wiring = provider.GetRequiredService<IWiringSnapshot>();
 
-        Assert.True(wiring.Persistence.IsSelected);
-        Assert.True(wiring.Messaging.IsSelected);
+        Assert.True(wiring.PersistenceSelected);
+        Assert.NotNull(wiring.Transport);
     }
 
     private static ThesseraOptions WithDomainEvents(ThesseraOptions options) =>
         options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
 
     private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options);
+
+    private sealed record ForeignAdapter(string WriteConnectionString) : IPersistenceAdapter
+    {
+        public string Description => "UseForeignPersistence";
+
+        public AggregateStyle AggregateStyle => AggregateStyle.StateStored;
+
+        public bool IsTransientFault(Exception exception) => false;
+
+        public void Register(PersistenceRegistrationContext context)
+        {
+        }
+    }
 }
 

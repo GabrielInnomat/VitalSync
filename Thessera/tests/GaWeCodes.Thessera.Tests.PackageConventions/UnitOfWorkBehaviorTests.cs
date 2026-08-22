@@ -1,11 +1,8 @@
 using GaWeCodes.Thessera.Application.Cqrs;
 using GaWeCodes.Thessera.Application.Persistence;
 using GaWeCodes.Thessera.Application.Results;
-using GaWeCodes.Thessera.Core.Dispatching;
+using GaWeCodes.Thessera.Core.DependencyInjection;
 using GaWeCodes.Thessera.Core.Persistence;
-using GaWeCodes.Thessera.Persistence.EfCore.StateStored;
-using GaWeCodes.Thessera.Persistence.Marten;
-using GaWeCodes.Thessera.Npgsql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -14,6 +11,8 @@ namespace GaWeCodes.Thessera.Tests;
 
 public sealed class UnitOfWorkBehaviorTests
 {
+    private const string ConnectionString = "Host=localhost;Database=test;Username=test";
+
     [Fact]
     public async Task SuccessfulCommand_CommitsExactlyOnce()
     {
@@ -63,7 +62,10 @@ public sealed class UnitOfWorkBehaviorTests
     public async Task EfCoreConcurrencyConflictOnCommit_IsMappedToConflictFailure()
     {
         var unitOfWork = new ThrowingUnitOfWork(new DbUpdateConcurrencyException("row changed"));
-        using var provider = BuildProvider(unitOfWork, new PassingCommandHandler());
+        using var provider = BuildProvider(
+            unitOfWork,
+            new PassingCommandHandler(),
+            options => options.UseEfCoreStateStore<TestDbContext>(ConnectionString));
         var sender = provider.GetRequiredService<ISender>();
 
         var result = await sender.SendAsync(new ProbeCommand(), CancellationToken.None);
@@ -79,7 +81,10 @@ public sealed class UnitOfWorkBehaviorTests
     {
         var unitOfWork = new ThrowingUnitOfWork(
             new DbUpdateException("save failed", UniqueViolation("ux_widgets_name")));
-        using var provider = BuildProvider(unitOfWork, new PassingCommandHandler());
+        using var provider = BuildProvider(
+            unitOfWork,
+            new PassingCommandHandler(),
+            options => options.UseEfCoreStateStore<TestDbContext>(ConnectionString));
         var sender = provider.GetRequiredService<ISender>();
 
         var result = await sender.SendAsync(new ProbeCommand(), CancellationToken.None);
@@ -95,7 +100,10 @@ public sealed class UnitOfWorkBehaviorTests
     public async Task MartenUniqueViolationOnCommit_IsMappedToConflictFailure()
     {
         var unitOfWork = new ThrowingUnitOfWork(UniqueViolation("ux_gadgets_name"));
-        using var provider = BuildProvider(unitOfWork, new PassingCommandHandler());
+        using var provider = BuildProvider(
+            unitOfWork,
+            new PassingCommandHandler(),
+            options => options.UseMartenEventStore(ConnectionString));
         var sender = provider.GetRequiredService<ISender>();
 
         var result = await sender.SendAsync(new ProbeCommand(), CancellationToken.None);
@@ -112,7 +120,10 @@ public sealed class UnitOfWorkBehaviorTests
     {
         var unitOfWork = new ThrowingUnitOfWork(
             new DbUpdateException("save failed", UniqueViolation(constraintName: null)));
-        using var provider = BuildProvider(unitOfWork, new PassingCommandHandler());
+        using var provider = BuildProvider(
+            unitOfWork,
+            new PassingCommandHandler(),
+            options => options.UseEfCoreStateStore<TestDbContext>(ConnectionString));
         var sender = provider.GetRequiredService<ISender>();
 
         var result = await sender.SendAsync(new ProbeCommand(), CancellationToken.None);
@@ -131,7 +142,10 @@ public sealed class UnitOfWorkBehaviorTests
             "ERROR",
             PostgresErrorCodes.ForeignKeyViolation);
         var unitOfWork = new ThrowingUnitOfWork(new DbUpdateException("save failed", violation));
-        using var provider = BuildProvider(unitOfWork, new PassingCommandHandler());
+        using var provider = BuildProvider(
+            unitOfWork,
+            new PassingCommandHandler(),
+            options => options.UseEfCoreStateStore<TestDbContext>(ConnectionString));
         var sender = provider.GetRequiredService<ISender>();
 
         await Assert.ThrowsAsync<DbUpdateException>(
@@ -170,19 +184,6 @@ public sealed class UnitOfWorkBehaviorTests
         Assert.True(result.IsSuccess);
     }
 
-    [Fact]
-    public async Task Behavior_WithTheNullUnitOfWork_PassesThrough()
-    {
-        var behavior = new UnitOfWorkBehavior<ProbeCommand, Result>(new NullUnitOfWork(), []);
-
-        var result = await behavior.HandleAsync(
-            new ProbeCommand(),
-            new RequestPipeline<Result>(_ => Task.FromResult(Result.Success()), Result.Failed),
-            CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-    }
-
     private static PostgresException UniqueViolation(string? constraintName) =>
         new(
             "duplicate key value violates unique constraint",
@@ -191,16 +192,20 @@ public sealed class UnitOfWorkBehaviorTests
             PostgresErrorCodes.UniqueViolation,
             constraintName: constraintName);
 
-    private static ServiceProvider BuildProvider(IUnitOfWork unitOfWork, ICommandHandler<ProbeCommand> handler)
+    private static ServiceProvider BuildProvider(
+        IUnitOfWork unitOfWork,
+        ICommandHandler<ProbeCommand> handler,
+        Action<ThesseraOptions>? selectPersistence = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddScoped<IUnitOfWork>(_ => unitOfWork);
         services.AddScoped<ICommandHandler<ProbeCommand>>(_ => handler);
-        services.AddSingleton<IPersistenceFaultTranslator, EfCoreFaultTranslator>();
-        services.AddSingleton<IPersistenceFaultTranslator, MartenFaultTranslator>();
-        services.AddSingleton<IPersistenceFaultTranslator, PostgresFaultTranslator>();
-        services.AddThessera(_ => { });
+        services.AddThessera(options =>
+        {
+            options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
+            selectPersistence?.Invoke(options);
+        });
         return services.BuildServiceProvider();
     }
 
@@ -241,4 +246,6 @@ public sealed class UnitOfWorkBehaviorTests
     {
         public Task CommitAsync(CancellationToken cancellationToken) => throw exception;
     }
+
+    private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options);
 }

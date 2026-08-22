@@ -2,6 +2,7 @@ using GaWeCodes.Thessera.Application.Persistence;
 using GaWeCodes.Thessera.Core.DependencyInjection;
 using GaWeCodes.Thessera.Domain.Aggregates;
 using GaWeCodes.Thessera.Wolverine.Messaging.DomainEvents;
+using JasperFx.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Wolverine;
@@ -104,7 +105,7 @@ public sealed class MartenUnitOfWorkTests(PostgreSqlFixture fixture)
                 .CommitAsync(TestContext.Current.CancellationToken));
 
         Assert.NotNull(exception);
-        Assert.Contains("Concurrency", exception.GetType().Name, StringComparison.Ordinal);
+        Assert.IsAssignableFrom<EventStreamUnexpectedMaxEventIdException>(exception);
         Assert.NotEmpty(secondCounter.DomainEvents);
 
         await host.StopAsync(TestContext.Current.CancellationToken);

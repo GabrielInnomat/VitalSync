@@ -39,7 +39,9 @@ public sealed class WolverineWiringStartupValidationTests
     {
         using var provider = BuildProvider(_ => { });
 
-        Assert.Empty(provider.GetServices<IStartupCheck>().OfType<WolverineRuntimeCheck>());
+        Assert.DoesNotContain(
+            provider.GetServices<IStartupCheck>(),
+            check => check.GetType().Name == "WolverineRuntimeCheck");
     }
 
     [Fact]
@@ -48,7 +50,7 @@ public sealed class WolverineWiringStartupValidationTests
         using var provider = BuildProvider(options =>
             options.UseEfCoreStateStore<TestDbContext>(ConnectionString));
 
-        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is WolverineRuntimeCheck);
+        Assert.Single(provider.GetServices<IStartupCheck>(), check => check.GetType().Name == "WolverineRuntimeCheck");
     }
 
     private static ServiceProvider BuildProvider(
@@ -67,7 +69,7 @@ public sealed class WolverineWiringStartupValidationTests
     }
 
     private static IStartupCheck GetValidator(ServiceProvider provider) =>
-        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is WolverineRuntimeCheck);
+        Assert.Single(provider.GetServices<IStartupCheck>(), check => check.GetType().Name == "WolverineRuntimeCheck");
 
     private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options);
 }

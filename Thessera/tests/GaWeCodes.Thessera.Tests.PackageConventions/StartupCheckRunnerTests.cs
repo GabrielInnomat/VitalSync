@@ -9,31 +9,32 @@ namespace GaWeCodes.Thessera.Tests;
 public sealed class StartupCheckRunnerTests
 {
     [Fact]
-    public async Task ABeforeCheck_RunsWhileHostedServicesAreStarting()
+    public async Task ABeforeCheck_RunsBeforeTheStartedPhaseCompletes()
     {
-        var check = new RecordingCheck(StartupPhase.BeforeHostedServicesStart);
-        var runner = CreateRunner(check);
+        var observed = new List<string>();
+        var check = new CallbackCheck(StartupPhase.BeforeHostedServicesStart, () => observed.Add("check"));
 
-        await runner.StartAsync(CancellationToken.None);
+        using var host = BuildHost(services =>
+        {
+            services.AddSingleton<IStartupCheck>(check);
+            services.AddHostedService(_ => new MarkerLifecycleService(() => observed.Add("started-phase")));
+        });
 
-        Assert.Equal(1, check.Runs);
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        await host.StopAsync(TestContext.Current.CancellationToken);
 
-        await runner.StartedAsync(CancellationToken.None);
-
-        Assert.Equal(1, check.Runs);
+        Assert.Equal(["check", "started-phase"], observed);
     }
 
     [Fact]
-    public async Task AnAfterCheck_RunsOnlyOnceEveryHostedServiceHasStarted()
+    public async Task AnAfterCheck_RunsExactlyOnce()
     {
         var check = new RecordingCheck(StartupPhase.AfterHostedServicesStarted);
-        var runner = CreateRunner(check);
 
-        await runner.StartAsync(CancellationToken.None);
+        using var host = BuildHost(services => services.AddSingleton<IStartupCheck>(check));
 
-        Assert.Equal(0, check.Runs);
-
-        await runner.StartedAsync(CancellationToken.None);
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        await host.StopAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(1, check.Runs);
     }
@@ -43,10 +44,15 @@ public sealed class StartupCheckRunnerTests
     {
         var first = new ThrowingCheck();
         var second = new RecordingCheck(StartupPhase.BeforeHostedServicesStart);
-        var runner = CreateRunner(first, second);
+
+        using var host = BuildHost(services =>
+        {
+            services.AddSingleton<IStartupCheck>(first);
+            services.AddSingleton<IStartupCheck>(second);
+        });
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => runner.StartAsync(CancellationToken.None));
+            () => host.StartAsync(TestContext.Current.CancellationToken));
 
         Assert.Equal(0, second.Runs);
     }
@@ -56,15 +62,12 @@ public sealed class StartupCheckRunnerTests
     {
         var observed = new List<string>();
 
-        using var host = new HostBuilder()
-            .ConfigureServices(services =>
-            {
-                services.AddSingleton<IStartupCheck>(
-                    new CallbackCheck(StartupPhase.AfterHostedServicesStarted, () => observed.Add("check")));
-                services.AddHostedService<StartupCheckRunner>();
-                services.AddHostedService(_ => new CallbackHostedService(() => observed.Add("late-service")));
-            })
-            .Build();
+        using var host = BuildHost(services =>
+        {
+            services.AddSingleton<IStartupCheck>(
+                new CallbackCheck(StartupPhase.AfterHostedServicesStarted, () => observed.Add("check")));
+            services.AddHostedService(_ => new CallbackHostedService(() => observed.Add("late-service")));
+        });
 
         await host.StartAsync(TestContext.Current.CancellationToken);
         await host.StopAsync(TestContext.Current.CancellationToken);
@@ -119,11 +122,17 @@ public sealed class StartupCheckRunnerTests
 
         Assert.Contains(
             provider.GetServices<IStartupCheck>(),
-            check => check is MartenSchemaProvisioner);
+            check => check.GetType().Name == "MartenSchemaProvisioner");
     }
 
-    private static IHostedLifecycleService CreateRunner(params IStartupCheck[] checks) =>
-        new StartupCheckRunner(checks);
+    private static IHost BuildHost(Action<IServiceCollection> configureServices) =>
+        new HostBuilder()
+            .ConfigureServices(services =>
+            {
+                configureServices(services);
+                services.AddThessera(options => options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly));
+            })
+            .Build();
 
     private sealed class RecordingCheck(StartupPhase phase) : SynchronousStartupCheck
     {
@@ -157,5 +166,24 @@ public sealed class StartupCheckRunnerTests
         }
 
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class MarkerLifecycleService(Action onStarted) : IHostedLifecycleService
+    {
+        public Task StartingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task StartedAsync(CancellationToken cancellationToken)
+        {
+            onStarted();
+            return Task.CompletedTask;
+        }
+
+        public Task StoppingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }
