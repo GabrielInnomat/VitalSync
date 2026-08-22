@@ -1,51 +1,46 @@
-using GaWeCodes.Thessera.Core.Messaging.DomainEvents;
-using GaWeCodes.Thessera.Core.Persistence;
-using GaWeCodes.Thessera.Domain;
+using GaWeCodes.Thessera.Application.Persistence;
+using GaWeCodes.Thessera.Core.DependencyInjection;
 using GaWeCodes.Thessera.Domain.Aggregates;
-using GaWeCodes.Thessera.Persistence.Marten;
-using JasperFx;
-using JasperFx.Events;
-using Marten;
-using NSubstitute;
-using Wolverine.Marten;
+using GaWeCodes.Thessera.Wolverine.Messaging.DomainEvents;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Wolverine;
 
 namespace GaWeCodes.Thessera.Tests;
 
 [Collection(PostgreSqlCollection.Name)]
 public sealed class MartenEventSourcedRepositoryTests(PostgreSqlFixture fixture)
 {
-    private static readonly DateTimeOffset CommitTime = new(2026, 7, 30, 12, 0, 0, TimeSpan.Zero);
-
     [Fact]
     public async Task SaveThenReload_ReturnsTheFoldedStateAndVersion()
     {
         Assert.SkipUnless(fixture.Available, fixture.SkipReason);
 
-        var store = BuildStore();
+        using var host = await StartHostAsync();
         var id = new CounterId(Guid.NewGuid());
 
-        await using (var session = store.LightweightSession())
+        using (var scope = host.Services.CreateScope())
         {
-            var tracker = new MartenAggregateTracker();
-            var repository = new MartenEventSourcedRepository<Counter, CounterId>(session, tracker);
+            var repository = scope.ServiceProvider.GetRequiredService<IRepository<Counter, CounterId>>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
             var counter = Counter.Create(id);
             counter.Increment(5);
-            await repository.AddAsync(counter, TestContext.Current.CancellationToken);
 
-            await Commit(session, tracker);
+            await repository.AddAsync(counter, TestContext.Current.CancellationToken);
+            await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
         }
 
-        await using (var session = store.LightweightSession())
+        using (var verification = host.Services.CreateScope())
         {
-            var tracker = new MartenAggregateTracker();
-            var repository = new MartenEventSourcedRepository<Counter, CounterId>(session, tracker);
-
+            var repository = verification.ServiceProvider.GetRequiredService<IRepository<Counter, CounterId>>();
             var reloaded = await repository.GetByIdAsync(id, TestContext.Current.CancellationToken);
 
             Assert.NotNull(reloaded);
             Assert.Equal(5, reloaded!.Total);
             Assert.Equal(2, ((IStateOwner)reloaded).Version);
         }
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -53,29 +48,32 @@ public sealed class MartenEventSourcedRepositoryTests(PostgreSqlFixture fixture)
     {
         Assert.SkipUnless(fixture.Available, fixture.SkipReason);
 
-        var store = BuildStore();
+        using var host = await StartHostAsync();
         var id = new CounterId(Guid.NewGuid());
 
-        await Seed(store, id, increments: 5);
+        await SeedAsync(host, id, increments: 5);
 
-        await using (var session = store.LightweightSession())
+        using (var scope = host.Services.CreateScope())
         {
-            var tracker = new MartenAggregateTracker();
-            var repository = new MartenEventSourcedRepository<Counter, CounterId>(session, tracker);
+            var repository = scope.ServiceProvider.GetRequiredService<IRepository<Counter, CounterId>>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
             var counter = await repository.GetByIdAsync(id, TestContext.Current.CancellationToken);
-            counter!.Increment(3);
 
-            await Commit(session, tracker);
+            counter!.Increment(3);
+            await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
         }
 
-        await using (var verification = store.LightweightSession())
+        using (var verification = host.Services.CreateScope())
         {
-            var repository = new MartenEventSourcedRepository<Counter, CounterId>(verification, new MartenAggregateTracker());
+            var repository = verification.ServiceProvider.GetRequiredService<IRepository<Counter, CounterId>>();
             var reloaded = await repository.GetByIdAsync(id, TestContext.Current.CancellationToken);
 
+            Assert.NotNull(reloaded);
             Assert.Equal(8, reloaded!.Total);
             Assert.Equal(3, ((IStateOwner)reloaded).Version);
         }
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -83,64 +81,62 @@ public sealed class MartenEventSourcedRepositoryTests(PostgreSqlFixture fixture)
     {
         Assert.SkipUnless(fixture.Available, fixture.SkipReason);
 
-        var store = BuildStore();
+        using var host = await StartHostAsync();
         var id = new CounterId(Guid.NewGuid());
-        await Seed(store, id, increments: 1);
 
-        await using var sessionA = store.LightweightSession();
-        var trackerA = new MartenAggregateTracker();
-        var repositoryA = new MartenEventSourcedRepository<Counter, CounterId>(sessionA, trackerA);
+        await SeedAsync(host, id, increments: 1);
+
+        using var scopeA = host.Services.CreateScope();
+        using var scopeB = host.Services.CreateScope();
+
+        var repositoryA = scopeA.ServiceProvider.GetRequiredService<IRepository<Counter, CounterId>>();
+        var repositoryB = scopeB.ServiceProvider.GetRequiredService<IRepository<Counter, CounterId>>();
         var counterA = await repositoryA.GetByIdAsync(id, TestContext.Current.CancellationToken);
-
-        await using var sessionB = store.LightweightSession();
-        var trackerB = new MartenAggregateTracker();
-        var repositoryB = new MartenEventSourcedRepository<Counter, CounterId>(sessionB, trackerB);
         var counterB = await repositoryB.GetByIdAsync(id, TestContext.Current.CancellationToken);
 
         counterA!.Increment(1);
-        await Commit(sessionA, trackerA);
+        await scopeA.ServiceProvider.GetRequiredService<IUnitOfWork>().CommitAsync(TestContext.Current.CancellationToken);
 
         counterB!.Increment(1);
-        var exception = await Record.ExceptionAsync(() => Commit(sessionB, trackerB));
+        var exception = await Record.ExceptionAsync(
+            () => scopeB.ServiceProvider.GetRequiredService<IUnitOfWork>()
+                .CommitAsync(TestContext.Current.CancellationToken));
 
         Assert.NotNull(exception);
-        Assert.IsAssignableFrom<ConcurrencyException>(exception);
+        Assert.Contains("Concurrency", exception.GetType().Name, StringComparison.Ordinal);
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
-    private static async Task Commit(IDocumentSession session, MartenAggregateTracker tracker)
+    private async Task<IHost> StartHostAsync()
     {
-        var unitOfWork = new MartenUnitOfWork(
-            session,
-            tracker,
-            Substitute.For<IMartenOutbox>(),
-            new DomainEventEnvelopeFactory(
-                new DomainEventEnvelopeSerializer(new DomainEventTypeRegistry([typeof(CounterCreated).Assembly])),
-                new StoppedClock(CommitTime)));
-        await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
+        var builder = Host.CreateApplicationBuilder();
+
+        builder.AddThessera(options => options
+            .AddDomainEventsFrom(typeof(CounterCreated).Assembly)
+            .UseMartenEventStore(fixture.ConnectionString)
+            .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
+            .CustomizeWolverine(ConfigureDurability));
+
+        var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        return host;
     }
 
-    private static async Task Seed(IDocumentStore store, CounterId id, int increments)
+    private static async Task SeedAsync(IHost host, CounterId id, int increments)
     {
-        await using var session = store.LightweightSession();
-        var tracker = new MartenAggregateTracker();
-        var repository = new MartenEventSourcedRepository<Counter, CounterId>(session, tracker);
+        using var scope = host.Services.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<Counter, CounterId>>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var counter = Counter.Create(id);
         counter.Increment(increments);
         await repository.AddAsync(counter, TestContext.Current.CancellationToken);
-        await Commit(session, tracker);
+        await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
     }
 
-    private DocumentStore BuildStore() =>
-        DocumentStore.For(options =>
-        {
-            options.Connection(fixture.ConnectionString);
-            options.Events.StreamIdentity = StreamIdentity.AsString;
-            options.DatabaseSchemaName = "counters_" + Guid.NewGuid().ToString("N")[..8];
-        });
-
-    private sealed class StoppedClock(DateTimeOffset now) : IClock
+    private static void ConfigureDurability(WolverineOptions options)
     {
-        public DateTimeOffset Now => now;
+        options.Durability.Mode = DurabilityMode.Solo;
+        options.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
     }
 }
-

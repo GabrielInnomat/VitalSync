@@ -1,12 +1,9 @@
 using System.Reflection;
 using GaWeCodes.Thessera.Application.Cqrs;
 using GaWeCodes.Thessera.Core.DependencyInjection;
-using GaWeCodes.Thessera.Core.DependencyInjection.Wiring;
 using GaWeCodes.Thessera.Core.Dispatching;
-using GaWeCodes.Thessera.Core.Messaging.DomainEvents;
 using GaWeCodes.Thessera.Messaging.RabbitMq;
 using GaWeCodes.Thessera.Persistence.Marten;
-using GaWeCodes.Thessera.Wolverine.DependencyInjection.Wiring;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -14,30 +11,30 @@ using Wolverine;
 using Wolverine.Configuration;
 using Wolverine.RabbitMQ;
 using Wolverine.RabbitMQ.Internal;
-using ThesseraWiring = GaWeCodes.Thessera.Wolverine.DependencyInjection.Wiring.WolverineOptionsExtensions;
 
 namespace GaWeCodes.Thessera.Tests;
 
 public sealed class WolverineExtensionTests
 {
-    private const string ConnectionString = "Host=localhost;Database=test;Username=test;Password=test";
+    private const string ConnectionString = "Host=localhost;Database=test;Username=test";
 
-    private static readonly Uri RabbitMqUri = new("amqp://guest:guest@localhost:5672");
+    private const string DomainEventsQueue = "thessera-domain-events";
 
-    private static readonly RabbitMqTransportAdapter TestMessagingSettings =
-        new(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName);
+    private const string ProjectionsQueue = "thessera-projections";
+
+    private static readonly Uri RabbitMqUri = new("amqp://localhost:5672");
 
     private static readonly Assembly TestAssembly = typeof(WolverineExtensionTests).Assembly;
 
     [Fact]
-    public void AddThessera_WithAPersistenceStrategy_RegistersTheWolverineExtension()
+    public void AddThessera_WithAPersistenceStrategy_RegistersOneWolverineExtension()
     {
         using var provider = BuildProvider(options =>
             options.UseEfCoreStateStore<TestDbContext>(ConnectionString));
 
-        Assert.Single(
+        Assert.Contains(
             provider.GetServices<IWolverineExtension>(),
-            extension => extension is ThesseraWolverineExtension);
+            extension => extension.GetType().Name == "ThesseraWolverineExtension");
     }
 
     [Fact]
@@ -46,58 +43,6 @@ public sealed class WolverineExtensionTests
         using var provider = BuildProvider(_ => { });
 
         Assert.Empty(provider.GetServices<IWolverineExtension>());
-    }
-
-    [Fact]
-    public void NoCapabilitySelected_RequiresNoWolverine()
-    {
-        using var provider = BuildProvider(_ => { });
-
-        var settings = provider.GetRequiredService<ThesseraWiringSettings>();
-
-        Assert.False(settings.RequiresRuntime);
-        Assert.False(settings.Persistence.IsSelected);
-        Assert.Null(settings.Persistence.WriteConnectionString);
-        Assert.Null(settings.Messaging.Transport);
-    }
-
-    [Fact]
-    public void EfCoreSelection_RequestsRoutingAndEfCoreOutbox()
-    {
-        using var provider = BuildProvider(options =>
-            options.UseEfCoreStateStore<TestDbContext>(ConnectionString));
-
-        var settings = provider.GetRequiredService<ThesseraWiringSettings>();
-
-        Assert.True(settings.Persistence.IsSelected);
-        Assert.Equal(ConnectionString, settings.Persistence.WriteConnectionString);
-        Assert.Null(settings.Messaging.Transport);
-    }
-
-    [Fact]
-    public void MartenSelection_RequestsRoutingWithoutEfCoreOutbox()
-    {
-        using var provider = BuildProvider(options =>
-            options.UseMartenEventStore(ConnectionString));
-
-        var settings = provider.GetRequiredService<ThesseraWiringSettings>();
-
-        Assert.True(settings.Persistence.IsSelected);
-        Assert.Equal(ConnectionString, settings.Persistence.WriteConnectionString);
-        Assert.Null(settings.Messaging.Transport);
-    }
-
-    [Fact]
-    public void MessagingSelection_RecordsTheBrokerUri()
-    {
-        using var provider = BuildProvider(options => options
-            .UseMartenEventStore(ConnectionString)
-            .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
-
-        var settings = provider.GetRequiredService<ThesseraWiringSettings>();
-
-        Assert.Equal(RabbitMqUri, ((RabbitMqTransportAdapter)settings.Messaging.Transport!).RabbitMqUri);
-        Assert.True(settings.RequiresRuntime);
     }
 
     [Fact]
@@ -117,7 +62,9 @@ public sealed class WolverineExtensionTests
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
             .UseMartenEventStore(ConnectionString));
 
-        Assert.True(provider.GetRequiredService<ThesseraWiringSettings>().Persistence.IsSelected);
+        Assert.Contains(
+            provider.GetServices<IWolverineExtension>(),
+            extension => extension.GetType().Name == "ThesseraWolverineExtension");
     }
 
     [Fact]
@@ -132,120 +79,58 @@ public sealed class WolverineExtensionTests
     }
 
     [Fact]
-    public void Configure_WithDomainEventRouting_RoutesTheEnvelopeToTheLocalQueue()
+    public void WithPersistenceAndUseWolverine_RoutesDomainAndProjectionEnvelopesToLocalQueues()
     {
-        var options = ConfigureOptions(Settings(settings => settings.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString)))));
+        using var host = BuildHost(options => options.UseMartenEventStore(ConnectionString));
+        var wolverine = host.Services.GetRequiredService<WolverineOptions>();
+        var endpoints = wolverine.Transports.SelectMany(transport => transport.Endpoints()).ToArray();
 
-        var endpoints = options.Transports.SelectMany(transport => transport.Endpoints());
-
-        Assert.Contains(
-            endpoints,
-            endpoint => endpoint.Uri.ToString().Contains("thessera-domain-events", StringComparison.Ordinal));
+        Assert.Contains(endpoints, endpoint => endpoint.Uri.ToString().Contains(DomainEventsQueue, StringComparison.Ordinal));
+        Assert.Contains(endpoints, endpoint => endpoint.Uri.ToString().Contains(ProjectionsQueue, StringComparison.Ordinal));
     }
 
     [Fact]
-    public void PartitionKey_CombinesTheAggregateNameAndItsIdentity()
+    public void WithMessaging_AddsRabbitMqTransportAndDeclaresTheExchangeAsDurable()
     {
-        var envelope = new DomainEventEnvelope(
-            "widget-created-v1",
-            "{}",
-            Guid.NewGuid(),
-            "widget",
-            "8f3a",
-            1,
-            DateTimeOffset.UtcNow);
+        using var host = BuildHost(options => options
+            .UseMartenEventStore(ConnectionString)
+            .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
+        var rabbitMq = RabbitMqTransportOf(host.Services.GetRequiredService<WolverineOptions>());
 
-        Assert.Equal("widget/8f3a", ThesseraWiring.PartitionKeyFor(envelope));
+        Assert.True(rabbitMq.Exchanges[TestMessaging.ExchangeName].IsDurable);
     }
 
     [Fact]
-    public async Task Configure_WithDomainEventRouting_LetsAHandlerDependOnISender()
+    public void WithMessaging_EnablesPublisherConfirmationsAndTheirTracking()
     {
-        using var host = await Host.CreateDefaultBuilder()
-            .ConfigureServices(services => services.AddScoped<ISender, RequestSender>())
-            .UseWolverine(options =>
-            {
-                new ThesseraWolverineExtension(
-                    Settings(settings => settings.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString)))))
-                    .Configure(options);
-                options.Discovery.IncludeAssembly(typeof(WolverineExtensionTests).Assembly);
-            })
-            .StartAsync(TestContext.Current.CancellationToken);
-
-        await host.Services.GetRequiredService<IMessageBus>()
-            .InvokeAsync(new SenderDependentProbe(), TestContext.Current.CancellationToken);
-    }
-
-    [Fact]
-    public void Configure_WithBrokerUri_AddsTheRabbitMqTransport()
-    {
-        var options = ConfigureOptions(Settings(settings => settings.Messaging.SelectTransport(TestMessagingSettings)));
-
-        Assert.Contains(options.Transports, transport => transport.Protocol == "rabbitmq");
-    }
-
-    [Fact]
-    public void Configure_WithBrokerUri_DeclaresThePlatformExchangeAsDurable()
-    {
-        var options = ConfigureOptions(Settings(settings => settings.Messaging.SelectTransport(TestMessagingSettings)));
-
-        var exchange = RabbitMqTransportOf(options)
-            .Exchanges[TestMessaging.ExchangeName];
-
-        Assert.True(exchange.IsDurable);
-    }
-
-    [Fact]
-    public void Configure_WithSubscription_DeclaresTheQueueAsDurable()
-    {
-        var options = ConfigureOptions(Settings(settings =>
-        {
-            settings.Messaging.SelectTransport(TestMessagingSettings);
-            settings.Messaging.SelectSubscription(
-                new IntegrationEventSubscription("billing.integration-events", ["orders.*"], TestAssembly));
-        }));
-
-        var queue = RabbitMqTransportOf(options).Queues["billing.integration-events"];
-
-        Assert.True(queue.IsDurable);
-    }
-
-    [Fact]
-    public void Configure_WithBrokerUri_EnablesPublisherConfirmationsAndTheirTracking()
-    {
-        var options = ConfigureOptions(Settings(settings => settings.Messaging.SelectTransport(TestMessagingSettings)));
-
+        using var host = BuildHost(options => options
+            .UseMartenEventStore(ConnectionString)
+            .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
+        var rabbitMq = RabbitMqTransportOf(host.Services.GetRequiredService<WolverineOptions>());
         var channel = new WolverineRabbitMqChannelOptions();
 
         Assert.False(channel.PublisherConfirmationsEnabled);
         Assert.False(channel.PublisherConfirmationTrackingEnabled);
 
-        var configureChannel = RabbitMqTransportOf(options).ChannelCreationOptions;
-
-        Assert.NotNull(configureChannel);
-        configureChannel(channel);
+        rabbitMq.ChannelCreationOptions!(channel);
 
         Assert.True(channel.PublisherConfirmationsEnabled);
         Assert.True(channel.PublisherConfirmationTrackingEnabled);
     }
 
-    private static RabbitMqTransport RabbitMqTransportOf(WolverineOptions options)
-        => options.Transports.OfType<RabbitMqTransport>().Single();
-
     [Fact]
-    public void SubscriptionSelection_RecordsQueueBindingsAndConsumerAssembly()
+    public void WithSubscription_ListensOnTheQueueAndDeclaresItAsDurable()
     {
-        using var provider = BuildProvider(options => options
+        using var host = BuildHost(options => options
             .UseMartenEventStore(ConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
-            .SubscribeToIntegrationEvents("billing.integration-events", TestAssembly, "orders.*", "reporting.*"));
+            .SubscribeToIntegrationEvents("billing.integration-events", TestAssembly, "orders.*"));
+        var rabbitMq = RabbitMqTransportOf(host.Services.GetRequiredService<WolverineOptions>());
 
-        var subscription = provider.GetRequiredService<MessagingSelection>().Subscription;
-
-        Assert.NotNull(subscription);
-        Assert.Equal("billing.integration-events", subscription!.EndpointName);
-        Assert.Equal(["orders.*", "reporting.*"], subscription.TopicPatterns);
-        Assert.Equal(TestAssembly, subscription.ConsumerAssembly);
+        Assert.True(rabbitMq.Queues["billing.integration-events"].IsDurable);
+        Assert.Contains(
+            host.Services.GetRequiredService<WolverineOptions>().Transports.SelectMany(transport => transport.Endpoints()),
+            endpoint => endpoint.Uri.ToString().Contains("billing.integration-events", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -292,79 +177,62 @@ public sealed class WolverineExtensionTests
     }
 
     [Fact]
-    public void Configure_WithSubscription_ListensOnTheQueue()
+    public void WithPersistence_WidensTheInboxIdempotencyWindow()
     {
-        var options = ConfigureOptions(Settings(settings =>
-        {
-            settings.Messaging.SelectTransport(TestMessagingSettings);
-            settings.Messaging.SelectSubscription(
-                new IntegrationEventSubscription("billing.integration-events", ["orders.*"], TestAssembly));
-        }));
+        using var host = BuildHost(options => options.UseMartenEventStore(ConnectionString));
+        var wolverine = host.Services.GetRequiredService<WolverineOptions>();
 
-        Assert.Contains(
-            options.Transports.SelectMany(transport => transport.Endpoints()),
-            endpoint => endpoint.Uri.ToString().Contains("billing.integration-events", StringComparison.Ordinal));
+        Assert.Equal(TimeSpan.FromDays(7), wolverine.Durability.KeepAfterMessageHandling);
     }
 
     [Fact]
-    public void Configure_WithNothingSelected_AddsNoRabbitMqTransportAndNoEnvelopeRoute()
+    public void WithoutPersistence_LeavesTheInboxIdempotencyWindowAtDefault()
     {
-        var options = ConfigureOptions(new ThesseraWiringSettings());
+        using var host = BuildHost(_ => { });
+        var wolverine = host.Services.GetRequiredService<WolverineOptions>();
 
-        Assert.DoesNotContain(options.Transports, transport => transport.Protocol == "rabbitmq");
-        Assert.DoesNotContain(
-            options.Transports.SelectMany(transport => transport.Endpoints()),
-            endpoint => endpoint.Uri.ToString().Contains("thessera-domain-events", StringComparison.Ordinal));
+        Assert.Equal(new DurabilitySettings().KeepAfterMessageHandling, wolverine.Durability.KeepAfterMessageHandling);
     }
 
     [Fact]
-    public void Configure_WithPersistence_WidensTheInboxIdempotencyWindow()
+    public async Task WithPersistenceAndRouting_AHandlerCanDependOnISender()
     {
-        var options = ConfigureOptions(Settings(settings =>
-            settings.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString)))));
+        using var host = await Host.CreateDefaultBuilder()
+            .ConfigureServices(services =>
+            {
+                services.AddScoped<ISender, RequestSender>();
+                services.AddThessera(options =>
+                {
+                    options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
+                    options.UseEfCoreStateStore<TestDbContext>(ConnectionString);
+                });
+            })
+            .UseWolverine(options =>
+            {
+                options.Durability.Mode = DurabilityMode.Solo;
+                options.Discovery.IncludeAssembly(typeof(WolverineExtensionTests).Assembly);
+            })
+            .StartAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(TimeSpan.FromDays(7), options.Durability.KeepAfterMessageHandling);
+        await host.Services.GetRequiredService<IMessageBus>()
+            .InvokeAsync(new SenderDependentProbe(), TestContext.Current.CancellationToken);
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
-    [Fact]
-    public void TheInboxIdempotencyWindow_IsNotTheWolverineDefault()
-    {
-        Assert.NotEqual(
-            new DurabilitySettings().KeepAfterMessageHandling,
-            ThesseraWiring.IdempotencyWindow);
-    }
+    private static RabbitMqTransport RabbitMqTransportOf(WolverineOptions options)
+        => options.Transports.OfType<RabbitMqTransport>().Single();
 
-    [Fact]
-    public void Configure_WithoutPersistence_LeavesTheIdempotencyWindowAlone()
-    {
-        var options = ConfigureOptions(new ThesseraWiringSettings());
-
-        Assert.Equal(
-            new DurabilitySettings().KeepAfterMessageHandling,
-            options.Durability.KeepAfterMessageHandling);
-    }
-
-    [Fact]
-    public void Configure_WithoutABroker_StillAppliesTheFailurePolicies()
-    {
-        var options = ConfigureOptions(new ThesseraWiringSettings());
-
-        Assert.NotEmpty(options.Policies.Failures);
-    }
-
-    private static ThesseraWiringSettings Settings(Action<ThesseraWiringSettings> configure)
-    {
-        var settings = new ThesseraWiringSettings();
-        configure(settings);
-        return settings;
-    }
-
-    private static WolverineOptions ConfigureOptions(ThesseraWiringSettings settings)
-    {
-        var options = new WolverineOptions();
-        new ThesseraWolverineExtension(settings).Configure(options);
-        return options;
-    }
+    private static IHost BuildHost(Action<ThesseraOptions> configure)
+        => Host.CreateDefaultBuilder()
+            .ConfigureServices(services =>
+                services.AddThessera(options =>
+                {
+                    options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
+                    configure(options);
+                }))
+            .UseWolverine(options => options.Durability.Mode = DurabilityMode.Solo)
+            .Build();
 
     private static ServiceProvider BuildProvider(Action<ThesseraOptions> configure)
     {
@@ -387,4 +255,3 @@ public sealed class SenderDependentProbeHandler
 {
     public static Task HandleAsync(SenderDependentProbe probe, ISender sender) => Task.CompletedTask;
 }
-

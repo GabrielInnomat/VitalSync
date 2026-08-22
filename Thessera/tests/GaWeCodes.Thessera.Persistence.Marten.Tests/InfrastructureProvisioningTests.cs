@@ -1,12 +1,9 @@
 using GaWeCodes.Thessera.Core.DependencyInjection;
-using GaWeCodes.Thessera.Core.DependencyInjection.Wiring;
 using GaWeCodes.Thessera.Core.Startup;
-using GaWeCodes.Thessera.Messaging.RabbitMq;
 using GaWeCodes.Thessera.Persistence.Marten;
-using GaWeCodes.Thessera.Wolverine.DependencyInjection.Validation;
-using GaWeCodes.Thessera.Wolverine.DependencyInjection.Wiring;
 using Marten;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Wolverine;
 using Wolverine.RabbitMQ.Internal;
 
@@ -18,24 +15,24 @@ public sealed class InfrastructureProvisioningTests
 
     private static readonly Uri RabbitMqUri = new("amqp://localhost:5672");
 
-    private static readonly RabbitMqTransportAdapter TestMessagingSettings =
-        new(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName);
-
     [Fact]
     public void AHostThatSelectsNothing_ProvisionsNothing()
     {
         using var provider = BuildProvider(_ => { });
 
-        Assert.False(provider.GetRequiredService<ProvisioningSelection>().ProvisionsInfrastructure);
+        Assert.DoesNotContain(
+            provider.GetServices<IStartupCheck>(),
+            check => check.GetType().Name is "InfrastructurePresenceCheck" or "BrokerTopologyCheck");
     }
 
     [Fact]
     public void AHostThatSelectsAtStartup_ProvisionsInfrastructure()
     {
         using var provider = BuildProvider(options => options
+            .UseMartenEventStore(ConnectionString)
             .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup));
 
-        Assert.True(provider.GetRequiredService<ProvisioningSelection>().ProvisionsInfrastructure);
+        Assert.Equal(JasperFx.AutoCreate.CreateOrUpdate, AutoCreateOf(provider));
     }
 
     [Fact]
@@ -46,7 +43,7 @@ public sealed class InfrastructureProvisioningTests
     [Fact]
     public void WithoutProvisioning_TheMessageStorageIsNotBuiltAtStartup()
     {
-        var options = ConfigureOptions(Settings(settings => settings.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString)))));
+        var options = ConfigureWolverineOptions(thessera => thessera.UseMartenEventStore(ConnectionString));
 
         Assert.Equal(JasperFx.AutoCreate.None, options.AutoBuildMessageStorageOnStartup);
     }
@@ -54,11 +51,9 @@ public sealed class InfrastructureProvisioningTests
     [Fact]
     public void WithProvisioning_TheMessageStorageIsBuiltAtStartup()
     {
-        var options = ConfigureOptions(Settings(settings =>
-        {
-            settings.Persistence.Select(PersistenceChoice.For(new MartenPersistenceAdapter(ConnectionString)));
-            settings.Provisioning.Select(InfrastructureProvisioning.AtStartup);
-        }));
+        var options = ConfigureWolverineOptions(thessera => thessera
+            .UseMartenEventStore(ConnectionString)
+            .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup));
 
         Assert.Equal(JasperFx.AutoCreate.CreateOrUpdate, options.AutoBuildMessageStorageOnStartup);
     }
@@ -66,7 +61,9 @@ public sealed class InfrastructureProvisioningTests
     [Fact]
     public void WithoutProvisioning_TheBrokerTopologyIsNotDeclaredAtAll()
     {
-        var options = ConfigureOptions(Settings(settings => settings.Messaging.SelectTransport(TestMessagingSettings)));
+        var options = ConfigureWolverineOptions(thessera => thessera
+            .UseMartenEventStore(ConnectionString)
+            .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
 
         var transport = RabbitMqTransportOf(options);
 
@@ -77,11 +74,10 @@ public sealed class InfrastructureProvisioningTests
     [Fact]
     public void WithProvisioning_TheBrokerTopologyIsCreated()
     {
-        var options = ConfigureOptions(Settings(settings =>
-        {
-            settings.Messaging.SelectTransport(TestMessagingSettings);
-            settings.Provisioning.Select(InfrastructureProvisioning.AtStartup);
-        }));
+        var options = ConfigureWolverineOptions(thessera => thessera
+            .UseMartenEventStore(ConnectionString)
+            .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName)
+            .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup));
 
         var transport = RabbitMqTransportOf(options);
 
@@ -94,7 +90,9 @@ public sealed class InfrastructureProvisioningTests
     {
         using var provider = BuildProvider(_ => { });
 
-        Assert.DoesNotContain(provider.GetServices<IStartupCheck>(), check => check is BrokerTopologyCheck);
+        Assert.DoesNotContain(
+            provider.GetServices<IStartupCheck>(),
+            check => check.GetType().Name == "BrokerTopologyCheck");
     }
 
     [Fact]
@@ -104,7 +102,9 @@ public sealed class InfrastructureProvisioningTests
             .UseMartenEventStore(ConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
 
-        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is BrokerTopologyCheck);
+        Assert.Single(
+            provider.GetServices<IStartupCheck>(),
+            check => check.GetType().Name == "BrokerTopologyCheck");
     }
 
     [Fact]
@@ -145,7 +145,9 @@ public sealed class InfrastructureProvisioningTests
     {
         using var provider = BuildProvider(_ => { });
 
-        Assert.Empty(provider.GetServices<IStartupCheck>().OfType<InfrastructurePresenceCheck>());
+        Assert.DoesNotContain(
+            provider.GetServices<IStartupCheck>(),
+            check => check.GetType().Name == "InfrastructurePresenceCheck");
     }
 
     [Fact]
@@ -153,7 +155,9 @@ public sealed class InfrastructureProvisioningTests
     {
         using var provider = BuildProvider(options => options.UseMartenEventStore(ConnectionString));
 
-        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is InfrastructurePresenceCheck);
+        Assert.Single(
+            provider.GetServices<IStartupCheck>(),
+            check => check.GetType().Name == "InfrastructurePresenceCheck");
     }
 
     [Fact]
@@ -170,26 +174,30 @@ public sealed class InfrastructureProvisioningTests
         ((DocumentStore)provider.GetRequiredService<IDocumentStore>()).Options.AutoCreateSchemaObjects;
 
     private static IStartupCheck Check(ServiceProvider provider) =>
-        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is InfrastructurePresenceCheck);
+        Assert.Single(
+            provider.GetServices<IStartupCheck>(),
+            check => check.GetType().Name == "InfrastructurePresenceCheck");
 
     private static IStartupCheck BrokerCheck(ServiceProvider provider) =>
-        Assert.Single(provider.GetServices<IStartupCheck>(), check => check is BrokerTopologyCheck);
+        Assert.Single(
+            provider.GetServices<IStartupCheck>(),
+            check => check.GetType().Name == "BrokerTopologyCheck");
 
     private static RabbitMqTransport RabbitMqTransportOf(WolverineOptions options)
         => options.Transports.OfType<RabbitMqTransport>().Single();
 
-    private static WolverineOptions ConfigureOptions(ThesseraWiringSettings settings)
+    private static WolverineOptions ConfigureWolverineOptions(Action<ThesseraOptions> configure)
     {
-        var options = new WolverineOptions();
-        new ThesseraWolverineExtension(settings).Configure(options);
-        return options;
-    }
+        using var host = Host.CreateDefaultBuilder()
+            .ConfigureServices(services => services.AddThessera(options =>
+            {
+                options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
+                configure(options);
+            }))
+            .UseWolverine(options => options.Durability.Mode = DurabilityMode.Solo)
+            .Build();
 
-    private static ThesseraWiringSettings Settings(Action<ThesseraWiringSettings> configure)
-    {
-        var settings = new ThesseraWiringSettings();
-        configure(settings);
-        return settings;
+        return host.Services.GetRequiredService<WolverineOptions>();
     }
 
     private static ServiceProvider BuildProvider(Action<ThesseraOptions> configure)

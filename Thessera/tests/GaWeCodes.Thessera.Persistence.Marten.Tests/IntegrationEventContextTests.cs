@@ -1,9 +1,10 @@
 using GaWeCodes.Thessera.Application.IntegrationEvents;
 using GaWeCodes.Thessera.Core.DependencyInjection;
-using GaWeCodes.Thessera.Core.DependencyInjection.Wiring;
 using GaWeCodes.Thessera.Core.Messaging.IntegrationEvents;
-using GaWeCodes.Thessera.Messaging.RabbitMq;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Wolverine;
+using Wolverine.RabbitMQ.Internal;
 
 namespace GaWeCodes.Thessera.Tests;
 
@@ -50,14 +51,17 @@ public sealed class IntegrationEventContextTests
     [Fact]
     public void TheHostGivenNames_AreRecorded()
     {
-        var settings = Configure(options => options
+        using var provider = BuildProvider(options => options
             .UseMartenEventStore(ConnectionString)
             .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
+        var sourceContext = provider.GetRequiredService<IntegrationEventSourceContext>();
+        var options = ConfigureWolverineOptions(configure => configure
+            .UseMartenEventStore(ConnectionString)
+            .UseWolverineMessaging(RabbitMqUri, TestMessaging.ExchangeName, TestMessaging.ContextName));
+        var rabbitMq = options.Transports.OfType<RabbitMqTransport>().Single();
 
-        Assert.Equal(
-            TestMessaging.ExchangeName,
-            ((RabbitMqTransportAdapter)settings.Messaging.Transport!).ExchangeName);
-        Assert.Equal(TestMessaging.ContextName, settings.Messaging.Transport.ContextName);
+        Assert.Equal(TestMessaging.ContextName, sourceContext.Name);
+        Assert.NotNull(rabbitMq.Exchanges[TestMessaging.ExchangeName]);
     }
 
     [Fact]
@@ -99,7 +103,26 @@ public sealed class IntegrationEventContextTests
             provider.GetRequiredService<IntegrationEventSourceContext>().Name);
     }
 
-    private static ThesseraWiringSettings Configure(Action<ThesseraOptions> configure)
+    private static void Configure(Action<ThesseraOptions> configure)
+    {
+        using var provider = BuildProvider(configure);
+    }
+
+    private static WolverineOptions ConfigureWolverineOptions(Action<ThesseraOptions> configure)
+    {
+        using var host = Host.CreateDefaultBuilder()
+            .ConfigureServices(services => services.AddThessera(options =>
+            {
+                options.AddDomainEventsFrom(typeof(FlushProbeStarted).Assembly);
+                configure(options);
+            }))
+            .UseWolverine(options => options.Durability.Mode = DurabilityMode.Solo)
+            .Build();
+
+        return host.Services.GetRequiredService<WolverineOptions>();
+    }
+
+    private static ServiceProvider BuildProvider(Action<ThesseraOptions> configure)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -109,8 +132,7 @@ public sealed class IntegrationEventContextTests
             configure(options);
         });
 
-        using var provider = services.BuildServiceProvider();
-        return provider.GetRequiredService<ThesseraWiringSettings>();
+        return services.BuildServiceProvider();
     }
 }
 

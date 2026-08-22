@@ -1,17 +1,17 @@
 using GaWeCodes.Thessera.Application.DomainEvents;
 using GaWeCodes.Thessera.Application.IntegrationEvents;
+using GaWeCodes.Thessera.Application.Cqrs;
 using GaWeCodes.Thessera.Core.Messaging.DomainEvents;
 using GaWeCodes.Thessera.Core.Messaging.IntegrationEvents;
+using GaWeCodes.Thessera.Core.Messaging.Transport;
 using GaWeCodes.Thessera.Domain.Events;
 using GaWeCodes.Thessera.Domain.Naming;
-using GaWeCodes.Thessera.Wolverine.DependencyInjection.Wiring;
 using GaWeCodes.Thessera.Wolverine.Messaging.DomainEvents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Wolverine;
 using Wolverine.Tracking;
-using BuildingBlockDefaults = GaWeCodes.Thessera.Wolverine.DependencyInjection.Wiring.WolverineOptionsExtensions;
 
 namespace GaWeCodes.Thessera.Tests;
 
@@ -86,7 +86,7 @@ public sealed class IntegrationEventSinkDeliveryTests
                 services.AddThessera(options => options.AddDomainEventsFrom(typeof(SinkProbeDomainEvent).Assembly));
                 services.Replace(
                     ServiceDescriptor.Singleton<IIntegrationEventSinkFactory>(
-                        new IntegrationEventSinkFactory(TestMessaging.ContextName)));
+                        new ProbeIntegrationEventSinkFactory(TestMessaging.ContextName)));
                 services.AddSingleton<IIntegrationEventMapper<SinkProbeDomainEvent>, SinkProbeMapper>();
                 services.AddSingleton<IIntegrationEventMapper<SinkProbeDomainEvent>, SinkProbeCrashingMapper>();
                 services.AddSingleton<SinkProbeRecorder>();
@@ -98,9 +98,16 @@ public sealed class IntegrationEventSinkDeliveryTests
 
                 options.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
 
-                options.ApplyThesseraDomainEventRouting();
+                options.Discovery.IncludeAssembly(typeof(DomainEventEnvelopeHandler).Assembly);
+                options.CodeGeneration.AlwaysUseServiceLocationFor<IIntegrationEventPublisher>();
+                options.CodeGeneration.AlwaysUseServiceLocationFor<IIntegrationEventSinkFactory>();
+                options.CodeGeneration.AlwaysUseServiceLocationFor<ProjectionRunner>();
+                options.CodeGeneration.AlwaysUseServiceLocationFor<ISender>();
+                options.PublishMessage<DomainEventEnvelope>().ToLocalQueue("sink-probe-domain-events").BufferedInMemory();
+                options.PublishMessage<ProjectionEnvelope>().ToLocalQueue("sink-probe-projections").BufferedInMemory();
 
-                options.LocalQueue(BuildingBlockDefaults.DomainEventLocalQueueName).BufferedInMemory();
+                options.LocalQueue("sink-probe-domain-events").BufferedInMemory();
+                options.LocalQueue("sink-probe-projections").BufferedInMemory();
 
                 options.Discovery.IncludeType(typeof(SinkProbeIntegrationEventHandler));
                 options.PublishMessage<SinkProbeIntegrationEvent>().ToLocalQueue("sink-probe-integration");
@@ -177,6 +184,31 @@ public sealed class SinkProbeCrashingMapper(SinkProbeCrashSwitch crashSwitch) : 
     }
 }
 
+public sealed class ProbeIntegrationEventSinkFactory(string sourceContext) : IIntegrationEventSinkFactory
+{
+    public IIntegrationEventSink Create(IMessageEmitter emitter)
+    {
+        ArgumentNullException.ThrowIfNull(emitter);
+        return new ProbeIntegrationEventSink(emitter, sourceContext);
+    }
+}
+
+public sealed class ProbeIntegrationEventSink(IMessageEmitter emitter, string sourceContext) : IIntegrationEventSink
+{
+    public Task PublishAsync(IIntegrationEvent integrationEvent, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(integrationEvent);
+
+        return emitter.PublishAsync(
+            integrationEvent,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [IntegrationEventSourceContext.HeaderName] = sourceContext,
+            },
+            cancellationToken);
+    }
+}
+
 public static class SinkProbeIntegrationEventHandler
 {
     public static void Handle(SinkProbeIntegrationEvent message, Envelope envelope, SinkProbeRecorder recorder)
@@ -186,4 +218,3 @@ public static class SinkProbeIntegrationEventHandler
         recorder.Record(envelope);
     }
 }
-

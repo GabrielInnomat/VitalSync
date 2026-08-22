@@ -7,7 +7,6 @@ using Wolverine;
 using Wolverine.Configuration;
 using Wolverine.ErrorHandling;
 using Wolverine.Postgresql;
-using ThesseraWiring = GaWeCodes.Thessera.Wolverine.DependencyInjection.Wiring.WolverineOptionsExtensions;
 
 namespace GaWeCodes.Thessera.Tests;
 
@@ -86,7 +85,7 @@ public sealed class DomainEventPartitioningBehaviourTests(PostgreSqlFixture post
                 .SelectMany(transport => transport.Endpoints())
                 .Single(candidate => candidate.Uri.ToString().Contains(queueName, StringComparison.Ordinal));
 
-            Assert.Equal<PartitionSlots?>(ThesseraWiring.DomainEventPartitionSlots, endpoint.GroupShardingSlotNumber);
+            Assert.Equal<PartitionSlots?>(PartitionSlots.Five, endpoint.GroupShardingSlotNumber);
             Assert.NotEqual(1, endpoint.MaxDegreeOfParallelism);
         }
 

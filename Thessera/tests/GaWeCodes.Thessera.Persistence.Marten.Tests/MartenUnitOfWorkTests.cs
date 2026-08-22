@@ -1,124 +1,133 @@
-using GaWeCodes.Thessera.Core.Messaging.DomainEvents;
-using GaWeCodes.Thessera.Core.Persistence;
-using GaWeCodes.Thessera.Domain;
+using GaWeCodes.Thessera.Application.Persistence;
+using GaWeCodes.Thessera.Core.DependencyInjection;
 using GaWeCodes.Thessera.Domain.Aggregates;
-using GaWeCodes.Thessera.Persistence.Marten;
-using Marten;
-using NSubstitute;
-using Wolverine.Marten;
+using GaWeCodes.Thessera.Wolverine.Messaging.DomainEvents;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Wolverine;
 
 namespace GaWeCodes.Thessera.Tests;
 
-public sealed class MartenUnitOfWorkTests
+[Collection(PostgreSqlCollection.Name)]
+public sealed class MartenUnitOfWorkTests(PostgreSqlFixture fixture)
 {
-    private static readonly DateTimeOffset CommitTime = new(2026, 7, 31, 12, 0, 0, TimeSpan.Zero);
-
-    private static readonly DomainEventEnvelopeSerializer Serializer =
-        new(new DomainEventTypeRegistry([typeof(CounterCreated).Assembly]));
-
-    private static readonly DomainEventEnvelopeFactory EnvelopeFactory =
-        new(Serializer, new StoppedClock(CommitTime));
-
     [Fact]
-    public async Task Commit_EnrollsOutboxBeforeSaving()
+    public async Task Commit_PersistsAndReloadsFoldedStateAndVersion()
     {
-        var calls = new List<string>();
-        var session = Substitute.For<IDocumentSession>();
-        var outbox = Substitute.For<IMartenOutbox>();
-        outbox.When(o => o.Enroll(session)).Do(_ => calls.Add("enroll"));
-        session.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(Task.CompletedTask)
-            .AndDoes(_ => calls.Add("save"));
+        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
 
-        var unitOfWork = new MartenUnitOfWork(session, TrackerWith(out _), outbox, EnvelopeFactory);
-        await unitOfWork.CommitAsync(CancellationToken.None);
+        using var host = await StartHostAsync();
+        var id = new CounterId(Guid.NewGuid());
 
-        Assert.Equal(["enroll", "save"], calls);
-    }
+        using (var scope = host.Services.CreateScope())
+        {
+            var repository = scope.ServiceProvider.GetRequiredService<IRepository<Counter, CounterId>>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
-    [Fact]
-    public async Task Commit_PublishesEveryDomainEventToOutboxBeforeSaving()
-    {
-        var calls = new List<string>();
-        var session = Substitute.For<IDocumentSession>();
-        var outbox = Substitute.For<IMartenOutbox>();
-#pragma warning disable CA2012
-        outbox.When(o => o.PublishAsync(Arg.Any<object>())).Do(_ => calls.Add("publish"));
-#pragma warning restore CA2012
-        session.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(Task.CompletedTask)
-            .AndDoes(_ => calls.Add("save"));
+            var counter = Counter.Create(id);
+            counter.Increment(1);
+            counter.Increment(2);
+            await repository.AddAsync(counter, TestContext.Current.CancellationToken);
+            await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
+        }
 
-        var tracker = TrackerWith(out var counter);
-        counter.Increment(1);
+        using (var verification = host.Services.CreateScope())
+        {
+            var repository = verification.ServiceProvider.GetRequiredService<IRepository<Counter, CounterId>>();
+            var reloaded = await repository.GetByIdAsync(id, TestContext.Current.CancellationToken);
 
-        var unitOfWork = new MartenUnitOfWork(session, tracker, outbox, EnvelopeFactory);
-        await unitOfWork.CommitAsync(CancellationToken.None);
+            Assert.NotNull(reloaded);
+            Assert.Equal(3, reloaded!.Total);
+            Assert.Equal(3, ((IStateOwner)reloaded).Version);
+        }
 
-        Assert.Equal(["publish", "publish", "save"], calls);
+        await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
     public async Task Commit_AfterSuccessfulSave_ClearsTrackedEvents()
     {
-        var session = Substitute.For<IDocumentSession>();
-        var tracker = TrackerWith(out var counter);
+        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
 
-        var unitOfWork = new MartenUnitOfWork(session, tracker, Substitute.For<IMartenOutbox>(), EnvelopeFactory);
-        await unitOfWork.CommitAsync(CancellationToken.None);
+        using var host = await StartHostAsync();
 
-        Assert.Empty(counter.DomainEvents);
-        Assert.Empty(tracker.Entries);
+        using (var scope = host.Services.CreateScope())
+        {
+            var repository = scope.ServiceProvider.GetRequiredService<IRepository<Counter, CounterId>>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var counter = Counter.Create(new CounterId(Guid.NewGuid()));
+
+            await repository.AddAsync(counter, TestContext.Current.CancellationToken);
+            Assert.NotEmpty(counter.DomainEvents);
+
+            await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
+
+            Assert.Empty(counter.DomainEvents);
+        }
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
     public async Task Commit_WhenSaveFails_KeepsTrackedEvents()
     {
-        var session = Substitute.For<IDocumentSession>();
-        session.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns(Task.FromException(new InvalidOperationException("commit failed")));
-        var tracker = TrackerWith(out var counter);
+        Assert.SkipUnless(fixture.Available, fixture.SkipReason);
 
-        var unitOfWork = new MartenUnitOfWork(session, tracker, Substitute.For<IMartenOutbox>(), EnvelopeFactory);
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => unitOfWork.CommitAsync(CancellationToken.None));
+        using var host = await StartHostAsync();
+        var id = new CounterId(Guid.NewGuid());
 
-        Assert.NotEmpty(counter.DomainEvents);
-        Assert.NotEmpty(tracker.Entries);
+        using (var seed = host.Services.CreateScope())
+        {
+            var repository = seed.ServiceProvider.GetRequiredService<IRepository<Counter, CounterId>>();
+            var unitOfWork = seed.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var counter = Counter.Create(id);
+            await repository.AddAsync(counter, TestContext.Current.CancellationToken);
+            await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
+        }
+
+        using var first = host.Services.CreateScope();
+        using var second = host.Services.CreateScope();
+
+        var firstRepository = first.ServiceProvider.GetRequiredService<IRepository<Counter, CounterId>>();
+        var secondRepository = second.ServiceProvider.GetRequiredService<IRepository<Counter, CounterId>>();
+
+        var firstCounter = await firstRepository.GetByIdAsync(id, TestContext.Current.CancellationToken);
+        var secondCounter = await secondRepository.GetByIdAsync(id, TestContext.Current.CancellationToken);
+
+        firstCounter!.Increment(1);
+        secondCounter!.Increment(1);
+
+        await first.ServiceProvider.GetRequiredService<IUnitOfWork>().CommitAsync(TestContext.Current.CancellationToken);
+
+        var exception = await Record.ExceptionAsync(
+            () => second.ServiceProvider.GetRequiredService<IUnitOfWork>()
+                .CommitAsync(TestContext.Current.CancellationToken));
+
+        Assert.NotNull(exception);
+        Assert.Contains("Concurrency", exception.GetType().Name, StringComparison.Ordinal);
+        Assert.NotEmpty(secondCounter.DomainEvents);
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
-    [Fact]
-    public async Task Commit_NumbersPublishedEnvelopesConsecutivelyUpToTheAggregateVersion()
+    private async Task<IHost> StartHostAsync()
     {
-        var published = new List<DomainEventEnvelope>();
-        var session = Substitute.For<IDocumentSession>();
-        var outbox = Substitute.For<IMartenOutbox>();
-#pragma warning disable CA2012
-        outbox.When(o => o.PublishAsync(Arg.Any<DomainEventEnvelope>()))
-            .Do(call => published.Add(call.Arg<DomainEventEnvelope>()!));
-#pragma warning restore CA2012
+        var builder = Host.CreateApplicationBuilder();
 
-        var tracker = TrackerWith(out var counter);
-        counter.Increment(1);
-        counter.Increment(2);
+        builder.AddThessera(options => options
+            .AddDomainEventsFrom(typeof(CounterCreated).Assembly)
+            .UseMartenEventStore(fixture.ConnectionString)
+            .ProvisionInfrastructure(InfrastructureProvisioning.AtStartup)
+            .CustomizeWolverine(ConfigureDurability));
 
-        var unitOfWork = new MartenUnitOfWork(session, tracker, outbox, EnvelopeFactory);
-        await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
-
-        Assert.Equal([1L, 2L, 3L], published.Select(envelope => envelope.Version));
-        Assert.Equal(((IStateOwner)counter).Version, published[^1].Version);
+        var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        return host;
     }
 
-    private static MartenAggregateTracker TrackerWith(out Counter counter)
+    private static void ConfigureDurability(WolverineOptions options)
     {
-        var tracker = new MartenAggregateTracker();
-        var aggregate = Counter.Create(new CounterId(Guid.NewGuid()));
-        tracker.Track(aggregate, "counter", aggregate.Id.Value.ToString(), () => ((IStateOwner)aggregate).Version);
-        counter = aggregate;
-        return tracker;
-    }
-
-    private sealed class StoppedClock(DateTimeOffset now) : IClock
-    {
-        public DateTimeOffset Now => now;
+        options.Durability.Mode = DurabilityMode.Solo;
+        options.ApplicationAssembly = typeof(DomainEventEnvelopeHandler).Assembly;
     }
 }
-
