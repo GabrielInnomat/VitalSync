@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Thessera\src\GaWeCodes.Thessera.Application\GaWeCodes.Thessera.Application.csproj" />
+    <PackageReference Include="GaWeCodes.Thessera.Application" />
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Domain\VitalSync.Sample.EventSourced.Domain.csproj" />
   </ItemGroup>
 

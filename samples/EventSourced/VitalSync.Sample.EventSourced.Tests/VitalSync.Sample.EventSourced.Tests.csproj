@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Thessera\src\GaWeCodes.Thessera.Testing\GaWeCodes.Thessera.Testing.csproj" />
+    <PackageReference Include="GaWeCodes.Thessera.Testing" />
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Contracts\VitalSync.Sample.EventSourced.Contracts.csproj" />
     <ProjectReference Include="..\..\StateStored\VitalSync.Sample.StateStored.Contracts\VitalSync.Sample.StateStored.Contracts.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Domain\VitalSync.Sample.EventSourced.Domain.csproj" />

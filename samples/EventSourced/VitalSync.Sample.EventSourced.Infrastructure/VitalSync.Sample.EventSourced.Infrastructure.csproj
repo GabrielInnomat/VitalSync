@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Thessera\src\GaWeCodes.Thessera.Persistence.Marten\GaWeCodes.Thessera.Persistence.Marten.csproj" />
-    <ProjectReference Include="..\..\..\Thessera\src\GaWeCodes.Thessera.Persistence.EfCore.Postgres\GaWeCodes.Thessera.Persistence.EfCore.Postgres.csproj" />
-    <ProjectReference Include="..\..\..\Thessera\src\GaWeCodes.Thessera.Messaging.RabbitMq\GaWeCodes.Thessera.Messaging.RabbitMq.csproj" />
+    <PackageReference Include="GaWeCodes.Thessera.Persistence.Marten" />
+    <PackageReference Include="GaWeCodes.Thessera.Persistence.EfCore.Postgres" />
+    <PackageReference Include="GaWeCodes.Thessera.Messaging.RabbitMq" />
     <ProjectReference Include="..\..\VitalSync.Sample.Contracts\VitalSync.Sample.Contracts.csproj" />
     <ProjectReference Include="..\VitalSync.Sample.EventSourced.Application\VitalSync.Sample.EventSourced.Application.csproj" />
   </ItemGroup>

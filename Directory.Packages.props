@@ -11,6 +11,12 @@
     <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.Rabbitmq" Version="9.0.0" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
+    <PackageVersion Include="GaWeCodes.Thessera.Application" Version="1.0.0-preview.1" />
+    <PackageVersion Include="GaWeCodes.Thessera.Domain" Version="1.0.0-preview.1" />
+    <PackageVersion Include="GaWeCodes.Thessera.Messaging.RabbitMq" Version="1.0.0-preview.1" />
+    <PackageVersion Include="GaWeCodes.Thessera.Persistence.EfCore.Postgres" Version="1.0.0-preview.1" />
+    <PackageVersion Include="GaWeCodes.Thessera.Persistence.Marten" Version="1.0.0-preview.1" />
+    <PackageVersion Include="GaWeCodes.Thessera.Testing" Version="1.0.0-preview.1" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.83.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.10" />

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Thessera\src\GaWeCodes.Thessera.Domain\GaWeCodes.Thessera.Domain.csproj" />
+    <PackageReference Include="GaWeCodes.Thessera.Domain" />
   </ItemGroup>
 
   <ItemGroup>
