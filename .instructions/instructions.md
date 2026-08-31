@@ -6,8 +6,11 @@ A cloud-native, distributed platform unifying **nutrition**, **fitness**, and **
 behind a single Blazor UI. Built as independent ASP.NET Core microservices using **DDD**, **CQRS**,
 and **selective Event Sourcing**.
 
-> Technical/architectural decisions are mandatory. Business/domain details are refined iteratively.
-> When a change affects architecture, update the affected document under `docs/`.
+Technical and architectural decisions are mandatory. Business and domain details are refined
+iteratively.
+
+**Thessera is a separate product**, consumed as the `GaWeCodes.Thessera.*` packages and developed in
+its own repository. Its internals are neither changed nor documented here.
 
 ## Build, test
 
@@ -16,21 +19,16 @@ dotnet build
 dotnet test
 ```
 
-Solution file: `VitalSync.slnx`. SDK pinned in `global.json` (`10.0.302`, `rollForward:
-latestFeature`).
+Solution file: `VitalSync.slnx`. The SDK is pinned in `global.json`, and Docker is required for the
+container-backed tests. **No Aspire workload** — the AppHost references `Aspire.AppHost.Sdk` as a
+package.
 
-`Directory.Build.props` applies solution-wide: `net10.0`, nullable + implicit usings enabled,
-`LangVersion latest`, `AnalysisLevel latest-all`, `AnalysisMode All`, `EnableNETAnalyzers`,
-`TreatWarningsAsErrors` and `CodeAnalysisTreatWarningsAsErrors` both true, `WarningLevel 9999`.
+`Directory.Build.props` applies solution-wide and puts the build under the strictest analysis
+available, with warnings treated as errors. A build failing on a warning is expected behavior, not a
+reason to work around the rule.
 
-Package versions are managed centrally in `Directory.Packages.props`
-(`ManagePackageVersionsCentrally`, `CentralPackageTransitivePinningEnabled`): a `.csproj` carries
+Package versions are managed centrally in `Directory.Packages.props`: a `.csproj` carries
 `<PackageReference Include="..." />` with no `Version`.
-
-## Prerequisites
-
-the .NET SDK pinned in `global.json` (`10.0.302`, `rollForward: latestFeature`) and
-Docker. **No Aspire workload** — the AppHosts reference `Aspire.AppHost.Sdk` as a package.
 
 ## Repository map
 
@@ -46,6 +44,14 @@ VitalSync/
 └── tests/
 ```
 
+## Business domains
+
+**Nutrition** covers ingredients, recipes, meal plans, shopping lists and nutrient intake.
+**Fitness** covers exercises, workout plans, workout sessions and energy expenditure.
+**Health Analytics** derives insights from both.
+
+Bounded-context decomposition is iterative — see `docs/domains/`.
+
 ## Non-negotiable rules
 
 - The Blazor frontend talks **exclusively** to the **BFF**. The BFF exposes **REST** to the frontend
@@ -57,48 +63,43 @@ VitalSync/
 - Each bounded context owns a **write + read database pair**, never shared, no cross-database FKs,
   joins or transactions.
 - `AddThessera` is called **exactly once** per host.
-- **Every service host wires the same defaults**:
-  `builder.AddServiceDefaults()`, one `AddNpgSqlReadinessCheck` **per database the context owns**
-  (`<context>-write` _and_ `<context>-read`), `AddRabbitMqReadinessCheck()`, `AddProblemDetails()` +
-  `app.UseExceptionHandler()` (a thin global handler), `app.MapDefaultEndpoints()`, and
-  `await app.RunAsync().ConfigureAwait(false)`. The connection names **are** the Aspire resource
-  names. `AddServiceDefaults()` already registers the OpenTelemetry sources `Thessera`,
-  `Npgsql`, `Wolverine` and `Marten` — do not re-add them.
+- A new service host follows the form of an existing `Program.cs` exactly. Two things are not visible
+  there: the connection names **are** the Aspire resource names, and `AddServiceDefaults()` already
+  registers the OpenTelemetry sources `Thessera`, `Npgsql`, `Wolverine` and `Marten` — do not re-add
+  them.
 - **No comments** — not in `*.cs`, `*.csproj`, workflow YAML, or code examples in `*.md`.
 - **No FluentAssertions** — xUnit built-in asserts only.
 
-## Business domains
+## Documentation
 
-- **Nutrition** — ingredients & nutritional values, recipes, meal plans, shopping lists,
-  nutrient-intake calculation.
-- **Fitness** — exercises, workout plans, workout-session tracking, energy/calorie expenditure.
-- **HealthAnalytics** — insights derived from nutrition and fitness data.
+`docs/` describes **architecture, patterns and technologies** — how VitalSync works, not how it is
+implemented. Implementation detail belongs in the code, and anything about the platform building
+blocks belongs in the Thessera repository.
 
-Bounded-context decomposition is iterative — see `docs/domains/`.
+When a change affects architecture, update the affected document under `docs/`. Check the `*.md`
+files your change affects — including this one, whenever you find a gap or an ambiguity in the
+guidance here.
 
-## Testing & CI
+## Testing
 
-Full strategy: `docs/testing.md`. What it will not tell you from the code:
-
-- Test projects mirror source structure 1:1. Domain tests use hand-written test doubles
-  (`TestDoubles/`), not mocks — the domain has no infrastructure to mock. NSubstitute is for
-  application/persistence/messaging tests.
-- Assert observable behavior, not internals ("creating a recipe raises a `RecipeCreated` event").
-- Add or extend tests alongside **any** behavioral change, and make them pass.
+The full strategy is in `docs/testing.md`. Beyond it: add or extend tests alongside **any**
+behavioral change, and make them pass.
 
 ## When contributing
 
 1. Respect the non-negotiable rules above.
 2. Add or update tests, and make sure they pass.
-3. If a change affects architecture, update the affected document under `docs/`.
-4. Check the `*.md` files your change affects and update them — including this file, whenever you
-   find a gap or an ambiguity in the guidance here.
-5. Match existing style; respect `.editorconfig`, `Directory.Build.props`, `Directory.Packages.props`.
-6. **Always work on `main`** — never a separate branch, and never ask which branch to use.
-7. Never assume anything. If you need more information always **ask a human**!
-8. Ask **always** in the chat, as plain prose.\*\* Never open a dialog, prompt, or
-   multiple-choice picker; do not use a question tool. Write the question and its options as normal
-   text in your answer and then stop and wait.
-9. **Never answer with a table.** Not in chat, not in plan or notes documents you write. Use a
-   heading with a short list underneath instead, and say what each item _means_ rather than only
-   what it measures. Existing tables in the repository docs stay as they are. 10. Never commit yourself.
+3. Update the documentation your change affects.
+4. Match existing style; respect `.editorconfig`, `Directory.Build.props`, `Directory.Packages.props`.
+
+## How to behave
+
+- **Always work on `main`** — never a separate branch, and never ask which branch to use.
+- **Never commit.** Leave the changes in the working tree.
+- **Never assume anything.** If you need more information, always **ask a human**.
+- **Always ask in the chat, as plain prose.** Never open a dialog, prompt, or multiple-choice picker;
+  do not use a question tool. Write the question and its options as normal text in your answer, then
+  stop and wait.
+- **Never answer with a table.** Not in chat, not in plan or notes documents you write. Use a heading
+  with a short list underneath instead, and say what each item _means_ rather than only what it
+  measures. Existing tables in the repository docs stay as they are.
