@@ -7,7 +7,7 @@ behind a single Blazor UI. Built as independent ASP.NET Core microservices using
 and **selective Event Sourcing**.
 
 > Technical/architectural decisions are mandatory. Business/domain details are refined iteratively.
-> When a change affects architecture, add or update an ADR.
+> When a change affects architecture, update the affected document under `docs/`.
 
 ## Build, test
 
@@ -40,8 +40,9 @@ VitalSync/
 │   ├── Aspire/
 │   ├── Bff/
 │   ├── Frontend/VitalSync.Web/
-│   └── Services/                   Nutrition | Fitness | Analytics, each Api + MigrationService
-├── docs/architecture/
+│   └── Services/                   Nutrition | Fitness | HealthAnalytics, each Api + MigrationService
+├── docs/                           architecture.md, patterns.md, technologies.md, testing.md,
+│                                   glossary.md, domains/, userStories/
 └── tests/
 ```
 
@@ -59,25 +60,25 @@ VitalSync/
 - **Every service host wires the same defaults**:
   `builder.AddServiceDefaults()`, one `AddNpgSqlReadinessCheck` **per database the context owns**
   (`<context>-write` _and_ `<context>-read`), `AddRabbitMqReadinessCheck()`, `AddProblemDetails()` +
-  `app.UseExceptionHandler()` (ADR-0017's thin global handler), `app.MapDefaultEndpoints()`, and
+  `app.UseExceptionHandler()` (a thin global handler), `app.MapDefaultEndpoints()`, and
   `await app.RunAsync().ConfigureAwait(false)`. The connection names **are** the Aspire resource
-  names. `AddServiceDefaults()` already registers the OpenTelemetry sources `GaWeCodes.Thessera`,
+  names. `AddServiceDefaults()` already registers the OpenTelemetry sources `Thessera`,
   `Npgsql`, `Wolverine` and `Marten` — do not re-add them.
 - **No comments** — not in `*.cs`, `*.csproj`, workflow YAML, or code examples in `*.md`.
-- **No FluentAssertions** — xUnit built-in asserts only (ADR-0014).
+- **No FluentAssertions** — xUnit built-in asserts only.
 
 ## Business domains
 
 - **Nutrition** — ingredients & nutritional values, recipes, meal plans, shopping lists,
   nutrient-intake calculation.
 - **Fitness** — exercises, workout plans, workout-session tracking, energy/calorie expenditure.
-- **Analytics** — insights derived from nutrition and fitness data.
+- **HealthAnalytics** — insights derived from nutrition and fitness data.
 
-Bounded-context decomposition is iterative — see `docs/architecture/domain-model.md`.
+Bounded-context decomposition is iterative — see `docs/domains/`.
 
 ## Testing & CI
 
-Full strategy: `docs/architecture/testing-strategy.md`. What it will not tell you from the code:
+Full strategy: `docs/testing.md`. What it will not tell you from the code:
 
 - Test projects mirror source structure 1:1. Domain tests use hand-written test doubles
   (`TestDoubles/`), not mocks — the domain has no infrastructure to mock. NSubstitute is for
@@ -89,7 +90,7 @@ Full strategy: `docs/architecture/testing-strategy.md`. What it will not tell yo
 
 1. Respect the non-negotiable rules above.
 2. Add or update tests, and make sure they pass.
-3. If a change affects architecture, add or update an ADR (template in `decisions/README.md`).
+3. If a change affects architecture, update the affected document under `docs/`.
 4. Check the `*.md` files your change affects and update them — including this file, whenever you
    find a gap or an ambiguity in the guidance here.
 5. Match existing style; respect `.editorconfig`, `Directory.Build.props`, `Directory.Packages.props`.

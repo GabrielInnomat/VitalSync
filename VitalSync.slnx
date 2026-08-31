@@ -33,9 +33,9 @@
     <Project Path="src/Frontend/VitalSync.Web/VitalSync.Web.csproj" />
   </Folder>
   <Folder Name="/src/Services/" />
-  <Folder Name="/src/Services/Analytics/">
-    <Project Path="src/Services/Analytics/VitalSync.Analytics.Api/VitalSync.Analytics.Api.csproj" />
-    <Project Path="src/Services/Analytics/VitalSync.Analytics.MigrationService/VitalSync.Analytics.MigrationService.csproj" />
+  <Folder Name="/src/Services/HealthAnalytics/">
+    <Project Path="src/Services/HealthAnalytics/VitalSync.HealthAnalytics.Api/VitalSync.HealthAnalytics.Api.csproj" />
+    <Project Path="src/Services/HealthAnalytics/VitalSync.HealthAnalytics.MigrationService/VitalSync.HealthAnalytics.MigrationService.csproj" />
   </Folder>
   <Folder Name="/src/Services/Fitness/">
     <Project Path="src/Services/Fitness/VitalSync.Fitness.Api/VitalSync.Fitness.Api.csproj" />

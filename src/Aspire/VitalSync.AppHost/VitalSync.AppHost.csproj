@@ -13,8 +13,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Bff\VitalSync.Bff\VitalSync.Bff.csproj" />
     <ProjectReference Include="..\..\Frontend\VitalSync.Web\VitalSync.Web.csproj" />
-    <ProjectReference Include="..\..\Services\Analytics\VitalSync.Analytics.Api\VitalSync.Analytics.Api.csproj" />
-    <ProjectReference Include="..\..\Services\Analytics\VitalSync.Analytics.MigrationService\VitalSync.Analytics.MigrationService.csproj" />
+    <ProjectReference Include="..\..\Services\HealthAnalytics\VitalSync.HealthAnalytics.Api\VitalSync.HealthAnalytics.Api.csproj" />
+    <ProjectReference Include="..\..\Services\HealthAnalytics\VitalSync.HealthAnalytics.MigrationService\VitalSync.HealthAnalytics.MigrationService.csproj" />
     <ProjectReference Include="..\..\Services\Fitness\VitalSync.Fitness.MigrationService\VitalSync.Fitness.MigrationService.csproj" />
     <ProjectReference Include="..\..\Services\Nutrition\VitalSync.Nutrition.Api\VitalSync.Nutrition.Api.csproj" />
     <ProjectReference Include="..\..\Services\Fitness\VitalSync.Fitness.Api\VitalSync.Fitness.Api.csproj" />

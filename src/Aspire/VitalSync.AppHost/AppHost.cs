@@ -14,8 +14,8 @@ var nutritionRead = postgres.AddDatabase("nutrition-read", "nutrition-read");
 var fitnessWrite = postgres.AddDatabase("fitness-write", "fitness-write");
 var fitnessRead = postgres.AddDatabase("fitness-read", "fitness-read");
 
-var analyticsWrite = postgres.AddDatabase("analytics-write", "analytics-write");
-var analyticsRead = postgres.AddDatabase("analytics-read", "analytics-read");
+var healthAnalyticsWrite = postgres.AddDatabase("health-analytics-write", "health-analytics-write");
+var healthAnalyticsRead = postgres.AddDatabase("health-analytics-read", "health-analytics-read");
 
 var nutritionMigrationService = builder.AddProject<Projects.VitalSync_Nutrition_MigrationService>("nutrition-migration-service")
     .WithReference(nutritionWrite)
@@ -33,11 +33,11 @@ var fitnessMigrationService = builder.AddProject<Projects.VitalSync_Fitness_Migr
     .WithReference(messaging)
     .WaitFor(messaging);
 
-var analyticsMigrationService = builder.AddProject<Projects.VitalSync_Analytics_MigrationService>("analytics-migration-service")
-    .WithReference(analyticsWrite)
-    .WaitFor(analyticsWrite)
-    .WithReference(analyticsRead)
-    .WaitFor(analyticsRead)
+var healthAnalyticsMigrationService = builder.AddProject<Projects.VitalSync_HealthAnalytics_MigrationService>("health-analytics-migration-service")
+    .WithReference(healthAnalyticsWrite)
+    .WaitFor(healthAnalyticsWrite)
+    .WithReference(healthAnalyticsRead)
+    .WaitFor(healthAnalyticsRead)
     .WithReference(messaging)
     .WaitFor(messaging);
 
@@ -61,14 +61,14 @@ var fitnessService = builder.AddProject<Projects.VitalSync_Fitness_Api>("fitness
     .WaitForCompletion(fitnessMigrationService)
     .WithHttpHealthCheck("/health");
 
-var analyticsService = builder.AddProject<Projects.VitalSync_Analytics_Api>("analytics-service")
-    .WithReference(analyticsRead)
-    .WaitFor(analyticsRead)
-    .WithReference(analyticsWrite)
-    .WaitFor(analyticsWrite)
+var healthAnalyticsService = builder.AddProject<Projects.VitalSync_HealthAnalytics_Api>("health-analytics-service")
+    .WithReference(healthAnalyticsRead)
+    .WaitFor(healthAnalyticsRead)
+    .WithReference(healthAnalyticsWrite)
+    .WaitFor(healthAnalyticsWrite)
     .WithReference(messaging)
     .WaitFor(messaging)
-    .WaitForCompletion(analyticsMigrationService)
+    .WaitForCompletion(healthAnalyticsMigrationService)
     .WithHttpHealthCheck("/health");
 
 var backendForFrontend = builder.AddProject<Projects.VitalSync_Bff>("backend-for-frontend")
@@ -76,8 +76,8 @@ var backendForFrontend = builder.AddProject<Projects.VitalSync_Bff>("backend-for
     .WaitFor(nutritionService)
     .WithReference(fitnessService)
     .WaitFor(fitnessService)
-    .WithReference(analyticsService)
-    .WaitFor(analyticsService)
+    .WithReference(healthAnalyticsService)
+    .WaitFor(healthAnalyticsService)
     .WithHttpHealthCheck("/health");
 
 builder.AddProject<Projects.VitalSync_Web>("web-frontend")
