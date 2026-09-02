@@ -29,7 +29,7 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.18.0-beta.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.18.0" />
-    <PackageVersion Include="protobuf-net.BuildTools" Version="3.3.8" />
+    <PackageVersion Include="protobuf-net" Version="3.4.21" />
     <PackageVersion Include="protobuf-net.Grpc" Version="1.3.14" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.3.14" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
