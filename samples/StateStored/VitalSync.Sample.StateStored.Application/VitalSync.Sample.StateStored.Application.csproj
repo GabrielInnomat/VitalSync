@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="GaWeCodes.Thessera.Analyzers" PrivateAssets="all" />
     <PackageReference Include="GaWeCodes.Thessera.Application" />
     <ProjectReference Include="..\VitalSync.Sample.StateStored.Domain\VitalSync.Sample.StateStored.Domain.csproj" />
   </ItemGroup>

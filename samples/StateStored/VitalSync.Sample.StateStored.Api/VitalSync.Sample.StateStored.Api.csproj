@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <PackageReference Include="GaWeCodes.Thessera.Analyzers" PrivateAssets="all" />
     <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
   </ItemGroup>
 

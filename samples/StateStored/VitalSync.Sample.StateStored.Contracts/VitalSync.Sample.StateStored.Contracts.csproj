@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="GaWeCodes.Thessera.Analyzers" PrivateAssets="all" />
     <PackageReference Include="protobuf-net.Grpc" />
     <PackageReference Include="protobuf-net.BuildTools" PrivateAssets="all" />
   </ItemGroup>
