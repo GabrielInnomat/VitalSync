@@ -54,7 +54,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: "**/bin/Release/net10.0/TestResults/**"
+          path: "TestResults/**"
           if-no-files-found: ignore
 
       - name: Create the ASP.NET development certificate
@@ -92,6 +92,7 @@ jobs:
           VITALSYNC_REQUIRE_SMOKE: "1"
           THESSERA_REQUIRE_CONTAINERS: "1"
         run: |
+          rm -rf TestResults
           dotnet test samples/StateStored/VitalSync.Sample.StateStored.Tests \
             --configuration Release --no-build -- --output Detailed --report-xunit-trx
           dotnet test samples/EventSourced/VitalSync.Sample.EventSourced.Tests \
@@ -106,14 +107,14 @@ jobs:
               sed -n '/outcome="Failed"/,/<\/UnitTestResult>/p' "$trx"
               echo "::endgroup::"
             fi
-          done < <(find samples -name '*.trx' -type f)
+          done < <(find TestResults -name '*.trx' -type f)
 
       - name: Upload smoke test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: smoke-test-results
-          path: "samples/**/bin/Release/net10.0/TestResults/**"
+          path: "TestResults/**"
           if-no-files-found: ignore
 
       - name: Diagnostics
