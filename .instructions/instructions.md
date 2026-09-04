@@ -37,10 +37,12 @@ VitalSync/
 ├── src/
 │   ├── Aspire/
 │   ├── Bff/
-│   ├── Frontend/VitalSync.Web/
+│   ├── Frontend/                   VitalSync.Web | VitalSync.DesignSystem (RCL: tokens + components)
 │   └── Services/                   Nutrition | Fitness | HealthAnalytics, each Api + MigrationService
 ├── docs/                           architecture.md, patterns.md, technologies.md, testing.md,
-│                                   glossary.md, domains/, userStories/
+│                                   design-system.md, glossary.md, domains/, userStories/
+├── tools/                          build-time checks, not shipped
+├── plan.md                         throwaway: what is left to build; deleted when it is
 └── tests/
 ```
 
@@ -68,6 +70,12 @@ Bounded-context decomposition is iterative — see `docs/domains/`.
   registers the OpenTelemetry sources `Thessera`, `Npgsql`, `Wolverine` and `Marten` — do not re-add
   them.
 - **No comments** — not in `*.cs`, `*.csproj`, workflow YAML, or code examples in `*.md`.
+- **CSS is the one exception, and a narrow one.** A comment is allowed only where the value would
+  otherwise read as a mistake and be "fixed": a deliberate duplicate, a shade that must not be
+  reused, a unit chosen to work around browser behavior. One line, stating the constraint. Never
+  a value that a tool computes — a contrast ratio in a comment goes stale the moment a color
+  changes, and the check in `tools/VitalSync.DesignTokens.Contrast` already owns those numbers.
+  Rationale, derivations and conventions belong in `docs/`, not in the stylesheet.
 - **No FluentAssertions** — xUnit built-in asserts only.
 
 ## Documentation

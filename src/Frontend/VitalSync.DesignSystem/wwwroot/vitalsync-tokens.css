@@ -1,0 +1,289 @@
+/* VitalSync Design System - Tokens. Begruendungen und Konventionen: docs/design-system.md.
+   Kontrastwerte stehen bewusst nicht hier, sie werden von tools/VitalSync.DesignTokens.Contrast berechnet. */
+
+:root {
+  --neutral-50:  #F8FAFC;
+  --neutral-100: #F1F5F9;
+  --neutral-200: #E2E8F0;
+  --neutral-300: #CBD5E1;
+  --neutral-400: #94A3B8;
+  --neutral-500: #64748B;
+  /* Zwischenstufe ausserhalb der Slate-Skala: Placeholder braucht sie fuer 4.5:1 */
+  --neutral-550: #5B6B81;
+  --neutral-600: #475569;
+  --neutral-700: #334155;
+  --neutral-800: #1E293B;
+  --neutral-900: #0F172A;
+  --neutral-950: #020617;
+
+  --blue-50:  #EFF6FF;
+  --blue-100: #DBEAFE;
+  --blue-400: #60A5FA;
+  --blue-500: #3B82F6;
+  --blue-600: #2563EB;
+  --blue-700: #1D4ED8;
+
+  --green-400: #4ADE80;
+  /* ungenutzt: verfehlt 3:1 auf der Card */
+  --green-600: #16A34A;
+  --green-700: #15803D;
+
+  --amber-400: #FBBF24;
+  /* ungenutzt: verfehlt 3:1 auf der Card */
+  --amber-600: #D97706;
+  --amber-700: #B45309;
+
+  --red-50:  #FEF2F2;
+  --red-400: #F87171;
+  --red-600: #DC2626;
+  --red-700: #B91C1C;
+  --red-950: #450A0A;
+
+  /* Aus Okabe-Ito abgeleitet. Werte nur zusammen mit der Trennungspruefung aendern, siehe docs/design-system.md */
+  --data-1-light: #C07500;
+  --data-2-light: #0090C6;
+  --data-3-light: #007C49;
+  --data-4-light: #075593;
+  --data-5-light: #AE3E00;
+  --data-6-light: #BB6E99;
+
+  --data-1-dark: #E69F00;
+  --data-2-dark: #59B8EE;
+  --data-3-dark: #05A175;
+  --data-4-dark: #427ABC;
+  --data-5-dark: #D55E00;
+  --data-6-dark: #CC79A7;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  --touch-target-min: 44px;
+
+  --font-size-100: 0.875rem;
+  --font-size-200: 1rem;
+  /* 20px: die 3:1-Ausnahme aus 1.4.3 gilt hier NUR ab bold */
+  --font-size-300: 1.25rem;
+  --font-size-400: 1.5625rem;
+  --font-size-500: 1.953rem;
+
+  --font-size-large-text-min: 1.5rem;
+  --font-size-large-text-bold-min: 1.1875rem;
+  --font-family-ui: "Inter", system-ui, sans-serif;
+  --font-family-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+
+  --container-breakpoint-sm: 320px;
+  --container-breakpoint-md: 480px;
+  --container-breakpoint-lg: 640px;
+
+  --motion-duration-fast: 120ms;
+  --motion-duration-base: 200ms;
+  --motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-full: 9999px;
+
+  --border-width-thin: 1px;
+  --border-width-thick: 2px;
+
+  --line-height-tight: 1.25;
+  --line-height-base: 1.5;
+  --line-height-relaxed: 1.75;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --icon-size-sm: 1rem;
+  --icon-size-md: 1.25rem;
+  --icon-size-lg: 1.5rem;
+  --icon-size-xl: 2rem;
+
+  /* nur Nicht-Text; Text nimmt --color-text-disabled, nie beides */
+  --opacity-disabled: 0.5;
+  --opacity-hover-overlay: 0.08;
+  --opacity-pressed-overlay: 0.12;
+  --opacity-scrim: 0.5;
+
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1100;
+  --z-index-overlay: 1200;
+  --z-index-modal: 1300;
+  --z-index-popover: 1400;
+  --z-index-toast: 1500;
+  --z-index-tooltip: 1600;
+
+  --container-max-width: 1280px;
+
+  --shadow-1: 0 1px 3px rgba(15, 23, 42, 0.16), 0 1px 2px rgba(15, 23, 42, 0.10);
+  --shadow-2: 0 4px 8px rgba(15, 23, 42, 0.16), 0 2px 4px rgba(15, 23, 42, 0.10);
+  --shadow-3: 0 12px 20px rgba(15, 23, 42, 0.20), 0 4px 8px rgba(15, 23, 42, 0.12);
+  --shadow-4: 0 24px 32px rgba(15, 23, 42, 0.24), 0 8px 12px rgba(15, 23, 42, 0.14);
+
+  --color-background-primary: var(--neutral-50);
+  --color-background-surface: var(--neutral-100);
+  --color-border-subtle: var(--neutral-200);
+  --color-border-default: var(--neutral-300);
+
+  /* Grenze bedienbarer Elemente, 1.4.11: nicht --color-border-default verwenden */
+  --color-border-interactive: var(--neutral-500);
+  --color-border-interactive-hover: var(--neutral-600);
+
+  --color-text-primary: var(--neutral-900);
+  --color-text-secondary: var(--neutral-600);
+  --color-text-disabled: var(--neutral-400);
+
+  --color-text-placeholder: var(--neutral-550);
+
+  --color-action-primary: var(--blue-600);
+  --color-action-primary-hover: var(--blue-700);
+
+  /* absichtlich neutral statt Markenfarbe, siehe docs/design-system.md */
+  --color-focus-ring: var(--neutral-900);
+  --color-focus-ring-offset: #FFFFFF;
+
+  --color-text-on-action: #FFFFFF;
+
+  --color-text-success: var(--green-700);
+  --color-text-warning: var(--amber-700);
+  --color-text-critical: var(--red-700);
+
+  --color-surface-success: var(--green-700);
+  --color-surface-warning: var(--amber-700);
+  --color-surface-critical: var(--red-700);
+
+  --color-surface-critical-subtle: var(--red-50);
+  --color-border-critical: var(--red-600);
+  --color-icon-critical: var(--red-600);
+
+  --color-data-heartrate: var(--data-5-light);
+  --color-data-sleep: var(--data-4-light);
+  --color-data-activity: var(--data-3-light);
+  --color-data-nutrition: var(--data-1-light);
+
+  --color-background-elevated-1: var(--color-background-surface);
+  /* Stufe 2 und 3 sind im Light Mode absichtlich gleich, siehe docs/design-system.md */
+  --color-background-elevated-2: #FFFFFF;
+  --color-background-elevated-3: #FFFFFF;
+
+  /* trennt das Feld NICHT von der Card, das leistet --color-border-interactive */
+  --color-background-input: #FFFFFF;
+}
+
+[data-theme="dark"] {
+  --color-background-primary: var(--neutral-900);
+  --color-background-surface: var(--neutral-800);
+  --color-border-subtle: var(--neutral-700);
+  --color-border-default: var(--neutral-600);
+
+  --color-border-interactive: var(--neutral-400);
+  --color-border-interactive-hover: var(--neutral-300);
+
+  --color-text-primary: var(--neutral-50);
+  --color-text-secondary: var(--neutral-300);
+  --color-text-disabled: var(--neutral-600);
+  --color-text-placeholder: var(--neutral-400);
+
+  --color-action-primary: var(--blue-400);
+  --color-action-primary-hover: var(--blue-500);
+  --color-focus-ring: var(--neutral-50);
+  --color-focus-ring-offset: var(--neutral-900);
+
+  --color-text-success: var(--green-400);
+  --color-text-warning: var(--amber-400);
+  --color-text-critical: var(--red-400);
+
+  --color-text-on-action: var(--neutral-900);
+
+  --color-surface-success: var(--green-400);
+  --color-surface-warning: var(--amber-400);
+  --color-surface-critical: var(--red-400);
+
+  --color-surface-critical-subtle: var(--red-950);
+  --color-border-critical: var(--red-400);
+  --color-icon-critical: var(--red-400);
+
+  --color-data-heartrate: var(--data-5-dark);
+  --color-data-sleep: var(--data-4-dark);
+  --color-data-activity: var(--data-3-dark);
+  --color-data-nutrition: var(--data-1-dark);
+
+  --color-background-input: var(--neutral-950);
+
+  --color-background-elevated-1: var(--neutral-800);
+  --color-background-elevated-2: #24304a;
+  --color-background-elevated-3: #2c3a58;
+
+  --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.40), 0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-2: 0 4px 8px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.30);
+  --shadow-3: 0 12px 20px rgba(0, 0, 0, 0.50), 0 4px 8px rgba(0, 0, 0, 0.35);
+  --shadow-4: 0 24px 32px rgba(0, 0, 0, 0.55), 0 8px 12px rgba(0, 0, 0, 0.40);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    /* nicht 0ms: dann feuert transitionend in manchen Browsern nicht */
+    --motion-duration-fast: 0.01ms;
+    --motion-duration-base: 0.01ms;
+  }
+}
+
+:root {
+  --button-primary-background: var(--color-action-primary);
+  --button-primary-background-hover: var(--color-action-primary-hover);
+  --button-primary-text: var(--color-text-on-action);
+  --button-min-height: var(--touch-target-min);
+  --button-min-width: var(--touch-target-min);
+  --button-padding-inline: var(--space-4);
+  --button-radius: var(--radius-md);
+  --button-font-weight: var(--font-weight-semibold);
+
+  --focus-ring-width: var(--border-width-thick);
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--color-focus-ring);
+  --focus-ring-offset-color: var(--color-focus-ring-offset);
+
+  --card-background: var(--color-background-elevated-1);
+  --card-radius: var(--radius-lg);
+  --card-padding: var(--space-6);
+  --card-shadow: var(--shadow-1);
+  --card-shadow-hover: var(--shadow-2);
+  --card-border: var(--border-width-thin) solid var(--color-border-subtle);
+
+  --input-height: var(--touch-target-min);
+  --input-radius: var(--radius-sm);
+  --input-padding-inline: var(--space-3);
+  --input-background: var(--color-background-input);
+  --input-background-disabled: var(--neutral-100);
+  --input-text-color: var(--color-text-primary);
+  --input-placeholder-color: var(--color-text-placeholder);
+
+  --input-border-color: var(--color-border-interactive);
+  --input-border-color-hover: var(--color-border-interactive-hover);
+  --input-border-color-focus: var(--color-action-primary);
+  --input-border-width: var(--border-width-thin);
+  --input-border-width-focus: var(--border-width-thick);
+
+  --input-helper-text-color: var(--color-text-secondary);
+
+  --input-border-color-error: var(--color-border-critical);
+  --input-background-error: var(--color-surface-critical-subtle);
+  --input-error-text-color: var(--color-text-critical);
+  --input-error-icon-color: var(--color-icon-critical);
+}
+
+[data-theme="dark"] {
+  --input-background-disabled: var(--neutral-700);
+}
+

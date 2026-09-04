@@ -1,0 +1,543 @@
+{
+  "checks": [
+    {
+      "id": "text-primary-on-background",
+      "criterion": "1.4.3",
+      "description": "Body text on the page background",
+      "foreground": "--color-text-primary",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "text-primary-on-card",
+      "criterion": "1.4.3",
+      "description": "Body text inside a card",
+      "foreground": "--color-text-primary",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "text-primary-on-elevated-1",
+      "criterion": "1.4.3",
+      "description": "Body text on a resting elevated surface",
+      "foreground": "--color-text-primary",
+      "background": "--color-background-elevated-1",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "text-secondary-on-elevated-2",
+      "criterion": "1.4.3",
+      "description": "Secondary text in an open dropdown",
+      "foreground": "--color-text-secondary",
+      "background": "--color-background-elevated-2",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "text-secondary-on-elevated-3",
+      "criterion": "1.4.3",
+      "description": "Secondary text inside a modal or dialog",
+      "foreground": "--color-text-secondary",
+      "background": "--color-background-elevated-3",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "text-primary-on-elevated-2",
+      "criterion": "1.4.3",
+      "description": "Body text on a hovered card or an open dropdown",
+      "foreground": "--color-text-primary",
+      "background": "--color-background-elevated-2",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "text-primary-on-elevated-3",
+      "criterion": "1.4.3",
+      "description": "Body text inside a modal or dialog",
+      "foreground": "--color-text-primary",
+      "background": "--color-background-elevated-3",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "text-secondary-on-background",
+      "criterion": "1.4.3",
+      "description": "Secondary text on the page background",
+      "foreground": "--color-text-secondary",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "text-secondary-on-card",
+      "criterion": "1.4.3",
+      "description": "Secondary text inside a card",
+      "foreground": "--color-text-secondary",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "action-primary-on-background",
+      "criterion": "1.4.3",
+      "description": "Link or text button on the page background",
+      "foreground": "--color-action-primary",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "action-primary-on-card",
+      "criterion": "1.4.3",
+      "description": "Link or text button inside a card",
+      "foreground": "--color-action-primary",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "action-primary-hover-on-background",
+      "criterion": "1.4.3",
+      "description": "Hovered link or text button on the page background",
+      "foreground": "--color-action-primary-hover",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "text-success-on-background",
+      "criterion": "1.4.3",
+      "description": "Success message on the page background",
+      "foreground": "--color-text-success",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "text-success-on-card",
+      "criterion": "1.4.3",
+      "description": "Success message inside a card",
+      "foreground": "--color-text-success",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "text-warning-on-background",
+      "criterion": "1.4.3",
+      "description": "Warning message on the page background",
+      "foreground": "--color-text-warning",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "text-warning-on-card",
+      "criterion": "1.4.3",
+      "description": "Warning message inside a card",
+      "foreground": "--color-text-warning",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "text-critical-on-background",
+      "criterion": "1.4.3",
+      "description": "Critical message on the page background",
+      "foreground": "--color-text-critical",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "text-critical-on-card",
+      "criterion": "1.4.3",
+      "description": "Critical message inside a card",
+      "foreground": "--color-text-critical",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "input-text-on-input-background",
+      "criterion": "1.4.3",
+      "description": "Value typed into a form field",
+      "foreground": "--input-text-color",
+      "background": "--input-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "input-text-on-input-error-background",
+      "criterion": "1.4.3",
+      "description": "Value typed into a form field that is showing an error",
+      "foreground": "--input-text-color",
+      "background": "--input-background-error",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "input-placeholder-on-input-background",
+      "criterion": "1.4.3",
+      "description": "Placeholder text inside a form field",
+      "foreground": "--input-placeholder-color",
+      "background": "--input-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "input-placeholder-on-input-error-background",
+      "criterion": "1.4.3",
+      "description": "Placeholder of an empty required field that is showing an error",
+      "foreground": "--input-placeholder-color",
+      "background": "--input-background-error",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "input-helper-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Helper text below a form field on the page background",
+      "foreground": "--input-helper-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "input-helper-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Helper text below a form field inside a card",
+      "foreground": "--input-helper-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "input-error-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Validation message below a form field on the page background",
+      "foreground": "--input-error-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "input-error-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Validation message below a form field inside a card",
+      "foreground": "--input-error-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "input-border-on-input-background",
+      "criterion": "1.4.11",
+      "description": "Resting form field border against the field it encloses",
+      "foreground": "--input-border-color",
+      "background": "--input-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "input-border-on-card",
+      "criterion": "1.4.11",
+      "description": "Resting form field border against the card behind it",
+      "foreground": "--input-border-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "input-border-hover-on-input-background",
+      "criterion": "1.4.11",
+      "description": "Hovered form field border against the field it encloses",
+      "foreground": "--input-border-color-hover",
+      "background": "--input-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "input-border-focus-on-input-background",
+      "criterion": "1.4.11",
+      "description": "Focused form field border against the field it encloses",
+      "foreground": "--input-border-color-focus",
+      "background": "--input-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "input-border-hover-on-card",
+      "criterion": "1.4.11",
+      "description": "Hovered form field border against the card behind it",
+      "foreground": "--input-border-color-hover",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "input-border-focus-on-card",
+      "criterion": "1.4.11",
+      "description": "Focused form field border against the card behind it",
+      "foreground": "--input-border-color-focus",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "input-border-error-on-card",
+      "criterion": "1.4.11",
+      "description": "Error form field border against the card behind it",
+      "foreground": "--input-border-color-error",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "input-border-error-on-input-error-background",
+      "criterion": "1.4.11",
+      "description": "Error form field border against the field it encloses",
+      "foreground": "--input-border-color-error",
+      "background": "--input-background-error",
+      "requirement": "non-text"
+    },
+    {
+      "id": "input-error-icon-on-input-error-background",
+      "criterion": "1.4.11",
+      "description": "Error icon inside a form field that is showing an error",
+      "foreground": "--input-error-icon-color",
+      "background": "--input-background-error",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-on-focus-ring-offset",
+      "criterion": "1.4.11",
+      "description": "Outer focus ring against its own separator - the innermost edge the eye sees",
+      "foreground": "--focus-ring-color",
+      "background": "--focus-ring-offset-color",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-offset-on-button-fill",
+      "criterion": "1.4.11",
+      "description": "Focus separator against the primary button it surrounds - the edge that previously had no rule and sat at 1.00",
+      "foreground": "--focus-ring-offset-color",
+      "background": "--button-primary-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-offset-on-input-focus-border",
+      "criterion": "1.4.11",
+      "description": "Focus separator against the focused form field border it surrounds - a field is bounded by its border, not by its fill",
+      "foreground": "--focus-ring-offset-color",
+      "background": "--input-border-color-focus",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-on-background",
+      "criterion": "1.4.11",
+      "description": "Focus indicator against the page background it is drawn on",
+      "foreground": "--focus-ring-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-on-card",
+      "criterion": "1.4.11",
+      "description": "Focus indicator against the card it is drawn on",
+      "foreground": "--focus-ring-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-heartrate-on-background",
+      "criterion": "1.4.11",
+      "description": "Heart rate series against the page background",
+      "foreground": "--color-data-heartrate",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-heartrate-on-card",
+      "criterion": "1.4.11",
+      "description": "Heart rate series against the card a chart sits in",
+      "foreground": "--color-data-heartrate",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-sleep-on-background",
+      "criterion": "1.4.11",
+      "description": "Sleep series against the page background",
+      "foreground": "--color-data-sleep",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-sleep-on-card",
+      "criterion": "1.4.11",
+      "description": "Sleep series against the card a chart sits in",
+      "foreground": "--color-data-sleep",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-activity-on-background",
+      "criterion": "1.4.11",
+      "description": "Activity series against the page background",
+      "foreground": "--color-data-activity",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-activity-on-card",
+      "criterion": "1.4.11",
+      "description": "Activity series against the card a chart sits in",
+      "foreground": "--color-data-activity",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-nutrition-on-background",
+      "criterion": "1.4.11",
+      "description": "Nutrition series against the page background",
+      "foreground": "--color-data-nutrition",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-nutrition-on-card",
+      "criterion": "1.4.11",
+      "description": "Nutrition series against the card a chart sits in",
+      "foreground": "--color-data-nutrition",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-palette-2-light-on-card",
+      "criterion": "1.4.11",
+      "description": "Unassigned palette slot 2, guarded before it gets a series",
+      "foreground": "--data-2-light",
+      "background": "--card-background",
+      "requirement": "non-text",
+      "themes": [
+        "light"
+      ]
+    },
+    {
+      "id": "data-palette-6-light-on-card",
+      "criterion": "1.4.11",
+      "description": "Unassigned palette slot 6, guarded before it gets a series",
+      "foreground": "--data-6-light",
+      "background": "--card-background",
+      "requirement": "non-text",
+      "themes": [
+        "light"
+      ]
+    },
+    {
+      "id": "data-palette-2-dark-on-card",
+      "criterion": "1.4.11",
+      "description": "Unassigned palette slot 2, guarded before it gets a series",
+      "foreground": "--data-2-dark",
+      "background": "--card-background",
+      "requirement": "non-text",
+      "themes": [
+        "dark"
+      ]
+    },
+    {
+      "id": "data-palette-6-dark-on-card",
+      "criterion": "1.4.11",
+      "description": "Unassigned palette slot 6, guarded before it gets a series",
+      "foreground": "--data-6-dark",
+      "background": "--card-background",
+      "requirement": "non-text",
+      "themes": [
+        "dark"
+      ]
+    },
+    {
+      "id": "button-primary-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Label on a resting primary button",
+      "foreground": "--button-primary-text",
+      "background": "--button-primary-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "button-primary-text-on-hover-fill",
+      "criterion": "1.4.3",
+      "description": "Label on a hovered primary button",
+      "foreground": "--button-primary-text",
+      "background": "--button-primary-background-hover",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "surface-success-on-card",
+      "criterion": "1.4.11",
+      "description": "Success fill against the card it sits in",
+      "foreground": "--color-surface-success",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "surface-warning-on-card",
+      "criterion": "1.4.11",
+      "description": "Warning fill against the card it sits in",
+      "foreground": "--color-surface-warning",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "surface-critical-on-card",
+      "criterion": "1.4.11",
+      "description": "Critical fill against the card it sits in",
+      "foreground": "--color-surface-critical",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "surface-success-on-background",
+      "criterion": "1.4.11",
+      "description": "Success fill against the page background",
+      "foreground": "--color-surface-success",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "surface-warning-on-background",
+      "criterion": "1.4.11",
+      "description": "Warning fill against the page background",
+      "foreground": "--color-surface-warning",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "surface-critical-on-background",
+      "criterion": "1.4.11",
+      "description": "Critical fill against the page background",
+      "foreground": "--color-surface-critical",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    }
+  ],
+  "waivers": [],
+  "separations": [
+    {
+      "id": "assigned-data-series",
+      "description": "The four series a chart actually renders must stay tellable apart, including under colour vision deficiency",
+      "colors": [
+        "--color-data-heartrate",
+        "--color-data-sleep",
+        "--color-data-activity",
+        "--color-data-nutrition"
+      ],
+      "minimumDeltaE": 16
+    },
+    {
+      "id": "data-palette-light",
+      "description": "All six light-mode palette slots, so an unassigned slot cannot be taken into use unchecked",
+      "colors": [
+        "--data-1-light",
+        "--data-2-light",
+        "--data-3-light",
+        "--data-4-light",
+        "--data-5-light",
+        "--data-6-light"
+      ],
+      "minimumDeltaE": 16,
+      "themes": [
+        "light"
+      ]
+    },
+    {
+      "id": "data-palette-dark",
+      "description": "All six dark-mode palette slots, so an unassigned slot cannot be taken into use unchecked",
+      "colors": [
+        "--data-1-dark",
+        "--data-2-dark",
+        "--data-3-dark",
+        "--data-4-dark",
+        "--data-5-dark",
+        "--data-6-dark"
+      ],
+      "minimumDeltaE": 16,
+      "themes": [
+        "dark"
+      ]
+    }
+  ],
+  "separationWaivers": []
+}

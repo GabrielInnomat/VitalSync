@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "VitalSync.Web",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/Frontend/VitalSync.Web", "--launch-profile", "http", "--no-build"],
+      "port": 5164
+    }
+  ]
+}

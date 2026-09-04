@@ -30,6 +30,7 @@
     <Project Path="src/Bff/VitalSync.Bff/VitalSync.Bff.csproj" />
   </Folder>
   <Folder Name="/src/Frontend/">
+    <Project Path="src/Frontend/VitalSync.DesignSystem/VitalSync.DesignSystem.csproj" />
     <Project Path="src/Frontend/VitalSync.Web/VitalSync.Web.csproj" />
   </Folder>
   <Folder Name="/src/Services/" />
@@ -45,7 +46,11 @@
     <Project Path="src/Services/Nutrition/VitalSync.Nutrition.Api/VitalSync.Nutrition.Api.csproj" />
     <Project Path="src/Services/Nutrition/VitalSync.Nutrition.MigrationService/VitalSync.Nutrition.MigrationService.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/VitalSync.DesignTokens.Contrast/VitalSync.DesignTokens.Contrast.csproj" />
+  </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/VitalSync.DesignTokens.Contrast.Tests/VitalSync.DesignTokens.Contrast.Tests.csproj" />
     <Project Path="tests/VitalSync.ServiceDefaults.Tests/VitalSync.ServiceDefaults.Tests.csproj" />
   </Folder>
 </Solution>

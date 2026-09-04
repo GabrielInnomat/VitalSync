@@ -14,6 +14,8 @@ code, or in the [Thessera](./technologies.md) repository for anything the platfo
 - **[Technologies](./technologies.md)** — what the system is built on and why each product was
   chosen.
 - **[Testing](./testing.md)** — what is tested at which level, and the principles behind it.
+- **[Design System](./design-system.md)** — the token architecture, the accessibility rules the
+  colors are held to, and the conventions that no token can enforce on its own.
 
 ## The business
 

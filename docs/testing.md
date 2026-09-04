@@ -46,6 +46,40 @@ Test projects mirror the source structure one to one.
   the type it was registered as only proves that dependency injection works. A useful guard rebuilds
   the situation the code exists to prevent, and shows that it no longer occurs.
 
+## Design token contrast
+
+The design system commits to WCAG 2.1 AA without exceptions, and its colors are declared once as CSS
+custom properties. Contrast ratios written down by hand go stale the moment a color changes, so they
+are computed instead of documented.
+
+A rule document names the pairs that have to hold — a text color against the surface it is read on, a
+form field border against the field it encloses, a chart series against the background it is drawn
+over — together with the success criterion each pair answers to. The check resolves both sides
+through the whole `var()` chain, separately for the light and the dark theme, and measures them. A
+pair that names a token which no longer exists, or which resolves to something that is not a color,
+fails just as loudly as one that is too faint: a rule that silently stops applying is worse than no
+rule.
+
+Where the system does not yet meet a rule, the shortfall is recorded as a waiver carrying the ratio
+measured at the time and the reason it is still open. A waived pair does not break the build, but it
+cannot drift either: if the ratio gets worse the check fails, and if the pair starts passing the
+waiver is reported as stale and has to be removed. Debt stays visible and stays bounded, and the
+strict mode reports every waiver as a failure for an honest picture of the true state.
+
+Contrast alone is not the whole obligation. A chart also has to stay readable for someone who cannot
+separate the hues it uses, and that property is invisible to a contrast ratio: uniformly darkening a
+colour-blind-safe palette until every series clears the threshold can push two series onto the same
+perceived colour, which passes the contrast rule while making the chart useless for the reader it was
+chosen to serve. A second kind of rule therefore names a set of colours that have to stay tellable
+apart and the smallest perceptual distance the set must keep. Each colour is run through a simulation
+of protanopia, deuteranopia and tritanopia, every pair is measured in a perceptually uniform space,
+and the closest pair under the worst of those conditions is what the rule is judged on. It reports
+which pair collapsed and under which condition, because that is what tells you which colour to move.
+
+The same check runs two ways. `dotnet run --project tools/VitalSync.DesignTokens.Contrast` prints a
+readable report for whoever is changing a color, and the test project asserts the same result, so the
+ordinary test run is the gate and no separate pipeline step is needed.
+
 ## Continuous integration
 
 `.github/workflows/build.yml` runs on every push to `main`, on pull requests and on demand. It
