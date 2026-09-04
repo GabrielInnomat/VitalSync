@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>VitalSync.DesignTokens.Contrast</RootNamespace>
+    <AssemblyName>VitalSync.DesignTokens.Contrast</AssemblyName>
+    <NoWarn>$(NoWarn);CA1303</NoWarn>
+  </PropertyGroup>
+
+</Project>
