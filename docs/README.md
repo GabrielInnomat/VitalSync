@@ -32,4 +32,3 @@ bounded context.
 ## Reference
 
 - **[Glossary](./glossary.md)** — the cross-cutting terms the documents above use.
-- **[User stories](./userStories/)** — the requirements the domains are built from.

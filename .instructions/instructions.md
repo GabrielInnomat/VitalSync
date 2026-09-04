@@ -40,7 +40,7 @@ VitalSync/
 │   ├── Frontend/                   VitalSync.Web | VitalSync.DesignSystem (RCL: tokens + components)
 │   └── Services/                   Nutrition | Fitness | HealthAnalytics, each Api + MigrationService
 ├── docs/                           architecture.md, patterns.md, technologies.md, testing.md,
-│                                   design-system.md, glossary.md, domains/, userStories/
+│                                   design-system.md, glossary.md, domains/
 ├── tools/                          build-time checks, not shipped
 ├── plan.md                         throwaway: what is left to build; deleted when it is
 └── tests/
