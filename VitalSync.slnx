@@ -50,6 +50,7 @@
     <Project Path="tools/VitalSync.DesignTokens.Contrast/VitalSync.DesignTokens.Contrast.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/VitalSync.DesignSystem.Tests/VitalSync.DesignSystem.Tests.csproj" />
     <Project Path="tests/VitalSync.DesignTokens.Contrast.Tests/VitalSync.DesignTokens.Contrast.Tests.csproj" />
     <Project Path="tests/VitalSync.ServiceDefaults.Tests/VitalSync.ServiceDefaults.Tests.csproj" />
   </Folder>

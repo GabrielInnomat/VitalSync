@@ -8,6 +8,7 @@
     <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.5.3" />
     <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.Rabbitmq" Version="9.0.0" />
+    <PackageVersion Include="bunit" Version="2.9.0" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="GaWeCodes.Thessera.Analyzers" Version="1.0.0-Preview.3" />
     <PackageVersion Include="GaWeCodes.Thessera.Application" Version="1.0.0-Preview.3" />
