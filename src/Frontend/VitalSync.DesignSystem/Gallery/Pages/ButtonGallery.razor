@@ -1,0 +1,63 @@
+@page "/design-system/button"
+@layout GalleryLayout
+@using VitalSync.DesignSystem.Primitives
+
+<h1>Button</h1>
+<p>
+    Three variants: <code>Primary</code> for the default action, <code>Secondary</code> for a
+    lower-emphasis action, <code>Critical</code> for a destructive one. No <code>Danger</code>
+    variant and no size variants — see <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>
+    for the reasoning. Icon-only buttons are not supported: passing <code>Icon</code> without a
+    label throws.
+</p>
+
+<div class="vs-gallery__themes">
+    <section data-theme="light" class="vs-gallery__theme-panel">
+        <h2>Light</h2>
+        @renderStates()
+    </section>
+    <section data-theme="dark" class="vs-gallery__theme-panel">
+        <h2>Dark</h2>
+        @renderStates()
+    </section>
+</div>
+
+<h2>Usage</h2>
+<pre><code>&lt;Button Variant="ButtonVariant.Primary" OnClick="Save"&gt;Speichern&lt;/Button&gt;
+
+&lt;Button Variant="ButtonVariant.Critical" OnClick="Delete"&gt;
+    &lt;Icon&gt;&lt;svg ...&gt;&lt;/svg&gt;&lt;/Icon&gt;
+    Löschen
+&lt;/Button&gt;
+
+&lt;Button Variant="ButtonVariant.Secondary" Disabled="true"&gt;Abbrechen&lt;/Button&gt;
+</code></pre>
+
+@code {
+    private RenderFragment renderStates() => @<text>
+        <div class="vs-gallery__row">
+            <Button Variant="ButtonVariant.Primary">Primary</Button>
+            <Button Variant="ButtonVariant.Secondary">Secondary</Button>
+            <Button Variant="ButtonVariant.Critical">Critical</Button>
+        </div>
+        <div class="vs-gallery__row">
+            <Button Variant="ButtonVariant.Primary" Disabled="true">Primary</Button>
+            <Button Variant="ButtonVariant.Secondary" Disabled="true">Secondary</Button>
+            <Button Variant="ButtonVariant.Critical" Disabled="true">Critical</Button>
+        </div>
+        <div class="vs-gallery__row">
+            <Button Variant="ButtonVariant.Primary">
+                <Icon>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 3h11l3 3v15H5z" /></svg>
+                </Icon>
+                <ChildContent>Speichern</ChildContent>
+            </Button>
+            <Button Variant="ButtonVariant.Critical">
+                <Icon>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 7h12l-1 13H7z" /></svg>
+                </Icon>
+                <ChildContent>Löschen</ChildContent>
+            </Button>
+        </div>
+    </text>;
+}

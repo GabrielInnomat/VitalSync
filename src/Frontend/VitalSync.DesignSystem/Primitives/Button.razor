@@ -1,0 +1,47 @@
+@namespace VitalSync.DesignSystem.Primitives
+
+<button type="@Type"
+        class="@CssClass"
+        disabled="@Disabled"
+        @attributes="AdditionalAttributes"
+        @onclick="OnClick">
+    @if (Icon is not null)
+    {
+        <span class="vs-button__icon" aria-hidden="true">@Icon</span>
+    }
+    <span class="vs-button__label">@ChildContent</span>
+</button>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? Icon { get; set; }
+
+    [Parameter]
+    public ButtonVariant Variant { get; set; } = ButtonVariant.Primary;
+
+    [Parameter]
+    public string Type { get; set; } = "button";
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => $"vs-button vs-button--{Variant.ToString().ToLowerInvariant()}";
+
+    protected override void OnParametersSet()
+    {
+        if (Icon is not null && ChildContent is null)
+        {
+            throw new InvalidOperationException(
+                "Button requires a visible label alongside an icon; icon-only buttons are not supported.");
+        }
+    }
+}

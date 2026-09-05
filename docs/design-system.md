@@ -38,7 +38,14 @@ because only the semantic layer switches.
 `[data-theme="dark"]` on `<html>` is the single source of truth. There is no parallel
 `@media (prefers-color-scheme)` block. The Blazor app reads the system preference once at startup
 through JS interop and sets the attribute before the first render, which avoids a flash of the
-wrong theme. 
+wrong theme.
+
+This is the automatic default, not the only path. A manual override belongs in the settings area,
+not in the main navigation — a theme choice is an infrequent, per-user preference, not something
+that competes for space with everyday navigation. It is persisted as a user setting on the backend,
+not in `localStorage`: this product is used across devices, and a choice tied to one browser's
+storage would silently fail to follow the user anywhere else. The override, once set, replaces the
+system-preference read; `prefers-color-scheme` remains the fallback for a user who has not chosen.
 
 ## The rule that replaced the two-shade system
 
@@ -124,6 +131,35 @@ Both sets are verified against the rounded hex values, not against intermediate 
 That distinction is not academic: the first version of this palette was verified before rounding,
 reported 16.0, and actually delivered 15.52. The check in the tool found it.
 
+**Status colours get the same separation check, text and icon only.** `--color-text-success`,
+`-warning` and `-critical` are individually contrast-checked already, but not against each other.
+They rarely sit side by side — except in a legend or a table column, where they do, and the icon
+layer added above does not remove the need to check the colours themselves: someone reading only
+the colour, not the shape, still has to be able to tell them apart. The check is paired ΔE under
+normal vision and the three colour vision deficiencies, the same method as the data-visualisation
+palette. It applies to the text and icon tokens only, not to the subtle fills, which are
+deliberately near-indistinguishable from the card and were never meant to carry the distinction.
+
+## Icons
+
+The design system is VitalSync-specific, not a generic library shared across products — the
+principles above (calm, accessible by default, this user base) are the product's business case, not
+a neutral baseline. Icons follow the same logic: there is no reason to limit the set to what a
+generic library ships.
+
+Two layers:
+
+- **Generic UI icons** — warning, info, close, chevron, and similar — come from **Phosphor**
+  (MIT-licensed, free). It offers several stroke weights (thin/regular/bold/duotone) in one
+  consistent grid, which matters directly for WCAG 1.4.1: a critical and a warning icon can differ
+  in weight as well as shape, not colour alone.
+- **Domain icons** — running, cycling, a dumbbell, a heart-rate trace, a meal, a scale — are
+  VitalSync-specific and Phosphor does not carry them at the needed specificity. These are drawn as
+  a small custom SVG set, matched to Phosphor's grid and stroke width so the two do not visually
+  diverge.
+
+Both layers live in `VitalSync.DesignSystem`; a component never imports an icon library directly.
+
 ## Conventions no token can enforce
 
 - **Disabled is colour or opacity, never both.** Text in a disabled control takes
@@ -174,6 +210,16 @@ reuse in a narrower column.
 
 `var()` is not allowed inside a media query condition, so the `--breakpoint-*` tokens are the
 documented source of truth and the pixel values are repeated literally in the `@media` rules.
+
+## Tone of voice
+
+Calm, never urgent — including at critical severity. This is a precision of the "trustworthy and
+calm" principle above, not a new one: the user base includes older and visually impaired people
+reading vital data, and alarmist phrasing (exclamation marks, imperative "Achtung!") raises stress
+in exactly that group without communicating urgency any better than a plain statement does. A
+message names the fact and the action: "The value could not be saved. Please try again," not a
+warning-toned rewrite of the same sentence. Urgency is carried by the visual coding described
+below — border, icon, colour — not by the words.
 
 ## Form validation
 
@@ -250,7 +296,30 @@ chart series into one colour for red-green blind readers.
    that cannot be measured is a token nobody will notice going wrong.
 4. Build the component: ARIA handling, focus ring, touch target of at least 44×44 px.
 5. Add bUnit tests.
+6. Add its page to the component gallery, described below.
 
 While building, no colour, duration or size is hard-coded in a `.razor.css`. Everything goes through
 a token — that is what makes the check, the reduced-motion fallback and the theme switch reach the
 component at all. A hard-coded value is invisible to all three.
+
+## Component gallery
+
+There is no external documentation tool for this — no Storybook equivalent, no separate build.
+Every component's demo page lives as a `.razor` file under `Gallery/` in
+`VitalSync.DesignSystem` itself, next to the tokens and the component it demonstrates: one project
+carries the whole system, tokens through demo page, instead of splitting the living reference into
+a second tool that drifts out of sync.
+
+`VitalSync.Web` does not duplicate these pages. Its `Router` lists the design system's assembly in
+`AdditionalAssemblies`, and the `@page` routes declared inside the library are picked up as-is.
+
+Routes live under `/design-system/*`, guarded by a single check for
+`IWebHostEnvironment.IsDevelopment()` at the top of the gallery's own layout rather than repeated
+per page — in anything other than Development the route answers as not found. The gallery is a
+tool for building the system, not a part of the product; it therefore has no entry in `NavMenu` and
+is reached by URL only.
+
+Each component's page shows every visual state (default, hover, focus, disabled, and both themes
+side by side) together with the markup needed to use it. The markup is what makes the page a
+reference and not just a visual check — a screenshot proves a component renders, a snippet proves
+someone can use it correctly.

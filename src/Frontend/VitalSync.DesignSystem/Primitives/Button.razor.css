@@ -1,0 +1,71 @@
+.vs-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--button-gap);
+    min-height: var(--button-min-height);
+    min-width: var(--button-min-width);
+    padding-inline: var(--button-padding-inline);
+    border-radius: var(--button-radius);
+    border: var(--button-border-width) solid transparent;
+    font-family: var(--font-family-ui);
+    font-size: var(--font-size-200);
+    font-weight: var(--button-font-weight);
+    line-height: var(--line-height-tight);
+    cursor: pointer;
+    transition: background-color var(--motion-duration-fast) var(--motion-easing),
+                border-color var(--motion-duration-fast) var(--motion-easing),
+                color var(--motion-duration-fast) var(--motion-easing);
+}
+
+.vs-button__icon {
+    display: inline-flex;
+    width: var(--icon-size-md);
+    height: var(--icon-size-md);
+}
+
+    .vs-button__icon ::deep svg {
+        width: 100%;
+        height: 100%;
+    }
+
+.vs-button--primary {
+    background-color: var(--button-primary-background);
+    color: var(--button-primary-text);
+}
+
+    .vs-button--primary:hover:not(:disabled) {
+        background-color: var(--button-primary-background-hover);
+    }
+
+.vs-button--secondary {
+    background-color: var(--button-secondary-background);
+    color: var(--button-secondary-text);
+    border-color: var(--button-secondary-border-color);
+}
+
+    .vs-button--secondary:hover:not(:disabled) {
+        background-color: var(--button-secondary-background-hover);
+        border-color: var(--button-secondary-border-color-hover);
+    }
+
+.vs-button--critical {
+    background-color: var(--button-critical-background);
+    color: var(--button-critical-text);
+}
+
+    .vs-button--critical:hover:not(:disabled) {
+        background-color: var(--button-critical-background-hover);
+    }
+
+.vs-button:disabled {
+    cursor: not-allowed;
+    color: var(--button-disabled-text);
+    background-color: var(--button-disabled-background);
+    border-color: transparent;
+}
+
+    .vs-button--secondary:disabled {
+        background-color: transparent;
+        border-color: var(--button-disabled-border-color);
+    }

@@ -1,3 +1,4 @@
+using VitalSync.DesignSystem.Primitives;
 using VitalSync.ServiceDefaults;
 using VitalSync.Web.Components;
 
@@ -25,7 +26,8 @@ app.UseOutputCache();
 app.MapStaticAssets();
 
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .AddAdditionalAssemblies(typeof(Button).Assembly);
 
 app.MapDefaultEndpoints();
 

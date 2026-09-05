@@ -1,0 +1,34 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Hosting
+@using Microsoft.Extensions.Hosting
+@inherits LayoutComponentBase
+@inject IWebHostEnvironment Environment
+@inject NavigationManager Navigation
+
+@if (Environment.IsDevelopment())
+{
+    <a href="#vs-gallery-main" class="vs-gallery__skip-link">Skip to content</a>
+    <div class="vs-gallery">
+        <nav class="vs-gallery__nav" aria-label="Design system">
+            <ul>
+                <li><a href="design-system" aria-current="@IsCurrent("design-system")">Design System</a></li>
+                <li><a href="design-system/button" aria-current="@IsCurrent("design-system/button")">Button</a></li>
+            </ul>
+        </nav>
+        <main id="vs-gallery-main" class="vs-gallery__content" tabindex="-1">
+            @Body
+        </main>
+    </div>
+}
+else
+{
+    <p class="vs-gallery__not-found">Not found.</p>
+}
+
+@code {
+    private string? IsCurrent(string relativePath)
+    {
+        var current = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
+        return current == relativePath ? "page" : null;
+    }
+}
