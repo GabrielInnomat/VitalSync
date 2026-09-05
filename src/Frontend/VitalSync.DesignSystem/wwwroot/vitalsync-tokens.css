@@ -35,8 +35,10 @@
 
   --red-50:  #FEF2F2;
   --red-400: #F87171;
+  --red-500: #EF4444;
   --red-600: #DC2626;
   --red-700: #B91C1C;
+  --red-800: #991B1B;
   --red-950: #450A0A;
 
   /* Aus Okabe-Ito abgeleitet. Werte nur zusammen mit der Trennungspruefung aendern, siehe docs/design-system.md */
@@ -167,6 +169,12 @@
   --color-border-critical: var(--red-600);
   --color-icon-critical: var(--red-600);
 
+  /* Bewusst eigener Wert statt weiterer Abdunkelung von red-700, siehe docs/design-system.md */
+  --color-surface-critical-hover: var(--red-800);
+
+  --color-surface-disabled: var(--neutral-200);
+  --color-border-disabled: var(--neutral-300);
+
   --color-data-heartrate: var(--data-5-light);
   --color-data-sleep: var(--data-4-light);
   --color-data-activity: var(--data-3-light);
@@ -214,6 +222,11 @@
   --color-border-critical: var(--red-400);
   --color-icon-critical: var(--red-400);
 
+  --color-surface-critical-hover: var(--red-500);
+
+  --color-surface-disabled: var(--neutral-700);
+  --color-border-disabled: var(--neutral-600);
+
   --color-data-heartrate: var(--data-5-dark);
   --color-data-sleep: var(--data-4-dark);
   --color-data-activity: var(--data-3-dark);
@@ -243,9 +256,26 @@
   --button-primary-background: var(--color-action-primary);
   --button-primary-background-hover: var(--color-action-primary-hover);
   --button-primary-text: var(--color-text-on-action);
+
+  --button-secondary-background: transparent;
+  --button-secondary-background-hover: var(--color-background-surface);
+  --button-secondary-text: var(--color-action-primary);
+  --button-secondary-border-color: var(--color-border-interactive);
+  --button-secondary-border-color-hover: var(--color-border-interactive-hover);
+
+  --button-critical-background: var(--color-surface-critical);
+  --button-critical-background-hover: var(--color-surface-critical-hover);
+  --button-critical-text: var(--color-text-on-action);
+
+  --button-disabled-background: var(--color-surface-disabled);
+  --button-disabled-border-color: var(--color-border-disabled);
+  --button-disabled-text: var(--color-text-disabled);
+
   --button-min-height: var(--touch-target-min);
   --button-min-width: var(--touch-target-min);
   --button-padding-inline: var(--space-4);
+  --button-gap: var(--space-2);
+  --button-border-width: var(--border-width-thin);
   --button-radius: var(--radius-md);
   --button-font-weight: var(--font-weight-semibold);
 

@@ -81,6 +81,30 @@
       "requirement": "text-normal"
     },
     {
+      "id": "text-secondary-on-surface",
+      "criterion": "1.4.3",
+      "description": "Default gallery navigation link on the nav surface",
+      "foreground": "--color-text-secondary",
+      "background": "--color-background-surface",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "action-primary-on-surface",
+      "criterion": "1.4.3",
+      "description": "Current-page gallery navigation link on the nav surface",
+      "foreground": "--color-action-primary",
+      "background": "--color-background-surface",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "action-primary-border-on-surface",
+      "criterion": "1.4.11",
+      "description": "Current-page indicator border of the gallery navigation against the nav surface",
+      "foreground": "--color-action-primary",
+      "background": "--color-background-surface",
+      "requirement": "non-text"
+    },
+    {
       "id": "action-primary-on-card",
       "criterion": "1.4.3",
       "description": "Link or text button inside a card",
@@ -443,6 +467,102 @@
       "foreground": "--button-primary-text",
       "background": "--button-primary-background-hover",
       "requirement": "text-normal"
+    },
+    {
+      "id": "button-secondary-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Label on a resting secondary button on the page background",
+      "foreground": "--button-secondary-text",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "button-secondary-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Label on a resting secondary button inside a card",
+      "foreground": "--button-secondary-text",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "button-secondary-text-on-hover-fill",
+      "criterion": "1.4.3",
+      "description": "Resting label colour against the fill a secondary button gains on hover",
+      "foreground": "--button-secondary-text",
+      "background": "--button-secondary-background-hover",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "button-secondary-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Resting secondary button border against the page background",
+      "foreground": "--button-secondary-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "button-secondary-border-on-card",
+      "criterion": "1.4.11",
+      "description": "Resting secondary button border against the card behind it",
+      "foreground": "--button-secondary-border-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "button-secondary-border-hover-on-background",
+      "criterion": "1.4.11",
+      "description": "Hovered secondary button border against the page background",
+      "foreground": "--button-secondary-border-color-hover",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "button-secondary-border-hover-on-card",
+      "criterion": "1.4.11",
+      "description": "Hovered secondary button border against the card behind it",
+      "foreground": "--button-secondary-border-color-hover",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "button-critical-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Label on a resting critical button",
+      "foreground": "--button-critical-text",
+      "background": "--button-critical-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "button-critical-text-on-hover-fill",
+      "criterion": "1.4.3",
+      "description": "Label on a hovered critical button",
+      "foreground": "--button-critical-text",
+      "background": "--button-critical-background-hover",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "surface-critical-hover-on-card",
+      "criterion": "1.4.11",
+      "description": "Hovered critical button fill against the card it sits in",
+      "foreground": "--color-surface-critical-hover",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "surface-critical-hover-on-background",
+      "criterion": "1.4.11",
+      "description": "Hovered critical button fill against the page background",
+      "foreground": "--color-surface-critical-hover",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-offset-on-button-critical-fill",
+      "criterion": "1.4.11",
+      "description": "Focus separator against the critical button it surrounds",
+      "foreground": "--focus-ring-offset-color",
+      "background": "--button-critical-background",
+      "requirement": "non-text"
     },
     {
       "id": "surface-success-on-card",

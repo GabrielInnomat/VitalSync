@@ -77,6 +77,10 @@ Bounded-context decomposition is iterative — see `docs/domains/`.
   changes, and the check in `tools/VitalSync.DesignTokens.Contrast` already owns those numbers.
   Rationale, derivations and conventions belong in `docs/`, not in the stylesheet.
 - **No FluentAssertions** — xUnit built-in asserts only.
+- **Every HTML and CSS change must be WCAG 2.1 AA conformant.** Colour contrast is enforced by
+  `tools/VitalSync.DesignTokens.Contrast`, but AA covers more than contrast: keyboard reachability,
+  visible focus, semantic landmarks and headings, `aria-*` used correctly, and never colour as the
+  only carrier of meaning (state, current-page, error, etc. all need a second, non-colour cue).
 
 ## Documentation
 
