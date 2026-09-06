@@ -246,10 +246,43 @@ name one.
 **Required fields.** Not the asterisk alone: the native `required` attribute as well, plus one
 "* = required" note per form, because some screen readers do not announce a bare asterisk.
 
+## Input
+
+One generic `Input<TValue>` component, not a family of `InputText`/`InputNumber`/`InputPassword`.
+`Type` selects the native `<input type>` (`text`, `email`, `number`, `password`, …); parsing goes
+through `BindConverter.TryConvertTo<TValue>`, the same mechanism `@bind` uses internally, so the
+component works for `string`, numeric and other convertible types without per-type components.
+
+It is bound to an `EditContext` — it inherits `InputBase<TValue>` and is used with `@bind-Value`
+inside an `EditForm`, the same as Blazor's own input components. It is not meant to work standalone
+outside a form.
+
+**Label is mandatory.** There is no label-less `Input`, the same rule as `Button`'s no-icon-only
+rule: a missing `Label` throws rather than silently rendering an inaccessible field.
+
+**No size variants.** Standard size only, consistent with `Button`.
+
+**Optional decorative `LabelIcon`.** A `RenderFragment` rendered before the label text, `aria-hidden`,
+purely a visual scanning aid — not a tooltip or help mechanism. That would need a `Tooltip`
+component, which does not exist yet.
+
+**Optional `Prefix` / `Suffix`.** `RenderFragment`s for units (`kg`, `kcal`) or fixed adornments,
+rendered inside the field so they share its border.
+
+**Password reveal toggle.** Only rendered when `Type="password"`. A visible text button
+("Anzeigen" / "Verbergen"), never icon-only, following the same rule as `Button`. It toggles the
+native `type` between `password` and `text`; the toggle itself is a plain `<button>`, not a `Button`
+component, because `Button` has no compact size and would look oversized inline in a field.
+
+**`Required`.** Sets the native `required` attribute and, next to the label, a decorative `*`
+(`aria-hidden`, inherits the label's already-verified text colour via `currentColor`). The
+form-wide "* = required" legend from [Form validation](#form-validation) is a form-level concern,
+not something `Input` renders itself.
+
 ## How this is kept true
 
 `tools/VitalSync.DesignTokens.Contrast` resolves every `var()` chain per theme and measures the
-pairs named in the rule document — 116 contrast checks and 4 separation checks at the time of
+pairs named in the rule document — 150 contrast checks and 4 separation checks at the time of
 writing, all passing, with no open waiver.
 
 Contrast rules name a foreground, a background and the criterion they answer to. Separation rules

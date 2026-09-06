@@ -1,0 +1,84 @@
+@page "/design-system/input"
+@layout GalleryLayout
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using VitalSync.DesignSystem.Primitives
+
+<h1>Input</h1>
+<p>
+    A single generic component bound to an <code>EditContext</code>. <code>Label</code> is
+    mandatory — label-less inputs are not supported. No size variants. Errors are shown via
+    border, icon and text together, never colour alone. See
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>
+    for the reasoning.
+</p>
+
+<div class="vs-gallery__themes">
+    <section data-theme="light" class="vs-gallery__theme-panel">
+        <h2>Light</h2>
+        <EditForm Model="_lightModel" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+
+            <Input TValue="string" @bind-Value="_lightModel.Name" Label="Name" Required="true" HelperText="Wie du angesprochen werden möchtest." />
+
+            <Input TValue="int?" @bind-Value="_lightModel.WeightKg" Label="Gewicht" Type="number" Placeholder="0">
+                <Suffix>kg</Suffix>
+            </Input>
+
+            <Input TValue="string" @bind-Value="_lightModel.Password" Label="Passwort" Type="password" Required="true" />
+
+            <Button Variant="ButtonVariant.Primary" Type="submit">Absenden</Button>
+        </EditForm>
+    </section>
+    <section data-theme="dark" class="vs-gallery__theme-panel">
+        <h2>Dark</h2>
+        <EditForm Model="_darkModel" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+
+            <Input TValue="string" @bind-Value="_darkModel.Name" Label="Name" Required="true" HelperText="Wie du angesprochen werden möchtest." />
+
+            <Input TValue="int?" @bind-Value="_darkModel.WeightKg" Label="Gewicht" Type="number" Placeholder="0">
+                <Suffix>kg</Suffix>
+            </Input>
+
+            <Input TValue="string" @bind-Value="_darkModel.Password" Label="Passwort" Type="password" Required="true" />
+
+            <Button Variant="ButtonVariant.Primary" Type="submit">Absenden</Button>
+        </EditForm>
+    </section>
+</div>
+
+<h2>Usage</h2>
+<pre><code>&lt;EditForm Model="model" OnValidSubmit="Save"&gt;
+    &lt;DataAnnotationsValidator /&gt;
+
+    &lt;Input @@bind-Value="model.Name" Label="Name" Required="true" /&gt;
+
+    &lt;Input @@bind-Value="model.WeightKg" Label="Gewicht" Type="number"&gt;
+        &lt;Suffix&gt;kg&lt;/Suffix&gt;
+    &lt;/Input&gt;
+
+    &lt;Input @@bind-Value="model.Password" Label="Passwort" Type="password" Required="true" /&gt;
+&lt;/EditForm&gt;
+</code></pre>
+
+@code {
+    private readonly DemoModel _lightModel = new();
+    private readonly DemoModel _darkModel = new();
+
+    private void HandleValidSubmit()
+    {
+    }
+
+    private sealed class DemoModel
+    {
+        [Required(ErrorMessage = "Bitte gib einen Namen ein.")]
+        public string? Name { get; set; }
+
+        [Range(0, 300, ErrorMessage = "Bitte gib ein plausibles Gewicht ein.")]
+        public int? WeightKg { get; set; }
+
+        [Required(ErrorMessage = "Bitte gib ein Passwort ein.")]
+        public string? Password { get; set; }
+    }
+}

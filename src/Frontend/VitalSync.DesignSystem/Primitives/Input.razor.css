@@ -1,0 +1,133 @@
+.vs-input {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    font-family: var(--font-family-ui);
+}
+
+.vs-input__label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--input-gap);
+    color: var(--input-text-color);
+    font-size: var(--font-size-200);
+    font-weight: var(--font-weight-semibold);
+}
+
+.vs-input__label-icon {
+    display: inline-flex;
+    width: var(--input-icon-size);
+    height: var(--input-icon-size);
+}
+
+    .vs-input__label-icon ::deep svg {
+        width: 100%;
+        height: 100%;
+    }
+
+.vs-input__required-marker {
+    color: currentColor;
+}
+
+.vs-input__field {
+    display: flex;
+    align-items: center;
+    gap: var(--input-gap);
+    min-height: var(--input-height);
+    padding-inline: var(--input-padding-inline);
+    background-color: var(--input-background);
+    border: var(--input-border-width) solid var(--input-border-color);
+    border-radius: var(--input-radius);
+    transition: border-color var(--motion-duration-fast) var(--motion-easing);
+}
+
+    .vs-input__field:hover {
+        border-color: var(--input-border-color-hover);
+    }
+
+    .vs-input__field:focus-within {
+        border-color: var(--input-border-color-focus);
+        border-width: var(--input-border-width-focus);
+    }
+
+.vs-input__field--error {
+    background-color: var(--input-background-error);
+    border-color: var(--input-border-color-error);
+}
+
+.vs-input__field--disabled {
+    background-color: var(--input-background-disabled);
+    cursor: not-allowed;
+}
+
+.vs-input__control {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background-color: transparent;
+    color: var(--input-text-color);
+    font-family: inherit;
+    font-size: var(--font-size-200);
+    line-height: var(--line-height-tight);
+}
+
+    .vs-input__control:focus {
+        outline: none;
+    }
+
+    .vs-input__control::placeholder {
+        color: var(--input-placeholder-color);
+    }
+
+    .vs-input__control:disabled {
+        cursor: not-allowed;
+    }
+
+.vs-input__affix {
+    color: var(--input-affix-text-color);
+    font-size: var(--font-size-200);
+    white-space: nowrap;
+}
+
+.vs-input__toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--input-toggle-text-color);
+    font-family: inherit;
+    font-size: var(--font-size-200);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+    .vs-input__toggle:hover {
+        text-decoration: underline;
+    }
+
+.vs-input__helper {
+    margin: 0;
+    color: var(--input-helper-text-color);
+    font-size: var(--font-size-100);
+}
+
+.vs-input__error {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0;
+    color: var(--input-error-text-color);
+    font-size: var(--font-size-100);
+}
+
+.vs-input__error-icon {
+    display: inline-flex;
+    width: var(--input-icon-size);
+    height: var(--input-icon-size);
+    color: var(--input-error-icon-color);
+    flex-shrink: 0;
+}
+
+    .vs-input__error-icon svg {
+        width: 100%;
+        height: 100%;
+    }

@@ -1,0 +1,20 @@
+.vs-gallery__themes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-6);
+}
+
+.vs-gallery__theme-panel {
+    background-color: var(--color-background-primary);
+    color: var(--color-text-primary);
+    border: var(--border-width-thin) solid var(--color-border-subtle);
+    border-radius: var(--card-radius);
+    padding: var(--card-padding);
+}
+
+.vs-gallery__theme-panel form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    align-items: flex-start;
+}

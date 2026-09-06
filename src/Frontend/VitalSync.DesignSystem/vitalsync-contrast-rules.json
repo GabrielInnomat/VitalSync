@@ -217,6 +217,38 @@
       "requirement": "text-normal"
     },
     {
+      "id": "input-affix-text-on-input-background",
+      "criterion": "1.4.3",
+      "description": "Prefix or suffix text (e.g. a unit) inside a resting form field",
+      "foreground": "--input-affix-text-color",
+      "background": "--input-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "input-affix-text-on-input-error-background",
+      "criterion": "1.4.3",
+      "description": "Prefix or suffix text inside a form field that is showing an error",
+      "foreground": "--input-affix-text-color",
+      "background": "--input-background-error",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "input-toggle-text-on-input-background",
+      "criterion": "1.4.3",
+      "description": "Show/hide password toggle text inside a resting form field",
+      "foreground": "--input-toggle-text-color",
+      "background": "--input-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "input-toggle-text-on-input-error-background",
+      "criterion": "1.4.3",
+      "description": "Show/hide password toggle text inside a form field that is showing an error",
+      "foreground": "--input-toggle-text-color",
+      "background": "--input-background-error",
+      "requirement": "text-normal"
+    },
+    {
       "id": "input-error-text-on-background",
       "criterion": "1.4.3",
       "description": "Validation message below a form field on the page background",

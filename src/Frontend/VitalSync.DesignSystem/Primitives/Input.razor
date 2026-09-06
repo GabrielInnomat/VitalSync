@@ -1,0 +1,152 @@
+@namespace VitalSync.DesignSystem.Primitives
+@typeparam TValue
+@inherits InputBase<TValue>
+@implements IDisposable
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Globalization
+
+<div class="vs-input">
+    <label for="@_inputId" class="vs-input__label">
+        @if (LabelIcon is not null)
+        {
+            <span class="vs-input__label-icon" aria-hidden="true">@LabelIcon</span>
+        }
+        @Label
+        @if (Required)
+        {
+            <span class="vs-input__required-marker" aria-hidden="true">*</span>
+        }
+    </label>
+
+    <div class="vs-input__field @(HasError ? "vs-input__field--error" : null) @(Disabled ? "vs-input__field--disabled" : null)">
+        @if (Prefix is not null)
+        {
+            <span class="vs-input__affix vs-input__affix--prefix">@Prefix</span>
+        }
+        <input id="@_inputId"
+               type="@EffectiveType"
+               class="vs-input__control"
+               placeholder="@Placeholder"
+               required="@Required"
+               disabled="@Disabled"
+               aria-invalid="@(HasError ? "true" : null)"
+               aria-describedby="@DescribedBy"
+               @bind="CurrentValueAsString"
+               @bind:event="oninput"
+               @attributes="AdditionalAttributes" />
+        @if (Suffix is not null)
+        {
+            <span class="vs-input__affix vs-input__affix--suffix">@Suffix</span>
+        }
+        @if (Type == "password")
+        {
+            <button type="button" class="vs-input__toggle" @onclick="ToggleShowPassword">
+                @(_showPassword ? "Verbergen" : "Anzeigen")
+            </button>
+        }
+    </div>
+
+    @if (HasError)
+    {
+        <p id="@ErrorId" class="vs-input__error" role="alert">
+            <span class="vs-input__error-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2 1 21h22L12 2Zm0 5 7.5 13h-15L12 7Zm-1 4v4h2v-4h-2Zm0 5v2h2v-2h-2Z" />
+                </svg>
+            </span>
+            @CurrentErrors.First()
+        </p>
+    }
+    else if (!string.IsNullOrEmpty(HelperText))
+    {
+        <p id="@HelperId" class="vs-input__helper">@HelperText</p>
+    }
+</div>
+
+@code {
+    private readonly string _inputId = $"vs-input-{Guid.NewGuid():N}";
+    private bool _showPassword;
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public RenderFragment? LabelIcon { get; set; }
+
+    [Parameter]
+    public string Type { get; set; } = "text";
+
+    [Parameter]
+    public RenderFragment? Prefix { get; set; }
+
+    [Parameter]
+    public RenderFragment? Suffix { get; set; }
+
+    [Parameter]
+    public string? HelperText { get; set; }
+
+    [Parameter]
+    public string? Placeholder { get; set; }
+
+    [Parameter]
+    public bool Required { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    private string EffectiveType => Type == "password" && _showPassword ? "text" : Type;
+
+    private string ErrorId => $"{_inputId}-error";
+
+    private string HelperId => $"{_inputId}-helper";
+
+    private string? DescribedBy => HasError
+        ? ErrorId
+        : string.IsNullOrEmpty(HelperText) ? null : HelperId;
+
+    private IEnumerable<string> CurrentErrors => EditContext.GetValidationMessages(FieldIdentifier);
+
+    private bool HasError => CurrentErrors.Any();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        if (string.IsNullOrWhiteSpace(Label))
+        {
+            throw new InvalidOperationException(
+                "Input requires a visible Label; label-less inputs are not supported.");
+        }
+
+        EditContext.OnValidationStateChanged += HandleValidationStateChanged;
+    }
+
+    private void ToggleShowPassword() => _showPassword = !_showPassword;
+
+    private void HandleValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
+        => StateHasChanged();
+
+    protected override bool TryParseValueFromString(string? value, out TValue result, out string validationErrorMessage)
+    {
+        if (BindConverter.TryConvertTo(value!, CultureInfo.CurrentCulture, out TValue? parsedValue))
+        {
+            result = parsedValue!;
+            validationErrorMessage = "";
+            return true;
+        }
+
+        result = default!;
+        validationErrorMessage = $"The {Label} field must be a valid value.";
+        return false;
+    }
+
+    protected override string FormatValueAsString(TValue? value) => value switch
+    {
+        null => "",
+        string stringValue => stringValue,
+        IFormattable formattable => formattable.ToString(null, CultureInfo.CurrentCulture) ?? "",
+        _ => value.ToString() ?? "",
+    };
+
+    public void Dispose() => EditContext.OnValidationStateChanged -= HandleValidationStateChanged;
+}

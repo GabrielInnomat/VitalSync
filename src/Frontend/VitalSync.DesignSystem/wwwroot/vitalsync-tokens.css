@@ -306,6 +306,10 @@
   --input-border-width-focus: var(--border-width-thick);
 
   --input-helper-text-color: var(--color-text-secondary);
+  --input-affix-text-color: var(--color-text-secondary);
+  --input-toggle-text-color: var(--color-action-primary);
+  --input-icon-size: var(--icon-size-sm);
+  --input-gap: var(--space-2);
 
   --input-border-color-error: var(--color-border-critical);
   --input-background-error: var(--color-surface-critical-subtle);
