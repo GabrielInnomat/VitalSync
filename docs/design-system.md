@@ -35,10 +35,16 @@ because only the semantic layer switches.
 
 ## Themes
 
-`[data-theme="dark"]` on `<html>` is the single source of truth. There is no parallel
-`@media (prefers-color-scheme)` block. The Blazor app reads the system preference once at startup
-through JS interop and sets the attribute before the first render, which avoids a flash of the
-wrong theme.
+`[data-theme]` on `<html>` is the single source of truth. There is no parallel
+`@media (prefers-color-scheme)` block. A small inline script in the document head reads the system
+preference and sets `data-theme="light"` or `data-theme="dark"` before the first paint, which
+avoids a flash of the wrong theme.
+
+The semantic layer is declared for `:root` and `[data-theme="light"]`, and overridden for
+`[data-theme="dark"]`. The component layer is declared for `:root` and every `[data-theme]`
+element, so a component token resolves against the theme of its nearest themed ancestor. That is
+what lets a subtree carry a different theme than the page — the gallery shows both side by side —
+without a component keeping the colours of the page it happens to sit on.
 
 This is the automatic default, not the only path. A manual override belongs in the settings area,
 not in the main navigation — a theme choice is an infrequent, per-user preference, not something
@@ -71,7 +77,8 @@ obligations and move in different directions between themes:
 - `--color-text-critical` — the message below the field. 4.5:1. `red-700` becomes `red-400`.
 - `--color-border-critical` — the field border. 3:1 under 1.4.11, so the more vibrant `red-600`
   is enough in light; it becomes `red-400`.
-- `--color-icon-critical` — the warning mark inside the field. Same obligation as the border.
+- `--color-icon-critical` — the error mark, an X in a circle, next to the message below the field.
+  Same obligation as the border, measured against the page and the card it sits on.
 - `--color-surface-critical-subtle` — the fill. No threshold at all. `red-50` becomes `red-950`.
 
 The fill is deliberately almost indistinguishable from the card, 1.00:1 in light and 1.10:1 in
@@ -99,7 +106,10 @@ as an extension of the button rather than a ring.
 
 It is now two-tone: an outer ring in `--color-focus-ring` (`neutral-900` in light, `neutral-50` in
 dark) and an inner separator in `--color-focus-ring-offset`. Both edges are checked — ring against
-surface, ring against separator, separator against the component it surrounds.
+surface, ring against separator, separator against the component it surrounds. The ring is the
+`outline`, drawn at `--focus-ring-offset` from the component; the separator is a `box-shadow` of
+the same width that fills that gap, so the gap shows the separator colour rather than whatever
+surface lies behind it. Only `:focus-visible` draws it — a mouse click does not.
 
 Neutral rather than brand is the point. A neutral ring has enough contrast against every surface
 and every component fill in the system, including future green, amber or red ones. A brand colour
@@ -107,7 +117,10 @@ can be devalued by any new component that happens to share it, which is exactly 
 This is the direction WCAG 2.2 takes with 2.4.11.
 
 `--input-border-color-focus` is decoupled from the ring and stays blue. The ring says "the keyboard
-focus is here", the border says "this field is active". Two statements, two tokens.
+focus is here", the border says "this field is active". Two statements, two tokens. On `Input` the
+ring sits around the whole field, prefix, suffix and reveal toggle included, not around the bare
+`<input>` inside it; the thicker focus border is drawn inset, so focusing a field never shifts the
+layout.
 
 ## Data visualisation
 
@@ -131,14 +144,19 @@ Both sets are verified against the rounded hex values, not against intermediate 
 That distinction is not academic: the first version of this palette was verified before rounding,
 reported 16.0, and actually delivered 15.52. The check in the tool found it.
 
-**Status colours get the same separation check, text and icon only.** `--color-text-success`,
+**Status colours get the same separation check, and do not pass it.** `--color-text-success`,
 `-warning` and `-critical` are individually contrast-checked already, but not against each other.
-They rarely sit side by side — except in a legend or a table column, where they do, and the icon
-layer added above does not remove the need to check the colours themselves: someone reading only
-the colour, not the shape, still has to be able to tell them apart. The check is paired ΔE under
-normal vision and the three colour vision deficiencies, the same method as the data-visualisation
-palette. It applies to the text and icon tokens only, not to the subtle fills, which are
-deliberately near-indistinguishable from the card and were never meant to carry the distinction.
+They rarely sit side by side — except in a legend or a table column, where they do. The rule
+`status-text` measures them with the same method as the data-visualisation palette: paired ΔE under
+normal vision and the three colour vision deficiencies, against a minimum of 16. It applies to the
+text tokens only, not to the subtle fills, which are deliberately near-indistinguishable from the
+card and were never meant to carry the distinction.
+
+The measured values fall short: ΔE 9.91 in light (warning against critical) and 9.17 in dark
+(success against critical), both under deuteranopia. The shortfall is accepted and recorded as a
+waiver in both themes, because a status in this system never appears by colour alone — every status
+badge carries its own fixed icon and a text label, which is what 1.4.1 asks for. The waiver keeps
+the gap from widening unnoticed; a colour change that makes it worse fails the check.
 
 ## Icons
 
@@ -150,23 +168,39 @@ generic library ships.
 Two layers:
 
 - **Generic UI icons** — warning, info, close, chevron, and similar — come from **Phosphor**
-  (MIT-licensed, free). It offers several stroke weights (thin/regular/bold/duotone) in one
-  consistent grid, which matters directly for WCAG 1.4.1: a critical and a warning icon can differ
-  in weight as well as shape, not colour alone.
+  (MIT-licensed, free). It ships every icon in several weights on one consistent 256-unit grid;
+  VitalSync uses the **Fill** weight throughout. That matters directly for WCAG 1.4.1: a critical
+  and a warning icon differ in shape, not in colour alone.
 - **Domain icons** — running, cycling, a dumbbell, a heart-rate trace, a meal, a scale — are
   VitalSync-specific and Phosphor does not carry them at the needed specificity. These are drawn as
-  a small custom SVG set, matched to Phosphor's grid and stroke width so the two do not visually
-  diverge.
+  a small custom SVG set, matched to Phosphor's grid and Fill weight so the two do not visually
+  diverge. None exist yet; they are added when the first domain screen needs one.
 
 Both layers live in `VitalSync.DesignSystem`; a component never imports an icon library directly.
+
+**How the generic layer is delivered.** There is no package and no icon font. The few Phosphor
+icons the system uses are copied into the library as SVG path data, in the **Fill** weight, and
+rendered by one component, `SystemIcon`, selected by the `SystemIconName` enum. Phosphor's MIT
+licence travels with them in `Icons/PHOSPHOR-LICENSE.txt`. An icon is added by adding its path
+from Phosphor's Fill set and a name to the enum — never by drawing a lookalike by hand.
+
+`SystemIcon` renders an `<svg>` with `fill="currentColor"`, `aria-hidden="true"` and
+`focusable="false"`, sized to fill its container. The container decides the size through its own
+component token and the colour through `color`, so the icon inherits whatever the surrounding text
+has already been verified against. An icon is always decorative: the meaning is in the text next to
+it.
 
 ## Conventions no token can enforce
 
 - **Disabled is colour or opacity, never both.** Text in a disabled control takes
   `--color-text-disabled` and no opacity; non-text parts take `--opacity-disabled`. Stacked they
-  multiply, landing at 1.48:1 in light and 1.37:1 in dark. Disabled controls are exempt from 1.4.3,
+  multiply, landing at 1.48:1 in light and 1.75:1 in dark. Disabled controls are exempt from 1.4.3,
   but for this user base that is effectively invisible. Dimming a whole control with `opacity` is
   the convenient move and therefore the likely mistake.
+- **Disabled text stays readable, just not prominent.** On `--color-surface-disabled`,
+  `--color-text-disabled` sits at about 2:1 in both themes. Lower and a disabled field's value can
+  no longer be read; higher and it starts to look editable. In dark the placeholder already takes
+  `--neutral-400`, so disabled text sits one step below it.
 - **Large text is not the same as a large heading.** The 3:1 exception in 1.4.3 starts at
   `--font-size-large-text-min` (24px), or `--font-size-large-text-bold-min` (19px) when bold.
   `--font-size-300` is 20px and qualifies only in bold; `--font-size-200` never qualifies.
@@ -221,15 +255,50 @@ message names the fact and the action: "The value could not be saved. Please try
 warning-toned rewrite of the same sentence. Urgency is carried by the visual coding described
 below — border, icon, colour — not by the words.
 
+**The interface is German.** Every text a user sees or hears — labels, messages, button text,
+accessible names, page titles — is German, and the document declares `lang="de"` so screen readers
+pick the right pronunciation. Component, parameter and variant names stay English, as in the rest of
+the code, and so do exception messages, which are written for developers.
+
+## Button
+
+Three variants: `Primary` for the main action, `Secondary` for a less prominent one, `Critical`
+for a destructive one. The destructive variant carries the same name as the semantic role it is
+filled with, `--color-surface-critical`; there is no separate `Danger`. `Primary` is the default.
+
+**A label is mandatory once there is an icon.** `Icon` is an optional, decorative `RenderFragment`
+rendered before the label and `aria-hidden`. An `Icon` without `ChildContent` throws: an icon-only
+button has no visible name, and the same rule holds for `Input`'s label and `Badge`'s text.
+
+**No size variants.** Minimum height and width are `--touch-target-min`, 44×44 px. A smaller
+button would miss the target, so there is one size everywhere.
+
+**States.** The fill darkens on hover, because the whole surface is the affordance. `Disabled`
+sets the native `disabled` attribute and follows the disabled convention above: text takes
+`--color-text-disabled`, the fill `--color-surface-disabled`, no opacity on top. A disabled
+`Secondary` keeps no fill and shows its outline in `--color-border-disabled` instead. The focus ring
+is the global one.
+
+**It is a plain `<button>`.** `Type` defaults to `button`, so a `Button` inside a form does not
+submit it by accident; a submit button says `Type="submit"`. `OnClick` is an ordinary
+`EventCallback`. Any other attribute is passed through to the element, and a passed `class` is
+appended to the component's own classes rather than replacing them.
+
 ## Form validation
 
 **Visual coding.** An error is border plus icon plus text, optionally the subtle fill. Never colour
-alone. There is no default success tick — flagging every valid field is visual noise in a long
-form, so the error is the only actively signalled state.
+alone. The icon is the X in a circle, the same mark a critical `Badge` carries. There is no default
+success tick — flagging every valid field is visual noise in a long form, so the error is the only
+actively signalled state.
 
 **Timing.** First check on blur, not while typing. After the first error, revalidate live on every
 further keystroke in that field, so a correction is acknowledged immediately. On submit, everything
 is validated again and focus moves to the first field in error.
+
+**Native validation is off.** `Form` sets `novalidate`. The browser's own bubbles appear before
+the designed error state, in the browser's language and styling, and disappear again on their own;
+the native `required` attribute stays for its semantics, only the browser's interception of the
+submit goes.
 
 **ARIA is contextual, not a blanket obligation.** `aria-describedby` only when helper or error text
 actually exists — a plain search field needs none. `aria-required` only on custom controls with no
@@ -244,7 +313,36 @@ field in error. The three-field threshold is our own convention; WCAG techniques
 name one.
 
 **Required fields.** Not the asterisk alone: the native `required` attribute as well, plus one
-"* = required" note per form, because some screen readers do not announce a bare asterisk.
+"* = Pflichtfeld" note per form, because some screen readers do not announce a bare asterisk.
+
+All of this is implemented once, in [`Form`](#form), rather than repeated in every form.
+
+## Form
+
+`Form` wraps `EditForm` and turns the rules above into behaviour, so a page cannot forget them. It
+takes either a `Model` or an `EditContext` — exactly one, otherwise it throws — and passes every
+other attribute through to the `<form>`.
+
+**Fields register themselves.** Every `Input` inside a `Form` finds it through a cascading value and
+registers on first render. The form therefore knows its fields in rendering order, without the page
+listing them. A field rendered later, behind an `@if`, joins at the end of that order.
+
+**What it renders.** The "* = Pflichtfeld" note appears as soon as one registered field is
+required, and disappears with the last one. The `aria-live` region for the summary exists from the
+first render, empty, once more than three fields are registered — a live region added together with
+its content is not reliably announced.
+
+**What happens on an invalid submit.** With up to three fields, focus moves to the first enabled
+field in error. Beyond three, the summary fills, receives focus, and lists one link per field in
+error, in rendering order, each reading "label: first message". A link moves focus to its field.
+Its `href` also points at the field on the current page, so it stays correct with `<base href>`
+and without a live connection. The summary follows every further validation change and empties on
+a valid submit.
+
+**What it leaves to the page.** The validator — `DataAnnotationsValidator` or another — is chosen by
+the page, as with `EditForm`. Field layout belongs to the page as well, because the `<form>` element
+is rendered by `EditForm` and is outside `Form`'s CSS scope. A model-level error that belongs to no
+registered field is not listed in the summary.
 
 ## Input
 
@@ -254,8 +352,9 @@ through `BindConverter.TryConvertTo<TValue>`, the same mechanism `@bind` uses in
 component works for `string`, numeric and other convertible types without per-type components.
 
 It is bound to an `EditContext` — it inherits `InputBase<TValue>` and is used with `@bind-Value`
-inside an `EditForm`, the same as Blazor's own input components. It is not meant to work standalone
-outside a form.
+inside a [`Form`](#form), where it registers itself, or inside a plain `EditForm`, the same as
+Blazor's own input components. It is not meant to work standalone outside a form. A value the type
+cannot parse is reported in German, naming the field's label.
 
 **Label is mandatory.** There is no label-less `Input`, the same rule as `Button`'s no-icon-only
 rule: a missing `Label` throws rather than silently rendering an inaccessible field.
@@ -270,20 +369,77 @@ component, which does not exist yet.
 rendered inside the field so they share its border.
 
 **Password reveal toggle.** Only rendered when `Type="password"`. A visible text button
-("Anzeigen" / "Verbergen"), never icon-only, following the same rule as `Button`. It toggles the
+("Anzeigen" / "Verbergen"), never icon-only, following the same rule as `Button`. Its accessible
+name adds the field's label ("Passwort anzeigen"), because a page with two password fields would
+otherwise have two identical "Anzeigen" buttons; `aria-controls` points at the field. It is
+disabled together with the field, and its hit area is the full 44×44 px target. It toggles the
 native `type` between `password` and `text`; the toggle itself is a plain `<button>`, not a `Button`
 component, because `Button` has no compact size and would look oversized inline in a field.
 
+**Attributes pass through, identity does not.** Anything not declared as a parameter —
+`autocomplete`, `inputmode`, `data-*` — lands on the `<input>`. `id`, `aria-describedby` and
+`aria-invalid` are set by the component after them, because the label, the helper text and the
+error message are wired to those exact values.
+
+**Razor caveat.** The component is named `Input`, and inside a C# block (`@if`, `@foreach`) Razor
+reads `<Input>…</Input>` with child content as the void HTML `<input>`. Inside such a block, an
+`Input` with `Prefix` or `Suffix` is written with its full name,
+`<VitalSync.DesignSystem.Primitives.Input>`. A self-closing `<Input … />` is unaffected.
+
 **`Required`.** Sets the native `required` attribute and, next to the label, a decorative `*`
 (`aria-hidden`, inherits the label's already-verified text colour via `currentColor`). The
-form-wide "* = required" legend from [Form validation](#form-validation) is a form-level concern,
-not something `Input` renders itself.
+form-wide "* = Pflichtfeld" note from [Form validation](#form-validation) is rendered by `Form`, not
+by `Input` itself.
+
+## Badge
+
+One component, `Badge`, with a `Variant`: `Neutral` for a tag, `Success`, `Warning` and `Critical`
+for a status. Every badge has a text label and an icon; the variant decides which icon.
+
+**The text is mandatory.** A badge without `ChildContent` throws. The label carries the meaning,
+the icon only supports it.
+
+**A neutral badge takes any icon.** By default it shows a tag; `Icon` replaces that with a
+`RenderFragment` of the page's choosing, for a category that has its own symbol.
+
+**A status badge has a fixed icon.** `Success` shows a check in a circle, `Warning` a triangle,
+`Critical` an X in a circle — all from Phosphor's Fill set (see [Icons](#icons)). Passing an `Icon`
+to a status variant throws. The shape, not just the colour, tells the three states apart, which is
+what makes the status colours' measured separation shortfall acceptable (see
+[Data visualisation](#data-visualisation)). The X in a circle is the same mark that flags an input
+error, so critical looks the same wherever it appears.
+
+**It can be a link.** It renders `<span>` by default, or `<a href="…">` when `Href` is given, for a
+badge that is also a navigation link (e.g. a tag that filters a list). Same 44×44 px touch target
+as `Button` and `Input`, met by giving the badge that literal height rather than an invisible
+enlarged hit area around a smaller visual — a badge that size does not look out of place next to
+those two.
+
+**Bold fill, not the subtle one.** `Input`'s error state uses `--color-surface-critical-subtle`,
+barely different from the card, because border, icon and text already carry that state and the
+fill only needs to avoid competing with them. A badge has no border and no adjacent field to
+lean on, so it takes the vibrant `--color-surface-success/warning/critical` used by `Button`'s
+critical variant, not the subtle one. The neutral fill needed a semantic role that did not exist
+yet, `--color-surface-neutral` (`neutral-700` in light, `neutral-400` in dark, the same shade
+pattern as the three status fills), verified against card and page background like they are.
+
+**No hover fill change.** A `Button`'s fill darkens on hover because the whole surface is the
+affordance. A linked badge already gets the global focus ring and, since 1.4.1 forbids colour
+alone here too, an underline on hover — that is enough; a new fill tone for `Success`/`Warning`
+would have meant new palette stops (`green-800`/`amber-800` in light, `green-500`/`amber-500` in
+dark) with their own contrast and separation checks, for a state that already has a working,
+cheaper signal.
+
+**No compact size.** A table full of badges was a candidate for a smaller variant, but a smaller
+badge that is also a link cannot keep the 44×44 px target without an invisible enlarged hit area,
+which is a worse trade than one consistent size everywhere.
 
 ## How this is kept true
 
 `tools/VitalSync.DesignTokens.Contrast` resolves every `var()` chain per theme and measures the
-pairs named in the rule document — 150 contrast checks and 4 separation checks at the time of
-writing, all passing, with no open waiver.
+pairs named in the rule document — 204 contrast checks and 6 separation checks at the time of
+writing. All pass except the two status-colour separation checks, which run under a waiver (see
+[Data visualisation](#data-visualisation)).
 
 Contrast rules name a foreground, a background and the criterion they answer to. Separation rules
 name a set of colours that must stay tellable apart, and measure every pair under normal vision and
@@ -348,11 +504,17 @@ a second tool that drifts out of sync.
 
 Routes live under `/design-system/*`, guarded by a single check for
 `IWebHostEnvironment.IsDevelopment()` at the top of the gallery's own layout rather than repeated
-per page — in anything other than Development the route answers as not found. The gallery is a
+per page. In anything other than Development the layout calls `NavigationManager.NotFound()`, so
+the route answers with a 404 and no content, the same as an unknown URL. The gallery is a
 tool for building the system, not a part of the product; it therefore has no entry in `NavMenu` and
 is reached by URL only.
 
 Each component's page shows every visual state (default, hover, focus, disabled, and both themes
 side by side) together with the markup needed to use it. The markup is what makes the page a
 reference and not just a visual check — a screenshot proves a component renders, a snippet proves
-someone can use it correctly.
+someone can use it correctly. Pages with something to operate — a button to click, a form to
+submit, a password to reveal — are `InteractiveServer`; a statically rendered page would show the
+control but silently do nothing. Every page sets its own `<PageTitle>`, and the gallery layout
+reflows to a single column at narrow widths, so the reference itself meets the rules it documents.
+The pages are German like the rest of the interface; component and parameter names in the prose and
+snippets stay as they are in code.

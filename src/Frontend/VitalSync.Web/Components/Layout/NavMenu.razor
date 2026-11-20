@@ -2,25 +2,26 @@
     <a class="brand" href="">VitalSync</a>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="nav-toggle" />
+<button type="button"
+        class="nav-toggle"
+        aria-expanded="false"
+        aria-controls="vs-nav-menu"
+        onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded') !== 'true')">
+    <span class="nav-toggle__icon" aria-hidden="true"></span>
+    Menü
+</button>
 
-<div class="nav-scrollable" onclick="document.querySelector('.nav-toggle').click()">
-    <nav class="nav-list">
+<div id="vs-nav-menu" class="nav-scrollable" onclick="document.querySelector('.nav-toggle').setAttribute('aria-expanded', 'false')">
+    <nav class="nav-list" aria-label="Hauptnavigation">
         <div class="nav-item">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                Home
+                Startseite
             </NavLink>
         </div>
 
         <div class="nav-item">
             <NavLink class="nav-link" href="counter">
-                Counter
-            </NavLink>
-        </div>
-
-        <div class="nav-item">
-            <NavLink class="nav-link" href="weather">
-                Weather
+                Zähler
             </NavLink>
         </div>
     </nav>

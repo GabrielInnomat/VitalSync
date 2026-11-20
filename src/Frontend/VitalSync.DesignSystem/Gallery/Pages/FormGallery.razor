@@ -1,0 +1,122 @@
+@page "/design-system/form"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using VitalSync.DesignSystem.Primitives
+
+<PageTitle>Formular · Design System · VitalSync</PageTitle>
+
+<h1>Formular (<code>Form</code>)</h1>
+<p>
+    Umschliesst <code>EditForm</code> und schaltet die Browser-Validierung ab. Jedes
+    <a href="design-system/input"><code>Input</code></a> darin meldet sich selbst an. Ist ein
+    Feld Pflicht, erscheint der Hinweis «* = Pflichtfeld» automatisch. Bei einem ungültigen
+    Absenden springt der Fokus auf das erste fehlerhafte Feld. Ab mehr als drei Feldern
+    erscheint stattdessen eine Fehlerübersicht über dem Formular, die den Fokus erhält und zu
+    jedem Feld verlinkt. Den Validator wählt der Aufrufer, zum Beispiel
+    <code>DataAnnotationsValidator</code>. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    @foreach (var demo in _themes)
+    {
+        <section data-theme="@demo.Theme" class="vs-gallery__theme-panel">
+            <h2>@demo.Title</h2>
+
+            <h3>Bis drei Felder</h3>
+            <Form Model="demo.Short" OnValidSubmit="demo.MarkShortSubmitted">
+                <DataAnnotationsValidator />
+
+                <Input TValue="string" @bind-Value="demo.Short.FirstName" Label="Vorname" Required="true" autocomplete="given-name" />
+                <Input TValue="string" @bind-Value="demo.Short.LastName" Label="Nachname" Required="true" autocomplete="family-name" />
+                <Input TValue="string" @bind-Value="demo.Short.Email" Label="E-Mail" Type="email" autocomplete="email" />
+
+                <Button Variant="ButtonVariant.Primary" Type="submit">Absenden</Button>
+
+                <p role="status" class="vs-gallery__status">@(demo.ShortSubmitted ? "Gesendet." : null)</p>
+            </Form>
+
+            <h3>Mehr als drei Felder</h3>
+            <Form Model="demo.Long" OnValidSubmit="demo.MarkLongSubmitted">
+                <DataAnnotationsValidator />
+
+                <Input TValue="string" @bind-Value="demo.Long.FirstName" Label="Vorname" Required="true" autocomplete="given-name" />
+                <Input TValue="string" @bind-Value="demo.Long.LastName" Label="Nachname" Required="true" autocomplete="family-name" />
+                <Input TValue="string" @bind-Value="demo.Long.Email" Label="E-Mail" Type="email" Required="true" autocomplete="email" />
+                <Input TValue="int?" @bind-Value="demo.Long.BirthYear" Label="Geburtsjahr" Type="number" HelperText="Vierstellig, zum Beispiel 1990." autocomplete="bday-year" />
+                <Input TValue="string" @bind-Value="demo.Long.City" Label="Ort" Required="true" autocomplete="address-level2" />
+
+                <Button Variant="ButtonVariant.Primary" Type="submit">Absenden</Button>
+
+                <p role="status" class="vs-gallery__status">@(demo.LongSubmitted ? "Gesendet." : null)</p>
+            </Form>
+        </section>
+    }
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;Form Model="model" OnValidSubmit="Save"&gt;
+    &lt;DataAnnotationsValidator /&gt;
+
+    &lt;Input @@bind-Value="model.FirstName" Label="Vorname" Required="true" autocomplete="given-name" /&gt;
+    &lt;Input @@bind-Value="model.LastName" Label="Nachname" Required="true" autocomplete="family-name" /&gt;
+
+    &lt;Button Variant="ButtonVariant.Primary" Type="submit"&gt;Absenden&lt;/Button&gt;
+&lt;/Form&gt;
+</code></pre>
+
+@code {
+    private readonly ThemeDemo[] _themes = [new("light", "Hell"), new("dark", "Dunkel")];
+
+    private sealed class ThemeDemo(string theme, string title)
+    {
+        public string Theme { get; } = theme;
+
+        public string Title { get; } = title;
+
+        public ShortModel Short { get; } = new();
+
+        public LongModel Long { get; } = new();
+
+        public bool ShortSubmitted { get; private set; }
+
+        public bool LongSubmitted { get; private set; }
+
+        public void MarkShortSubmitted() => ShortSubmitted = true;
+
+        public void MarkLongSubmitted() => LongSubmitted = true;
+    }
+
+    private sealed class ShortModel
+    {
+        [Required(ErrorMessage = "Bitte gib einen Vornamen ein.")]
+        public string? FirstName { get; set; }
+
+        [Required(ErrorMessage = "Bitte gib einen Nachnamen ein.")]
+        public string? LastName { get; set; }
+
+        [EmailAddress(ErrorMessage = "Bitte gib eine gültige E-Mail-Adresse ein.")]
+        public string? Email { get; set; }
+    }
+
+    private sealed class LongModel
+    {
+        [Required(ErrorMessage = "Bitte gib einen Vornamen ein.")]
+        public string? FirstName { get; set; }
+
+        [Required(ErrorMessage = "Bitte gib einen Nachnamen ein.")]
+        public string? LastName { get; set; }
+
+        [Required(ErrorMessage = "Bitte gib eine E-Mail-Adresse ein.")]
+        [EmailAddress(ErrorMessage = "Bitte gib eine gültige E-Mail-Adresse ein.")]
+        public string? Email { get; set; }
+
+        [Range(1900, 2100, ErrorMessage = "Bitte gib ein vierstelliges Geburtsjahr ein.")]
+        public int? BirthYear { get; set; }
+
+        [Required(ErrorMessage = "Bitte gib einen Ort ein.")]
+        public string? City { get; set; }
+    }
+}

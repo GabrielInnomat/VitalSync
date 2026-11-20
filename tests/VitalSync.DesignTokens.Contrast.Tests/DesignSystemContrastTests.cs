@@ -65,14 +65,14 @@ public class DesignSystemContrastTests
     }
 
     [Fact]
-    public void EverySeparationSetResolvesAndStaysApart()
+    public void EverySeparationSetResolvesAndStaysApartUnlessWaived()
     {
         var check = DesignTokenContrastCheck.ForRepository();
 
         Assert.NotEmpty(check.Separations);
 
         var findings = check.Separations
-            .Where(result => result.Status != ContrastCheckStatus.Passed)
+            .Where(result => result.Status is not (ContrastCheckStatus.Passed or ContrastCheckStatus.Waived))
             .Select(ContrastReport.Describe)
             .ToList();
 

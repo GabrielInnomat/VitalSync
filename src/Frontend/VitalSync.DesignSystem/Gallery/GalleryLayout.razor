@@ -7,13 +7,15 @@
 
 @if (Environment.IsDevelopment())
 {
-    <a href="#vs-gallery-main" class="vs-gallery__skip-link">Skip to content</a>
+    <a href="@($"{CurrentPath}#vs-gallery-main")" class="vs-gallery__skip-link" data-enhance-nav="false">Zum Inhalt springen</a>
     <div class="vs-gallery">
-        <nav class="vs-gallery__nav" aria-label="Design system">
+        <nav class="vs-gallery__nav" aria-label="Design-System-Navigation">
             <ul>
                 <li><a href="design-system" aria-current="@IsCurrent("design-system")">Design System</a></li>
-                <li><a href="design-system/button" aria-current="@IsCurrent("design-system/button")">Button</a></li>
-                <li><a href="design-system/input" aria-current="@IsCurrent("design-system/input")">Input</a></li>
+                <li><a href="design-system/button" aria-current="@IsCurrent("design-system/button")">Schaltfläche</a></li>
+                <li><a href="design-system/input" aria-current="@IsCurrent("design-system/input")">Eingabefeld</a></li>
+                <li><a href="design-system/form" aria-current="@IsCurrent("design-system/form")">Formular</a></li>
+                <li><a href="design-system/badge" aria-current="@IsCurrent("design-system/badge")">Kennzeichnung</a></li>
             </ul>
         </nav>
         <main id="vs-gallery-main" class="vs-gallery__content" tabindex="-1">
@@ -21,15 +23,25 @@
         </main>
     </div>
 }
-else
-{
-    <p class="vs-gallery__not-found">Not found.</p>
-}
 
 @code {
-    private string? IsCurrent(string relativePath)
+    private string CurrentPath
     {
-        var current = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
-        return current == relativePath ? "page" : null;
+        get
+        {
+            var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+            var end = relative.IndexOfAny(['?', '#']);
+            return (end < 0 ? relative : relative[..end]).TrimEnd('/');
+        }
+    }
+
+    private string? IsCurrent(string relativePath) => CurrentPath == relativePath ? "page" : null;
+
+    protected override void OnInitialized()
+    {
+        if (!Environment.IsDevelopment())
+        {
+            Navigation.NotFound();
+        }
     }
 }

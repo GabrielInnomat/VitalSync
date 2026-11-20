@@ -1,28 +1,32 @@
 @page "/design-system/button"
 @layout GalleryLayout
+@rendermode InteractiveServer
 @using VitalSync.DesignSystem.Primitives
 
-<h1>Button</h1>
+<PageTitle>Schaltfläche · Design System · VitalSync</PageTitle>
+
+<h1>Schaltfläche (<code>Button</code>)</h1>
 <p>
-    Three variants: <code>Primary</code> for the default action, <code>Secondary</code> for a
-    lower-emphasis action, <code>Critical</code> for a destructive one. No <code>Danger</code>
-    variant and no size variants — see <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>
-    for the reasoning. Icon-only buttons are not supported: passing <code>Icon</code> without a
-    label throws.
+    Drei Varianten: <code>Primary</code> für die Hauptaktion, <code>Secondary</code> für eine
+    weniger betonte Aktion, <code>Critical</code> für eine zerstörende. Es gibt keine
+    <code>Danger</code>-Variante und keine Grössenvarianten – die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+    Schaltflächen nur mit Symbol werden nicht unterstützt: <code>Icon</code> ohne Beschriftung
+    löst eine Ausnahme aus.
 </p>
 
 <div class="vs-gallery__themes">
     <section data-theme="light" class="vs-gallery__theme-panel">
-        <h2>Light</h2>
+        <h2>Hell</h2>
         @renderStates()
     </section>
     <section data-theme="dark" class="vs-gallery__theme-panel">
-        <h2>Dark</h2>
+        <h2>Dunkel</h2>
         @renderStates()
     </section>
 </div>
 
-<h2>Usage</h2>
+<h2>Verwendung</h2>
 <pre><code>&lt;Button Variant="ButtonVariant.Primary" OnClick="Save"&gt;Speichern&lt;/Button&gt;
 
 &lt;Button Variant="ButtonVariant.Critical" OnClick="Delete"&gt;
@@ -36,14 +40,14 @@
 @code {
     private RenderFragment renderStates() => @<text>
         <div class="vs-gallery__row">
-            <Button Variant="ButtonVariant.Primary">Primary</Button>
-            <Button Variant="ButtonVariant.Secondary">Secondary</Button>
-            <Button Variant="ButtonVariant.Critical">Critical</Button>
+            <Button Variant="ButtonVariant.Primary">Primär</Button>
+            <Button Variant="ButtonVariant.Secondary">Sekundär</Button>
+            <Button Variant="ButtonVariant.Critical">Kritisch</Button>
         </div>
         <div class="vs-gallery__row">
-            <Button Variant="ButtonVariant.Primary" Disabled="true">Primary</Button>
-            <Button Variant="ButtonVariant.Secondary" Disabled="true">Secondary</Button>
-            <Button Variant="ButtonVariant.Critical" Disabled="true">Critical</Button>
+            <Button Variant="ButtonVariant.Primary" Disabled="true">Primär</Button>
+            <Button Variant="ButtonVariant.Secondary" Disabled="true">Sekundär</Button>
+            <Button Variant="ButtonVariant.Critical" Disabled="true">Kritisch</Button>
         </div>
         <div class="vs-gallery__row">
             <Button Variant="ButtonVariant.Primary">

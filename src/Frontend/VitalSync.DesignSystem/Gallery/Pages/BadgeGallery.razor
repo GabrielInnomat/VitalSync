@@ -1,0 +1,65 @@
+@page "/design-system/badge"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using VitalSync.DesignSystem.Primitives
+
+<PageTitle>Kennzeichnung · Design System · VitalSync</PageTitle>
+
+<h1>Kennzeichnung (<code>Badge</code>)</h1>
+<p>
+    <code>Badge</code> hat immer einen Text und immer ein Symbol. Die Variante <code>Neutral</code>
+    zeigt standardmässig ein Etikett-Symbol, über <code>Icon</code> kann ein eigenes gesetzt werden.
+    Die Statusvarianten <code>Success</code>, <code>Warning</code> und <code>Critical</code> haben
+    ein festes Symbol, damit der Status nicht nur über die Farbe erkennbar ist. Ein eigenes
+    <code>Icon</code> löst dort eine Ausnahme aus. Über <code>Href</code> wird jedes Badge zum
+    Link. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    <section data-theme="light" class="vs-gallery__theme-panel">
+        <h2>Hell</h2>
+        @renderStates()
+    </section>
+    <section data-theme="dark" class="vs-gallery__theme-panel">
+        <h2>Dunkel</h2>
+        @renderStates()
+    </section>
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;Badge&gt;Vegetarisch&lt;/Badge&gt;
+&lt;Badge Href="/recipes?tag=vegetarisch"&gt;Vegetarisch&lt;/Badge&gt;
+
+&lt;Badge&gt;
+    &lt;Icon&gt;&lt;svg ...&gt;&lt;/svg&gt;&lt;/Icon&gt;
+    &lt;ChildContent&gt;Saisonal&lt;/ChildContent&gt;
+&lt;/Badge&gt;
+
+&lt;Badge Variant="BadgeVariant.Success"&gt;Abgeschlossen&lt;/Badge&gt;
+&lt;Badge Variant="BadgeVariant.Warning"&gt;Fast fällig&lt;/Badge&gt;
+&lt;Badge Variant="BadgeVariant.Critical" Href="/workouts/123"&gt;Verpasst&lt;/Badge&gt;
+</code></pre>
+
+@code {
+    private RenderFragment renderStates() => @<text>
+        <div class="vs-gallery__row">
+            <Badge>Vegetarisch</Badge>
+            <Badge Href="design-system">Vegetarisch (Link)</Badge>
+            <Badge>
+                <Icon>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8" /></svg>
+                </Icon>
+                <ChildContent>Saisonal</ChildContent>
+            </Badge>
+        </div>
+        <div class="vs-gallery__row">
+            <Badge Variant="BadgeVariant.Success">Abgeschlossen</Badge>
+            <Badge Variant="BadgeVariant.Warning">Fast fällig</Badge>
+            <Badge Variant="BadgeVariant.Critical">Verpasst</Badge>
+        </div>
+        <div class="vs-gallery__row">
+            <Badge Variant="BadgeVariant.Critical" Href="design-system">Verpasst (Link)</Badge>
+        </div>
+    </text>;
+}

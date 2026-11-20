@@ -1,73 +1,101 @@
 @page "/design-system/input"
 @layout GalleryLayout
+@rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Forms
 @using VitalSync.DesignSystem.Primitives
 
-<h1>Input</h1>
+<PageTitle>Eingabefeld · Design System · VitalSync</PageTitle>
+
+<h1>Eingabefeld (<code>Input</code>)</h1>
 <p>
-    A single generic component bound to an <code>EditContext</code>. <code>Label</code> is
-    mandatory — label-less inputs are not supported. No size variants. Errors are shown via
-    border, icon and text together, never colour alone. See
-    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>
-    for the reasoning.
+    Eine einzige generische Komponente, gebunden an einen <code>EditContext</code>.
+    <code>Label</code> ist Pflicht – Felder ohne Beschriftung werden nicht unterstützt. Es gibt
+    keine Grössenvarianten. Fehler werden immer über Rahmen, Symbol und Text zugleich angezeigt,
+    nie nur über die Farbe. Ein Feld wird zum ersten Mal beim Verlassen geprüft, danach live
+    während der Eingabe. Innerhalb eines <a href="design-system/form"><code>Form</code></a>
+    meldet sich das Feld selbst an. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
 </p>
 
 <div class="vs-gallery__themes">
-    <section data-theme="light" class="vs-gallery__theme-panel">
-        <h2>Light</h2>
-        <EditForm Model="_lightModel" OnValidSubmit="HandleValidSubmit">
-            <DataAnnotationsValidator />
+    @foreach (var demo in _themes)
+    {
+        <section data-theme="@demo.Theme" class="vs-gallery__theme-panel">
+            <h2>@demo.Title</h2>
 
-            <Input TValue="string" @bind-Value="_lightModel.Name" Label="Name" Required="true" HelperText="Wie du angesprochen werden möchtest." />
+            <h3>Formular</h3>
+            <Form Model="demo.Form" OnValidSubmit="demo.MarkSubmitted">
+                <DataAnnotationsValidator />
 
-            <Input TValue="int?" @bind-Value="_lightModel.WeightKg" Label="Gewicht" Type="number" Placeholder="0">
-                <Suffix>kg</Suffix>
-            </Input>
+                <Input TValue="string" @bind-Value="demo.Form.Name" Label="Name" Required="true" HelperText="Wie du angesprochen werden möchtest." autocomplete="name" />
 
-            <Input TValue="string" @bind-Value="_lightModel.Password" Label="Passwort" Type="password" Required="true" />
+                <VitalSync.DesignSystem.Primitives.Input TValue="int?" @bind-Value="demo.Form.WeightKg" Label="Gewicht" Type="number" Placeholder="0">
+                    <Suffix>kg</Suffix>
+                </VitalSync.DesignSystem.Primitives.Input>
 
-            <Button Variant="ButtonVariant.Primary" Type="submit">Absenden</Button>
-        </EditForm>
-    </section>
-    <section data-theme="dark" class="vs-gallery__theme-panel">
-        <h2>Dark</h2>
-        <EditForm Model="_darkModel" OnValidSubmit="HandleValidSubmit">
-            <DataAnnotationsValidator />
+                <Input TValue="string" @bind-Value="demo.Form.Password" Label="Passwort" Type="password" Required="true" autocomplete="current-password" />
 
-            <Input TValue="string" @bind-Value="_darkModel.Name" Label="Name" Required="true" HelperText="Wie du angesprochen werden möchtest." />
+                <Button Variant="ButtonVariant.Primary" Type="submit">Absenden</Button>
 
-            <Input TValue="int?" @bind-Value="_darkModel.WeightKg" Label="Gewicht" Type="number" Placeholder="0">
-                <Suffix>kg</Suffix>
-            </Input>
+                <p role="status" class="vs-gallery__status">@(demo.Submitted ? "Gesendet." : null)</p>
+            </Form>
 
-            <Input TValue="string" @bind-Value="_darkModel.Password" Label="Passwort" Type="password" Required="true" />
+            <h3>Zustände</h3>
+            <Form EditContext="demo.States">
+                <Input TValue="string" @bind-Value="demo.StatesModel.Email" Label="E-Mail" Type="email" Required="true" autocomplete="off" />
 
-            <Button Variant="ButtonVariant.Primary" Type="submit">Absenden</Button>
-        </EditForm>
-    </section>
+                <VitalSync.DesignSystem.Primitives.Input TValue="decimal?" @bind-Value="demo.StatesModel.Price" Label="Preis" Type="number" HelperText="Preis pro Packung.">
+                    <Prefix>CHF</Prefix>
+                </VitalSync.DesignSystem.Primitives.Input>
+
+                <Input TValue="string" @bind-Value="demo.StatesModel.Locked" Label="Konto" Disabled="true" HelperText="Kann nicht geändert werden." />
+            </Form>
+        </section>
+    }
 </div>
 
-<h2>Usage</h2>
-<pre><code>&lt;EditForm Model="model" OnValidSubmit="Save"&gt;
+<h2>Verwendung</h2>
+<pre><code>&lt;Form Model="model" OnValidSubmit="Save"&gt;
     &lt;DataAnnotationsValidator /&gt;
 
-    &lt;Input @@bind-Value="model.Name" Label="Name" Required="true" /&gt;
+    &lt;Input @@bind-Value="model.Name" Label="Name" Required="true" autocomplete="name" /&gt;
 
     &lt;Input @@bind-Value="model.WeightKg" Label="Gewicht" Type="number"&gt;
         &lt;Suffix&gt;kg&lt;/Suffix&gt;
     &lt;/Input&gt;
 
-    &lt;Input @@bind-Value="model.Password" Label="Passwort" Type="password" Required="true" /&gt;
-&lt;/EditForm&gt;
+    &lt;Input @@bind-Value="model.Password" Label="Passwort" Type="password" Required="true" autocomplete="current-password" /&gt;
+&lt;/Form&gt;
 </code></pre>
 
 @code {
-    private readonly DemoModel _lightModel = new();
-    private readonly DemoModel _darkModel = new();
+    private readonly ThemeDemo[] _themes = [new("light", "Hell"), new("dark", "Dunkel")];
 
-    private void HandleValidSubmit()
+    private sealed class ThemeDemo
     {
+        public ThemeDemo(string theme, string title)
+        {
+            Theme = theme;
+            Title = title;
+            States = new EditContext(StatesModel);
+            var messages = new ValidationMessageStore(States);
+            messages.Add(States.Field(nameof(StatesDemoModel.Email)), "Bitte gib eine gültige E-Mail-Adresse ein.");
+        }
+
+        public string Theme { get; }
+
+        public string Title { get; }
+
+        public DemoModel Form { get; } = new();
+
+        public StatesDemoModel StatesModel { get; } = new();
+
+        public EditContext States { get; }
+
+        public bool Submitted { get; private set; }
+
+        public void MarkSubmitted() => Submitted = true;
     }
 
     private sealed class DemoModel
@@ -80,5 +108,14 @@
 
         [Required(ErrorMessage = "Bitte gib ein Passwort ein.")]
         public string? Password { get; set; }
+    }
+
+    private sealed class StatesDemoModel
+    {
+        public string? Email { get; set; } = "alex@";
+
+        public decimal? Price { get; set; } = 4.5m;
+
+        public string? Locked { get; set; } = "alex@example.ch";
     }
 }

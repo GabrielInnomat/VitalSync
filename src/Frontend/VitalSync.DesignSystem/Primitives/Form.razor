@@ -1,0 +1,193 @@
+@namespace VitalSync.DesignSystem.Primitives
+@implements IDisposable
+@using Microsoft.AspNetCore.Components.Forms
+@inject NavigationManager Navigation
+
+<CascadingValue Value="this" IsFixed="true">
+    <EditForm @attributes="AdditionalAttributes" EditContext="_editContext" OnSubmit="HandleSubmitAsync" novalidate="novalidate">
+        @if (HasSummary)
+        {
+            <div @ref="_summary" class="vs-form__summary" tabindex="-1" aria-live="polite">
+                @if (_summaryRequested && FieldsInError() is { Count: > 0 } fieldsInError)
+                {
+                    <div class="vs-form__summary-box">
+                        <p class="vs-form__summary-title">
+                            <span class="vs-form__summary-icon" aria-hidden="true">
+                                <SystemIcon Name="SystemIconName.XCircle" />
+                            </span>
+                            @SummaryTitle(fieldsInError.Count)
+                        </p>
+                        <ul class="vs-form__summary-list">
+                            @foreach (var field in fieldsInError)
+                            {
+                                <li>
+                                    <a href="@FieldHref(field)"
+                                       class="vs-form__summary-link"
+                                       @onclick="() => FocusFieldAsync(field)"
+                                       @onclick:preventDefault="true">@field.Label: @FirstMessage(field)</a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+            </div>
+        }
+        @if (HasRequiredField)
+        {
+            <p class="vs-form__legend">* = Pflichtfeld</p>
+        }
+        @ChildContent
+    </EditForm>
+</CascadingValue>
+
+@code {
+    private const int SummaryFieldThreshold = 3;
+
+    private readonly List<IFormField> _fields = [];
+    private EditContext? _editContext;
+    private ElementReference _summary;
+    private bool _summaryRequested;
+    private bool _focusPending;
+
+    [Parameter]
+    public object? Model { get; set; }
+
+    [Parameter]
+    public EditContext? EditContext { get; set; }
+
+    [Parameter]
+    public EventCallback<EditContext> OnValidSubmit { get; set; }
+
+    [Parameter]
+    public EventCallback<EditContext> OnInvalidSubmit { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private bool HasSummary => _fields.Count > SummaryFieldThreshold;
+
+    private bool HasRequiredField => _fields.Exists(candidate => candidate.Required);
+
+    internal void Register(IFormField field)
+    {
+        var before = (HasSummary, HasRequiredField);
+        _fields.Add(field);
+        RenderIfChanged(before);
+    }
+
+    internal void Unregister(IFormField field)
+    {
+        var before = (HasSummary, HasRequiredField);
+        _fields.Remove(field);
+        RenderIfChanged(before);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if ((Model is null) == (EditContext is null))
+        {
+            throw new InvalidOperationException(
+                "Form requires exactly one of Model or EditContext.");
+        }
+
+        var next = EditContext
+            ?? (_editContext is not null && ReferenceEquals(_editContext.Model, Model) ? _editContext : new EditContext(Model!));
+
+        if (ReferenceEquals(next, _editContext))
+        {
+            return;
+        }
+
+        if (_editContext is not null)
+        {
+            _editContext.OnValidationStateChanged -= HandleValidationStateChanged;
+        }
+
+        _editContext = next;
+        _editContext.OnValidationStateChanged += HandleValidationStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusPending)
+        {
+            return;
+        }
+
+        _focusPending = false;
+
+        if (HasSummary && FieldsInError().Count > 0)
+        {
+            await _summary.FocusAsync().ConfigureAwait(true);
+            return;
+        }
+
+        var firstInError = _fields.Find(candidate => !candidate.Disabled && HasErrors(candidate));
+        if (firstInError is not null)
+        {
+            await firstInError.FocusAsync().ConfigureAwait(true);
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_editContext is not null)
+        {
+            _editContext.OnValidationStateChanged -= HandleValidationStateChanged;
+        }
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        if (_editContext!.Validate())
+        {
+            _summaryRequested = false;
+            await OnValidSubmit.InvokeAsync(_editContext).ConfigureAwait(true);
+            return;
+        }
+
+        _summaryRequested = true;
+        _focusPending = true;
+        await OnInvalidSubmit.InvokeAsync(_editContext).ConfigureAwait(true);
+    }
+
+    private void HandleValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
+    {
+        if (_summaryRequested)
+        {
+            StateHasChanged();
+        }
+    }
+
+    private void RenderIfChanged((bool HasSummary, bool HasRequiredField) before)
+    {
+        if (before != (HasSummary, HasRequiredField))
+        {
+            StateHasChanged();
+        }
+    }
+
+    private List<IFormField> FieldsInError() => _fields.FindAll(HasErrors);
+
+    private bool HasErrors(IFormField field) =>
+        _editContext!.GetValidationMessages(field.FieldIdentifier).Any();
+
+    private string FirstMessage(IFormField field) =>
+        _editContext!.GetValidationMessages(field.FieldIdentifier).First();
+
+    private static string SummaryTitle(int count) =>
+        count == 1 ? "Bitte prüfe 1 Angabe:" : $"Bitte prüfe {count} Angaben:";
+
+    private string FieldHref(IFormField field)
+    {
+        var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var end = relative.IndexOfAny(['?', '#']);
+        return $"{(end < 0 ? relative : relative[..end])}#{field.Id}";
+    }
+
+    private static async Task FocusFieldAsync(IFormField field) =>
+        await field.FocusAsync().ConfigureAwait(true);
+}

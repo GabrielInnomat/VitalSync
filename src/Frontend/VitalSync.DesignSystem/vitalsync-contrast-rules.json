@@ -121,6 +121,14 @@
       "requirement": "text-normal"
     },
     {
+      "id": "action-primary-hover-on-card",
+      "criterion": "1.4.3",
+      "description": "Hovered link or text button on a card",
+      "foreground": "--color-action-primary-hover",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
       "id": "text-success-on-background",
       "criterion": "1.4.3",
       "description": "Success message on the page background",
@@ -329,11 +337,123 @@
       "requirement": "non-text"
     },
     {
-      "id": "input-error-icon-on-input-error-background",
+      "id": "input-border-focus-on-input-error-background",
       "criterion": "1.4.11",
-      "description": "Error icon inside a form field that is showing an error",
-      "foreground": "--input-error-icon-color",
+      "description": "Focused form field border against a field that is showing an error",
+      "foreground": "--input-border-color-focus",
       "background": "--input-background-error",
+      "requirement": "non-text"
+    },
+    {
+      "id": "input-error-icon-on-background",
+      "criterion": "1.4.11",
+      "description": "Error icon next to the error message, below the field, on the page background",
+      "foreground": "--input-error-icon-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "input-error-icon-on-card",
+      "criterion": "1.4.11",
+      "description": "Error icon next to the error message, below the field, on a card",
+      "foreground": "--input-error-icon-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "form-legend-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Required-field note at the top of a form on the page background",
+      "foreground": "--form-legend-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "form-legend-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Required-field note at the top of a form inside a card",
+      "foreground": "--form-legend-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "form-summary-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Error summary title on the page background - the summary has no fill of its own",
+      "foreground": "--form-summary-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "form-summary-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Error summary title inside a card",
+      "foreground": "--form-summary-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "form-summary-link-on-background",
+      "criterion": "1.4.3",
+      "description": "Link to a field in error, in the error summary, on the page background",
+      "foreground": "--form-summary-link-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "form-summary-link-on-card",
+      "criterion": "1.4.3",
+      "description": "Link to a field in error, in the error summary, inside a card",
+      "foreground": "--form-summary-link-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "form-summary-link-hover-on-background",
+      "criterion": "1.4.3",
+      "description": "Hovered link in the error summary on the page background",
+      "foreground": "--form-summary-link-color-hover",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "form-summary-link-hover-on-card",
+      "criterion": "1.4.3",
+      "description": "Hovered link in the error summary inside a card",
+      "foreground": "--form-summary-link-color-hover",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "form-summary-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Error summary border, the edge that frames it, on the page background",
+      "foreground": "--form-summary-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "form-summary-border-on-card",
+      "criterion": "1.4.11",
+      "description": "Error summary border inside a card",
+      "foreground": "--form-summary-border-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "form-summary-icon-on-background",
+      "criterion": "1.4.11",
+      "description": "Error icon in the summary title on the page background",
+      "foreground": "--form-summary-icon-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "form-summary-icon-on-card",
+      "criterion": "1.4.11",
+      "description": "Error icon in the summary title inside a card",
+      "foreground": "--form-summary-icon-color",
+      "background": "--card-background",
       "requirement": "non-text"
     },
     {
@@ -643,6 +763,86 @@
       "foreground": "--color-surface-critical",
       "background": "--color-background-primary",
       "requirement": "non-text"
+    },
+    {
+      "id": "surface-neutral-on-card",
+      "criterion": "1.4.11",
+      "description": "Neutral badge fill against the card it sits in",
+      "foreground": "--color-surface-neutral",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "surface-neutral-on-background",
+      "criterion": "1.4.11",
+      "description": "Neutral badge fill against the page background",
+      "foreground": "--color-surface-neutral",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "badge-neutral-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Label on a neutral badge",
+      "foreground": "--badge-neutral-text",
+      "background": "--badge-neutral-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "badge-success-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Label on a success status badge",
+      "foreground": "--badge-success-text",
+      "background": "--badge-success-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "badge-warning-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Label on a warning status badge",
+      "foreground": "--badge-warning-text",
+      "background": "--badge-warning-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "badge-critical-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Label on a critical status badge",
+      "foreground": "--badge-critical-text",
+      "background": "--badge-critical-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "focus-ring-offset-on-badge-neutral-fill",
+      "criterion": "1.4.11",
+      "description": "Focus separator against a neutral badge rendered as a link",
+      "foreground": "--focus-ring-offset-color",
+      "background": "--badge-neutral-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-offset-on-badge-success-fill",
+      "criterion": "1.4.11",
+      "description": "Focus separator against a success status badge rendered as a link",
+      "foreground": "--focus-ring-offset-color",
+      "background": "--badge-success-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-offset-on-badge-warning-fill",
+      "criterion": "1.4.11",
+      "description": "Focus separator against a warning status badge rendered as a link",
+      "foreground": "--focus-ring-offset-color",
+      "background": "--badge-warning-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-offset-on-badge-critical-fill",
+      "criterion": "1.4.11",
+      "description": "Focus separator against a critical status badge rendered as a link",
+      "foreground": "--focus-ring-offset-color",
+      "background": "--badge-critical-background",
+      "requirement": "non-text"
     }
   ],
   "waivers": [],
@@ -689,7 +889,30 @@
       "themes": [
         "dark"
       ]
+    },
+    {
+      "id": "status-text",
+      "description": "Success, warning and critical text must stay tellable apart, including under colour vision deficiency",
+      "colors": [
+        "--color-text-success",
+        "--color-text-warning",
+        "--color-text-critical"
+      ],
+      "minimumDeltaE": 16
     }
   ],
-  "separationWaivers": []
+  "separationWaivers": [
+    {
+      "separation": "status-text",
+      "theme": "light",
+      "deltaE": 9.91,
+      "reason": "Warning vs critical under deuteranopia. Accepted: a status never appears by colour alone; every status badge carries its own fixed icon and a text label."
+    },
+    {
+      "separation": "status-text",
+      "theme": "dark",
+      "deltaE": 9.17,
+      "reason": "Success vs critical under deuteranopia. Accepted: a status never appears by colour alone; every status badge carries its own fixed icon and a text label."
+    }
+  ]
 }

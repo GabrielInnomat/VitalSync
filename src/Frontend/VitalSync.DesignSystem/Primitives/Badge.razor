@@ -1,0 +1,62 @@
+@namespace VitalSync.DesignSystem.Primitives
+
+@if (Href is not null)
+{
+    <a @attributes="AdditionalAttributes" href="@Href" class="@CssClass">
+        <span class="vs-badge__icon" aria-hidden="true">@RenderIcon()</span>
+        <span class="vs-badge__label">@ChildContent</span>
+    </a>
+}
+else
+{
+    <span @attributes="AdditionalAttributes" class="@CssClass">
+        <span class="vs-badge__icon" aria-hidden="true">@RenderIcon()</span>
+        <span class="vs-badge__label">@ChildContent</span>
+    </span>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? Icon { get; set; }
+
+    [Parameter]
+    public BadgeVariant Variant { get; set; } = BadgeVariant.Neutral;
+
+    [Parameter]
+    public string? Href { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => CssClasses.Merge(
+        $"vs-badge vs-badge--{Variant.ToString().ToLowerInvariant()}",
+        AdditionalAttributes);
+
+    protected override void OnParametersSet()
+    {
+        if (ChildContent is null)
+        {
+            throw new InvalidOperationException(
+                "Badge requires ChildContent; the label carries the meaning, the icon only supports it.");
+        }
+
+        if (Variant != BadgeVariant.Neutral && Icon is not null)
+        {
+            throw new InvalidOperationException(
+                $"Badge with Variant.{Variant} has a fixed status icon; a custom Icon is only supported for Variant.Neutral.");
+        }
+    }
+
+    private RenderFragment RenderIcon() => Variant switch
+    {
+        BadgeVariant.Neutral when Icon is not null => Icon,
+        BadgeVariant.Neutral => @<SystemIcon Name="SystemIconName.Tag" />,
+        BadgeVariant.Success => @<SystemIcon Name="SystemIconName.CheckCircle" />,
+        BadgeVariant.Warning => @<SystemIcon Name="SystemIconName.Warning" />,
+        BadgeVariant.Critical => @<SystemIcon Name="SystemIconName.XCircle" />,
+        _ => throw new ArgumentOutOfRangeException(nameof(Variant), Variant, null),
+    };
+}

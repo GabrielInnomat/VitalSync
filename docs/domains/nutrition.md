@@ -1,7 +1,6 @@
 # Nutrition
 
-The business domain concerned with food and diet. It is the most developed domain in the project
-and the one the [user stories](../userStories/nutrition/001_createRecipe.md) currently describe.
+The business domain concerned with food and diet. It is the most developed domain in the project.
 
 **Status:** the bounded context is cut but not implemented. The service exists as a skeleton without
 domain code, so everything below describes intent rather than shipped behavior.
@@ -42,8 +41,8 @@ events.
 
 ### Unit
 
-The measure a quantity is expressed in. Units are shared vocabulary across recipes and ingredients;
-see the [units user story](../userStories/nutrition/002_units.md).
+The measure a quantity is expressed in. Units are shared vocabulary across recipes and
+ingredients.
 
 ### Meal plan
 

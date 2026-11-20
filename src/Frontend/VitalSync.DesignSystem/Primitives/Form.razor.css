@@ -1,0 +1,74 @@
+.vs-form__legend {
+    margin: 0;
+    color: var(--form-legend-text-color);
+    font-family: var(--font-family-ui);
+    font-size: var(--font-size-200);
+}
+
+.vs-form__summary {
+    border-radius: var(--form-summary-radius);
+}
+
+    .vs-form__summary:focus {
+        outline: none;
+    }
+
+    .vs-form__summary:focus-visible {
+        outline: var(--focus-ring-width) solid var(--focus-ring-color);
+        outline-offset: var(--focus-ring-offset);
+        box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+    }
+
+.vs-form__summary-box {
+    display: flex;
+    flex-direction: column;
+    gap: var(--form-summary-gap);
+    padding: var(--form-summary-padding);
+    border: var(--form-summary-border-width) solid var(--form-summary-border-color);
+    border-radius: var(--form-summary-radius);
+    color: var(--form-summary-text-color);
+    font-family: var(--font-family-ui);
+    font-size: var(--font-size-200);
+}
+
+.vs-form__summary-title {
+    display: flex;
+    align-items: center;
+    gap: var(--form-summary-gap);
+    margin: 0;
+    font-weight: var(--font-weight-semibold);
+}
+
+.vs-form__summary-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    width: var(--form-summary-icon-size);
+    height: var(--form-summary-icon-size);
+    color: var(--form-summary-icon-color);
+}
+
+.vs-form__summary-list {
+    margin: 0;
+    padding-inline-start: var(--space-6);
+}
+
+.vs-form__summary-link,
+.vs-form__summary-link:visited {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-target-min);
+    color: var(--form-summary-link-color);
+    text-decoration: underline;
+    overflow-wrap: anywhere;
+}
+
+    .vs-form__summary-link:hover {
+        color: var(--form-summary-link-color-hover);
+        text-decoration-thickness: var(--border-width-thick);
+    }
+
+    .vs-form__summary-link:focus-visible {
+        outline: var(--focus-ring-width) solid var(--focus-ring-color);
+        outline-offset: var(--focus-ring-offset);
+        box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+    }

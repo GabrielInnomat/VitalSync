@@ -96,4 +96,17 @@ public sealed class ButtonTests : BunitContext
 
         Assert.Equal("Speichern", cut.Find("button").GetAttribute("aria-label"));
     }
+
+    [Fact]
+    public void Appends_a_passed_class_to_the_component_classes()
+    {
+        var cut = Render<Button>(parameters => parameters
+            .AddChildContent("Label")
+            .AddUnmatched("class", "extra"));
+
+        var classes = cut.Find("button").ClassList;
+        Assert.Contains("vs-button", classes);
+        Assert.Contains("vs-button--primary", classes);
+        Assert.Contains("extra", classes);
+    }
 }

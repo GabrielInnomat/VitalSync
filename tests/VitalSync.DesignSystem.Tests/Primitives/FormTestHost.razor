@@ -1,0 +1,52 @@
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using VitalSync.DesignSystem.Primitives
+
+<Form Model="_model" OnValidSubmit="HandleValidSubmit" class="test-form">
+    <DataAnnotationsValidator />
+    <Input TValue="string" @bind-Value="_model.First" Label="Vorname" Required="RequiredFields" />
+    <Input TValue="string" @bind-Value="_model.Second" Label="Nachname" Required="RequiredFields" />
+    @if (FieldCount >= 3)
+    {
+        <Input TValue="string" @bind-Value="_model.Third" Label="Ort" />
+    }
+    @if (FieldCount >= 4)
+    {
+        <Input TValue="string" @bind-Value="_model.Fourth" Label="Land" />
+    }
+    <button type="submit">Absenden</button>
+</Form>
+
+@code {
+    private readonly HostModel _model = new();
+
+    [Parameter]
+    public int FieldCount { get; set; } = 2;
+
+    [Parameter]
+    public bool RequiredFields { get; set; }
+
+    [Parameter]
+    public string? First { get; set; }
+
+    public int ValidSubmits { get; private set; }
+
+    protected override void OnInitialized() => _model.First = First;
+
+    private void HandleValidSubmit() => ValidSubmits++;
+
+    private sealed class HostModel
+    {
+        [Required(ErrorMessage = "Bitte gib einen Vornamen ein.")]
+        public string? First { get; set; }
+
+        [Required(ErrorMessage = "Bitte gib einen Nachnamen ein.")]
+        public string? Second { get; set; }
+
+        [Required(ErrorMessage = "Bitte gib einen Ort ein.")]
+        public string? Third { get; set; }
+
+        [Required(ErrorMessage = "Bitte gib ein Land ein.")]
+        public string? Fourth { get; set; }
+    }
+}

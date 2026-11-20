@@ -1,7 +1,7 @@
 @namespace VitalSync.DesignSystem.Primitives
 @typeparam TValue
 @inherits InputBase<TValue>
-@implements IDisposable
+@implements IFormField
 @using Microsoft.AspNetCore.Components.Forms
 @using System.Globalization
 
@@ -23,7 +23,9 @@
         {
             <span class="vs-input__affix vs-input__affix--prefix">@Prefix</span>
         }
-        <input id="@_inputId"
+        <input @attributes="AdditionalAttributes"
+               @ref="Element"
+               id="@_inputId"
                type="@EffectiveType"
                class="vs-input__control"
                placeholder="@Placeholder"
@@ -31,17 +33,22 @@
                disabled="@Disabled"
                aria-invalid="@(HasError ? "true" : null)"
                aria-describedby="@DescribedBy"
-               @bind="CurrentValueAsString"
-               @bind:event="oninput"
-               @attributes="AdditionalAttributes" />
+               value="@CurrentValueAsString"
+               @onchange="HandleChange"
+               @oninput="HandleInput" />
         @if (Suffix is not null)
         {
             <span class="vs-input__affix vs-input__affix--suffix">@Suffix</span>
         }
         @if (Type == "password")
         {
-            <button type="button" class="vs-input__toggle" @onclick="ToggleShowPassword">
-                @(_showPassword ? "Verbergen" : "Anzeigen")
+            <button type="button"
+                    class="vs-input__toggle"
+                    aria-label="@ToggleAccessibleName"
+                    aria-controls="@_inputId"
+                    disabled="@Disabled"
+                    @onclick="ToggleShowPassword">
+                @ToggleText
             </button>
         }
     </div>
@@ -50,9 +57,7 @@
     {
         <p id="@ErrorId" class="vs-input__error" role="alert">
             <span class="vs-input__error-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2 1 21h22L12 2Zm0 5 7.5 13h-15L12 7Zm-1 4v4h2v-4h-2Zm0 5v2h2v-2h-2Z" />
-                </svg>
+                <SystemIcon Name="SystemIconName.XCircle" />
             </span>
             @CurrentErrors.First()
         </p>
@@ -66,6 +71,7 @@
 @code {
     private readonly string _inputId = $"vs-input-{Guid.NewGuid():N}";
     private bool _showPassword;
+    private bool _validateWhileTyping;
 
     [Parameter, EditorRequired]
     public string Label { get; set; } = "";
@@ -94,7 +100,20 @@
     [Parameter]
     public bool Disabled { get; set; }
 
+    public ElementReference? Element { get; protected set; }
+
+    [CascadingParameter]
+    private Form? ParentForm { get; set; }
+
+    FieldIdentifier IFormField.FieldIdentifier => FieldIdentifier;
+
+    string IFormField.Id => _inputId;
+
     private string EffectiveType => Type == "password" && _showPassword ? "text" : Type;
+
+    private string ToggleText => _showPassword ? "Verbergen" : "Anzeigen";
+
+    private string ToggleAccessibleName => $"{Label} {(_showPassword ? "verbergen" : "anzeigen")}";
 
     private string ErrorId => $"{_inputId}-error";
 
@@ -118,13 +137,37 @@
                 "Input requires a visible Label; label-less inputs are not supported.");
         }
 
-        EditContext.OnValidationStateChanged += HandleValidationStateChanged;
+        ParentForm?.Register(this);
+    }
+
+    public ValueTask FocusAsync() => Element is { } element ? element.FocusAsync() : ValueTask.CompletedTask;
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            ParentForm?.Unregister(this);
+        }
+
+        base.Dispose(disposing);
     }
 
     private void ToggleShowPassword() => _showPassword = !_showPassword;
 
-    private void HandleValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
-        => StateHasChanged();
+    private void HandleChange(ChangeEventArgs e)
+    {
+        _validateWhileTyping = true;
+        CurrentValueAsString = e.Value as string;
+    }
+
+    private void HandleInput(ChangeEventArgs e)
+    {
+        if (_validateWhileTyping || HasError)
+        {
+            _validateWhileTyping = true;
+            CurrentValueAsString = e.Value as string;
+        }
+    }
 
     protected override bool TryParseValueFromString(string? value, out TValue result, out string validationErrorMessage)
     {
@@ -136,7 +179,7 @@
         }
 
         result = default!;
-        validationErrorMessage = $"The {Label} field must be a valid value.";
+        validationErrorMessage = $"Bitte gib bei {Label} einen gültigen Wert ein.";
         return false;
     }
 
@@ -147,6 +190,4 @@
         IFormattable formattable => formattable.ToString(null, CultureInfo.CurrentCulture) ?? "",
         _ => value.ToString() ?? "",
     };
-
-    public void Dispose() => EditContext.OnValidationStateChanged -= HandleValidationStateChanged;
 }

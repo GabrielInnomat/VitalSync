@@ -1,5 +1,5 @@
 .top-row {
-    min-height: 3.5rem;
+    min-height: calc(var(--touch-target-min) + var(--space-3));
     display: flex;
     align-items: center;
     padding-inline: var(--space-4);
@@ -8,36 +8,44 @@
 }
 
 .brand {
-    font-size: 1.1rem;
+    font-size: var(--font-size-300);
     font-weight: var(--font-weight-semibold);
     color: var(--color-text-primary);
     text-decoration: none;
 }
 
 .nav-toggle {
-    appearance: none;
     cursor: pointer;
-    width: var(--touch-target-min);
-    height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+    min-height: var(--touch-target-min);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
+    gap: var(--space-2);
+    padding-inline: var(--space-3);
+    font-family: inherit;
+    font-size: var(--font-size-200);
+    font-weight: var(--font-weight-semibold);
     line-height: 1;
     color: var(--color-text-primary);
     background-color: var(--color-background-surface);
-    border: var(--border-width-thin) solid var(--color-border-default);
+    border: var(--border-width-thin) solid var(--color-border-interactive);
     border-radius: var(--radius-sm);
     position: absolute;
-    top: 0.5rem;
-    right: 1rem;
+    top: var(--space-2);
+    right: var(--space-4);
 }
 
-    .nav-toggle::before {
-        content: "\2630";
+    .nav-toggle:hover {
+        border-color: var(--color-border-interactive-hover);
     }
 
-    .nav-toggle:checked {
+    .nav-toggle__icon::before {
+        content: "\2630";
+        font-size: var(--font-size-300);
+    }
+
+    .nav-toggle[aria-expanded="true"] {
         background-color: var(--color-background-elevated-2);
     }
 
@@ -63,6 +71,7 @@
     .nav-item ::deep a {
         color: var(--color-text-secondary);
         text-decoration: none;
+        border-inline-start: var(--border-width-thick) solid transparent;
         border-radius: var(--radius-sm);
         min-height: var(--touch-target-min);
         display: flex;
@@ -70,21 +79,23 @@
         padding-inline: var(--space-3);
     }
 
-    .nav-item ::deep a.active {
-        background-color: var(--color-background-elevated-2);
+    .nav-item ::deep a:hover {
         color: var(--color-text-primary);
+        text-decoration: underline;
     }
 
-    .nav-item ::deep a:hover {
+    .nav-item ::deep a.active {
         background-color: var(--color-background-elevated-2);
+        border-inline-start-color: var(--color-action-primary);
         color: var(--color-text-primary);
+        font-weight: var(--font-weight-semibold);
     }
 
 .nav-scrollable {
     display: none;
 }
 
-.nav-toggle:checked ~ .nav-scrollable {
+.nav-toggle[aria-expanded="true"] ~ .nav-scrollable {
     display: block;
 }
 
@@ -95,7 +106,7 @@
 
     .nav-scrollable {
         display: block;
-        height: calc(100vh - 3.5rem);
+        height: calc(100vh - var(--touch-target-min) - var(--space-3));
         overflow-y: auto;
     }
 }
