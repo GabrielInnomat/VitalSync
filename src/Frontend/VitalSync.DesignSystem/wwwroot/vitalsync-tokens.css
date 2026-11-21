@@ -90,6 +90,7 @@
   --motion-duration-base: 200ms;
   --motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
 
+  --radius-xs: 0.25rem;
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
@@ -323,6 +324,64 @@
   --input-background-error: var(--color-surface-critical-subtle);
   --input-error-text-color: var(--color-text-critical);
   --input-error-icon-color: var(--color-icon-critical);
+
+  --choice-size: var(--icon-size-lg);
+  --choice-mark-size: var(--icon-size-md);
+  --choice-gap: var(--space-3);
+  --choice-border-width: var(--border-width-thick);
+  --choice-background: var(--color-background-input);
+  --choice-border-color: var(--color-border-interactive);
+  --choice-border-color-hover: var(--color-border-interactive-hover);
+  --choice-checked-background: var(--color-action-primary);
+  --choice-checked-background-hover: var(--color-action-primary-hover);
+  --choice-mark-color: var(--color-text-on-action);
+  --choice-label-text-color: var(--color-text-primary);
+  --choice-helper-text-color: var(--color-text-secondary);
+
+  --choice-background-error: var(--color-surface-critical-subtle);
+  --choice-border-color-error: var(--color-border-critical);
+  --choice-error-text-color: var(--color-text-critical);
+  --choice-error-icon-color: var(--color-icon-critical);
+  --choice-error-icon-size: var(--icon-size-sm);
+
+  --choice-background-disabled: var(--color-surface-disabled);
+  --choice-border-color-disabled: var(--color-border-disabled);
+  --choice-mark-color-disabled: var(--color-text-disabled);
+  --choice-label-text-color-disabled: var(--color-text-disabled);
+
+  --checkbox-radius: var(--radius-xs);
+
+  --radio-radius: var(--radius-full);
+  --radio-mark-size: var(--icon-size-sm);
+
+  --toggle-track-height: var(--icon-size-lg);
+  --toggle-track-width: calc(var(--toggle-track-height) * 2);
+  --toggle-track-border-width: var(--border-width-thick);
+  --toggle-radius: var(--radius-full);
+  --toggle-thumb-size: var(--icon-size-sm);
+  --toggle-mark-size: var(--icon-size-sm);
+  --toggle-gap: var(--space-3);
+  --toggle-label-font-weight: var(--font-weight-semibold);
+  --toggle-track-background: var(--color-background-input);
+  --toggle-track-border-color: var(--color-border-interactive);
+  --toggle-track-border-color-hover: var(--color-border-interactive-hover);
+  --toggle-thumb-color: var(--color-border-interactive);
+  --toggle-thumb-color-hover: var(--color-border-interactive-hover);
+  --toggle-checked-background: var(--color-action-primary);
+  --toggle-checked-background-hover: var(--color-action-primary-hover);
+  --toggle-checked-thumb-color: var(--color-text-on-action);
+  --toggle-label-text-color: var(--color-text-primary);
+  --toggle-state-text-color: var(--color-text-primary);
+  --toggle-helper-text-color: var(--color-text-secondary);
+
+  --toggle-track-background-disabled: var(--color-surface-disabled);
+  --toggle-track-border-color-disabled: var(--color-border-disabled);
+  --toggle-thumb-color-disabled: var(--color-text-disabled);
+  --toggle-text-color-disabled: var(--color-text-disabled);
+
+  --select-icon-size: var(--icon-size-sm);
+  --select-icon-color: var(--color-text-primary);
+  --select-icon-color-disabled: var(--color-text-disabled);
 
   --form-legend-text-color: var(--color-text-secondary);
   --form-summary-text-color: var(--color-text-primary);

@@ -1,0 +1,86 @@
+.vs-radio__label {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: var(--choice-gap);
+    min-height: var(--touch-target-min);
+    padding-block: max(0px, calc((var(--touch-target-min) - var(--choice-size)) / 2));
+    color: var(--choice-label-text-color);
+    font-family: var(--font-family-ui);
+    font-size: var(--font-size-200);
+    line-height: var(--line-height-base);
+    cursor: pointer;
+}
+
+.vs-radio__label--disabled {
+    color: var(--choice-label-text-color-disabled);
+    cursor: not-allowed;
+}
+
+.vs-radio__control {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    width: var(--choice-size);
+    height: var(--choice-size);
+}
+
+.vs-radio__input {
+    appearance: none;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--choice-background);
+    border: var(--choice-border-width) solid var(--choice-border-color);
+    border-radius: var(--radio-radius);
+    cursor: pointer;
+    transition: background-color var(--motion-duration-fast) var(--motion-easing),
+                border-color var(--motion-duration-fast) var(--motion-easing);
+}
+
+.vs-radio__label:hover .vs-radio__input:not(:disabled) {
+    border-color: var(--choice-border-color-hover);
+}
+
+.vs-radio__input:checked {
+    background-color: var(--choice-checked-background);
+    border-color: var(--choice-checked-background);
+}
+
+.vs-radio__label:hover .vs-radio__input:checked:not(:disabled) {
+    background-color: var(--choice-checked-background-hover);
+    border-color: var(--choice-checked-background-hover);
+}
+
+.vs-radio__input[aria-invalid="true"]:not(:checked):not(:disabled) {
+    background-color: var(--choice-background-error);
+    border-color: var(--choice-border-color-error);
+}
+
+.vs-radio__input:disabled {
+    background-color: var(--choice-background-disabled);
+    border-color: var(--choice-border-color-disabled);
+    cursor: not-allowed;
+}
+
+.vs-radio__mark {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: var(--choice-mark-color);
+    pointer-events: none;
+}
+
+    .vs-radio__mark ::deep svg {
+        width: var(--radio-mark-size);
+        height: var(--radio-mark-size);
+    }
+
+.vs-radio__input:checked + .vs-radio__mark {
+    display: flex;
+}
+
+.vs-radio__input:disabled + .vs-radio__mark {
+    color: var(--choice-mark-color-disabled);
+}

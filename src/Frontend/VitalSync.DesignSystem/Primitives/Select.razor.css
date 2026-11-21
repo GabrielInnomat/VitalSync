@@ -1,0 +1,127 @@
+.vs-select {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    font-family: var(--font-family-ui);
+}
+
+.vs-select__label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--input-gap);
+    color: var(--input-text-color);
+    font-size: var(--font-size-200);
+    font-weight: var(--font-weight-semibold);
+}
+
+.vs-select__required-marker {
+    color: currentColor;
+}
+
+.vs-select__field {
+    position: relative;
+    display: flex;
+}
+
+.vs-select__control {
+    appearance: none;
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    min-height: var(--input-height);
+    margin: 0;
+    padding-block: 0;
+    padding-inline-start: var(--input-padding-inline);
+    padding-inline-end: calc(var(--input-padding-inline) + var(--select-icon-size) + var(--input-gap));
+    background-color: var(--input-background);
+    border: var(--input-border-width) solid var(--input-border-color);
+    border-radius: var(--input-radius);
+    color: var(--input-text-color);
+    font-family: inherit;
+    font-size: var(--font-size-200);
+    line-height: var(--line-height-tight);
+    cursor: pointer;
+    transition: border-color var(--motion-duration-fast) var(--motion-easing);
+}
+
+    .vs-select__control:hover {
+        border-color: var(--input-border-color-hover);
+    }
+
+    .vs-select__control ::deep option {
+        background-color: var(--input-background);
+        color: var(--input-text-color);
+    }
+
+.vs-select__control--empty {
+    color: var(--input-placeholder-color);
+}
+
+.vs-select__control[aria-invalid="true"],
+.vs-select__control[aria-invalid="true"]:hover {
+    background-color: var(--input-background-error);
+    border-color: var(--input-border-color-error);
+}
+
+.vs-select__control:focus {
+    border-color: var(--input-border-color-focus);
+    box-shadow: inset 0 0 0 calc(var(--input-border-width-focus) - var(--input-border-width)) var(--input-border-color-focus);
+}
+
+.vs-select__control:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+    box-shadow: inset 0 0 0 calc(var(--input-border-width-focus) - var(--input-border-width)) var(--input-border-color-focus),
+                0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+}
+
+.vs-select__control:disabled,
+.vs-select__control:disabled:hover {
+    background-color: var(--input-background-disabled);
+    border-color: var(--input-border-color-disabled);
+    color: var(--input-text-color-disabled);
+    cursor: not-allowed;
+}
+
+.vs-select__icon {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: var(--input-padding-inline);
+    display: inline-flex;
+    align-items: center;
+    width: var(--select-icon-size);
+    color: var(--select-icon-color);
+    pointer-events: none;
+}
+
+    .vs-select__icon ::deep svg {
+        width: 100%;
+        height: var(--select-icon-size);
+    }
+
+.vs-select__control:disabled + .vs-select__icon {
+    color: var(--select-icon-color-disabled);
+}
+
+.vs-select__helper {
+    margin: 0;
+    color: var(--input-helper-text-color);
+    font-size: var(--font-size-100);
+}
+
+.vs-select__error {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0;
+    color: var(--input-error-text-color);
+    font-size: var(--font-size-100);
+}
+
+.vs-select__error-icon {
+    display: inline-flex;
+    width: var(--input-icon-size);
+    height: var(--input-icon-size);
+    color: var(--input-error-icon-color);
+    flex-shrink: 0;
+}

@@ -1,0 +1,57 @@
+@namespace VitalSync.DesignSystem.Primitives
+@typeparam TValue
+@implements IDisposable
+
+<label for="@Id" class="vs-radio__label @(ParentGroup.Disabled ? "vs-radio__label--disabled" : null)">
+    <span class="vs-radio__control">
+        <input @ref="Element"
+               id="@Id"
+               type="radio"
+               class="vs-radio__input"
+               name="@ParentGroup.Name"
+               checked="@ParentGroup.IsSelected(Value)"
+               required="@ParentGroup.Required"
+               disabled="@ParentGroup.Disabled"
+               aria-invalid="@(ParentGroup.HasError ? "true" : null)"
+               @onchange="HandleChange" />
+        <span class="vs-radio__mark" aria-hidden="true">
+            <SystemIcon Name="SystemIconName.Circle" />
+        </span>
+    </span>
+    <span class="vs-radio__text">@Label</span>
+</label>
+
+@code {
+    [Parameter, EditorRequired]
+    public TValue Value { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    [CascadingParameter]
+    private RadioGroup<TValue>? Group { get; set; }
+
+    public ElementReference? Element { get; private set; }
+
+    internal string Id { get; } = $"vs-radio-{Guid.NewGuid():N}";
+
+    private RadioGroup<TValue> ParentGroup => Group
+        ?? throw new InvalidOperationException("RadioOption must be placed inside a RadioGroup.");
+
+    protected override void OnInitialized()
+    {
+        if (string.IsNullOrWhiteSpace(Label))
+        {
+            throw new InvalidOperationException(
+                "RadioOption requires a visible Label; label-less options are not supported.");
+        }
+
+        ParentGroup.Register(this);
+    }
+
+    internal ValueTask FocusAsync() => Element?.FocusAsync() ?? ValueTask.CompletedTask;
+
+    public void Dispose() => Group?.Unregister(this);
+
+    private void HandleChange() => ParentGroup.Select(Value);
+}

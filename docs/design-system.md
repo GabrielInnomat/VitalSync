@@ -184,6 +184,14 @@ rendered by one component, `SystemIcon`, selected by the `SystemIconName` enum. 
 licence travels with them in `Icons/PHOSPHOR-LICENSE.txt`. An icon is added by adding its path
 from Phosphor's Fill set and a name to the enum — never by drawing a lookalike by hand.
 
+**One exception: the bare check mark.** Phosphor's Fill weight has no free-standing check — its
+filled "check" is a square with the tick knocked out of it, which inside a checkbox would draw a box
+within a box. The check mark in `Checkbox`, and on a switched-on `Toggle`, therefore comes from
+Phosphor's **Bold** weight, the
+closest in stroke mass to Fill. It is the only icon outside the Fill set; any further exception
+needs the same reason: Fill has no shape that works in that place. The dot of a selected radio
+button needs no exception: it is Phosphor's Fill circle.
+
 `SystemIcon` renders an `<svg>` with `fill="currentColor"`, `aria-hidden="true"` and
 `focusable="false"`, sized to fill its container. The container decides the size through its own
 component token and the colour through `color`, so the icon inherits whatever the surrounding text
@@ -323,7 +331,7 @@ All of this is implemented once, in [`Form`](#form), rather than repeated in eve
 takes either a `Model` or an `EditContext` — exactly one, otherwise it throws — and passes every
 other attribute through to the `<form>`.
 
-**Fields register themselves.** Every `Input` inside a `Form` finds it through a cascading value and
+**Fields register themselves.** Every `Input`, `Checkbox`, `RadioGroup` and `Select` inside a `Form` finds it through a cascading value and
 registers on first render. The form therefore knows its fields in rendering order, without the page
 listing them. A field rendered later, behind an `@if`, joins at the end of that order.
 
@@ -372,7 +380,10 @@ rendered inside the field so they share its border.
 ("Anzeigen" / "Verbergen"), never icon-only, following the same rule as `Button`. Its accessible
 name adds the field's label ("Passwort anzeigen"), because a page with two password fields would
 otherwise have two identical "Anzeigen" buttons; `aria-controls` points at the field. It is
-disabled together with the field, and its hit area is the full 44×44 px target. It toggles the
+disabled together with the field, and its hit area is the full 44×44 px target. Reaching that
+target means it stretches over the field's own border, so the global ring would land on that border;
+the toggle draws its ring inside the field instead, rounded and clear of the border, checked against
+both the normal and the error fill. It toggles the
 native `type` between `password` and `text`; the toggle itself is a plain `<button>`, not a `Button`
 component, because `Button` has no compact size and would look oversized inline in a field.
 
@@ -390,6 +401,148 @@ reads `<Input>…</Input>` with child content as the void HTML `<input>`. Inside
 (`aria-hidden`, inherits the label's already-verified text colour via `currentColor`). The
 form-wide "* = Pflichtfeld" note from [Form validation](#form-validation) is rendered by `Form`, not
 by `Input` itself.
+
+## Checkbox
+
+A native `<input type="checkbox">`, restyled with `appearance: none` and nothing else replaced: the
+keyboard, the checked state and what a screen reader announces all stay the browser's own. Like
+`Input`, it inherits `InputBase<bool>`, is used with `@bind-Value` inside a [`Form`](#form), where it
+registers itself, and is not meant to work standalone.
+
+**Label is mandatory, and it is the hit area.** A missing `Label` throws. The label wraps both the
+box and its text, so the whole row is clickable; the row is at least 44 px high, while the box
+itself is 24 px. A long label wraps beside the box, which stays aligned with the first line.
+
+**The checked state is a shape, not a colour.** Checked means a filled box *and* a check mark, so
+the state survives greyscale and forced colours. The check mark is decorative (`aria-hidden`); the
+state itself is the native `checked`.
+
+**Boundaries are held to 3:1.** The border uses `--color-border-interactive` and the checked fill
+`--color-action-primary`, each measured against page, card and the box's own fill, and the check
+mark against the fill it sits on.
+
+**Errors follow [Form validation](#form-validation)**, with one difference in timing: a checkbox
+has no typing phase, so it is checked when it changes rather than on blur. An unchecked box in
+error takes the subtle critical fill and border; the message below carries the icon and
+`role="alert"`, and the input carries `aria-invalid` and `aria-describedby`. A checked box keeps
+its checked look even while in error, because the fill already marks the state the user chose.
+
+**No indeterminate state.** It only makes sense for a parent of a nested selection, and there is
+none yet.
+
+**Shared tokens with the radio group.** The `--choice-*` tokens describe what a checkbox and a
+radio button have in common — size, border, fill, mark, label, helper and error colours — so the two
+cannot drift apart. Only the corner radius is the checkbox's own, `--checkbox-radius`, which takes the smallest step of the radius scale, `--radius-xs`.
+
+## Radio group
+
+`RadioGroup<TValue>` is a `<fieldset>` of native `<input type="radio">`, restyled the same way as
+[`Checkbox`](#checkbox). The group holds the value: it inherits `InputBase<TValue>`, is used with
+`@bind-Value` inside a [`Form`](#form), where it registers itself as one field, and is not meant to
+work standalone. Each `RadioOption<TValue>` inside it contributes one radio button with its own
+`Value` and `Label`; the type is inferred from the binding, so an enum works as well as a string.
+An option outside a group throws.
+
+**The group is named by its legend.** `Label` is mandatory and becomes the `<legend>`, which a
+screen reader announces when focus enters the group. Every option needs its own `Label` as well; a
+missing one throws on either level. As with `Checkbox`, the label wraps the circle and its text, so
+the whole row is the hit area and at least 44 px high.
+
+**The keyboard is the browser's.** All options share one `name`, so the group is a single tab stop:
+Tab lands on the selected option, or on the first one while nothing is selected, and the arrow
+keys move and select in one step. Nothing of this is scripted.
+
+**The selected state is a shape, not a colour.** Selected means a filled circle *and* a dot. The dot
+is an icon drawn in `currentColor`, not a coloured background, so it stays visible in forced colours,
+where background colours are dropped. Options stack vertically, and only the whole group can be
+disabled, through the native `disabled` of the `<fieldset>`.
+
+**Errors follow [Checkbox](#checkbox)**: checked on change, the subtle critical fill and border on
+every unselected option, and a selected option in error keeps its selected look. The message — or
+the helper text — sits below the options, aligned with the legend rather than indented, because it
+belongs to the group and not to one option; the `<fieldset>` points at it with `aria-describedby`.
+`aria-invalid` sits on every radio button and never on the `<fieldset>`, whose role does not support
+it; the component removes it from the attributes it passes through.
+
+**In a `Form`.** A summary link points at the first option. Focus — after an invalid submit or from
+a summary link — goes to the selected option, or to the first one while nothing is selected, which
+is where Tab would land as well.
+
+**Tokens.** Everything shared with `Checkbox` comes from `--choice-*`. The radio button's own are
+`--radio-radius`, which takes `--radius-full`, and `--radio-mark-size` for the dot. No colour pairing
+is new, so the group adds no contrast rules.
+
+## Toggle
+
+A native `<input type="checkbox">` with `role="switch"`, restyled like [`Checkbox`](#checkbox): the
+keyboard (Space switches), the checked state and the announcement stay the browser's own; a screen
+reader reads the label, "switch" and on or off. A toggle takes effect the moment it changes, so it
+has no validation, no error state and no place in a [`Form`](#form): it is a plain component with
+`Value` and `ValueChanged`, used with `@bind-Value`, and does not inherit `InputBase`. A choice that
+only applies on submit, or that has more than two states, is a `Checkbox` or a
+[`RadioGroup`](#radio-group) — the theme switcher, with its three states, is a radio group.
+
+**The label sits above the switch.** `Label` is mandatory; a missing one throws. Below it, the
+switch and its state text share one row of at least 44 px. Label, switch and state text are all
+inside one `<label>`, so the whole block is the hit area. Placing the label above rather than
+beside keeps the state text from reading as part of the label, keeps label and switch together at
+any width, and lets a long label wrap without moving the switch. Optional helper text sits below
+and is linked with `aria-describedby`.
+
+**The state is a position, a mark and a word, never a colour.** On moves the thumb to the end of
+the track and shows a check mark in the space it leaves; off leaves the track empty. Next to the
+switch, "Ein" or "Aus" says the same in words. The word, the thumb and the mark are `aria-hidden`,
+because the native checked state already carries the meaning. The thumb is drawn as a border, not
+a background, so it survives forced colours, where background colours are dropped; the mark is a
+`currentColor` icon for the same reason. The thumb's movement uses `--motion-duration-base`, which
+the reduced-motion fallback shortens.
+
+**Disabled uses colours, never opacity**, from the same disabled roles as `Checkbox`; a disabled
+toggle is skipped by Tab.
+
+**Tokens and rules.** The toggle has its own `--toggle-*` set rather than borrowing `--choice-*`:
+the track is twice as wide as it is high, the thumb is `--icon-size-sm`, and the colours point at
+the same semantic roles as a checkbox. Its own rules measure the track border and the filled track
+against page and card, the thumb against the track it sits in, thumb and mark against the filled
+track, the label, state and helper text, and the focus separator against border and fill.
+
+## Select
+
+`Select<TValue>` is a native `<select>` for one choice out of a list. Like
+[`Input`](#input), it inherits `InputBase<TValue>`, is used with `@bind-Value` inside a
+[`Form`](#form), where it registers itself, and is not meant to work standalone. Each
+`SelectOption<TValue>` inside it contributes one `<option>` with its own `Value` and `Label`; the
+type is inferred from the binding, so an enum works as well as a string. An option outside a
+`Select` throws. A choice between a few options that should all stay visible is a
+[`RadioGroup`](#radio-group); a `Select` is for lists too long for that.
+
+**Only the closed field is styled.** It looks like an `Input` — the same border, height, fill,
+error state and focus treatment, from the same `--input-*` tokens — with a caret on the right in
+place of the browser's own arrow. The caret is Phosphor's Fill caret, decorative (`aria-hidden`)
+and ignored by the pointer, so a click on it still opens the list. The open list is the operating
+system's own and is left alone: its keyboard handling, its touch behaviour and what a screen reader
+announces stay native. Its options only take the field's background and text colour, so the list
+follows the theme where the browser allows it.
+
+**An empty first choice.** The first `<option>` has an empty value and shows `Placeholder`, by
+default "Bitte wählen", in the placeholder colour. It says that nothing has been chosen yet, instead
+of quietly preselecting the first real option. `Placeholder` must not be blank, because it is the
+visible text of that choice; an option may not use the empty value, which is reserved for it. For a
+nullable type the empty choice is a valid value and binds `null`. For a non-nullable type it cannot
+be stored, and choosing it is reported as an error naming the label.
+
+**Label is mandatory**, on the `Select` and on every option; a missing one throws.
+
+**Errors follow [Checkbox](#checkbox)**: a select has no typing phase, so it is checked when it
+changes. The error look and the message are the same as `Input`'s. `aria-invalid` is always set,
+`false` while there is no error: an empty `required` select is invalid to the browser from the
+start, and without an explicit value a screen reader would announce it as invalid before the user
+has done anything.
+
+**Attributes pass through, identity does not**, as with `Input`.
+
+**Tokens and rules.** The field reuses `Input`'s tokens. The caret has its own `--select-icon-*`
+tokens, and its rules measure it against the normal and the error fill.
 
 ## Badge
 
@@ -437,7 +590,7 @@ which is a worse trade than one consistent size everywhere.
 ## How this is kept true
 
 `tools/VitalSync.DesignTokens.Contrast` resolves every `var()` chain per theme and measures the
-pairs named in the rule document — 204 contrast checks and 6 separation checks at the time of
+pairs named in the rule document — 304 contrast checks and 6 separation checks at the time of
 writing. All pass except the two status-colour separation checks, which run under a waiver (see
 [Data visualisation](#data-visualisation)).
 

@@ -361,6 +361,350 @@
       "requirement": "non-text"
     },
     {
+      "id": "select-icon-on-input-background",
+      "criterion": "1.4.11",
+      "description": "Arrow that marks a select as a list to choose from, inside a resting field",
+      "foreground": "--select-icon-color",
+      "background": "--input-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "select-icon-on-input-error-background",
+      "criterion": "1.4.11",
+      "description": "Arrow that marks a select as a list to choose from, inside a field that is showing an error",
+      "foreground": "--select-icon-color",
+      "background": "--input-background-error",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-label-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Label next to a checkbox or radio on the page background",
+      "foreground": "--choice-label-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "choice-label-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Label next to a checkbox or radio inside a card",
+      "foreground": "--choice-label-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "choice-helper-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Helper text below a checkbox or radio group on the page background",
+      "foreground": "--choice-helper-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "choice-helper-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Helper text below a checkbox or radio group inside a card",
+      "foreground": "--choice-helper-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "choice-error-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Validation message below a checkbox or radio group on the page background",
+      "foreground": "--choice-error-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "choice-error-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Validation message below a checkbox or radio group inside a card",
+      "foreground": "--choice-error-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "choice-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Unchecked checkbox or radio border against the page background",
+      "foreground": "--choice-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-border-on-card",
+      "criterion": "1.4.11",
+      "description": "Unchecked checkbox or radio border against the card behind it",
+      "foreground": "--choice-border-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-border-on-choice-background",
+      "criterion": "1.4.11",
+      "description": "Unchecked checkbox or radio border against the fill it encloses",
+      "foreground": "--choice-border-color",
+      "background": "--choice-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-border-hover-on-background",
+      "criterion": "1.4.11",
+      "description": "Hovered unchecked checkbox or radio border against the page background",
+      "foreground": "--choice-border-color-hover",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-border-hover-on-card",
+      "criterion": "1.4.11",
+      "description": "Hovered unchecked checkbox or radio border against the card behind it",
+      "foreground": "--choice-border-color-hover",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-border-hover-on-choice-background",
+      "criterion": "1.4.11",
+      "description": "Hovered unchecked checkbox or radio border against the fill it encloses",
+      "foreground": "--choice-border-color-hover",
+      "background": "--choice-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-checked-fill-on-background",
+      "criterion": "1.4.11",
+      "description": "Checked checkbox fill against the page background - the fill is its own boundary",
+      "foreground": "--choice-checked-background",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-checked-fill-on-card",
+      "criterion": "1.4.11",
+      "description": "Checked checkbox fill against the card behind it",
+      "foreground": "--choice-checked-background",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-checked-fill-hover-on-background",
+      "criterion": "1.4.11",
+      "description": "Hovered checked checkbox fill against the page background",
+      "foreground": "--choice-checked-background-hover",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-checked-fill-hover-on-card",
+      "criterion": "1.4.11",
+      "description": "Hovered checked checkbox fill against the card behind it",
+      "foreground": "--choice-checked-background-hover",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-mark-on-checked-fill",
+      "criterion": "1.4.11",
+      "description": "Check mark against the checked fill it sits on - the mark, not the fill, says checked",
+      "foreground": "--choice-mark-color",
+      "background": "--choice-checked-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-mark-on-checked-fill-hover",
+      "criterion": "1.4.11",
+      "description": "Check mark against the hovered checked fill",
+      "foreground": "--choice-mark-color",
+      "background": "--choice-checked-background-hover",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-border-error-on-background",
+      "criterion": "1.4.11",
+      "description": "Error border of an unchecked checkbox against the page background",
+      "foreground": "--choice-border-color-error",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-border-error-on-card",
+      "criterion": "1.4.11",
+      "description": "Error border of an unchecked checkbox against the card behind it",
+      "foreground": "--choice-border-color-error",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-border-error-on-error-background",
+      "criterion": "1.4.11",
+      "description": "Error border of an unchecked checkbox against the error fill it encloses",
+      "foreground": "--choice-border-color-error",
+      "background": "--choice-background-error",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-error-icon-on-background",
+      "criterion": "1.4.11",
+      "description": "Error icon next to the message below a checkbox or radio group on the page background",
+      "foreground": "--choice-error-icon-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "choice-error-icon-on-card",
+      "criterion": "1.4.11",
+      "description": "Error icon next to the message below a checkbox or radio group inside a card",
+      "foreground": "--choice-error-icon-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggle-label-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Toggle label above the switch on the page background",
+      "foreground": "--toggle-label-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "toggle-label-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Toggle label above the switch inside a card",
+      "foreground": "--toggle-label-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "toggle-state-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Visible on/off text next to the switch on the page background",
+      "foreground": "--toggle-state-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "toggle-state-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Visible on/off text next to the switch inside a card",
+      "foreground": "--toggle-state-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "toggle-helper-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Helper text below a toggle on the page background",
+      "foreground": "--toggle-helper-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "toggle-helper-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Helper text below a toggle inside a card",
+      "foreground": "--toggle-helper-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "toggle-track-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Border of a switched-off toggle track against the page background - the border, not the fill, bounds the track",
+      "foreground": "--toggle-track-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggle-track-border-on-card",
+      "criterion": "1.4.11",
+      "description": "Border of a switched-off toggle track against the card behind it",
+      "foreground": "--toggle-track-border-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggle-track-border-hover-on-background",
+      "criterion": "1.4.11",
+      "description": "Hovered border of a switched-off toggle track against the page background",
+      "foreground": "--toggle-track-border-color-hover",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggle-track-border-hover-on-card",
+      "criterion": "1.4.11",
+      "description": "Hovered border of a switched-off toggle track against the card behind it",
+      "foreground": "--toggle-track-border-color-hover",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggle-thumb-on-track",
+      "criterion": "1.4.11",
+      "description": "Thumb of a switched-off toggle against the track it sits in - its position says off",
+      "foreground": "--toggle-thumb-color",
+      "background": "--toggle-track-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggle-thumb-hover-on-track",
+      "criterion": "1.4.11",
+      "description": "Hovered thumb of a switched-off toggle against the track it sits in",
+      "foreground": "--toggle-thumb-color-hover",
+      "background": "--toggle-track-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggle-checked-fill-on-background",
+      "criterion": "1.4.11",
+      "description": "Filled track of a switched-on toggle against the page background - the fill is its own boundary",
+      "foreground": "--toggle-checked-background",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggle-checked-fill-on-card",
+      "criterion": "1.4.11",
+      "description": "Filled track of a switched-on toggle against the card behind it",
+      "foreground": "--toggle-checked-background",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggle-checked-fill-hover-on-background",
+      "criterion": "1.4.11",
+      "description": "Hovered filled track of a switched-on toggle against the page background",
+      "foreground": "--toggle-checked-background-hover",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggle-checked-fill-hover-on-card",
+      "criterion": "1.4.11",
+      "description": "Hovered filled track of a switched-on toggle against the card behind it",
+      "foreground": "--toggle-checked-background-hover",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggle-checked-thumb-on-checked-fill",
+      "criterion": "1.4.11",
+      "description": "Thumb and check mark of a switched-on toggle against the filled track - position and mark, not the fill, say on",
+      "foreground": "--toggle-checked-thumb-color",
+      "background": "--toggle-checked-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggle-checked-thumb-on-checked-fill-hover",
+      "criterion": "1.4.11",
+      "description": "Thumb and check mark of a switched-on toggle against the hovered filled track",
+      "foreground": "--toggle-checked-thumb-color",
+      "background": "--toggle-checked-background-hover",
+      "requirement": "non-text"
+    },
+    {
       "id": "form-legend-text-on-background",
       "criterion": "1.4.3",
       "description": "Required-field note at the top of a form on the page background",
@@ -481,6 +825,46 @@
       "requirement": "non-text"
     },
     {
+      "id": "focus-ring-offset-on-choice-border",
+      "criterion": "1.4.11",
+      "description": "Focus separator against the border of an unchecked checkbox or radio it surrounds",
+      "foreground": "--focus-ring-offset-color",
+      "background": "--choice-border-color",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-offset-on-choice-checked-fill",
+      "criterion": "1.4.11",
+      "description": "Focus separator against a checked checkbox it surrounds",
+      "foreground": "--focus-ring-offset-color",
+      "background": "--choice-checked-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-offset-on-choice-border-error",
+      "criterion": "1.4.11",
+      "description": "Focus separator against the error border of an unchecked checkbox - where focus lands on an invalid submit",
+      "foreground": "--focus-ring-offset-color",
+      "background": "--choice-border-color-error",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-offset-on-toggle-track-border",
+      "criterion": "1.4.11",
+      "description": "Focus separator against the border of a switched-off toggle track it surrounds",
+      "foreground": "--focus-ring-offset-color",
+      "background": "--toggle-track-border-color",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-offset-on-toggle-checked-fill",
+      "criterion": "1.4.11",
+      "description": "Focus separator against the filled track of a switched-on toggle it surrounds",
+      "foreground": "--focus-ring-offset-color",
+      "background": "--toggle-checked-background",
+      "requirement": "non-text"
+    },
+    {
       "id": "focus-ring-on-background",
       "criterion": "1.4.11",
       "description": "Focus indicator against the page background it is drawn on",
@@ -494,6 +878,22 @@
       "description": "Focus indicator against the card it is drawn on",
       "foreground": "--focus-ring-color",
       "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-on-input-background",
+      "criterion": "1.4.11",
+      "description": "Focus indicator of the password reveal toggle, drawn inside the field it belongs to",
+      "foreground": "--focus-ring-color",
+      "background": "--input-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "focus-ring-on-input-error-background",
+      "criterion": "1.4.11",
+      "description": "Focus indicator of the password reveal toggle inside a field that is showing an error",
+      "foreground": "--focus-ring-color",
+      "background": "--input-background-error",
       "requirement": "non-text"
     },
     {

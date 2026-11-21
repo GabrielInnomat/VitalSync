@@ -1,0 +1,136 @@
+.vs-toggle {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    font-family: var(--font-family-ui);
+}
+
+.vs-toggle__label {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    align-self: flex-start;
+    color: var(--toggle-label-text-color);
+    font-size: var(--font-size-200);
+    line-height: var(--line-height-base);
+    cursor: pointer;
+}
+
+.vs-toggle__text {
+    font-weight: var(--toggle-label-font-weight);
+}
+
+.vs-toggle__row {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--toggle-gap);
+    min-height: var(--touch-target-min);
+    color: var(--toggle-state-text-color);
+}
+
+.vs-toggle__label--disabled,
+.vs-toggle__label--disabled .vs-toggle__row {
+    color: var(--toggle-text-color-disabled);
+    cursor: not-allowed;
+}
+
+.vs-toggle__control {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    width: var(--toggle-track-width);
+    height: var(--toggle-track-height);
+}
+
+.vs-toggle__input {
+    appearance: none;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--toggle-track-background);
+    border: var(--toggle-track-border-width) solid var(--toggle-track-border-color);
+    border-radius: var(--toggle-radius);
+    cursor: pointer;
+    transition: background-color var(--motion-duration-fast) var(--motion-easing),
+                border-color var(--motion-duration-fast) var(--motion-easing);
+}
+
+.vs-toggle__label:hover .vs-toggle__input:not(:disabled) {
+    border-color: var(--toggle-track-border-color-hover);
+}
+
+.vs-toggle__input:checked {
+    background-color: var(--toggle-checked-background);
+    border-color: var(--toggle-checked-background);
+}
+
+.vs-toggle__label:hover .vs-toggle__input:checked:not(:disabled) {
+    background-color: var(--toggle-checked-background-hover);
+    border-color: var(--toggle-checked-background-hover);
+}
+
+.vs-toggle__input:disabled {
+    background-color: var(--toggle-track-background-disabled);
+    border-color: var(--toggle-track-border-color-disabled);
+    cursor: not-allowed;
+}
+
+/* nur Rand, keine Füllung: in Forced Colors bleibt der Daumen so sichtbar */
+.vs-toggle__thumb {
+    position: absolute;
+    top: calc((var(--toggle-track-height) - var(--toggle-thumb-size)) / 2);
+    left: calc((var(--toggle-track-height) - var(--toggle-thumb-size)) / 2);
+    box-sizing: border-box;
+    width: var(--toggle-thumb-size);
+    height: var(--toggle-thumb-size);
+    border: calc(var(--toggle-thumb-size) / 2) solid var(--toggle-thumb-color);
+    border-radius: var(--toggle-radius);
+    pointer-events: none;
+    transition: transform var(--motion-duration-base) var(--motion-easing),
+                border-color var(--motion-duration-fast) var(--motion-easing);
+}
+
+.vs-toggle__label:hover .vs-toggle__input:not(:disabled):not(:checked) ~ .vs-toggle__thumb {
+    border-color: var(--toggle-thumb-color-hover);
+}
+
+.vs-toggle__input:checked ~ .vs-toggle__thumb {
+    transform: translateX(calc(var(--toggle-track-width) - var(--toggle-track-height)));
+    border-color: var(--toggle-checked-thumb-color);
+}
+
+.vs-toggle__input:disabled ~ .vs-toggle__thumb {
+    border-color: var(--toggle-thumb-color-disabled);
+}
+
+.vs-toggle__mark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: var(--toggle-track-height);
+    height: var(--toggle-track-height);
+    color: var(--toggle-checked-thumb-color);
+    pointer-events: none;
+}
+
+    .vs-toggle__mark ::deep svg {
+        width: var(--toggle-mark-size);
+        height: var(--toggle-mark-size);
+    }
+
+.vs-toggle__input:checked ~ .vs-toggle__mark {
+    display: flex;
+}
+
+.vs-toggle__input:disabled ~ .vs-toggle__mark {
+    color: var(--toggle-thumb-color-disabled);
+}
+
+.vs-toggle__helper {
+    margin: 0;
+    color: var(--toggle-helper-text-color);
+    font-size: var(--font-size-100);
+}

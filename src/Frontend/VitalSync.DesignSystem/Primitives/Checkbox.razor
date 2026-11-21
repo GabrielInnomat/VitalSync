@@ -1,0 +1,113 @@
+@namespace VitalSync.DesignSystem.Primitives
+@inherits InputBase<bool>
+@implements IFormField
+@using Microsoft.AspNetCore.Components.Forms
+
+<div class="vs-checkbox">
+    <label for="@_inputId" class="vs-checkbox__label @(Disabled ? "vs-checkbox__label--disabled" : null)">
+        <span class="vs-checkbox__control">
+            <input @attributes="AdditionalAttributes"
+                   @ref="Element"
+                   id="@_inputId"
+                   type="checkbox"
+                   class="vs-checkbox__input"
+                   checked="@CurrentValue"
+                   required="@Required"
+                   disabled="@Disabled"
+                   aria-invalid="@(HasError ? "true" : null)"
+                   aria-describedby="@DescribedBy"
+                   @onchange="HandleChange" />
+            <span class="vs-checkbox__mark" aria-hidden="true">
+                <SystemIcon Name="SystemIconName.Check" />
+            </span>
+        </span>
+        <span class="vs-checkbox__text">
+            @Label
+            @if (Required)
+            {
+                <span class="vs-checkbox__required-marker" aria-hidden="true">*</span>
+            }
+        </span>
+    </label>
+
+    @if (HasError)
+    {
+        <p id="@ErrorId" class="vs-checkbox__error" role="alert">
+            <span class="vs-checkbox__error-icon" aria-hidden="true">
+                <SystemIcon Name="SystemIconName.XCircle" />
+            </span>
+            @CurrentErrors.First()
+        </p>
+    }
+    else if (!string.IsNullOrEmpty(HelperText))
+    {
+        <p id="@HelperId" class="vs-checkbox__helper">@HelperText</p>
+    }
+</div>
+
+@code {
+    private readonly string _inputId = $"vs-checkbox-{Guid.NewGuid():N}";
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public string? HelperText { get; set; }
+
+    [Parameter]
+    public bool Required { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    public ElementReference? Element { get; protected set; }
+
+    [CascadingParameter]
+    private Form? ParentForm { get; set; }
+
+    FieldIdentifier IFormField.FieldIdentifier => FieldIdentifier;
+
+    string IFormField.Id => _inputId;
+
+    private string ErrorId => $"{_inputId}-error";
+
+    private string HelperId => $"{_inputId}-helper";
+
+    private string? DescribedBy => HasError
+        ? ErrorId
+        : string.IsNullOrEmpty(HelperText) ? null : HelperId;
+
+    private IEnumerable<string> CurrentErrors => EditContext.GetValidationMessages(FieldIdentifier);
+
+    private bool HasError => CurrentErrors.Any();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        if (string.IsNullOrWhiteSpace(Label))
+        {
+            throw new InvalidOperationException(
+                "Checkbox requires a visible Label; label-less checkboxes are not supported.");
+        }
+
+        ParentForm?.Register(this);
+    }
+
+    public ValueTask FocusAsync() => Element is { } element ? element.FocusAsync() : ValueTask.CompletedTask;
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            ParentForm?.Unregister(this);
+        }
+
+        base.Dispose(disposing);
+    }
+
+    private void HandleChange(ChangeEventArgs e) => CurrentValue = e.Value is true;
+
+    protected override bool TryParseValueFromString(string? value, out bool result, out string validationErrorMessage) =>
+        throw new NotSupportedException($"{nameof(Checkbox)} binds a bool directly and never parses a string.");
+}

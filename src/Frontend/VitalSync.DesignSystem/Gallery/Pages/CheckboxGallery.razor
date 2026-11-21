@@ -1,0 +1,118 @@
+@page "/design-system/checkbox"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using VitalSync.DesignSystem.Primitives
+
+<PageTitle>Kontrollkästchen · Design System · VitalSync</PageTitle>
+
+<h1>Kontrollkästchen (<code>Checkbox</code>)</h1>
+<p>
+    Ein natives Kontrollkästchen, nur umgestaltet, gebunden an einen <code>EditContext</code>.
+    <code>Label</code> ist Pflicht und die ganze Beschriftung ist klickbar. Der gewählte Zustand
+    zeigt sich über Füllung <em>und</em> Häkchen, nie nur über die Farbe. Geprüft wird beim
+    Ändern. Innerhalb eines <a href="design-system/form"><code>Form</code></a> meldet sich das
+    Kästchen selbst an. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    @foreach (var demo in _themes)
+    {
+        <section data-theme="@demo.Theme" class="vs-gallery__theme-panel">
+            <h2>@demo.Title</h2>
+
+            <h3>Formular</h3>
+            <Form Model="demo.Form" OnValidSubmit="demo.MarkSubmitted">
+                <DataAnnotationsValidator />
+
+                <Checkbox @bind-Value="demo.Form.PrivacyAccepted" Label="Ich akzeptiere die Datenschutzerklärung" Required="true" />
+
+                <Checkbox @bind-Value="demo.Form.Reminders" Label="Erinnerungen per E-Mail erhalten" HelperText="Du kannst das jederzeit wieder abbestellen." />
+
+                <Button Variant="ButtonVariant.Primary" Type="submit">Absenden</Button>
+
+                <p role="status" class="vs-gallery__status">@(demo.Submitted ? "Gesendet." : null)</p>
+            </Form>
+
+            <h3>Zustände</h3>
+            <Form EditContext="demo.States">
+                <Checkbox @bind-Value="demo.StatesModel.Unchecked" Label="Nicht gewählt" />
+
+                <Checkbox @bind-Value="demo.StatesModel.Checked" Label="Gewählt" />
+
+                <Checkbox @bind-Value="demo.StatesModel.Invalid" Label="Mit Fehler" Required="true" />
+
+                <Checkbox @bind-Value="demo.StatesModel.DisabledUnchecked" Label="Deaktiviert, nicht gewählt" Disabled="true" />
+
+                <Checkbox @bind-Value="demo.StatesModel.DisabledChecked" Label="Deaktiviert, gewählt" Disabled="true" HelperText="Kann nicht geändert werden." />
+
+                <Checkbox @bind-Value="demo.StatesModel.LongLabel" Label="Eine lange Beschriftung bricht um und bleibt dabei bündig zum Text, während das Kästchen an der ersten Zeile ausgerichtet bleibt." />
+            </Form>
+        </section>
+    }
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;Form Model="model" OnValidSubmit="Save"&gt;
+    &lt;DataAnnotationsValidator /&gt;
+
+    &lt;Checkbox @@bind-Value="model.PrivacyAccepted" Label="Ich akzeptiere die Datenschutzerklärung" Required="true" /&gt;
+
+    &lt;Checkbox @@bind-Value="model.Reminders" Label="Erinnerungen per E-Mail erhalten" HelperText="Du kannst das jederzeit wieder abbestellen." /&gt;
+&lt;/Form&gt;
+</code></pre>
+
+@code {
+    private readonly ThemeDemo[] _themes = [new("light", "Hell"), new("dark", "Dunkel")];
+
+    private sealed class ThemeDemo
+    {
+        public ThemeDemo(string theme, string title)
+        {
+            Theme = theme;
+            Title = title;
+            States = new EditContext(StatesModel);
+            var messages = new ValidationMessageStore(States);
+            messages.Add(States.Field(nameof(StatesDemoModel.Invalid)), "Bitte bestätige diese Angabe.");
+        }
+
+        public string Theme { get; }
+
+        public string Title { get; }
+
+        public DemoModel Form { get; } = new();
+
+        public StatesDemoModel StatesModel { get; } = new();
+
+        public EditContext States { get; }
+
+        public bool Submitted { get; private set; }
+
+        public void MarkSubmitted() => Submitted = true;
+    }
+
+    private sealed class DemoModel
+    {
+        [Range(typeof(bool), "true", "true", ErrorMessage = "Bitte akzeptiere die Datenschutzerklärung.")]
+        public bool PrivacyAccepted { get; set; }
+
+        public bool Reminders { get; set; }
+    }
+
+    private sealed class StatesDemoModel
+    {
+        public bool Unchecked { get; set; }
+
+        public bool Checked { get; set; } = true;
+
+        public bool Invalid { get; set; }
+
+        public bool DisabledUnchecked { get; set; }
+
+        public bool DisabledChecked { get; set; } = true;
+
+        public bool LongLabel { get; set; }
+    }
+}

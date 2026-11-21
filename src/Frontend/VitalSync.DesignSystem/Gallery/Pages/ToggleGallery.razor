@@ -1,0 +1,73 @@
+@page "/design-system/toggle"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using VitalSync.DesignSystem.Primitives
+
+<PageTitle>Schalter · Design System · VitalSync</PageTitle>
+
+<h1>Schalter (<code>Toggle</code>)</h1>
+<p>
+    Ein natives Kontrollkästchen mit <code>role="switch"</code>, nur umgestaltet. Der Schalter
+    wirkt sofort, kennt keine Validierung und gehört deshalb nicht in ein
+    <a href="design-system/form"><code>Form</code></a>. <code>Label</code> ist Pflicht und steht
+    über dem Schalter, Beschriftung und Schalter sind gemeinsam klickbar. Der Zustand zeigt sich
+    über die Lage des Daumens, das Häkchen und den Text „Ein“ oder „Aus“, nie nur über die Farbe.
+    Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    @foreach (var demo in _themes)
+    {
+        <section data-theme="@demo.Theme" class="vs-gallery__theme-panel">
+            <h2>@demo.Title</h2>
+
+            <h3>Beispiel</h3>
+            <div class="vs-gallery__stack">
+                <Toggle @bind-Value="demo.Reminders" Label="Erinnerungen" HelperText="Wir erinnern dich an geplante Trainings." />
+
+                <p class="vs-gallery__status">@(demo.Reminders ? "Erinnerungen sind eingeschaltet." : "Erinnerungen sind ausgeschaltet.")</p>
+            </div>
+
+            <h3>Zustände</h3>
+            <div class="vs-gallery__stack">
+                <Toggle @bind-Value="demo.Off" Label="Ausgeschaltet" />
+
+                <Toggle @bind-Value="demo.On" Label="Eingeschaltet" />
+
+                <Toggle @bind-Value="demo.DisabledOff" Label="Deaktiviert, aus" Disabled="true" />
+
+                <Toggle @bind-Value="demo.DisabledOn" Label="Deaktiviert, ein" Disabled="true" HelperText="Kann nicht geändert werden." />
+
+                <Toggle @bind-Value="demo.LongLabel" Label="Eine lange Beschriftung bricht über dem Schalter um, ohne dass sich Schalter und Zustandstext verschieben." />
+            </div>
+        </section>
+    }
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;Toggle @@bind-Value="settings.Reminders" Label="Erinnerungen" HelperText="Wir erinnern dich an geplante Trainings." /&gt;
+</code></pre>
+
+@code {
+    private readonly ThemeDemo[] _themes = [new("light", "Hell"), new("dark", "Dunkel")];
+
+    private sealed class ThemeDemo(string theme, string title)
+    {
+        public string Theme { get; } = theme;
+
+        public string Title { get; } = title;
+
+        public bool Reminders { get; set; }
+
+        public bool Off { get; set; }
+
+        public bool On { get; set; } = true;
+
+        public bool DisabledOff { get; set; }
+
+        public bool DisabledOn { get; set; } = true;
+
+        public bool LongLabel { get; set; }
+    }
+}

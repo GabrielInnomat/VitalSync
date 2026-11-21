@@ -1,0 +1,122 @@
+.vs-checkbox {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    font-family: var(--font-family-ui);
+}
+
+.vs-checkbox__label {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: var(--choice-gap);
+    min-height: var(--touch-target-min);
+    padding-block: max(0px, calc((var(--touch-target-min) - var(--choice-size)) / 2));
+    color: var(--choice-label-text-color);
+    font-size: var(--font-size-200);
+    line-height: var(--line-height-base);
+    cursor: pointer;
+}
+
+.vs-checkbox__label--disabled {
+    color: var(--choice-label-text-color-disabled);
+    cursor: not-allowed;
+}
+
+.vs-checkbox__control {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    width: var(--choice-size);
+    height: var(--choice-size);
+}
+
+.vs-checkbox__input {
+    appearance: none;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--choice-background);
+    border: var(--choice-border-width) solid var(--choice-border-color);
+    border-radius: var(--checkbox-radius);
+    cursor: pointer;
+    transition: background-color var(--motion-duration-fast) var(--motion-easing),
+                border-color var(--motion-duration-fast) var(--motion-easing);
+}
+
+.vs-checkbox__label:hover .vs-checkbox__input:not(:disabled) {
+    border-color: var(--choice-border-color-hover);
+}
+
+.vs-checkbox__input:checked {
+    background-color: var(--choice-checked-background);
+    border-color: var(--choice-checked-background);
+}
+
+.vs-checkbox__label:hover .vs-checkbox__input:checked:not(:disabled) {
+    background-color: var(--choice-checked-background-hover);
+    border-color: var(--choice-checked-background-hover);
+}
+
+.vs-checkbox__input[aria-invalid="true"]:not(:checked):not(:disabled) {
+    background-color: var(--choice-background-error);
+    border-color: var(--choice-border-color-error);
+}
+
+.vs-checkbox__input:disabled {
+    background-color: var(--choice-background-disabled);
+    border-color: var(--choice-border-color-disabled);
+    cursor: not-allowed;
+}
+
+.vs-checkbox__mark {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: var(--choice-mark-color);
+    pointer-events: none;
+}
+
+    .vs-checkbox__mark ::deep svg {
+        width: var(--choice-mark-size);
+        height: var(--choice-mark-size);
+    }
+
+.vs-checkbox__input:checked + .vs-checkbox__mark {
+    display: flex;
+}
+
+.vs-checkbox__input:disabled + .vs-checkbox__mark {
+    color: var(--choice-mark-color-disabled);
+}
+
+.vs-checkbox__required-marker {
+    margin-inline-start: var(--space-2);
+    color: currentColor;
+}
+
+.vs-checkbox__helper {
+    margin: 0;
+    padding-inline-start: calc(var(--choice-size) + var(--choice-gap));
+    color: var(--choice-helper-text-color);
+    font-size: var(--font-size-100);
+}
+
+.vs-checkbox__error {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0;
+    padding-inline-start: calc(var(--choice-size) + var(--choice-gap));
+    color: var(--choice-error-text-color);
+    font-size: var(--font-size-100);
+}
+
+.vs-checkbox__error-icon {
+    display: inline-flex;
+    width: var(--choice-error-icon-size);
+    height: var(--choice-error-icon-size);
+    color: var(--choice-error-icon-color);
+    flex-shrink: 0;
+}

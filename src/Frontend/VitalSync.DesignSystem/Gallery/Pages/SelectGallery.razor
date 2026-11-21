@@ -1,0 +1,134 @@
+@page "/design-system/select"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using VitalSync.DesignSystem.Primitives
+
+<PageTitle>Auswahlliste · Design System · VitalSync</PageTitle>
+
+<h1>Auswahlliste (<code>Select</code>)</h1>
+<p>
+    Ein natives <code>select</code> für eine einzige Wahl, gebunden an einen <code>EditContext</code>.
+    Das geschlossene Feld sieht aus wie ein <a href="design-system/input"><code>Input</code></a>,
+    die geöffnete Liste ist die des Betriebssystems. <code>Label</code> ist Pflicht, jede
+    <code>SelectOption</code> braucht ein eigenes <code>Label</code>. Eine leere erste Wahl
+    („Bitte wählen“) zeigt, dass noch nichts gewählt ist. Geprüft wird beim Ändern. Innerhalb eines
+    <a href="design-system/form"><code>Form</code></a> meldet sich die Liste selbst an. Die
+    Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    @foreach (var demo in _themes)
+    {
+        <section data-theme="@demo.Theme" class="vs-gallery__theme-panel">
+            <h2>@demo.Title</h2>
+
+            <h3>Formular</h3>
+            <Form Model="demo.Form" OnValidSubmit="demo.MarkSubmitted">
+                <DataAnnotationsValidator />
+
+                <Select @bind-Value="demo.Form.Diet" Label="Ernährungsform" Required="true" HelperText="Grundlage für deine Rezeptvorschläge.">
+                    <SelectOption Value="@("mixed")" Label="Mischkost" />
+                    <SelectOption Value="@("vegetarian")" Label="Vegetarisch" />
+                    <SelectOption Value="@("vegan")" Label="Vegan" />
+                    <SelectOption Value="@("pescetarian")" Label="Pescetarisch" />
+                </Select>
+
+                <Select @bind-Value="demo.Form.Unit" Label="Energieeinheit" Placeholder="Keine Angabe">
+                    <SelectOption Value="@("kcal")" Label="Kilokalorien (kcal)" />
+                    <SelectOption Value="@("kj")" Label="Kilojoule (kJ)" />
+                </Select>
+
+                <Button Variant="ButtonVariant.Primary" Type="submit">Absenden</Button>
+
+                <p role="status" class="vs-gallery__status">@(demo.Submitted ? "Gesendet." : null)</p>
+            </Form>
+
+            <h3>Zustände</h3>
+            <Form EditContext="demo.States">
+                <Select @bind-Value="demo.StatesModel.Unchosen" Label="Nichts gewählt">
+                    <SelectOption Value="@("a")" Label="Erste Option" />
+                    <SelectOption Value="@("b")" Label="Zweite Option" />
+                </Select>
+
+                <Select @bind-Value="demo.StatesModel.Chosen" Label="Gewählt">
+                    <SelectOption Value="@("a")" Label="Erste Option" />
+                    <SelectOption Value="@("b")" Label="Zweite Option" />
+                </Select>
+
+                <Select @bind-Value="demo.StatesModel.Invalid" Label="Mit Fehler" Required="true">
+                    <SelectOption Value="@("a")" Label="Erste Option" />
+                    <SelectOption Value="@("b")" Label="Zweite Option" />
+                </Select>
+
+                <Select @bind-Value="demo.StatesModel.Disabled" Label="Deaktiviert" Disabled="true" HelperText="Kann nicht geändert werden.">
+                    <SelectOption Value="@("a")" Label="Erste Option" />
+                    <SelectOption Value="@("b")" Label="Zweite Option" />
+                </Select>
+            </Form>
+        </section>
+    }
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;Form Model="model" OnValidSubmit="Save"&gt;
+    &lt;DataAnnotationsValidator /&gt;
+
+    &lt;Select @@bind-Value="model.Diet" Label="Ernährungsform" Required="true"&gt;
+        &lt;SelectOption Value="Diet.Mixed" Label="Mischkost" /&gt;
+        &lt;SelectOption Value="Diet.Vegetarian" Label="Vegetarisch" /&gt;
+        &lt;SelectOption Value="Diet.Vegan" Label="Vegan" /&gt;
+    &lt;/Select&gt;
+&lt;/Form&gt;
+</code></pre>
+
+@code {
+    private readonly ThemeDemo[] _themes = [new("light", "Hell"), new("dark", "Dunkel")];
+
+    private sealed class ThemeDemo
+    {
+        public ThemeDemo(string theme, string title)
+        {
+            Theme = theme;
+            Title = title;
+            States = new EditContext(StatesModel);
+            var messages = new ValidationMessageStore(States);
+            messages.Add(States.Field(nameof(StatesDemoModel.Invalid)), "Bitte wähle eine Option.");
+        }
+
+        public string Theme { get; }
+
+        public string Title { get; }
+
+        public DemoModel Form { get; } = new();
+
+        public StatesDemoModel StatesModel { get; } = new();
+
+        public EditContext States { get; }
+
+        public bool Submitted { get; private set; }
+
+        public void MarkSubmitted() => Submitted = true;
+    }
+
+    private sealed class DemoModel
+    {
+        [Required(ErrorMessage = "Bitte wähle eine Ernährungsform.")]
+        public string? Diet { get; set; }
+
+        public string? Unit { get; set; }
+    }
+
+    private sealed class StatesDemoModel
+    {
+        public string? Unchosen { get; set; }
+
+        public string? Chosen { get; set; } = "a";
+
+        public string? Invalid { get; set; }
+
+        public string? Disabled { get; set; } = "b";
+    }
+}

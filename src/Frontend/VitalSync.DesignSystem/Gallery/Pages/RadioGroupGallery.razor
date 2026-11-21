@@ -1,0 +1,141 @@
+@page "/design-system/radio-group"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using VitalSync.DesignSystem.Primitives
+
+<PageTitle>Optionsfelder · Design System · VitalSync</PageTitle>
+
+<h1>Optionsfelder (<code>RadioGroup</code>)</h1>
+<p>
+    Eine Gruppe nativer Optionsfelder, nur umgestaltet, gebunden an einen <code>EditContext</code>.
+    Die Gruppe ist ein <code>fieldset</code>, ihr <code>Label</code> die <code>legend</code>; jede
+    <code>RadioOption</code> braucht ein eigenes <code>Label</code>. Die Gruppe ist ein einziger
+    Tabstopp, die Pfeiltasten wechseln die Wahl. Die gewählte Option zeigt sich über Füllung
+    <em>und</em> Punkt, nie nur über die Farbe. Geprüft wird beim Ändern. Innerhalb eines
+    <a href="design-system/form"><code>Form</code></a> meldet sich die Gruppe selbst an. Die
+    Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    @foreach (var demo in _themes)
+    {
+        <section data-theme="@demo.Theme" class="vs-gallery__theme-panel">
+            <h2>@demo.Title</h2>
+
+            <h3>Formular</h3>
+            <Form Model="demo.Form" OnValidSubmit="demo.MarkSubmitted">
+                <DataAnnotationsValidator />
+
+                <RadioGroup @bind-Value="demo.Form.ActivityLevel" Label="Aktivitätsniveau" Required="true">
+                    <RadioOption Value="@("low")" Label="Gering" />
+                    <RadioOption Value="@("medium")" Label="Mittel" />
+                    <RadioOption Value="@("high")" Label="Hoch" />
+                </RadioGroup>
+
+                <RadioGroup @bind-Value="demo.Form.Appearance" Label="Darstellung" HelperText="„System“ folgt der Einstellung deines Geräts.">
+                    <RadioOption Value="@("light")" Label="Hell" />
+                    <RadioOption Value="@("dark")" Label="Dunkel" />
+                    <RadioOption Value="@("system")" Label="System" />
+                </RadioGroup>
+
+                <Button Variant="ButtonVariant.Primary" Type="submit">Absenden</Button>
+
+                <p role="status" class="vs-gallery__status">@(demo.Submitted ? "Gesendet." : null)</p>
+            </Form>
+
+            <h3>Zustände</h3>
+            <Form EditContext="demo.States">
+                <RadioGroup @bind-Value="demo.StatesModel.Unchosen" Label="Nichts gewählt">
+                    <RadioOption Value="@("a")" Label="Erste Option" />
+                    <RadioOption Value="@("b")" Label="Zweite Option" />
+                </RadioGroup>
+
+                <RadioGroup @bind-Value="demo.StatesModel.Chosen" Label="Gewählt">
+                    <RadioOption Value="@("a")" Label="Erste Option" />
+                    <RadioOption Value="@("b")" Label="Zweite Option" />
+                </RadioGroup>
+
+                <RadioGroup @bind-Value="demo.StatesModel.Invalid" Label="Mit Fehler" Required="true">
+                    <RadioOption Value="@("a")" Label="Erste Option" />
+                    <RadioOption Value="@("b")" Label="Zweite Option" />
+                </RadioGroup>
+
+                <RadioGroup @bind-Value="demo.StatesModel.Disabled" Label="Deaktiviert" Disabled="true" HelperText="Kann nicht geändert werden.">
+                    <RadioOption Value="@("a")" Label="Nicht gewählt" />
+                    <RadioOption Value="@("b")" Label="Gewählt" />
+                </RadioGroup>
+
+                <RadioGroup @bind-Value="demo.StatesModel.LongLabel" Label="Lange Beschriftung">
+                    <RadioOption Value="@("a")" Label="Eine lange Beschriftung bricht um und bleibt dabei bündig zum Text, während der Kreis an der ersten Zeile ausgerichtet bleibt." />
+                    <RadioOption Value="@("b")" Label="Kurz" />
+                </RadioGroup>
+            </Form>
+        </section>
+    }
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;Form Model="model" OnValidSubmit="Save"&gt;
+    &lt;DataAnnotationsValidator /&gt;
+
+    &lt;RadioGroup @@bind-Value="model.ActivityLevel" Label="Aktivitätsniveau" Required="true"&gt;
+        &lt;RadioOption Value="ActivityLevel.Low" Label="Gering" /&gt;
+        &lt;RadioOption Value="ActivityLevel.Medium" Label="Mittel" /&gt;
+        &lt;RadioOption Value="ActivityLevel.High" Label="Hoch" /&gt;
+    &lt;/RadioGroup&gt;
+&lt;/Form&gt;
+</code></pre>
+
+@code {
+    private readonly ThemeDemo[] _themes = [new("light", "Hell"), new("dark", "Dunkel")];
+
+    private sealed class ThemeDemo
+    {
+        public ThemeDemo(string theme, string title)
+        {
+            Theme = theme;
+            Title = title;
+            States = new EditContext(StatesModel);
+            var messages = new ValidationMessageStore(States);
+            messages.Add(States.Field(nameof(StatesDemoModel.Invalid)), "Bitte wähle eine Option.");
+        }
+
+        public string Theme { get; }
+
+        public string Title { get; }
+
+        public DemoModel Form { get; } = new();
+
+        public StatesDemoModel StatesModel { get; } = new();
+
+        public EditContext States { get; }
+
+        public bool Submitted { get; private set; }
+
+        public void MarkSubmitted() => Submitted = true;
+    }
+
+    private sealed class DemoModel
+    {
+        [Required(ErrorMessage = "Bitte wähle ein Aktivitätsniveau.")]
+        public string? ActivityLevel { get; set; }
+
+        public string? Appearance { get; set; } = "system";
+    }
+
+    private sealed class StatesDemoModel
+    {
+        public string? Unchosen { get; set; }
+
+        public string? Chosen { get; set; } = "a";
+
+        public string? Invalid { get; set; }
+
+        public string? Disabled { get; set; } = "b";
+
+        public string? LongLabel { get; set; }
+    }
+}

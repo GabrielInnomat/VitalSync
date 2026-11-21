@@ -108,6 +108,7 @@
 }
 
 .vs-input__toggle {
+    position: relative;
     align-self: stretch;
     min-width: var(--touch-target-min);
     min-height: var(--touch-target-min);
@@ -115,7 +116,7 @@
     background: none;
     border: none;
     padding-block: 0;
-    padding-inline: var(--space-1);
+    padding-inline: var(--space-2);
     color: var(--input-toggle-text-color);
     font-family: inherit;
     font-size: var(--font-size-200);
@@ -126,6 +127,21 @@
     .vs-input__toggle:hover:not(:disabled) {
         text-decoration: underline;
     }
+
+    .vs-input__toggle:focus-visible {
+        outline: none;
+        box-shadow: none;
+    }
+
+        .vs-input__toggle:focus-visible::after {
+            content: "";
+            position: absolute;
+            inset-block: calc(var(--input-border-width) + var(--focus-ring-offset));
+            inset-inline: 0;
+            border: var(--focus-ring-width) solid var(--focus-ring-color);
+            border-radius: var(--radius-xs);
+            pointer-events: none;
+        }
 
     .vs-input__toggle:disabled {
         color: var(--input-text-color-disabled);
