@@ -312,4 +312,15 @@ public sealed class SelectTests : BunitContext
                 ((ElementReference)call.Arguments[0]!).Id);
         });
     }
+
+    [Fact]
+    public void Renders_a_help_button_beside_the_label_but_outside_it_when_Info_is_set()
+    {
+        var (editContext, model) = CreateEditContext();
+
+        var cut = RenderSelect(editContext, model, parameters => parameters.Add(p => p.Info, "Bestimmt, welche Rezepte du siehst."));
+
+        Assert.Empty(cut.Find("label").QuerySelectorAll("button"));
+        Assert.Equal("Hilfe zu Ernährungsform", cut.Find(".vs-select__label-row .vs-toggletip__name").TextContent);
+    }
 }

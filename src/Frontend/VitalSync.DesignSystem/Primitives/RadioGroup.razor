@@ -9,12 +9,19 @@
           id="@_groupId"
           class="vs-radio-group"
           disabled="@Disabled"
+          aria-labelledby="@LabelId"
           aria-describedby="@DescribedBy">
     <legend class="vs-radio-group__legend">
-        @Label
-        @if (Required)
+        <span id="@LabelId" class="vs-radio-group__label">
+            @Label
+            @if (Required)
+            {
+                <span class="vs-radio-group__required-marker" aria-hidden="true">*</span>
+            }
+        </span>
+        @if (!string.IsNullOrWhiteSpace(Info))
         {
-            <span class="vs-radio-group__required-marker" aria-hidden="true">*</span>
+            <Toggletip Subject="@Label" Text="@Info" />
         }
     </legend>
 
@@ -50,6 +57,9 @@
     public string? HelperText { get; set; }
 
     [Parameter]
+    public string? Info { get; set; }
+
+    [Parameter]
     public bool Required { get; set; }
 
     [Parameter]
@@ -68,6 +78,8 @@
     internal string Name => _groupId;
 
     internal bool HasError => CurrentErrors.Any();
+
+    private string LabelId => $"{_groupId}-label";
 
     private string ErrorId => $"{_groupId}-error";
 

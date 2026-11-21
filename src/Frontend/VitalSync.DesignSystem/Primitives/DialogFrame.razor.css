@@ -1,0 +1,164 @@
+.vs-dialog {
+    container-type: inline-size;
+    box-sizing: border-box;
+    width: min(var(--dialog-width-medium), 100% - 2 * var(--dialog-margin));
+    max-width: none;
+    max-height: calc(100% - 2 * var(--dialog-margin));
+    margin: auto;
+    padding: 0;
+    overflow: hidden;
+    border: var(--dialog-border-width) solid var(--dialog-border-color);
+    border-radius: var(--dialog-radius);
+    background-color: var(--dialog-background);
+    box-shadow: var(--dialog-shadow);
+    color: var(--dialog-text-color);
+    font-family: var(--font-family-ui);
+    font-size: var(--font-size-200);
+    line-height: var(--line-height-base);
+    overflow-wrap: anywhere;
+}
+
+    .vs-dialog[open] {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .vs-dialog::backdrop {
+        background-color: var(--dialog-scrim-color);
+    }
+
+.vs-dialog--small {
+    width: min(var(--dialog-width-small), 100% - 2 * var(--dialog-margin));
+}
+
+.vs-dialog--fullscreen {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+}
+
+.vs-dialog__header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--dialog-gap);
+    padding: var(--dialog-padding) var(--dialog-padding) 0;
+}
+
+.vs-dialog__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-size: var(--dialog-title-font-size);
+    font-weight: var(--dialog-title-font-weight);
+    line-height: var(--line-height-tight);
+}
+
+.vs-dialog__close {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: var(--dialog-close-icon-size);
+    height: var(--dialog-close-icon-size);
+    margin: 0;
+    margin-block-start: calc((var(--dialog-title-font-size) * var(--line-height-tight) - var(--dialog-close-icon-size)) / 2);
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-xs);
+    background: none;
+    color: var(--dialog-close-icon-color);
+    font: inherit;
+    cursor: pointer;
+}
+
+    .vs-dialog__close::before {
+        content: "";
+        position: absolute;
+        inset-block-start: 50%;
+        inset-inline-start: 50%;
+        width: var(--touch-target-min);
+        height: var(--touch-target-min);
+        transform: translate(-50%, -50%);
+    }
+
+    .vs-dialog__close:hover {
+        color: var(--dialog-close-icon-color-hover);
+    }
+
+    .vs-dialog__close:focus-visible {
+        outline: var(--focus-ring-width) solid var(--focus-ring-color);
+        outline-offset: var(--focus-ring-offset);
+        box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+    }
+
+.vs-dialog__close-icon {
+    display: inline-flex;
+    width: 100%;
+    height: 100%;
+}
+
+    .vs-dialog__close-icon ::deep svg {
+        width: 100%;
+        height: 100%;
+    }
+
+.vs-dialog__close-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+.vs-dialog__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--dialog-gap) var(--dialog-padding) var(--dialog-padding);
+}
+
+    .vs-dialog__body:focus-visible {
+        outline: var(--focus-ring-width) solid var(--focus-ring-color);
+        outline-offset: calc(-1 * var(--focus-ring-width));
+    }
+
+.vs-dialog__content ::deep > :first-child {
+    margin-block-start: 0;
+}
+
+.vs-dialog__content ::deep > :last-child {
+    margin-block-end: 0;
+}
+
+.vs-dialog__footer {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--dialog-button-gap);
+    padding: 0 var(--dialog-padding) var(--dialog-padding);
+}
+
+@container (max-width: 24rem) {
+    .vs-dialog__footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+@media (max-height: 30em) {
+    .vs-dialog {
+        overflow-y: auto;
+    }
+
+    .vs-dialog__body {
+        flex: none;
+        overflow: visible;
+    }
+}

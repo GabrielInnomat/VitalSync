@@ -377,6 +377,46 @@
       "requirement": "non-text"
     },
     {
+      "id": "toggletip-icon-on-background",
+      "criterion": "1.4.11",
+      "description": "Info icon that is the only visible part of a help button, on the page background",
+      "foreground": "--toggletip-icon-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggletip-icon-on-card",
+      "criterion": "1.4.11",
+      "description": "Info icon that is the only visible part of a help button, inside a card",
+      "foreground": "--toggletip-icon-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggletip-icon-hover-on-background",
+      "criterion": "1.4.11",
+      "description": "Info icon of a hovered or open help button, on the page background",
+      "foreground": "--toggletip-icon-color-hover",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggletip-icon-hover-on-card",
+      "criterion": "1.4.11",
+      "description": "Info icon of a hovered or open help button, inside a card",
+      "foreground": "--toggletip-icon-color-hover",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toggletip-text-on-toggletip-background",
+      "criterion": "1.4.3",
+      "description": "Help text inside an open toggletip",
+      "foreground": "--toggletip-text-color",
+      "background": "--toggletip-background",
+      "requirement": "text-normal"
+    },
+    {
       "id": "choice-label-text-on-background",
       "criterion": "1.4.3",
       "description": "Label next to a checkbox or radio on the page background",
@@ -1243,6 +1283,607 @@
       "foreground": "--focus-ring-offset-color",
       "background": "--badge-critical-background",
       "requirement": "non-text"
+    },
+    {
+      "id": "avatar-initials-on-fill",
+      "criterion": "1.4.3",
+      "description": "Initials on an avatar without a photo",
+      "foreground": "--avatar-text-color",
+      "background": "--avatar-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "spinner-arc-on-background",
+      "criterion": "1.4.11",
+      "description": "Moving arc of a loading spinner on the page background",
+      "foreground": "--spinner-arc-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "spinner-arc-on-card",
+      "criterion": "1.4.11",
+      "description": "Moving arc of a loading spinner inside a card",
+      "foreground": "--spinner-arc-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "spinner-arc-on-track",
+      "criterion": "1.4.11",
+      "description": "Moving arc of a loading spinner against the ring it travels along",
+      "foreground": "--spinner-arc-color",
+      "background": "--spinner-track-color",
+      "requirement": "non-text"
+    },
+    {
+      "id": "spinner-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Loading text beside a spinner on the page background",
+      "foreground": "--spinner-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "spinner-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Loading text beside a spinner inside a card",
+      "foreground": "--spinner-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-info-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Title and text of an information alert on its fill",
+      "foreground": "--alert-text-color",
+      "background": "--alert-info-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-info-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Kind icon of an information alert on its fill",
+      "foreground": "--alert-info-icon-color",
+      "background": "--alert-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-info-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Border of an information alert against the page background",
+      "foreground": "--alert-info-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-info-border-on-card",
+      "criterion": "1.4.11",
+      "description": "Border of an information alert inside a card",
+      "foreground": "--alert-info-border-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-info-close-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Close icon of an information alert on its fill",
+      "foreground": "--alert-close-icon-color",
+      "background": "--alert-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-info-close-icon-hover-on-fill",
+      "criterion": "1.4.11",
+      "description": "Hovered close icon of an information alert on its fill",
+      "foreground": "--alert-close-icon-color-hover",
+      "background": "--alert-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-info-link-on-fill",
+      "criterion": "1.4.3",
+      "description": "Action link inside an information alert",
+      "foreground": "--color-action-primary",
+      "background": "--alert-info-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-info-link-hover-on-fill",
+      "criterion": "1.4.3",
+      "description": "Hovered action link inside an information alert",
+      "foreground": "--color-action-primary-hover",
+      "background": "--alert-info-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-info-secondary-button-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Label of a secondary action button inside an information alert",
+      "foreground": "--button-secondary-text",
+      "background": "--alert-info-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-info-secondary-button-border-on-fill",
+      "criterion": "1.4.11",
+      "description": "Border of a secondary action button inside an information alert",
+      "foreground": "--button-secondary-border-color",
+      "background": "--alert-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-info-primary-button-on-fill",
+      "criterion": "1.4.11",
+      "description": "Fill of a primary action button against an information alert",
+      "foreground": "--button-primary-background",
+      "background": "--alert-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-info-focus-ring-on-fill",
+      "criterion": "1.4.11",
+      "description": "Focus indicator of the action or close button inside an information alert",
+      "foreground": "--focus-ring-color",
+      "background": "--alert-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-success-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Title and text of a success alert on its fill",
+      "foreground": "--alert-text-color",
+      "background": "--alert-success-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-success-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Kind icon of a success alert on its fill",
+      "foreground": "--alert-success-icon-color",
+      "background": "--alert-success-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-success-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Border of a success alert against the page background",
+      "foreground": "--alert-success-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-success-border-on-card",
+      "criterion": "1.4.11",
+      "description": "Border of a success alert inside a card",
+      "foreground": "--alert-success-border-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-success-close-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Close icon of a success alert on its fill",
+      "foreground": "--alert-close-icon-color",
+      "background": "--alert-success-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-success-close-icon-hover-on-fill",
+      "criterion": "1.4.11",
+      "description": "Hovered close icon of a success alert on its fill",
+      "foreground": "--alert-close-icon-color-hover",
+      "background": "--alert-success-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-success-link-on-fill",
+      "criterion": "1.4.3",
+      "description": "Action link inside a success alert",
+      "foreground": "--color-action-primary",
+      "background": "--alert-success-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-success-link-hover-on-fill",
+      "criterion": "1.4.3",
+      "description": "Hovered action link inside a success alert",
+      "foreground": "--color-action-primary-hover",
+      "background": "--alert-success-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-success-secondary-button-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Label of a secondary action button inside a success alert",
+      "foreground": "--button-secondary-text",
+      "background": "--alert-success-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-success-secondary-button-border-on-fill",
+      "criterion": "1.4.11",
+      "description": "Border of a secondary action button inside a success alert",
+      "foreground": "--button-secondary-border-color",
+      "background": "--alert-success-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-success-primary-button-on-fill",
+      "criterion": "1.4.11",
+      "description": "Fill of a primary action button against a success alert",
+      "foreground": "--button-primary-background",
+      "background": "--alert-success-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-success-focus-ring-on-fill",
+      "criterion": "1.4.11",
+      "description": "Focus indicator of the action or close button inside a success alert",
+      "foreground": "--focus-ring-color",
+      "background": "--alert-success-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-warning-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Title and text of a warning alert on its fill",
+      "foreground": "--alert-text-color",
+      "background": "--alert-warning-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-warning-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Kind icon of a warning alert on its fill",
+      "foreground": "--alert-warning-icon-color",
+      "background": "--alert-warning-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-warning-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Border of a warning alert against the page background",
+      "foreground": "--alert-warning-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-warning-border-on-card",
+      "criterion": "1.4.11",
+      "description": "Border of a warning alert inside a card",
+      "foreground": "--alert-warning-border-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-warning-close-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Close icon of a warning alert on its fill",
+      "foreground": "--alert-close-icon-color",
+      "background": "--alert-warning-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-warning-close-icon-hover-on-fill",
+      "criterion": "1.4.11",
+      "description": "Hovered close icon of a warning alert on its fill",
+      "foreground": "--alert-close-icon-color-hover",
+      "background": "--alert-warning-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-warning-link-on-fill",
+      "criterion": "1.4.3",
+      "description": "Action link inside a warning alert",
+      "foreground": "--color-action-primary",
+      "background": "--alert-warning-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-warning-link-hover-on-fill",
+      "criterion": "1.4.3",
+      "description": "Hovered action link inside a warning alert",
+      "foreground": "--color-action-primary-hover",
+      "background": "--alert-warning-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-warning-secondary-button-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Label of a secondary action button inside a warning alert",
+      "foreground": "--button-secondary-text",
+      "background": "--alert-warning-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-warning-secondary-button-border-on-fill",
+      "criterion": "1.4.11",
+      "description": "Border of a secondary action button inside a warning alert",
+      "foreground": "--button-secondary-border-color",
+      "background": "--alert-warning-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-warning-primary-button-on-fill",
+      "criterion": "1.4.11",
+      "description": "Fill of a primary action button against a warning alert",
+      "foreground": "--button-primary-background",
+      "background": "--alert-warning-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-warning-focus-ring-on-fill",
+      "criterion": "1.4.11",
+      "description": "Focus indicator of the action or close button inside a warning alert",
+      "foreground": "--focus-ring-color",
+      "background": "--alert-warning-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-critical-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Title and text of an error alert on its fill",
+      "foreground": "--alert-text-color",
+      "background": "--alert-critical-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-critical-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Kind icon of an error alert on its fill",
+      "foreground": "--alert-critical-icon-color",
+      "background": "--alert-critical-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-critical-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Border of an error alert against the page background",
+      "foreground": "--alert-critical-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-critical-border-on-card",
+      "criterion": "1.4.11",
+      "description": "Border of an error alert inside a card",
+      "foreground": "--alert-critical-border-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-critical-close-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Close icon of an error alert on its fill",
+      "foreground": "--alert-close-icon-color",
+      "background": "--alert-critical-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-critical-close-icon-hover-on-fill",
+      "criterion": "1.4.11",
+      "description": "Hovered close icon of an error alert on its fill",
+      "foreground": "--alert-close-icon-color-hover",
+      "background": "--alert-critical-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-critical-link-on-fill",
+      "criterion": "1.4.3",
+      "description": "Action link inside an error alert",
+      "foreground": "--color-action-primary",
+      "background": "--alert-critical-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-critical-link-hover-on-fill",
+      "criterion": "1.4.3",
+      "description": "Hovered action link inside an error alert",
+      "foreground": "--color-action-primary-hover",
+      "background": "--alert-critical-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-critical-secondary-button-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Label of a secondary action button inside an error alert",
+      "foreground": "--button-secondary-text",
+      "background": "--alert-critical-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-critical-secondary-button-border-on-fill",
+      "criterion": "1.4.11",
+      "description": "Border of a secondary action button inside an error alert",
+      "foreground": "--button-secondary-border-color",
+      "background": "--alert-critical-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-critical-primary-button-on-fill",
+      "criterion": "1.4.11",
+      "description": "Fill of a primary action button against an error alert",
+      "foreground": "--button-primary-background",
+      "background": "--alert-critical-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-critical-focus-ring-on-fill",
+      "criterion": "1.4.11",
+      "description": "Focus indicator of the action or close button inside an error alert",
+      "foreground": "--focus-ring-color",
+      "background": "--alert-critical-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "dialog-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Title and content of a dialog",
+      "foreground": "--dialog-text-color",
+      "background": "--dialog-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "dialog-close-icon-on-background",
+      "criterion": "1.4.11",
+      "description": "X that is the only visible part of a dialog's close button",
+      "foreground": "--dialog-close-icon-color",
+      "background": "--dialog-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "dialog-close-icon-hover-on-background",
+      "criterion": "1.4.11",
+      "description": "X of a hovered close button in a dialog",
+      "foreground": "--dialog-close-icon-color-hover",
+      "background": "--dialog-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "dialog-focus-ring-on-background",
+      "criterion": "1.4.11",
+      "description": "Focus indicator of any control inside a dialog, and of its scrolling content",
+      "foreground": "--focus-ring-color",
+      "background": "--dialog-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "dialog-link-on-background",
+      "criterion": "1.4.3",
+      "description": "Link inside a dialog",
+      "foreground": "--color-action-primary",
+      "background": "--dialog-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "dialog-link-hover-on-background",
+      "criterion": "1.4.3",
+      "description": "Hovered link inside a dialog",
+      "foreground": "--color-action-primary-hover",
+      "background": "--dialog-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "dialog-secondary-button-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Label of a secondary button, such as Abbrechen, in a dialog",
+      "foreground": "--button-secondary-text",
+      "background": "--dialog-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "dialog-secondary-button-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Border of a secondary button, such as Abbrechen, in a dialog",
+      "foreground": "--button-secondary-border-color",
+      "background": "--dialog-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "dialog-primary-button-on-background",
+      "criterion": "1.4.11",
+      "description": "Fill of the main action button against a dialog",
+      "foreground": "--button-primary-background",
+      "background": "--dialog-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "dialog-critical-button-on-background",
+      "criterion": "1.4.11",
+      "description": "Fill of a destructive confirm button against a dialog",
+      "foreground": "--button-critical-background",
+      "background": "--dialog-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "dialog-input-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Border of a field in a form inside a dialog",
+      "foreground": "--input-border-color",
+      "background": "--dialog-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "dialog-choice-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Border of a checkbox or radio in a form inside a dialog",
+      "foreground": "--choice-border-color",
+      "background": "--dialog-background",
+      "requirement": "non-text"
+    }
+,
+    {
+      "id": "tabs-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Title of a tab that is not selected, on the page background",
+      "foreground": "--tabs-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "tabs-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Title of a tab that is not selected, inside a card",
+      "foreground": "--tabs-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "tabs-text-hover-on-background",
+      "criterion": "1.4.3",
+      "description": "Title of a hovered tab that is not selected, on the page background",
+      "foreground": "--tabs-text-color-hover",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "tabs-text-hover-on-card",
+      "criterion": "1.4.3",
+      "description": "Title of a hovered tab that is not selected, inside a card",
+      "foreground": "--tabs-text-color-hover",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "tabs-selected-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Title of the selected tab, on the page background",
+      "foreground": "--tabs-selected-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "tabs-selected-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Title of the selected tab, inside a card",
+      "foreground": "--tabs-selected-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "tabs-indicator-on-background",
+      "criterion": "1.4.11",
+      "description": "Bar that marks the selected tab, on the page background",
+      "foreground": "--tabs-indicator-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "tabs-indicator-on-card",
+      "criterion": "1.4.11",
+      "description": "Bar that marks the selected tab, inside a card",
+      "foreground": "--tabs-indicator-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "tabs-badge-text-on-badge-background",
+      "criterion": "1.4.3",
+      "description": "Badge text after a tab's title",
+      "foreground": "--tabs-badge-text-color",
+      "background": "--tabs-badge-background",
+      "requirement": "text-normal"
     }
   ],
   "waivers": [],
@@ -1292,11 +1933,12 @@
     },
     {
       "id": "status-text",
-      "description": "Success, warning and critical text must stay tellable apart, including under colour vision deficiency",
+      "description": "Success, warning, critical and information text must stay tellable apart, including under colour vision deficiency",
       "colors": [
         "--color-text-success",
         "--color-text-warning",
-        "--color-text-critical"
+        "--color-text-critical",
+        "--color-text-info"
       ],
       "minimumDeltaE": 16
     }
@@ -1306,13 +1948,13 @@
       "separation": "status-text",
       "theme": "light",
       "deltaE": 9.91,
-      "reason": "Warning vs critical under deuteranopia. Accepted: a status never appears by colour alone; every status badge carries its own fixed icon and a text label."
+      "reason": "Warning vs critical under deuteranopia. Accepted: a status never appears by colour alone; every status badge and every message carries its own fixed icon and a text label."
     },
     {
       "separation": "status-text",
       "theme": "dark",
       "deltaE": 9.17,
-      "reason": "Success vs critical under deuteranopia. Accepted: a status never appears by colour alone; every status badge carries its own fixed icon and a text label."
+      "reason": "Success vs critical under deuteranopia. Accepted: a status never appears by colour alone; every status badge and every message carries its own fixed icon and a text label."
     }
   ]
 }

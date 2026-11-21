@@ -1,0 +1,70 @@
+@namespace VitalSync.DesignSystem.Primitives
+@using System.Globalization
+
+<span @attributes="AdditionalAttributes"
+      class="@CssClass"
+      role="@(Decorative ? null : "img")"
+      aria-label="@(Decorative ? null : Name.Trim())"
+      aria-hidden="@(Decorative ? "true" : null)">
+    <span class="vs-avatar__initials" aria-hidden="true">@Initials</span>
+    @if (!string.IsNullOrWhiteSpace(Src))
+    {
+        <span class="vs-avatar__photo" aria-hidden="true" style="@PhotoStyle"></span>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = "";
+
+    [Parameter]
+    public string? Src { get; set; }
+
+    [Parameter]
+    public AvatarSize Size { get; set; } = AvatarSize.Medium;
+
+    [Parameter]
+    public bool Decorative { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => CssClasses.Merge(
+        $"vs-avatar vs-avatar--{Size.ToString().ToLowerInvariant()}",
+        AdditionalAttributes);
+
+    private string Initials
+    {
+        get
+        {
+            var words = Name.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            var first = StringInfo.GetNextTextElement(words[0]);
+            var initials = words.Length == 1
+                ? first
+                : first + StringInfo.GetNextTextElement(words[^1]);
+            return initials.ToUpperInvariant();
+        }
+    }
+
+    private string PhotoStyle
+    {
+        get
+        {
+            var escaped = Src!.Trim()
+                .Replace("\\", "\\\\", StringComparison.Ordinal)
+                .Replace("\"", "\\\"", StringComparison.Ordinal)
+                .Replace("\r", "\\D ", StringComparison.Ordinal)
+                .Replace("\n", "\\A ", StringComparison.Ordinal);
+            return $"background-image: url(\"{escaped}\")";
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Name))
+        {
+            throw new InvalidOperationException(
+                "Avatar requires a Name; it supplies the initials and, unless decorative, the accessible name.");
+        }
+    }
+}

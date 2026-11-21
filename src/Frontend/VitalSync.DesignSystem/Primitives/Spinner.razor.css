@@ -1,0 +1,34 @@
+.vs-spinner {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spinner-gap);
+    color: var(--spinner-text-color);
+    font-family: var(--font-family-ui);
+    line-height: var(--line-height-base);
+    vertical-align: middle;
+}
+
+.vs-spinner__ring {
+    flex-shrink: 0;
+    box-sizing: border-box;
+    inline-size: var(--spinner-size);
+    block-size: var(--spinner-size);
+    border: var(--spinner-stroke-width) solid var(--spinner-track-color);
+    border-top-color: var(--spinner-arc-color);
+    border-radius: var(--radius-full);
+    animation: vs-spinner-rotate var(--spinner-duration) linear infinite;
+}
+
+@keyframes vs-spinner-rotate {
+    to {
+        transform: rotate(1turn);
+    }
+}
+
+@media (forced-colors: active) {
+    .vs-spinner__ring {
+        forced-color-adjust: none;
+        border-color: Canvas;
+        border-top-color: CanvasText;
+    }
+}

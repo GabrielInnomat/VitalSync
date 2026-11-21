@@ -1,0 +1,122 @@
+@page "/design-system/tabs"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using VitalSync.DesignSystem.Primitives
+
+<PageTitle>Registerkarten · Design System · VitalSync</PageTitle>
+
+<h1>Registerkarten (<code>Tabs</code>, <code>Tab</code>)</h1>
+<p>
+    Registerkarten teilen eine Seite in zwei bis fünf Ansichten desselben Themas und zeigen immer
+    eine davon. Die Reihe ist ein Tab-Stopp, die Pfeiltasten wechseln sofort, Pos1 und Ende springen
+    an die Enden. Der gewählte Tab steht in der Adresse, ein Neuladen öffnet ihn wieder. Passt die
+    Reihe nicht, stapeln sich die Tabs. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    @foreach (var demo in _themes)
+    {
+        <section data-theme="@demo.Theme" class="vs-gallery__theme-panel">
+            <h2>@demo.Title</h2>
+
+            <h3>Wochenplan</h3>
+            <p>Gewählt: @(demo.Day ?? "noch nichts gemeldet")</p>
+            <Tabs Label="Wochentage" @bind-Active="demo.Day" QueryName="@($"tag-{demo.Theme}")">
+                @foreach (var (key, title, meals) in Week)
+                {
+                    <Tab Key="@key" Title="@title">
+                        <p>@meals</p>
+                        <Form Model="demo.Notes[key]">
+                            <VitalSync.DesignSystem.Primitives.Input TValue="string" @bind-Value="demo.Notes[key].Text" Label="Notiz" HelperText="Bleibt beim Wechseln erhalten." />
+                        </Form>
+                    </Tab>
+                }
+            </Tabs>
+
+            <h3>Mit Icon und Badge</h3>
+            <Tabs Label="Einkauf und Rezepte" QueryName="@($"ansicht-{demo.Theme}")">
+                <Tab Key="einkauf" Title="Einkaufsliste" Badge="3" BadgeDescription="offen">
+                    <Icon><SystemIcon Name="SystemIconName.CheckCircle" /></Icon>
+                    <ChildContent>
+                        <ul>
+                            <li>Haferflocken</li>
+                            <li>Heidelbeeren</li>
+                            <li>Linsen</li>
+                        </ul>
+                    </ChildContent>
+                </Tab>
+                <Tab Key="rezepte" Title="Rezepte" Badge="Neu">
+                    <Icon><SystemIcon Name="SystemIconName.Tag" /></Icon>
+                    <ChildContent>
+                        <p>Linsensuppe mit Karotten.</p>
+                    </ChildContent>
+                </Tab>
+                <Tab Key="hinweise" Title="Hinweise">
+                    <Icon><SystemIcon Name="SystemIconName.Info" /></Icon>
+                    <ChildContent>
+                        <p>Alle Werte sind Schätzungen.</p>
+                    </ChildContent>
+                </Tab>
+            </Tabs>
+
+            <h3>Wenig Platz</h3>
+            <div class="vs-gallery__narrow">
+                <Tabs Label="Auswertung" QueryName="@($"auswertung-{demo.Theme}")">
+                    <Tab Key="energie" Title="Energie"><p>2100 kcal im Schnitt.</p></Tab>
+                    <Tab Key="naehrstoffe" Title="Nährstoffe"><p>Eiweiss im Ziel.</p></Tab>
+                    <Tab Key="training" Title="Training"><p>Drei Einheiten.</p></Tab>
+                    <Tab Key="schlaf" Title="Schlaf"><p>Sieben Stunden.</p></Tab>
+                </Tabs>
+            </div>
+        </section>
+    }
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;Tabs Label="Wochentage" @@bind-Active="day"&gt;
+    &lt;Tab Key="mo" Title="Montag"&gt;…&lt;/Tab&gt;
+    &lt;Tab Key="di" Title="Dienstag"&gt;…&lt;/Tab&gt;
+&lt;/Tabs&gt;
+
+&lt;Tabs Label="Einkauf und Rezepte" QueryName="ansicht"&gt;
+    &lt;Tab Key="einkauf" Title="Einkaufsliste" Badge="3" BadgeDescription="offen"&gt;
+        &lt;Icon&gt;&lt;SystemIcon Name="SystemIconName.CheckCircle" /&gt;&lt;/Icon&gt;
+        &lt;ChildContent&gt;…&lt;/ChildContent&gt;
+    &lt;/Tab&gt;
+    &lt;Tab Key="rezepte" Title="Rezepte"&gt;…&lt;/Tab&gt;
+&lt;/Tabs&gt;
+</code></pre>
+
+@code {
+    private static readonly (string Key, string Title, string Meals)[] Week =
+    [
+        ("mo", "Montag", "Haferflocken mit Beeren, Linsensuppe, Gemüsepfanne."),
+        ("di", "Dienstag", "Joghurt mit Nüssen, Vollkornbrot mit Hummus, Lachs mit Kartoffeln."),
+        ("mi", "Mittwoch", "Rührei, Quinoasalat, Kichererbsencurry."),
+        ("do", "Donnerstag", "Porridge, Linsensalat, Ofengemüse."),
+        ("fr", "Freitag", "Müsli, Tomatensuppe, Pizza mit Gemüse."),
+    ];
+
+    private readonly ThemeDemo[] _themes =
+    [
+        new("light", "Hell"),
+        new("dark", "Dunkel"),
+    ];
+
+    private sealed class ThemeDemo(string theme, string title)
+    {
+        public string Theme { get; } = theme;
+
+        public string Title { get; } = title;
+
+        public string? Day { get; set; }
+
+        public Dictionary<string, Note> Notes { get; } = Week.ToDictionary(day => day.Key, _ => new Note());
+    }
+
+    private sealed class Note
+    {
+        public string? Text { get; set; }
+    }
+}

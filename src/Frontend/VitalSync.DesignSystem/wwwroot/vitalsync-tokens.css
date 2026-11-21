@@ -23,15 +23,24 @@
   --blue-600: #2563EB;
   --blue-700: #1D4ED8;
 
+  --sky-50:  #F0F9FF;
+  --sky-400: #38BDF8;
+  --sky-700: #0369A1;
+  --sky-950: #082F49;
+
+  --green-50:  #F0FDF4;
   --green-400: #4ADE80;
   /* ungenutzt: verfehlt 3:1 auf der Card */
   --green-600: #16A34A;
   --green-700: #15803D;
+  --green-950: #052E16;
 
+  --amber-50:  #FFFBEB;
   --amber-400: #FBBF24;
   /* ungenutzt: verfehlt 3:1 auf der Card */
   --amber-600: #D97706;
   --amber-700: #B45309;
+  --amber-950: #451A03;
 
   --red-50:  #FEF2F2;
   --red-400: #F87171;
@@ -88,6 +97,7 @@
 
   --motion-duration-fast: 120ms;
   --motion-duration-base: 200ms;
+  --motion-duration-spin: 1000ms;
   --motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
 
   --radius-xs: 0.25rem;
@@ -164,15 +174,29 @@
   --color-text-success: var(--green-700);
   --color-text-warning: var(--amber-700);
   --color-text-critical: var(--red-700);
+  --color-text-info: var(--sky-700);
 
   --color-surface-success: var(--green-700);
   --color-surface-warning: var(--amber-700);
   --color-surface-critical: var(--red-700);
   --color-surface-neutral: var(--neutral-700);
+  --color-surface-neutral-subtle: var(--neutral-200);
 
   --color-surface-critical-subtle: var(--red-50);
   --color-border-critical: var(--red-600);
   --color-icon-critical: var(--red-600);
+
+  --color-surface-info-subtle: var(--sky-50);
+  --color-border-info: var(--sky-700);
+  --color-icon-info: var(--sky-700);
+
+  --color-surface-success-subtle: var(--green-50);
+  --color-border-success: var(--green-700);
+  --color-icon-success: var(--green-700);
+
+  --color-surface-warning-subtle: var(--amber-50);
+  --color-border-warning: var(--amber-700);
+  --color-icon-warning: var(--amber-700);
 
   /* Bewusst eigener Wert statt weiterer Abdunkelung von red-700, siehe docs/design-system.md */
   --color-surface-critical-hover: var(--red-800);
@@ -192,6 +216,8 @@
 
   /* trennt das Feld NICHT von der Card, das leistet --color-border-interactive */
   --color-background-input: #FFFFFF;
+
+  --color-scrim: color-mix(in srgb, var(--neutral-950) calc(var(--opacity-scrim) * 100%), transparent);
 }
 
 [data-theme="dark"] {
@@ -216,6 +242,7 @@
   --color-text-success: var(--green-400);
   --color-text-warning: var(--amber-400);
   --color-text-critical: var(--red-400);
+  --color-text-info: var(--sky-400);
 
   --color-text-on-action: var(--neutral-900);
 
@@ -223,10 +250,23 @@
   --color-surface-warning: var(--amber-400);
   --color-surface-critical: var(--red-400);
   --color-surface-neutral: var(--neutral-400);
+  --color-surface-neutral-subtle: var(--neutral-700);
 
   --color-surface-critical-subtle: var(--red-950);
   --color-border-critical: var(--red-400);
   --color-icon-critical: var(--red-400);
+
+  --color-surface-info-subtle: var(--sky-950);
+  --color-border-info: var(--sky-400);
+  --color-icon-info: var(--sky-400);
+
+  --color-surface-success-subtle: var(--green-950);
+  --color-border-success: var(--green-400);
+  --color-icon-success: var(--green-400);
+
+  --color-surface-warning-subtle: var(--amber-950);
+  --color-border-warning: var(--amber-400);
+  --color-icon-warning: var(--amber-400);
 
   --color-surface-critical-hover: var(--red-500);
 
@@ -242,7 +282,7 @@
 
   --color-background-elevated-1: var(--neutral-800);
   --color-background-elevated-2: #24304a;
-  --color-background-elevated-3: #2c3a58;
+  --color-background-elevated-3: #2a3755;
 
   --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.40), 0 1px 2px rgba(0, 0, 0, 0.30);
   --shadow-2: 0 4px 8px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.30);
@@ -255,6 +295,8 @@
     /* nicht 0ms: dann feuert transitionend in manchen Browsern nicht */
     --motion-duration-fast: 0.01ms;
     --motion-duration-base: 0.01ms;
+    /* länger statt kürzer: eine Endlosdrehung mit 0.01ms würde rasen statt ruhen */
+    --motion-duration-spin: 3000ms;
   }
 }
 
@@ -383,6 +425,19 @@
   --select-icon-color: var(--color-text-primary);
   --select-icon-color-disabled: var(--color-text-disabled);
 
+  --toggletip-icon-size: var(--icon-size-md);
+  --toggletip-icon-color: var(--color-text-secondary);
+  --toggletip-icon-color-hover: var(--color-text-primary);
+  --toggletip-background: var(--color-background-elevated-2);
+  --toggletip-text-color: var(--color-text-primary);
+  --toggletip-border: var(--border-width-thin) solid var(--color-border-default);
+  --toggletip-radius: var(--radius-sm);
+  --toggletip-padding: var(--space-3);
+  --toggletip-shadow: var(--shadow-2);
+  --toggletip-max-width: 20rem;
+  --toggletip-offset: var(--space-1);
+  --toggletip-spacing: var(--space-3);
+
   --form-legend-text-color: var(--color-text-secondary);
   --form-summary-text-color: var(--color-text-primary);
   --form-summary-link-color: var(--color-action-primary);
@@ -413,4 +468,92 @@
 
   --badge-critical-background: var(--color-surface-critical);
   --badge-critical-text: var(--color-text-on-action);
+
+  --avatar-size-small: 2rem;
+  --avatar-size-medium: 2.5rem;
+  --avatar-size-large: 4rem;
+  --avatar-font-size-small: var(--font-size-100);
+  --avatar-font-size-medium: var(--font-size-200);
+  --avatar-font-size-large: var(--font-size-400);
+  --avatar-font-weight: var(--font-weight-semibold);
+  --avatar-radius: var(--radius-full);
+  --avatar-background: var(--color-surface-neutral-subtle);
+  --avatar-text-color: var(--color-text-primary);
+
+  --spinner-size: var(--icon-size-lg);
+  --spinner-stroke-width: var(--border-width-thick);
+  --spinner-arc-color: var(--color-text-secondary);
+  --spinner-track-color: var(--color-border-subtle);
+  --spinner-text-color: var(--color-text-secondary);
+  --spinner-gap: var(--space-2);
+  --spinner-duration: var(--motion-duration-spin);
+
+  --alert-padding: var(--space-4);
+  --alert-gap: var(--space-3);
+  --alert-content-gap: var(--space-1);
+  --alert-action-spacing: var(--space-2);
+  --alert-radius: var(--radius-sm);
+  --alert-border-width: var(--border-width-thin);
+  --alert-icon-size: var(--icon-size-md);
+  --alert-text-color: var(--color-text-primary);
+  --alert-title-font-weight: var(--font-weight-semibold);
+  --alert-close-icon-size: var(--icon-size-md);
+  --alert-close-icon-color: var(--color-text-secondary);
+  --alert-close-icon-color-hover: var(--color-text-primary);
+
+  --alert-info-background: var(--color-surface-info-subtle);
+  --alert-info-border-color: var(--color-border-info);
+  --alert-info-icon-color: var(--color-icon-info);
+
+  --alert-success-background: var(--color-surface-success-subtle);
+  --alert-success-border-color: var(--color-border-success);
+  --alert-success-icon-color: var(--color-icon-success);
+
+  --alert-warning-background: var(--color-surface-warning-subtle);
+  --alert-warning-border-color: var(--color-border-warning);
+  --alert-warning-icon-color: var(--color-icon-warning);
+
+  --alert-critical-background: var(--color-surface-critical-subtle);
+  --alert-critical-border-color: var(--color-border-critical);
+  --alert-critical-icon-color: var(--color-icon-critical);
+
+  --dialog-background: var(--color-background-elevated-3);
+  --dialog-text-color: var(--color-text-primary);
+  --dialog-border-width: var(--border-width-thin);
+  --dialog-border-color: var(--color-border-default);
+  --dialog-radius: var(--radius-lg);
+  --dialog-shadow: var(--shadow-4);
+  --dialog-scrim-color: var(--color-scrim);
+  --dialog-padding: var(--space-6);
+  --dialog-gap: var(--space-4);
+  --dialog-button-gap: var(--space-3);
+  --dialog-margin: var(--space-4);
+  --dialog-width-small: 25rem;
+  --dialog-width-medium: 40rem;
+  --dialog-title-font-size: var(--font-size-300);
+  --dialog-title-font-weight: var(--font-weight-semibold);
+  --dialog-close-icon-size: var(--icon-size-md);
+  --dialog-close-icon-color: var(--color-text-secondary);
+  --dialog-close-icon-color-hover: var(--color-text-primary);
+
+  --tabs-min-height: var(--touch-target-min);
+  --tabs-padding-inline: var(--space-4);
+  --tabs-gap: var(--space-2);
+  --tabs-icon-size: var(--icon-size-md);
+  --tabs-font-weight: var(--font-weight-regular);
+  --tabs-selected-font-weight: var(--font-weight-semibold);
+  --tabs-text-color: var(--color-text-secondary);
+  --tabs-text-color-hover: var(--color-text-primary);
+  --tabs-selected-text-color: var(--color-action-primary);
+  --tabs-indicator-color: var(--color-action-primary);
+  --tabs-indicator-width: var(--space-1);
+  --tabs-divider-color: var(--color-border-default);
+  --tabs-divider-width: var(--border-width-thin);
+  --tabs-badge-background: var(--color-surface-neutral-subtle);
+  --tabs-badge-text-color: var(--color-text-primary);
+  --tabs-badge-font-size: var(--font-size-100);
+  --tabs-badge-font-weight: var(--font-weight-semibold);
+  --tabs-badge-padding-inline: var(--space-2);
+  --tabs-badge-radius: var(--radius-full);
+  --tabs-panel-spacing: var(--space-4);
 }

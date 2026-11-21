@@ -288,4 +288,17 @@ public sealed class RadioGroupTests : BunitContext
                 ((ElementReference)call.Arguments[0]!).Id);
         });
     }
+
+    [Fact]
+    public void Names_the_group_by_its_label_alone_when_Info_puts_a_help_button_into_the_legend()
+    {
+        var (editContext, model) = CreateEditContext();
+
+        var cut = RenderGroup(editContext, model, parameters => parameters.Add(p => p.Info, "Wie viel du dich im Alltag bewegst."));
+
+        var name = cut.Find($"#{cut.Find("fieldset").GetAttribute("aria-labelledby")}");
+        Assert.Equal("Aktivitätsniveau", name.TextContent.Trim());
+        Assert.Empty(name.QuerySelectorAll("button"));
+        Assert.Single(cut.FindAll("fieldset > legend .vs-toggletip__button"));
+    }
 }

@@ -189,4 +189,19 @@ public sealed class CheckboxTests : BunitContext
 
         Assert.Equal("* = Pflichtfeld", cut.Find(".vs-form__legend").TextContent);
     }
+
+    [Fact]
+    public void Keeps_the_help_button_outside_the_label_and_usable_when_the_checkbox_is_disabled()
+    {
+        var (editContext, model) = CreateEditContext();
+
+        var cut = RenderCheckbox(editContext, model, parameters => parameters
+            .Add(p => p.Info, "Du kannst sie jederzeit widerrufen.")
+            .Add(p => p.Disabled, true));
+
+        var button = cut.Find(".vs-toggletip__button");
+        Assert.Empty(cut.Find("label").QuerySelectorAll("button"));
+        Assert.False(button.HasAttribute("disabled"));
+        Assert.Equal("Hilfe zu Datenschutz akzeptiert", cut.Find(".vs-toggletip__name").TextContent);
+    }
 }

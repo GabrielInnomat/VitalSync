@@ -1,0 +1,86 @@
+@page "/design-system/spinner"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using VitalSync.DesignSystem.Primitives
+
+<PageTitle>Ladeanzeige · Design System · VitalSync</PageTitle>
+
+<h1>Ladeanzeige (<code>Spinner</code>)</h1>
+<p>
+    <code>Spinner</code> zeigt, dass etwas lädt: ein drehender Ring und immer ein sichtbarer Text,
+    standardmässig „Wird geladen …“. Der Text wird als Status angesagt, der Ring ist für
+    Screenreader ausgeblendet. Ist „weniger Bewegung“ eingestellt, dreht der Ring langsamer statt
+    stillzustehen. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    <section data-theme="light" class="vs-gallery__theme-panel">
+        <h2>Hell</h2>
+        @renderStates()
+    </section>
+    <section data-theme="dark" class="vs-gallery__theme-panel">
+        <h2>Dunkel</h2>
+        @renderStates()
+    </section>
+</div>
+
+<h2>Beim Laden eingefügt</h2>
+<p>
+    So erscheint der Spinner im echten Einsatz: erst wenn das Laden beginnt. Hier lässt sich prüfen,
+    ob ein Screenreader den Text beim Einfügen ansagt.
+</p>
+<div class="vs-spinner-gallery__demo">
+    <Button Variant="ButtonVariant.Secondary" OnClick="LoadAsync">Laden starten</Button>
+    @if (isLoading)
+    {
+        <Spinner Label="Rezepte werden geladen …" />
+    }
+    else if (hasLoaded)
+    {
+        <p>Rezepte geladen.</p>
+    }
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;Spinner /&gt;
+&lt;Spinner Label="Rezepte werden geladen …" /&gt;
+</code></pre>
+
+@code {
+    private bool isLoading;
+    private bool hasLoaded;
+
+    private async Task LoadAsync()
+    {
+        if (isLoading)
+        {
+            return;
+        }
+
+        isLoading = true;
+        hasLoaded = false;
+        await Task.Delay(TimeSpan.FromSeconds(4));
+        isLoading = false;
+        hasLoaded = true;
+    }
+
+    private static RenderFragment renderStates() => @<text>
+        <h3>Standard</h3>
+        <div class="vs-gallery__row">
+            <Spinner />
+        </div>
+        <h3>Eigener Text</h3>
+        <div class="vs-gallery__row">
+            <Spinner Label="Trainingsplan wird geladen …" />
+        </div>
+        <h3>In einer Karte</h3>
+        <div class="vs-spinner-gallery__card">
+            <Spinner />
+        </div>
+        <h3>Langer Text bei wenig Platz</h3>
+        <div class="vs-spinner-gallery__narrow">
+            <Spinner Label="Die Nährwerte aller Mahlzeiten dieser Woche werden berechnet …" />
+        </div>
+    </text>;
+}

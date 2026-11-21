@@ -6,17 +6,23 @@
 @using System.Globalization
 
 <div class="vs-input">
-    <label for="@_inputId" class="vs-input__label">
-        @if (LabelIcon is not null)
+    <div class="vs-input__label-row">
+        <label for="@_inputId" class="vs-input__label">
+            @if (LabelIcon is not null)
+            {
+                <span class="vs-input__label-icon" aria-hidden="true">@LabelIcon</span>
+            }
+            @Label
+            @if (Required)
+            {
+                <span class="vs-input__required-marker" aria-hidden="true">*</span>
+            }
+        </label>
+        @if (!string.IsNullOrWhiteSpace(Info))
         {
-            <span class="vs-input__label-icon" aria-hidden="true">@LabelIcon</span>
+            <Toggletip Subject="@Label" Text="@Info" />
         }
-        @Label
-        @if (Required)
-        {
-            <span class="vs-input__required-marker" aria-hidden="true">*</span>
-        }
-    </label>
+    </div>
 
     <div class="vs-input__field @(HasError ? "vs-input__field--error" : null) @(Disabled ? "vs-input__field--disabled" : null)">
         @if (Prefix is not null)
@@ -90,6 +96,9 @@
 
     [Parameter]
     public string? HelperText { get; set; }
+
+    [Parameter]
+    public string? Info { get; set; }
 
     [Parameter]
     public string? Placeholder { get; set; }

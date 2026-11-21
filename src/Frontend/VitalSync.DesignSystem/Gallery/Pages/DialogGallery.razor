@@ -1,0 +1,260 @@
+@page "/design-system/dialog"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using VitalSync.DesignSystem.Primitives
+
+<PageTitle>Dialog · Design System · VitalSync</PageTitle>
+
+<h1>Dialog (<code>Dialog</code>, <code>ConfirmDialog</code>)</h1>
+<p>
+    Ein Dialog liegt über der Seite und sperrt sie, bis er geschlossen ist. <code>Dialog</code> hat
+    immer ein X und auf Wunsch „Abbrechen"; <code>ConfirmDialog</code> fragt nach einer
+    Bestätigung und hat nur „Abbrechen" und die eine Aktion. Escape bricht immer ab, ein Klick auf
+    den Hintergrund nie. Der Fokus springt beim Öffnen fest auf das erste Feld oder auf „Abbrechen"
+    und kehrt beim Schliessen zurück. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    @foreach (var demo in _themes)
+    {
+        <section data-theme="@demo.Theme" class="vs-gallery__theme-panel">
+            <h2>@demo.Title</h2>
+
+            <h3>Formular</h3>
+            <p>Menge: @demo.SavedGrams g. Wer etwas ändert und dann abbricht, wird gefragt, ob die Änderung verworfen werden soll.</p>
+            <div class="vs-gallery__row">
+                <Button Variant="ButtonVariant.Secondary" OnClick="demo.StartEdit">Mahlzeit bearbeiten</Button>
+            </div>
+
+            <h3 @ref="demo.ListHeading" tabindex="-1">Bestätigung mit Zielfokus</h3>
+            @if (demo.MealDeleted)
+            {
+                <p>Keine Mahlzeit geplant.</p>
+                <div class="vs-gallery__row">
+                    <Button Variant="ButtonVariant.Secondary" OnClick="demo.Restore">Wiederherstellen</Button>
+                </div>
+            }
+            else
+            {
+                <p>Haferflocken mit Beeren, Frühstück am Montag.</p>
+                <div class="vs-gallery__row">
+                    <Button Variant="ButtonVariant.Critical" OnClick="demo.AskDelete">Mahlzeit löschen</Button>
+                </div>
+            }
+
+            <h3>Langer Text ohne Felder</h3>
+            <div class="vs-gallery__row">
+                <Button Variant="ButtonVariant.Secondary" OnClick="demo.ShowNotes">Berechnung erklären</Button>
+            </div>
+
+            <h3>Vollbild</h3>
+            <div class="vs-gallery__row">
+                <Button Variant="ButtonVariant.Secondary" OnClick="demo.ShowPlan">Wochenplan ansehen</Button>
+            </div>
+
+            <Dialog Open="demo.EditOpen" Title="Mahlzeit bearbeiten" CancelButton="true" OnClose="demo.RequestCloseEdit">
+                <ChildContent>
+                    <Form Model="demo.Draft" OnValidSubmit="demo.Save" id="@demo.FormId">
+                        <DataAnnotationsValidator />
+                        <VitalSync.DesignSystem.Primitives.Input TValue="int?" @bind-Value="demo.Draft.Grams" Label="Menge" Type="number" Required="true" HelperText="Zwischen 1 und 2000 Gramm.">
+                            <Suffix>g</Suffix>
+                        </VitalSync.DesignSystem.Primitives.Input>
+                    </Form>
+                </ChildContent>
+                <Actions>
+                    <Button Variant="ButtonVariant.Primary" Type="submit" form="@demo.FormId">Speichern</Button>
+                </Actions>
+            </Dialog>
+
+            <ConfirmDialog Open="demo.DiscardOpen"
+                           Title="Änderungen verwerfen?"
+                           ConfirmLabel="Verwerfen"
+                           ConfirmVariant="ButtonVariant.Critical"
+                           OnConfirm="demo.Discard"
+                           OnCancel="demo.KeepEditing">
+                Die geänderte Menge wird nicht gespeichert.
+            </ConfirmDialog>
+
+            <ConfirmDialog Open="demo.DeleteOpen"
+                           Title="Mahlzeit löschen?"
+                           ConfirmLabel="Löschen"
+                           ConfirmVariant="ButtonVariant.Critical"
+                           OnConfirm="demo.Delete"
+                           OnCancel="demo.KeepMeal"
+                           CloseFocusTarget="@(demo.MealDeleted ? () => demo.ListHeading : null)">
+                „Haferflocken mit Beeren" wird aus dem Plan für Montag entfernt.
+            </ConfirmDialog>
+
+            <Dialog Open="demo.NotesOpen" Title="Wie Nährwerte berechnet werden" OnClose="demo.HideNotes">
+                <p>
+                    VitalSync rechnet jede Mahlzeit aus ihren Zutaten zusammen. Für jede Zutat ist
+                    hinterlegt, wie viel Energie, Eiweiss, Fett, Kohlenhydrate und Ballaststoffe in
+                    hundert Gramm stecken.
+                </p>
+                <p>
+                    Die Menge, die du in einem Rezept angibst, wird mit diesen Werten verrechnet. Wer
+                    eine Portion halbiert, sieht also auch nur die Hälfte der Nährwerte.
+                </p>
+                <p>
+                    Beim Kochen verändern sich manche Zutaten. Nudeln nehmen Wasser auf, Fleisch
+                    verliert welches. VitalSync rechnet deshalb immer mit dem Gewicht vor dem Kochen,
+                    so wie es auf der Verpackung steht.
+                </p>
+                <p>
+                    Vitamine und Mineralstoffe werden auf dieselbe Weise berechnet. Wo für eine Zutat
+                    kein Wert bekannt ist, fehlt er auch in der Summe; die Übersicht zeigt das an,
+                    statt eine Null anzunehmen.
+                </p>
+                <p>
+                    Der Tagesbedarf richtet sich nach den Angaben in deinem Profil. Ändern sich
+                    Gewicht oder Aktivität, passt VitalSync die Ziele beim nächsten Öffnen an.
+                </p>
+                <p>
+                    Trainings aus dem Bereich Fitness fliessen in den Energiebedarf ein. Ein langer
+                    Lauf erhöht das Tagesziel, ein Ruhetag senkt es wieder auf den Grundbedarf.
+                </p>
+                <p>
+                    Alle Werte sind Schätzungen. Sie helfen, Muster zu erkennen, ersetzen aber keine
+                    Beratung durch eine Fachperson.
+                </p>
+                <p>
+                    Wer eine Zutat selbst erfasst, kann ihre Werte jederzeit korrigieren. Die
+                    Änderung gilt ab sofort für alle Rezepte, in denen die Zutat vorkommt.
+                </p>
+            </Dialog>
+
+            <Dialog Open="demo.PlanOpen" Title="Wochenplan" Fullscreen="true" CancelButton="true" OnClose="demo.HidePlan">
+                <ChildContent>
+                    <ul>
+                        <li>Montag: Haferflocken mit Beeren, Linsensuppe, Gemüsepfanne</li>
+                        <li>Dienstag: Joghurt mit Nüssen, Vollkornbrot mit Hummus, Lachs mit Kartoffeln</li>
+                        <li>Mittwoch: Rührei, Quinoasalat, Kichererbsencurry</li>
+                    </ul>
+                </ChildContent>
+                <Actions>
+                    <Button Variant="ButtonVariant.Primary" OnClick="demo.HidePlan">Übernehmen</Button>
+                </Actions>
+            </Dialog>
+        </section>
+    }
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;Dialog Open="editOpen" Title="Mahlzeit bearbeiten" CancelButton="true" OnClose="RequestClose"&gt;
+    &lt;ChildContent&gt;
+        &lt;Form Model="draft" OnValidSubmit="Save" id="meal-form"&gt;
+            &lt;Input @@bind-Value="draft.Grams" Label="Menge" Type="number" Required="true" /&gt;
+        &lt;/Form&gt;
+    &lt;/ChildContent&gt;
+    &lt;Actions&gt;
+        &lt;Button Variant="ButtonVariant.Primary" Type="submit" form="meal-form"&gt;Speichern&lt;/Button&gt;
+    &lt;/Actions&gt;
+&lt;/Dialog&gt;
+
+&lt;ConfirmDialog Open="deleteOpen"
+               Title="Mahlzeit löschen?"
+               ConfirmLabel="Löschen"
+               ConfirmVariant="ButtonVariant.Critical"
+               OnConfirm="Delete"
+               OnCancel="() =&gt; deleteOpen = false"
+               CloseFocusTarget="() =&gt; listHeading"&gt;
+    „Haferflocken mit Beeren" wird aus dem Plan für Montag entfernt.
+&lt;/ConfirmDialog&gt;
+</code></pre>
+
+@code {
+    private readonly ThemeDemo[] _themes =
+    [
+        new("light", "Hell"),
+        new("dark", "Dunkel"),
+    ];
+
+    private sealed class ThemeDemo(string theme, string title)
+    {
+        public string Theme { get; } = theme;
+
+        public string Title { get; } = title;
+
+        public string FormId { get; } = $"vs-dialog-gallery-form-{theme}";
+
+        public MealDraft Draft { get; private set; } = new();
+
+        public int SavedGrams { get; private set; } = 150;
+
+        public bool EditOpen { get; private set; }
+
+        public bool DiscardOpen { get; private set; }
+
+        public bool DeleteOpen { get; private set; }
+
+        public bool MealDeleted { get; private set; }
+
+        public bool NotesOpen { get; private set; }
+
+        public bool PlanOpen { get; private set; }
+
+        public ElementReference ListHeading { get; set; }
+
+        public void StartEdit()
+        {
+            Draft = new MealDraft { Grams = SavedGrams };
+            EditOpen = true;
+        }
+
+        public void RequestCloseEdit()
+        {
+            if (Draft.Grams == SavedGrams)
+            {
+                EditOpen = false;
+            }
+            else
+            {
+                DiscardOpen = true;
+            }
+        }
+
+        public void Save()
+        {
+            SavedGrams = Draft.Grams ?? SavedGrams;
+            EditOpen = false;
+        }
+
+        public void Discard()
+        {
+            DiscardOpen = false;
+            EditOpen = false;
+        }
+
+        public void KeepEditing() => DiscardOpen = false;
+
+        public void AskDelete() => DeleteOpen = true;
+
+        public void Delete()
+        {
+            MealDeleted = true;
+            DeleteOpen = false;
+        }
+
+        public void KeepMeal() => DeleteOpen = false;
+
+        public void Restore() => MealDeleted = false;
+
+        public void ShowNotes() => NotesOpen = true;
+
+        public void HideNotes() => NotesOpen = false;
+
+        public void ShowPlan() => PlanOpen = true;
+
+        public void HidePlan() => PlanOpen = false;
+    }
+
+    private sealed class MealDraft
+    {
+        [Required(ErrorMessage = "Gib eine Menge ein.")]
+        [Range(1, 2000, ErrorMessage = "Gib eine Menge zwischen 1 und 2000 Gramm ein.")]
+        public int? Grams { get; set; }
+    }
+}

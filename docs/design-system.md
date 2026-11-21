@@ -145,7 +145,8 @@ That distinction is not academic: the first version of this palette was verified
 reported 16.0, and actually delivered 15.52. The check in the tool found it.
 
 **Status colours get the same separation check, and do not pass it.** `--color-text-success`,
-`-warning` and `-critical` are individually contrast-checked already, but not against each other.
+`-warning`, `-critical` and `-info` are individually contrast-checked already, but not against each
+other.
 They rarely sit side by side — except in a legend or a table column, where they do. The rule
 `status-text` measures them with the same method as the data-visualisation palette: paired ΔE under
 normal vision and the three colour vision deficiencies, against a minimum of 16. It applies to the
@@ -155,7 +156,8 @@ card and were never meant to carry the distinction.
 The measured values fall short: ΔE 9.91 in light (warning against critical) and 9.17 in dark
 (success against critical), both under deuteranopia. The shortfall is accepted and recorded as a
 waiver in both themes, because a status in this system never appears by colour alone — every status
-badge carries its own fixed icon and a text label, which is what 1.4.1 asks for. The waiver keeps
+badge and every message carries its own fixed icon and a text label, which is what 1.4.1 asks for.
+The information colour, added with [`Alert`](#alert), did not lower either value. The waiver keeps
 the gap from widening unnoticed; a colour change that makes it worse fails the check.
 
 ## Icons
@@ -184,19 +186,23 @@ rendered by one component, `SystemIcon`, selected by the `SystemIconName` enum. 
 licence travels with them in `Icons/PHOSPHOR-LICENSE.txt`. An icon is added by adding its path
 from Phosphor's Fill set and a name to the enum — never by drawing a lookalike by hand.
 
-**One exception: the bare check mark.** Phosphor's Fill weight has no free-standing check — its
-filled "check" is a square with the tick knocked out of it, which inside a checkbox would draw a box
-within a box. The check mark in `Checkbox`, and on a switched-on `Toggle`, therefore comes from
-Phosphor's **Bold** weight, the
-closest in stroke mass to Fill. It is the only icon outside the Fill set; any further exception
-needs the same reason: Fill has no shape that works in that place. The dot of a selected radio
-button needs no exception: it is Phosphor's Fill circle.
+**Two exceptions: the bare check mark and the bare X.** Phosphor's Fill weight has no free-standing
+check — its filled "check" is a square with the tick knocked out of it, which inside a checkbox would
+draw a box within a box. The check mark in `Checkbox`, and on a switched-on `Toggle`, therefore
+comes from Phosphor's **Bold** weight, the closest in stroke mass to Fill. The X that closes a
+message or a dialog has the same problem: Fill's X sits in a square, and the X in a circle is already taken by
+the error mark, so a close button drawn with it would read as an error. It too comes from Bold.
+These are the only icons outside the Fill set; any further exception needs the same reason: Fill has
+no shape that works in that place. The dot of a selected radio button needs no exception: it is
+Phosphor's Fill circle.
 
 `SystemIcon` renders an `<svg>` with `fill="currentColor"`, `aria-hidden="true"` and
 `focusable="false"`, sized to fill its container. The container decides the size through its own
 component token and the colour through `color`, so the icon inherits whatever the surrounding text
 has already been verified against. An icon is always decorative: the meaning is in the text next to
-it.
+it. The icons with no visible text beside them, the info icon of [`Toggletip`](#toggletip) and
+the X that closes a [message](#messages) or a [dialog](#dialog), are no exception to this: their buttons are named by
+visually hidden text, and the icon stays `aria-hidden`.
 
 ## Conventions no token can enforce
 
@@ -216,10 +222,12 @@ it.
   there is no room for a third perceptible step. `--color-background-elevated-2` and `-3` are
   deliberately equal, and the dropdown/modal distinction is carried by the shadow alone.
 - **Every transition and animation duration references a motion token.** The reduced-motion
-  fallback only reaches durations that go through `--motion-duration-fast` or `-base`; a hard-coded
-  `300ms` in a component stylesheet is invisible to it. The fallback uses `0.01ms` rather than `0ms`
-  because `transitionend` does not fire at exactly zero in several browsers, which would strand
-  logic that waits for it — for the very users who asked for reduced motion.
+  fallback only reaches durations that go through a motion token; a hard-coded `300ms` in a
+  component stylesheet is invisible to it. For transitions, `--motion-duration-fast` and `-base`
+  drop to `0.01ms` rather than `0ms`, because `transitionend` does not fire at exactly zero in
+  several browsers, which would strand logic that waits for it — for the very users who asked for
+  reduced motion. A looping animation goes the other way: `--motion-duration-spin` grows from one
+  to three seconds, because a loop shortened to almost nothing does not stop, it races.
 - **A filled surface needs its own colour for the label on it.** `--color-text-on-action` does this
   for the button. The value of a fill says nothing about what is readable on top of it.
 
@@ -276,7 +284,9 @@ filled with, `--color-surface-critical`; there is no separate `Danger`. `Primary
 
 **A label is mandatory once there is an icon.** `Icon` is an optional, decorative `RenderFragment`
 rendered before the label and `aria-hidden`. An `Icon` without `ChildContent` throws: an icon-only
-button has no visible name, and the same rule holds for `Input`'s label and `Badge`'s text.
+button has no visible name, and the same rule holds for `Input`'s label and `Badge`'s text. The
+system has three icon-only buttons, the help button of [`Toggletip`](#toggletip) and the close
+buttons of the [messages](#messages) and the [dialog](#dialog), for the reasons given there.
 
 **No size variants.** Minimum height and width are `--touch-target-min`, 44×44 px. A smaller
 button would miss the target, so there is one size everywhere.
@@ -370,8 +380,12 @@ rule: a missing `Label` throws rather than silently rendering an inaccessible fi
 **No size variants.** Standard size only, consistent with `Button`.
 
 **Optional decorative `LabelIcon`.** A `RenderFragment` rendered before the label text, `aria-hidden`,
-purely a visual scanning aid — not a tooltip or help mechanism. That would need a `Tooltip`
-component, which does not exist yet.
+purely a visual scanning aid — not a help mechanism. Help is `Info`, below.
+
+**Optional `Info`.** A short explanation behind a [`Toggletip`](#toggletip) beside the label, with
+the label as its subject. It sits next to the `<label>`, never inside it, so the label alone stays
+the field's accessible name. With or without it, the label only spans its own text: the empty space
+to its right is not a click target for the field.
 
 **Optional `Prefix` / `Suffix`.** `RenderFragment`s for units (`kg`, `kcal`) or fixed adornments,
 rendered inside the field so they share its border.
@@ -411,7 +425,9 @@ registers itself, and is not meant to work standalone.
 
 **Label is mandatory, and it is the hit area.** A missing `Label` throws. The label wraps both the
 box and its text, so the whole row is clickable; the row is at least 44 px high, while the box
-itself is 24 px. A long label wraps beside the box, which stays aligned with the first line.
+itself is 24 px. A long label wraps beside the box, which stays aligned with the first line. `Info`
+adds a [`Toggletip`](#toggletip) after the label on the same row, outside the `<label>`; it follows
+the box in tab order, as it does on screen, and stays usable when the checkbox is disabled.
 
 **The checked state is a shape, not a colour.** Checked means a filled box *and* a check mark, so
 the state survives greyscale and forced colours. The check mark is decorative (`aria-hidden`); the
@@ -448,6 +464,12 @@ screen reader announces when focus enters the group. Every option needs its own 
 missing one throws on either level. As with `Checkbox`, the label wraps the circle and its text, so
 the whole row is the hit area and at least 44 px high.
 
+**`Info` sits in the legend.** A disabled `<fieldset>` disables everything inside it except the
+content of its first `<legend>`, so the legend is the only place where the
+[`Toggletip`](#toggletip) stays usable while the group is disabled. Because its button would
+otherwise become part of the group's name, the `<fieldset>` is named by `aria-labelledby`, pointing
+at the label text alone.
+
 **The keyboard is the browser's.** All options share one `name`, so the group is a single tab stop:
 Tab lands on the selected option, or on the first one while nothing is selected, and the arrow
 keys move and select in one step. Nothing of this is scripted.
@@ -483,8 +505,10 @@ only applies on submit, or that has more than two states, is a `Checkbox` or a
 [`RadioGroup`](#radio-group) — the theme switcher, with its three states, is a radio group.
 
 **The label sits above the switch.** `Label` is mandatory; a missing one throws. Below it, the
-switch and its state text share one row of at least 44 px. Label, switch and state text are all
-inside one `<label>`, so the whole block is the hit area. Placing the label above rather than
+switch and its state text share one row of at least 44 px. The label text and that row are two
+`<label>`s for the same input, so the whole block is the hit area while the
+[`Toggletip`](#toggletip) of `Info` sits beside the label text, outside both. The state text is
+`aria-hidden`, so the switch is still named by its label alone. Placing the label above rather than
 beside keeps the state text from reading as part of the label, keeps label and switch together at
 any width, and lets a long label wrap without moving the switch. Optional helper text sits below
 and is linked with `aria-describedby`.
@@ -531,7 +555,8 @@ visible text of that choice; an option may not use the empty value, which is res
 nullable type the empty choice is a valid value and binds `null`. For a non-nullable type it cannot
 be stored, and choosing it is reported as an error naming the label.
 
-**Label is mandatory**, on the `Select` and on every option; a missing one throws.
+**Label is mandatory**, on the `Select` and on every option; a missing one throws. `Info` adds a
+[`Toggletip`](#toggletip) beside the label, as on `Input`.
 
 **Errors follow [Checkbox](#checkbox)**: a select has no typing phase, so it is checked when it
 changes. The error look and the message are the same as `Input`'s. `aria-invalid` is always set,
@@ -543,6 +568,49 @@ has done anything.
 
 **Tokens and rules.** The field reuses `Input`'s tokens. The caret has its own `--select-icon-*`
 tokens, and its rules measure it against the normal and the error fill.
+
+## Toggletip
+
+A small info button that opens a short explanation on click, Enter or Space — a toggletip, not a
+tooltip. A hover tooltip does not work on touch, is hard to keep open and dismissable as 1.4.13
+requires, and hides its text from anyone who does not hover. A toggletip is a button, so pointer,
+touch and keyboard all reach it the same way.
+
+**Standalone and on every field.** `Toggletip` takes `Subject` and `Text`, both mandatory; a blank
+one throws. It is phrasing content, so it sits inside a paragraph or beside a heading. `Input`,
+`Select`, `Checkbox`, `RadioGroup` and `Toggle` take the same explanation through `Info` and render
+the toggletip beside their label, with the label as its subject. It never sits inside a `<label>`:
+a button there would become part of the field's name and take the label's clicks. It explains the
+field rather than operating it, so it stays usable when the field is disabled.
+
+**An icon-only button.** It shows only Phosphor's Fill info icon, which is decorative. Its name
+is visually hidden text, "Hilfe zu …" followed by `Subject`, so two help buttons on one page never
+share a name. It is one of three exceptions to `Button`'s no-icon-only rule, the others being the
+close buttons of the [messages](#messages) and the [dialog](#dialog): an info icon beside a label is a convention users already know,
+and a visible word there would compete with the label it explains.
+
+**No script.** The button opens the popup through the native Popover API (`popovertarget`,
+`popover="auto"`). The browser handles Enter and Space, closes the popup on Esc or a click outside,
+closes any other open toggletip, keeps focus on the button and exposes the button as expanded or
+collapsed. The popup directly follows the button in the DOM, so a screen reader reading on reaches
+the text right after the button. It holds plain text only — nothing focusable, no links — because
+anything interactive inside would need focus management that a toggletip should not have.
+
+**Placement.** CSS Anchor Positioning places the popup below the button, starting at its edge, and
+flips it to the other side or above when it does not fit. Its width is capped at
+`--toggletip-max-width` and at the viewport less a margin, so at 320 px it wraps instead of
+scrolling sideways.
+
+**Target size.** The visible icon is 20 px, with an invisible 44×44 px hit area centred on it. That
+deliberately differs from [`Badge`](#badge), which refuses an invisible enlarged hit area: a badge
+at 44 px still looks right, an info icon at 44 px would dwarf the label it explains.
+`--toggletip-spacing` keeps the hit area clear of the label text. Above a `Select` it reaches a few
+pixels into the field's top edge; the help button lies on top there, and the rest of the field
+stays a click target.
+
+**Tokens and rules.** The `--toggletip-*` set: the icon in the secondary text colour, the primary
+one on hover and while open; the popup on the elevated surface, with the default border and shadow.
+Rules measure both icon colours against page and card, and the popup text against its background.
 
 ## Badge
 
@@ -587,10 +655,421 @@ cheaper signal.
 badge that is also a link cannot keep the 44×44 px target without an invisible enlarged hit area,
 which is a worse trade than one consistent size everywhere.
 
+## Avatar
+
+A person's photo, or their initials when there is no photo or it fails to load. Not operable:
+it never takes focus, and a page that wants a clickable avatar wraps it in its own link or button.
+
+**The name is mandatory.** `Avatar` takes `Name`, and a blank one throws, even when `Src` is given:
+a photo can always fail to load, and the initials are what replaces it. They are the first letter
+of the first and of the last word, or a single letter for a one-word name, counted in text
+elements so that an accented letter stays whole.
+
+**One accessible name, wherever it is needed.** Standing alone, the avatar is one image
+(`role="img"`) named after the person; photo and initials inside are hidden, so a screen reader
+announces the name once, whether or not the photo loaded. Beside a visible name, `Decorative`
+hides the whole avatar instead, so the name is not read twice.
+
+**The photo needs no script to fail.** It is a CSS background on a layer above the initials, not
+an `<img>`. A broken `<img>` draws the browser's broken-image mark even with an empty `alt`; a
+broken background draws nothing, and the initials beneath show through. This also works during
+prerendering, before any interactive handler could react to an error event. `Src` is escaped into
+a CSS string, so it cannot break out of the `url()`.
+
+**Three sizes.** `Small`, `Medium` (the default) and `Large` — 32, 40 and 64 px at the default text
+size, set in rem so they grow with the user's text size. None is held to the 44×44 px target,
+because none is operable. The smallest still fits the widest pair of initials under 1.4.12's text
+spacing.
+
+**One neutral fill.** Every avatar without a photo gets the same fill, not a colour derived from
+the name: per-person colours would need a set of fills with their own contrast rules in both
+themes, and would invite reading meaning into a colour that has none. The fill is a new semantic
+role, `--color-surface-neutral-subtle` (`neutral-200` in light, `neutral-700` in dark), quieter than
+`Badge`'s bold `--color-surface-neutral` so that a list of avatars does not dominate the names
+beside it. The fill itself carries nothing, so it has no threshold against the page; the initials
+on it are measured as normal text. A transparent border makes the circle visible in forced colours.
+
+**No status indicator.** An online or availability dot would be colour carrying meaning on a
+non-operable element; if one is ever needed, it is a separate decision with a text alternative.
+
+**Tokens and rules.** The `--avatar-*` set: three sizes with their font sizes, the radius, the
+fill and the initials colour (the primary text colour). One rule measures the initials against
+the fill.
+
+## Spinner
+
+A turning ring with a line of text beside it, shown while something loads. Not operable.
+
+**The text is always visible.** `Label` defaults to "Wird geladen …" and may be replaced with
+something more specific, such as "Rezepte werden geladen …"; a blank one throws. The ring alone
+would leave out anyone who cannot see it, does not read the motion as loading, or has stopped it;
+the text says the same thing to all of them. A non-breaking space keeps the ellipsis on the line
+of the word before it.
+
+**The text is announced, the ring is not.** The component is a `role="status"` live region, so a
+screen reader reads its text politely, without interrupting. The ring is `aria-hidden`. A live
+region inserted together with its text, which is how a spinner normally appears, is not announced
+reliably by every screen reader; whether it is in practice is left to the manual screen-reader
+test, and the component gallery has a demo that inserts the spinner on demand for exactly that.
+
+**Reduced motion slows it, never stops it.** The rotation takes `--motion-duration-spin`, one
+second, and three seconds under `prefers-reduced-motion`. A ring that stood still would look like
+a decoration, and the transition tokens' `0.01ms` would make it race instead. The motion itself is
+allowed under 2.2.2: it only runs while the content it stands for is loading, and indicating that
+is its whole purpose.
+
+**The arc is held to 3:1.** The text already carries the meaning, but the motion is information
+too: the arc is measured against the page, the card and the track it travels along. The track is
+quieter on purpose and carries nothing on its own. Arc and text share the secondary text colour, so
+the spinner reads as a calm status rather than an action.
+
+**Forced colours draw the arc in `CanvasText` on a `Canvas` track.** Left alone, forced colours
+would paint the whole border in one system colour, and a ring of one colour turns invisibly. The
+ring opts out with `forced-color-adjust: none` and takes the two system colours directly, so it
+stays in the user's palette.
+
+**One size.** 24 px at the default text size, in rem so it grows with the user's text size. A
+smaller size waits for the loading state of `Button`, which is a separate step.
+
+**Tokens and rules.** The `--spinner-*` set: size, stroke width, arc, track and text colours, the
+gap and the duration, which points at the new global `--motion-duration-spin`. Five rules: the arc
+against page, card and track, and the text against page and card.
+
+## Messages
+
+Three components tell the user something without being asked, and each has its own rules, because
+each answers a different question:
+
+- **`Alert`** belongs to the content. It sits where its subject is — in a card, above a form, in a
+  section — and stays as long as the state it describes.
+- **`AlertBanner`** belongs to the whole application. It runs across the top of the page for a
+  state that affects everything, such as maintenance or being offline.
+- **`Toast`** answers an action the user has just taken. It floats above the page, outside the
+  content, and reports how the action went.
+
+`Alert` is built; `AlertBanner` and `Toast` are not yet, and their rules below are decided.
+
+**What they share.** Every message has a mandatory title and a mandatory text. The kind is written
+out at the start of the title, followed by a dash — "Fehler – Speichern fehlgeschlagen" — so it
+reaches everyone in words and never depends on colour or icon (1.4.1). The words are "Information",
+"Erfolg", "Warnung" and "Fehler". Each kind has a fixed icon from the [Icons](#icons) set: a check in
+a circle for success, a triangle for a warning and an X in a circle for an error, as on `Badge`, and
+an i in a circle for information. The icon cannot be replaced and stays `aria-hidden`,
+because the title already says what it shows. Tone follows [Tone of voice](#tone-of-voice): calm
+at every kind.
+
+### Alert
+
+**Four kinds:** `Info`, `Success`, `Warning`, `Critical`.
+
+**The title is a real heading.** It looks like one, so 1.3.1 requires it to be one, and it makes
+the message reachable by heading navigation. Only the page knows its outline, so the page sets the
+level.
+
+**At most one action.** A message that names a problem should offer the way out where the problem
+is described: a link such as "Zutaten ergänzen" or a button such as "Erneut versuchen", below the
+text. Kept inside the message, it stays next to its problem for everyone, including a screen reader
+reading the message as one piece. Its name has to make sense together with the title (2.4.4), and
+it has the 44×44 px target of every other control. One, because a message with a choice of actions
+has become a form. An action that solves the problem removes the message, and the focused action
+with it, so the page then moves focus itself, as it names the target after closing.
+
+**Subtle fill, coloured border and icon, ordinary text.** Each kind has a subtle fill, a border and
+an icon in its colour; title and text keep the normal text colour, which is measured against every
+subtle fill at 4.5:1. Icon and border are held to 3:1. The bold fills `Badge` uses would turn a
+paragraph of text into a block of colour.
+
+**Information has its own colour.** The blue of actions would make an information message look
+clickable. The new information colour joins the separation check for status text described under
+[Data visualisation](#data-visualisation). Success and warning gain the subtle fill, border and
+icon roles that so far only critical had.
+
+**Only a message that appears later is announced.** A message that is part of the page when it
+loads is not announced; it is found by reading and by heading navigation, like the rest of the
+content, and announcing it on top of the page would interrupt the page's own announcement. A message
+that appears later — after saving, after a check — is announced, and the page states that it does:
+`Warning` and `Critical` interrupt (`role="alert"`), `Info` and `Success` wait until the screen
+reader is idle (`role="status"`). Whether a message inserted together with its text is announced
+reliably is left to the manual screen-reader test, as with the [Spinner](#spinner).
+
+**It can be closable, and is not by default.** Closing suits a message that is no longer needed
+once read, such as a success. A message about a problem that still exists is never closable; it
+disappears when the problem is solved. The close button is named "Schliessen" together with the
+title, has the 44×44 px target of every other control, and on closing moves focus to an element the
+page must name. Without that, focus would fall back to the start of the document (2.4.3), and only
+the page knows what comes next.
+
+**How it is used.** `Variant` defaults to `Info`. `Title`, `HeadingLevel` (2 to 6) and the text as
+`ChildContent` are mandatory, and a blank title, a missing text or a level outside that range
+throws. The single action is passed as `Action`. `Announce` marks a message that appears later and
+gives it its live-region role. `OnClose` adds the close button; it requires `CloseFocusTarget`, a
+function that returns the element to focus, and throws without it. Focus moves first and `OnClose`
+runs after, so the page can remove the message without focus being lost on the way. A message about
+a problem that still exists must not be given `OnClose`; the component cannot tell, so that stays
+the page's responsibility.
+
+**The close button.** It shows the bare X described under [Icons](#icons), in the secondary text
+colour and the primary one on hover, with an invisible 44×44 px hit area centred on it, like
+[`Toggletip`](#toggletip)'s help button. Its visually hidden name is "Schliessen:" followed by the
+full title, so two closable messages never share a name.
+
+**Information is sky, not the action blue.** `sky-700` in light and `sky-400` in dark — still
+bluish, as information is expected to be, but apart from the `blue-600` of links and buttons.
+
+**Narrow space breaks words, never the border.** With large text in a narrow column, long words in
+the title, the text and the action break inside the message instead of running past its edge
+(1.4.4, 1.4.10).
+
+**Tokens and rules.** New semantic roles: `--color-text-info`, and a subtle fill, border and icon
+colour for information, success and warning, matching the existing critical ones. The `--alert-*`
+set: padding, gaps, radius, a thin border, icon and close-icon size and colour, the text colour,
+the title weight, and fill, border and icon colour per kind. Twelve rules per kind, in both themes:
+the text and the icon on the fill, the border against page and card, the close icon at rest and on
+hover, a link at rest and on hover, a secondary button's text and border, a primary button's fill,
+and the focus ring, all on the fill.
+
+### Alert banner
+
+**Built on `Alert`.** Same fill, border, icon, title format, text and optional single action, such
+as "Mehr erfahren", across the full width.
+
+**Three kinds:** `Info`, `Warning`, `Critical`. A success is never news for the whole application.
+
+**Announced like `Alert`.** A banner present when the page loads is not announced; one that appears
+later, such as "Du bist offline", is: `Warning` and `Critical` interrupt, `Info` waits.
+
+**At the very top, in its own landmark.** Banners sit above the header in a region named
+"Systemmeldungen", which screen readers list among the landmarks and can jump to. The region exists
+only while there is a banner. The title is a heading, like `Alert`'s.
+
+**It scrolls away.** A bar fixed to the top would cover too much of the page at high zoom and on
+small screens (1.4.10).
+
+**Closable like `Alert`.** Optional, never for a problem that still exists. Focus moves to the main
+content. A closed banner stays closed until the page is reloaded; nothing is stored.
+
+**Several at once stack.** One under the other, the most severe first: `Critical`, `Warning`,
+`Info`.
+
+### Toast
+
+**Three kinds:** `Success`, `Info`, `Critical`. Success confirms an action. Information reports
+an outcome that is neither success nor failure, such as "Keine Änderungen – Es gab nichts zu
+speichern." Critical reports a failure that has no place on the page, such as a request that ran in
+the background or an action whose form is already gone; a failure that belongs to a form or a
+section is an `Alert` there. There is no warning toast: a warning about an action's result belongs
+next to that result.
+
+**Icon, title and text, nothing else.** No action. The close button is the only control.
+
+**The title is not a heading.** It is set apart as emphasised text. Toasts come and go, and as
+headings they would keep changing the page's outline; they sit outside the content, in their own
+landmark, and are found through that.
+
+**It stays until it is closed.** No time limit, so 2.2.1 is met without a setting to extend or turn
+off a timeout, and a message can be read at any pace.
+
+**Announced through live regions that are always there.** The layout holds one polite and one
+assertive live region from the start, and the toast's text is written into them; a live region
+created together with its text is not announced reliably. `Success` and `Info` wait until the
+screen reader is idle, so a confirmation does not cut into what the user is doing; `Critical`
+interrupts.
+
+**It never takes focus.** Toasts sit in a region named "Benachrichtigungen" at the end of the page,
+reached with Tab and by landmark navigation. Closing a toast moves focus to the next toast's close
+button, or to the main content when none is left.
+
+**Bottom right; on narrow screens full width, and only the newest.** Three full-width toasts would
+cover too much of the page, and high zoom makes every screen narrow (1.4.10). The others wait in the
+stack and show again once the newest is closed.
+
+**At most three.** A fourth makes the oldest give way, never the one that holds focus. A toast only
+reports on an action and carries nothing the user needs later, so giving way loses nothing.
+
+**Raised through a service.** Pages call a service; the region is placed once in the layout. No
+page renders a toast itself.
+
+## Dialog
+
+A modal dialog: the page behind it cannot be used until it is closed. `Dialog` is the ordinary
+dialog, `ConfirmDialog` the confirmation; both are built on one shared frame.
+
+**Built on the native `<dialog>`.** Opened with `showModal()`, the browser makes the rest of the page
+inert, so neither Tab nor a screen reader's reading cursor can leave the dialog. It also places the
+dialog above everything else and closes it on Esc. A self-built overlay would have to imitate all of
+that in script and would get it wrong in places. `showModal()` cannot be called from markup, so the
+dialog brings the library's first JavaScript module.
+
+**Two kinds.** The ordinary dialog holds content or a form. The confirmation asks one question
+before an action, such as "Eintrag löschen?", and is exposed as `role="alertdialog"`, so screen
+readers announce it as a question that needs an answer.
+
+**The title is mandatory.** It names the dialog, and the dialog is announced with it.
+
+**Ways out.** The ordinary dialog always has the X at the top right, the bare X described under
+[Icons](#icons), and may also have an "Abbrechen" button among its buttons. The confirmation has no
+X; its "Abbrechen" button does that job. Esc always closes and counts as cancelling. A click on the
+dimmed background does not close: a click beside the dialog is often a slip, and it would discard
+what was typed. With the X, "Abbrechen" and Esc there are enough ways out, and all of them are
+reachable by keyboard.
+
+**Unsaved input.** Every way of closing an ordinary dialog first asks the page. The page may refuse
+and open a confirmation on top instead, such as "Änderungen verwerfen?". That is the only dialog
+allowed over another one; nothing else nests. Esc then closes only the confirmation. A
+[`Toggletip`](#toggletip) open inside a dialog takes Esc first; the next Esc closes the dialog.
+
+**Focus on opening is fixed.** In the ordinary dialog it moves to the first operable element below
+the title, in a form the first field, so typing can start at once; when nothing below the title is
+operable, it moves to the X. In the confirmation it moves to "Abbrechen", so an Enter pressed too
+early never confirms. The page cannot change either.
+
+**Focus on closing** returns to the element that opened the dialog. When that element is gone —
+after a deletion, say — the page must name the target, as it does when an [`Alert`](#alert) closes;
+otherwise focus would fall back to the start of the document (2.4.3).
+
+**Sizes.** The confirmation is narrow. The ordinary dialog is medium, and can be set to fill the
+whole screen.
+
+**Small screens and zoom.** The dialog takes nearly the full width and is never taller than the
+screen. Only its content scrolls, so the title and the buttons stay in view, and the scrolling area
+can be reached with the keyboard even when it holds nothing operable. When the screen is too low for
+that, the whole dialog scrolls instead, so the content never shrinks to nothing (1.4.10).
+
+**Buttons.** At the bottom, aligned right, the main action last and furthest right. When space runs
+short they stack, in the same order. What is seen first is always reached first with Tab (1.3.2,
+2.4.3).
+
+**The page behind.** It is dimmed with `--color-scrim` and does not scroll while the dialog is
+open.
+
+**Border and shadow.** A thin border as well as the shadow, so the dialog stays clearly separate in
+the dark theme, where shadows barely show, and in forced colours, where they are removed.
+
+**No animation.** The dialog appears and disappears at once.
+
+**How it is used.** Both are controlled by the page through `Open`; the dialog never closes itself.
+`Title` and the content as `ChildContent` are mandatory, and a blank title or a missing content
+throws. The title is always an `<h2>`, because a dialog starts its own outline above the page.
+
+- `Dialog` requires `OnClose`, which the X, "Abbrechen" and Esc all call. The page closes the
+  dialog by setting `Open` to `false`, or refuses and opens a confirmation instead. `CancelButton`
+  adds "Abbrechen"; the page's own buttons go into `Actions`, the main one last. `Fullscreen` fills
+  the screen. A form inside keeps its submit button in `Actions` and links it with the `form`
+  attribute, so Enter in a field still submits.
+- `ConfirmDialog` requires `ConfirmLabel`, `OnConfirm` and `OnCancel`; Esc calls `OnCancel`.
+  `ConfirmVariant` is `Primary` by default and `Critical` for a destructive action; `Secondary`
+  throws, because it is taken by "Abbrechen".
+- `CloseFocusTarget` is a function that returns the element to focus once the dialog has closed. It
+  is required when the opener no longer exists afterwards; the component cannot know that, so it
+  stays the page's responsibility.
+
+**The close button.** The bare X described under [Icons](#icons), in the secondary text colour and
+the primary one on hover, with an invisible 44×44 px hit area, like the close button of the
+[messages](#messages). Its visually hidden name is just "Schliessen": the dialog's own name already
+says what it closes.
+
+**The scrolling area.** When the content scrolls and holds nothing operable, it becomes a Tab stop
+of its own, exposed as a region named by the title, so it can be scrolled with the arrow keys
+(2.1.1). This is checked again whenever the dialog changes size.
+
+**Script.** One JavaScript module opens and closes the dialog, sets the focus, locks page scrolling
+and reports Esc and the browser's own close to the component. Everything else, from the inert page
+to the top layer, is the browser's.
+
+**Tokens and rules.** A new semantic role, `--color-scrim`: `--neutral-950` at `--opacity-scrim`.
+The `--dialog-*` set: the fill, which is `--color-background-elevated-3`, the text colour, a thin
+border in `--color-border-default`, radius, shadow, padding, gaps, outer margin, the two widths,
+the title size and weight, and the close icon's size and colours. Twelve rules, in both themes, all
+on the dialog's fill: the text, the close icon at rest and on hover, the focus ring, a link at rest
+and on hover, a secondary button's text and border, a primary and a critical button's fill, and the
+borders of a field and of a checkbox or radio button. A link in the action colour first fell short
+on the dark fill, so dark `--color-background-elevated-3` was lowered to `#2a3755`. The dimmed page
+behind is not measured; it is not something to read while the dialog is open.
+
+## Tabs
+
+`Tabs` splits one page into a few views of the same subject, such as the days of a week plan, and
+shows one at a time. It follows the ARIA tabs pattern; it is not page navigation, which stays with
+ordinary links.
+
+**Two to five tabs.** Fewer is not a choice, more no longer fit on a phone and turn into a list
+nobody scans. Both limits throw, as do a blank label, key or title, a tab without content and two
+tabs with the same key.
+
+**Every tab has a title.** It may also have an icon in front and a badge after it. The icon only
+supports the title and is hidden from screen readers. The badge is short text, such as a count; it
+is read as part of the tab's name, so a bare number gets a hidden description from the page ("3"
+becomes "3 offen" for a screen reader), and the visible text still starts the name (2.5.3). It is
+a small text pill of its own, not the `Badge` component, which is a full-height status label with
+a mandatory icon.
+
+**Automatic activation.** Moving to a tab shows its panel at once; there is no second key press to
+open it. Switching costs nothing here: all panels are already on the page.
+
+**Keyboard.** The row of tabs is a single Tab stop, landing on the selected tab. The arrow keys
+move between tabs and wrap from the last to the first and back; Home and End jump to the first and
+the last. Space and Enter select as well; before the page is interactive only Enter does, because
+the tab is then a plain link. The next Tab moves into the panel.
+
+**The panel is always a Tab stop.** Even when it holds a button or a field, so the step from the
+tabs into the content always lands on the same place and a screen reader announces which panel
+that is.
+
+**Inactive panels stay on the page, hidden.** Their state survives switching: a half-typed field
+is still there when the user comes back.
+
+**The selected tab** has a thick bar in the action colour along its bottom edge, semibold text and
+the action colour. The bar and the weight carry the state without colour (1.4.1); the bar alone is
+measured at 3:1 against the page (1.4.11). The other tabs use the secondary text colour and the
+primary one on hover. Every tab reserves the width of its semibold title, so switching never moves
+its neighbours.
+
+**Only horizontal, and nothing hidden.** When the row no longer fits — a narrow phone, 400 % zoom —
+the tabs stack, each one full width, with the bar on the start side; Up and Down then work as well
+as Left and Right. There is no scrolling row and no "more" menu, both of which hide tabs (1.4.10).
+The row never widens the area it sits in; it is measured against it, so a grid or flex parent
+cannot hide the overflow that should make it stack.
+
+**One size.** At least 44 px high, the same touch target as `Button`.
+
+**No disabled tabs**, and tabs cannot be closed or reordered.
+
+**The selected tab is in the address.** The page binds the selected key with `@bind-Active`; the
+component also keeps it in the query string, `?tab=…` by default. A reload or a shared link
+therefore opens the same tab. Switching replaces the address rather than adding to the history, so
+"Back" leaves the page instead of stepping through tabs.
+
+**It works without the live connection.** Every tab is a real link to its own address. Before the
+page is interactive, or after the connection has dropped, a click simply loads that address. Once
+interactive, the click is taken over and the tab switches without a reload; a middle click or
+Ctrl+click still opens the tab in a new browser tab.
+
+**No animation.** The panel changes at once.
+
+**How it is used.** `Tabs` takes the mandatory `Label`, the accessible name of the row, and one
+`Tab` per view. Each `Tab` has a mandatory `Key`, which is what ends up in the address and in
+`@bind-Active`, a mandatory `Title` and its content; `Icon`, `Badge` and `BadgeDescription` are
+optional, and a description without a badge throws. Without a bound value or a key in the address,
+the first tab is selected, and the component reports it back through `@bind-Active`. A key in the
+address wins over the bound value when the page loads; a later change of the bound value wins over
+the address. An unknown key falls back to the first tab. `QueryName` changes the name in the query
+string; two `Tabs` on one page need two names, or they would share one address entry.
+
+**Script.** One JavaScript module handles the keys, the click on a tab, the check whether the row
+still fits and the address. Blazor renders every role and state itself; the module never sets
+`aria-selected`. The address is replaced in the browser's history directly, because a navigation
+through Blazor would reload the page that is not yet interactive.
+
+**Tokens and rules.** The `--tabs-*` set: minimum height, padding, gap, icon size, the two text
+weights, the text colours at rest, on hover and selected, the bar's colour and width, the divider's
+colour and width, the badge's fill, text colour, size, weight, padding and radius, and the space
+above the panel. No new semantic role. Nine rules: the tab text at rest, on hover and selected, and
+the bar, each on the page and on a card, in both themes, plus the badge text on the badge fill.
+
 ## How this is kept true
 
 `tools/VitalSync.DesignTokens.Contrast` resolves every `var()` chain per theme and measures the
-pairs named in the rule document — 304 contrast checks and 6 separation checks at the time of
+pairs named in the rule document — 464 contrast checks and 6 separation checks at the time of
 writing. All pass except the two status-colour separation checks, which run under a waiver (see
 [Data visualisation](#data-visualisation)).
 

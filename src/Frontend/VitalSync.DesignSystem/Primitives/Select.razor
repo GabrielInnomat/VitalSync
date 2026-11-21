@@ -7,13 +7,19 @@
 @using System.Globalization
 
 <div class="vs-select">
-    <label for="@_selectId" class="vs-select__label">
-        @Label
-        @if (Required)
+    <div class="vs-select__label-row">
+        <label for="@_selectId" class="vs-select__label">
+            @Label
+            @if (Required)
+            {
+                <span class="vs-select__required-marker" aria-hidden="true">*</span>
+            }
+        </label>
+        @if (!string.IsNullOrWhiteSpace(Info))
         {
-            <span class="vs-select__required-marker" aria-hidden="true">*</span>
+            <Toggletip Subject="@Label" Text="@Info" />
         }
-    </label>
+    </div>
 
     <div class="vs-select__field">
         <select @attributes="AdditionalAttributes"
@@ -63,6 +69,9 @@
 
     [Parameter]
     public string? HelperText { get; set; }
+
+    [Parameter]
+    public string? Info { get; set; }
 
     [Parameter]
     public bool Required { get; set; }

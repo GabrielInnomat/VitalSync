@@ -1,0 +1,44 @@
+.vs-avatar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border: var(--border-width-thin) solid transparent;
+    border-radius: var(--avatar-radius);
+    background-color: var(--avatar-background);
+    color: var(--avatar-text-color);
+    font-family: var(--font-family-ui);
+    font-weight: var(--avatar-font-weight);
+    line-height: var(--line-height-tight);
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.vs-avatar--small {
+    inline-size: var(--avatar-size-small);
+    block-size: var(--avatar-size-small);
+    font-size: var(--avatar-font-size-small);
+}
+
+.vs-avatar--medium {
+    inline-size: var(--avatar-size-medium);
+    block-size: var(--avatar-size-medium);
+    font-size: var(--avatar-font-size-medium);
+}
+
+.vs-avatar--large {
+    inline-size: var(--avatar-size-large);
+    block-size: var(--avatar-size-large);
+    font-size: var(--avatar-font-size-large);
+}
+
+.vs-avatar__photo {
+    position: absolute;
+    inset: calc(-1 * var(--border-width-thin));
+    border-radius: inherit;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+}

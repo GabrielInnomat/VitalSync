@@ -1,0 +1,166 @@
+@page "/design-system/alert"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using VitalSync.DesignSystem.Primitives
+
+<PageTitle>Meldung · Design System · VitalSync</PageTitle>
+
+<h1>Meldung (<code>Alert</code>)</h1>
+<p>
+    <code>Alert</code> steht im Inhalt, dort wo sein Thema ist, und bleibt, solange der Zustand
+    besteht, den es beschreibt. Die Art steht immer ausgeschrieben im Titel, das Symbol dazu ist
+    fest. Der Titel ist eine echte Überschrift, deren Stufe die Seite festlegt. Angesagt wird nur
+    eine Meldung, die später erscheint. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    <section data-theme="light" class="vs-gallery__theme-panel">
+        <h2>Hell</h2>
+        @renderStates()
+    </section>
+    <section data-theme="dark" class="vs-gallery__theme-panel">
+        <h2>Dunkel</h2>
+        @renderStates()
+    </section>
+</div>
+
+<h2 @ref="demoHeading" tabindex="-1">Nach dem Speichern eingefügt</h2>
+<p>
+    So erscheint eine Meldung im echten Einsatz: erst nach einer Aktion. Hier lässt sich prüfen, ob
+    ein Screenreader sie beim Einfügen ansagt – den Erfolg höflich, den Fehler sofort – und ob der
+    Fokus nach dem Schliessen und nach „Erneut versuchen" auf dieser Überschrift landet.
+</p>
+<div class="vs-alert-gallery__demo">
+    <div class="vs-gallery__row">
+        <Button Variant="ButtonVariant.Secondary" OnClick="SaveSucceeds">Speichern</Button>
+        <Button Variant="ButtonVariant.Secondary" OnClick="SaveFails">Speichern ohne Verbindung</Button>
+    </div>
+    @if (outcome == Outcome.Saved)
+    {
+        <Alert Variant="AlertVariant.Success"
+               Title="Plan gespeichert"
+               HeadingLevel="3"
+               Announce="true"
+               OnClose="Dismiss"
+               CloseFocusTarget="() => demoHeading">
+            Dein Wochenplan ist gespeichert.
+        </Alert>
+    }
+    else if (outcome == Outcome.Failed)
+    {
+        <Alert Variant="AlertVariant.Critical"
+               Title="Speichern fehlgeschlagen"
+               HeadingLevel="3"
+               Announce="true">
+            <ChildContent>Es besteht keine Verbindung. Deine Änderungen sind noch nicht gespeichert.</ChildContent>
+            <Action>
+                <Button Variant="ButtonVariant.Secondary" OnClick="RetrySave">Erneut versuchen</Button>
+            </Action>
+        </Alert>
+    }
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;Alert Variant="AlertVariant.Warning" Title="Zutaten fehlen" HeadingLevel="2"&gt;
+    &lt;ChildContent&gt;Zwei Rezepte brauchen Zutaten, die noch nicht erfasst sind.&lt;/ChildContent&gt;
+    &lt;Action&gt;&lt;a href="zutaten"&gt;Zutaten ergänzen&lt;/a&gt;&lt;/Action&gt;
+&lt;/Alert&gt;
+
+&lt;Alert Variant="AlertVariant.Success"
+       Title="Plan gespeichert"
+       HeadingLevel="2"
+       Announce="true"
+       OnClose="Dismiss"
+       CloseFocusTarget="() =&gt; nextHeading"&gt;
+    Dein Wochenplan ist gespeichert.
+&lt;/Alert&gt;
+</code></pre>
+
+@code {
+    private enum Outcome
+    {
+        None,
+        Saved,
+        Failed,
+    }
+
+    private ElementReference demoHeading;
+    private Outcome outcome;
+    private bool focusHeadingAfterRender;
+
+    private void SaveSucceeds() => outcome = Outcome.Saved;
+
+    private void SaveFails() => outcome = Outcome.Failed;
+
+    private void RetrySave()
+    {
+        outcome = Outcome.Saved;
+        focusHeadingAfterRender = true;
+    }
+
+    private void Dismiss() => outcome = Outcome.None;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (focusHeadingAfterRender)
+        {
+            focusHeadingAfterRender = false;
+            await demoHeading.FocusAsync().ConfigureAwait(true);
+        }
+    }
+
+    private static RenderFragment renderStates() => @<text>
+        <h3>Arten</h3>
+        <div class="vs-alert-gallery__stack">
+            <Alert Variant="AlertVariant.Info" Title="Neue Rezepte" HeadingLevel="4">
+                Drei neue Rezepte passen zu deinem Wochenplan.
+            </Alert>
+            <Alert Variant="AlertVariant.Success" Title="Plan gespeichert" HeadingLevel="4">
+                Dein Wochenplan ist gespeichert.
+            </Alert>
+            <Alert Variant="AlertVariant.Warning" Title="Zutaten fehlen" HeadingLevel="4">
+                Zwei Rezepte brauchen Zutaten, die noch nicht erfasst sind.
+            </Alert>
+            <Alert Variant="AlertVariant.Critical" Title="Plan unvollständig" HeadingLevel="4">
+                Für Dienstag ist noch keine Mahlzeit geplant.
+            </Alert>
+        </div>
+        <h3>Mit Aktion</h3>
+        <div class="vs-alert-gallery__stack">
+            <Alert Variant="AlertVariant.Warning" Title="Zutaten fehlen" HeadingLevel="4">
+                <ChildContent>Zwei Rezepte brauchen Zutaten, die noch nicht erfasst sind.</ChildContent>
+                <Action><a href="design-system/alert">Zutaten ergänzen</a></Action>
+            </Alert>
+            <Alert Variant="AlertVariant.Critical" Title="Laden fehlgeschlagen" HeadingLevel="4">
+                <ChildContent>Die Nährwerte konnten nicht geladen werden.</ChildContent>
+                <Action><Button Variant="ButtonVariant.Secondary">Erneut versuchen</Button></Action>
+            </Alert>
+        </div>
+        <h3>In einer Karte</h3>
+        <div class="vs-alert-gallery__card">
+            <div class="vs-alert-gallery__stack">
+                <Alert Variant="AlertVariant.Info" Title="Neue Rezepte" HeadingLevel="4">
+                    Drei neue Rezepte passen zu deinem Wochenplan.
+                </Alert>
+                <Alert Variant="AlertVariant.Success" Title="Plan gespeichert" HeadingLevel="4">
+                    Dein Wochenplan ist gespeichert.
+                </Alert>
+                <Alert Variant="AlertVariant.Warning" Title="Zutaten fehlen" HeadingLevel="4">
+                    <ChildContent>Zwei Rezepte brauchen Zutaten, die noch nicht erfasst sind.</ChildContent>
+                    <Action><a href="design-system/alert">Zutaten ergänzen</a></Action>
+                </Alert>
+                <Alert Variant="AlertVariant.Critical" Title="Plan unvollständig" HeadingLevel="4">
+                    Für Dienstag ist noch keine Mahlzeit geplant.
+                </Alert>
+            </div>
+        </div>
+        <h3>Langer Text bei wenig Platz</h3>
+        <div class="vs-alert-gallery__narrow">
+            <Alert Variant="AlertVariant.Warning" Title="Nährstoffziel für Eisen nicht erreicht" HeadingLevel="4">
+                In den letzten sieben Tagen lag die Eisenzufuhr deutlich unter deinem Ziel. Hülsenfrüchte,
+                Haferflocken und Spinat helfen, die Lücke zu schliessen.
+            </Alert>
+        </div>
+    </text>;
+}

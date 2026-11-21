@@ -5,6 +5,12 @@
     font-family: var(--font-family-ui);
 }
 
+.vs-checkbox__row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--toggletip-spacing);
+}
+
 .vs-checkbox__label {
     display: inline-flex;
     align-items: flex-start;
@@ -94,6 +100,13 @@
 .vs-checkbox__required-marker {
     margin-inline-start: var(--space-2);
     color: currentColor;
+}
+
+.vs-checkbox__info {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: var(--touch-target-min);
 }
 
 .vs-checkbox__helper {

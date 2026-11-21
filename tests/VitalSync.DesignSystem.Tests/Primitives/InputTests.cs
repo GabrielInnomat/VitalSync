@@ -329,4 +329,26 @@ public sealed class InputTests : BunitContext
         Assert.Equal("Wie du angesprochen werden möchtest.", cut.Find(".vs-input__helper").TextContent);
         Assert.Empty(cut.FindAll(".vs-input__error"));
     }
+
+    [Fact]
+    public void Renders_a_help_button_beside_the_label_but_outside_it_when_Info_is_set()
+    {
+        var (editContext, model) = CreateEditContext();
+
+        var cut = RenderInput(editContext, model, parameters => parameters.Add(p => p.Info, "So, wie er im Ausweis steht."));
+
+        Assert.Empty(cut.Find("label").QuerySelectorAll("button"));
+        Assert.Equal("Hilfe zu Name", cut.Find(".vs-input__label-row .vs-toggletip__name").TextContent);
+        Assert.Equal("So, wie er im Ausweis steht.", cut.Find(".vs-toggletip__popup").TextContent);
+    }
+
+    [Fact]
+    public void Renders_no_help_button_without_Info()
+    {
+        var (editContext, model) = CreateEditContext();
+
+        var cut = RenderInput(editContext, model);
+
+        Assert.Empty(cut.FindAll(".vs-toggletip"));
+    }
 }

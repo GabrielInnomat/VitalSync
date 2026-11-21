@@ -5,6 +5,12 @@
     font-family: var(--font-family-ui);
 }
 
+.vs-select__label-row {
+    display: flex;
+    align-items: center;
+    gap: var(--toggletip-spacing);
+}
+
 .vs-select__label {
     display: inline-flex;
     align-items: center;

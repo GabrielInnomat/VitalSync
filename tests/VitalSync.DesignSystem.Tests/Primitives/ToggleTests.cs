@@ -119,4 +119,17 @@ public sealed class ToggleTests : BunitContext
         Assert.Equal("switch", input.GetAttribute("role"));
         Assert.Equal("toggle", input.GetAttribute("data-test"));
     }
+
+    [Fact]
+    public void Labels_the_switch_from_its_text_and_its_row_and_keeps_the_help_button_outside_both()
+    {
+        var cut = RenderToggle(parameters => parameters.Add(p => p.Info, "Erinnert dich an geplante Trainings."));
+
+        var input = cut.Find("input");
+        var labels = cut.FindAll("label");
+        Assert.Equal(2, labels.Count);
+        Assert.All(labels, label => Assert.Equal(input.Id, label.GetAttribute("for")));
+        Assert.All(labels, label => Assert.Empty(label.QuerySelectorAll("button")));
+        Assert.Equal("Hilfe zu Benachrichtigungen", cut.Find(".vs-toggletip__name").TextContent);
+    }
 }

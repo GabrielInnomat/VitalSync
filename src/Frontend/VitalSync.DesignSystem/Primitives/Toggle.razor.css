@@ -1,19 +1,26 @@
 .vs-toggle {
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
     font-family: var(--font-family-ui);
 }
 
-.vs-toggle__label {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: flex-start;
-    align-self: flex-start;
+.vs-toggle__label-row {
+    display: flex;
+    align-items: center;
+    gap: var(--toggletip-spacing);
+}
+
+.vs-toggle__label,
+.vs-toggle__switch {
     color: var(--toggle-label-text-color);
     font-size: var(--font-size-200);
     line-height: var(--line-height-base);
     cursor: pointer;
+}
+
+.vs-toggle__switch {
+    display: inline-flex;
+    align-self: flex-start;
 }
 
 .vs-toggle__text {
@@ -29,7 +36,8 @@
 }
 
 .vs-toggle__label--disabled,
-.vs-toggle__label--disabled .vs-toggle__row {
+.vs-toggle__switch--disabled,
+.vs-toggle__switch--disabled .vs-toggle__row {
     color: var(--toggle-text-color-disabled);
     cursor: not-allowed;
 }
@@ -55,7 +63,7 @@
                 border-color var(--motion-duration-fast) var(--motion-easing);
 }
 
-.vs-toggle__label:hover .vs-toggle__input:not(:disabled) {
+.vs-toggle:has(label:hover) .vs-toggle__input:not(:disabled) {
     border-color: var(--toggle-track-border-color-hover);
 }
 
@@ -64,7 +72,7 @@
     border-color: var(--toggle-checked-background);
 }
 
-.vs-toggle__label:hover .vs-toggle__input:checked:not(:disabled) {
+.vs-toggle:has(label:hover) .vs-toggle__input:checked:not(:disabled) {
     background-color: var(--toggle-checked-background-hover);
     border-color: var(--toggle-checked-background-hover);
 }
@@ -90,7 +98,7 @@
                 border-color var(--motion-duration-fast) var(--motion-easing);
 }
 
-.vs-toggle__label:hover .vs-toggle__input:not(:disabled):not(:checked) ~ .vs-toggle__thumb {
+.vs-toggle:has(label:hover) .vs-toggle__input:not(:disabled):not(:checked) ~ .vs-toggle__thumb {
     border-color: var(--toggle-thumb-color-hover);
 }
 
@@ -131,6 +139,7 @@
 
 .vs-toggle__helper {
     margin: 0;
+    margin-block-start: var(--space-1);
     color: var(--toggle-helper-text-color);
     font-size: var(--font-size-100);
 }

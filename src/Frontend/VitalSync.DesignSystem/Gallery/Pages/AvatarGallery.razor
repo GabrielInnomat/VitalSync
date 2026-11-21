@@ -1,0 +1,73 @@
+@page "/design-system/avatar"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using VitalSync.DesignSystem.Primitives
+
+<PageTitle>Profilbild · Design System · VitalSync</PageTitle>
+
+<h1>Profilbild (<code>Avatar</code>)</h1>
+<p>
+    <code>Avatar</code> zeigt das Foto einer Person. Fehlt das Foto oder lädt es nicht, erscheinen
+    die Initialen aus dem ersten und letzten Wort von <code>Name</code>. <code>Name</code> ist
+    deshalb immer Pflicht. Allein stehend ist der Avatar ein Bild mit dem Namen als Bezeichnung.
+    Steht der Name daneben, wird er mit <code>Decorative</code> für Screenreader ausgeblendet, damit
+    der Name nicht doppelt vorgelesen wird. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    <section data-theme="light" class="vs-gallery__theme-panel">
+        <h2>Hell</h2>
+        @renderStates()
+    </section>
+    <section data-theme="dark" class="vs-gallery__theme-panel">
+        <h2>Dunkel</h2>
+        @renderStates()
+    </section>
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;Avatar Name="Anna Muster" Src="/users/anna.jpg" /&gt;
+&lt;Avatar Name="Anna Muster" Size="AvatarSize.Large" /&gt;
+
+&lt;Avatar Name="Anna Muster" Src="/users/anna.jpg" Decorative="true" /&gt;
+&lt;span&gt;Anna Muster&lt;/span&gt;
+</code></pre>
+
+@code {
+    private const string Photo =
+        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23075593'/%3E%3Ccircle cx='32' cy='25' r='12' fill='%23F8FAFC'/%3E%3Cellipse cx='32' cy='62' rx='22' ry='20' fill='%23F8FAFC'/%3E%3C/svg%3E";
+
+    private const string BrokenPhoto = "data:image/png;base64,kaputt";
+
+    private RenderFragment renderStates() => @<text>
+        <h3>Grössen mit Initialen</h3>
+        <div class="vs-gallery__row">
+            <Avatar Name="Anna Muster" Size="AvatarSize.Small" />
+            <Avatar Name="Anna Muster" />
+            <Avatar Name="Anna Muster" Size="AvatarSize.Large" />
+        </div>
+        <h3>Grössen mit Foto</h3>
+        <div class="vs-gallery__row">
+            <Avatar Name="Ben Keller" Src="@Photo" Size="AvatarSize.Small" />
+            <Avatar Name="Ben Keller" Src="@Photo" />
+            <Avatar Name="Ben Keller" Src="@Photo" Size="AvatarSize.Large" />
+        </div>
+        <h3>Foto lädt nicht</h3>
+        <div class="vs-gallery__row">
+            <Avatar Name="Chiara Rossi" Src="@BrokenPhoto" />
+            <Avatar Name="Wim" Src="@BrokenPhoto" />
+        </div>
+        <h3>Neben dem Namen</h3>
+        <ul class="vs-avatar-gallery__people">
+            <li>
+                <Avatar Name="Anna Muster" Decorative="true" />
+                <span>Anna Muster</span>
+            </li>
+            <li>
+                <Avatar Name="Ben Keller" Src="@Photo" Decorative="true" />
+                <span>Ben Keller</span>
+            </li>
+        </ul>
+    </text>;
+}

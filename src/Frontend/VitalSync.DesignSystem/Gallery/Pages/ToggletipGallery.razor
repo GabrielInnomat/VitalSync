@@ -1,0 +1,125 @@
+@page "/design-system/toggletip"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Forms
+@using VitalSync.DesignSystem.Primitives
+
+<PageTitle>Hinweis · Design System · VitalSync</PageTitle>
+
+<h1>Hinweis (<code>Toggletip</code>)</h1>
+<p>
+    Eine Info-Schaltfläche, die auf Klick, <kbd>Enter</kbd> oder <kbd>Leertaste</kbd> einen kurzen
+    Erklärtext öffnet. <kbd>Esc</kbd> oder ein Klick daneben schließt ihn wieder, und es ist immer
+    nur einer offen. Der Text steht nur im Popup und ist reiner Text. <code>Subject</code> benennt,
+    wozu die Hilfe gehört („Hilfe zu …“), <code>Text</code> ist der Inhalt; beide sind Pflicht. Jedes
+    Formularfeld nimmt denselben Hinweis über seinen Parameter <code>Info</code> auf und setzt ihn
+    neben die Beschriftung, nie hinein. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    @foreach (var demo in _themes)
+    {
+        <section data-theme="@demo.Theme" class="vs-gallery__theme-panel">
+            <h2>@demo.Title</h2>
+
+            <h3>Eigenständig</h3>
+            <div class="vs-gallery__heading-row">
+                <h4>Grundumsatz</h4>
+                <Toggletip Subject="Grundumsatz" Text="Die Energie, die dein Körper in völliger Ruhe für Atmung, Kreislauf und Wärme verbraucht." />
+            </div>
+            <p>
+                Dein Tagesbedarf liegt bei 2300 kcal.
+                <Toggletip Subject="Tagesbedarf" Text="Grundumsatz plus die Energie, die du im Alltag und beim Training zusätzlich verbrauchst." />
+            </p>
+
+            <h3>In Feldern</h3>
+            <Form EditContext="demo.Fields">
+                <Input @bind-Value="demo.FieldsModel.Weight" Label="Zielgewicht" Info="Das Gewicht, das du langfristig halten möchtest, nicht ein Zwischenziel." />
+
+                <Select @bind-Value="demo.FieldsModel.Diet" Label="Ernährungsform" Info="Bestimmt, welche Rezepte wir dir vorschlagen.">
+                    <SelectOption Value="@("mixed")" Label="Mischkost" />
+                    <SelectOption Value="@("vegan")" Label="Vegan" />
+                </Select>
+
+                <RadioGroup @bind-Value="demo.FieldsModel.Level" Label="Aktivitätsniveau" Info="Wie viel du dich außerhalb des Trainings bewegst, etwa im Beruf.">
+                    <RadioOption Value="@("low")" Label="Gering" />
+                    <RadioOption Value="@("high")" Label="Hoch" />
+                </RadioGroup>
+
+                <Checkbox @bind-Value="demo.FieldsModel.Share" Label="Daten für die Forschung teilen" Info="Anonymisiert und ohne Namen. Du kannst das jederzeit widerrufen." />
+
+                <Toggle @bind-Value="demo.FieldsModel.Reminders" Label="Erinnerungen" Info="Eine Nachricht eine Stunde vor jedem geplanten Training." />
+            </Form>
+
+            <h3>Deaktiviert</h3>
+            <p class="vs-gallery__note">Die Hilfe bleibt bedienbar, auch wenn das Feld es nicht ist.</p>
+            <Form EditContext="demo.Disabled">
+                <Input @bind-Value="demo.DisabledModel.Weight" Label="Zielgewicht" Disabled="true" Info="Wird aus deinem Trainingsplan übernommen." />
+
+                <Select @bind-Value="demo.DisabledModel.Diet" Label="Ernährungsform" Disabled="true" Info="Wird von deiner Ernährungsberatung festgelegt.">
+                    <SelectOption Value="@("mixed")" Label="Mischkost" />
+                    <SelectOption Value="@("vegan")" Label="Vegan" />
+                </Select>
+
+                <RadioGroup @bind-Value="demo.DisabledModel.Level" Label="Aktivitätsniveau" Disabled="true" Info="Wird aus deinem Schrittzähler berechnet.">
+                    <RadioOption Value="@("low")" Label="Gering" />
+                    <RadioOption Value="@("high")" Label="Hoch" />
+                </RadioGroup>
+
+                <Checkbox @bind-Value="demo.DisabledModel.Share" Label="Daten für die Forschung teilen" Disabled="true" Info="Erst nach der Altersbestätigung möglich." />
+
+                <Toggle @bind-Value="demo.DisabledModel.Reminders" Label="Erinnerungen" Disabled="true" Info="Erst möglich, wenn Mitteilungen erlaubt sind." />
+            </Form>
+        </section>
+    }
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;p&gt;
+    Dein Tagesbedarf liegt bei 2300 kcal.
+    &lt;Toggletip Subject="Tagesbedarf" Text="Grundumsatz plus Bewegung." /&gt;
+&lt;/p&gt;
+
+&lt;Input @@bind-Value="model.Weight" Label="Zielgewicht" Info="Das Gewicht, das du langfristig halten möchtest." /&gt;
+</code></pre>
+
+@code {
+    private readonly ThemeDemo[] _themes = [new("light", "Hell"), new("dark", "Dunkel")];
+
+    private sealed class ThemeDemo
+    {
+        public ThemeDemo(string theme, string title)
+        {
+            Theme = theme;
+            Title = title;
+            Fields = new EditContext(FieldsModel);
+            Disabled = new EditContext(DisabledModel);
+        }
+
+        public string Theme { get; }
+
+        public string Title { get; }
+
+        public DemoModel FieldsModel { get; } = new();
+
+        public EditContext Fields { get; }
+
+        public DemoModel DisabledModel { get; } = new() { Weight = "72", Diet = "mixed", Level = "low", Reminders = true };
+
+        public EditContext Disabled { get; }
+    }
+
+    private sealed class DemoModel
+    {
+        public string Weight { get; set; } = "";
+
+        public string? Diet { get; set; }
+
+        public string? Level { get; set; }
+
+        public bool Share { get; set; }
+
+        public bool Reminders { get; set; }
+    }
+}

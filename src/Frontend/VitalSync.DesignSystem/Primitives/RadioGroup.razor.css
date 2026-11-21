@@ -10,6 +10,9 @@
 }
 
 .vs-radio-group__legend {
+    display: flex;
+    align-items: center;
+    gap: var(--toggletip-spacing);
     margin-block-end: var(--space-1);
     padding: 0;
     color: var(--choice-label-text-color);

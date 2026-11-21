@@ -1,0 +1,25 @@
+@namespace VitalSync.DesignSystem.Primitives
+
+<span @attributes="AdditionalAttributes" class="@CssClass" role="status">
+    <span class="vs-spinner__ring" aria-hidden="true"></span>
+    <span class="vs-spinner__label">@Label.Trim()</span>
+</span>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = "Wird geladen\u00A0…";
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => CssClasses.Merge("vs-spinner", AdditionalAttributes);
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Label))
+        {
+            throw new InvalidOperationException(
+                "Spinner requires a visible Label; it is the only cue that does not depend on seeing the motion.");
+        }
+    }
+}

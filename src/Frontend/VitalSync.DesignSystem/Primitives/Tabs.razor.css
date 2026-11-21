@@ -1,0 +1,119 @@
+.vs-tabs__list {
+    /* nicht entfernen: sonst drückt die Reihe ihren Container breiter, statt sich zu stapeln */
+    contain: inline-size;
+    display: flex;
+    flex-wrap: wrap;
+    border-block-end: var(--tabs-divider-width) solid var(--tabs-divider-color);
+}
+
+    .vs-tabs__list[data-vs-tabs-layout="row"] {
+        flex-wrap: nowrap;
+    }
+
+    .vs-tabs__list[data-vs-tabs-layout="stacked"] {
+        flex-direction: column;
+        border-block-end: none;
+        border-inline-start: var(--tabs-divider-width) solid var(--tabs-divider-color);
+    }
+
+.vs-tabs__tab {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--tabs-gap);
+    min-height: var(--tabs-min-height);
+    padding-block: var(--space-2);
+    padding-inline: var(--tabs-padding-inline);
+    color: var(--tabs-text-color);
+    font-family: var(--font-family-ui);
+    font-size: var(--font-size-200);
+    font-weight: var(--tabs-font-weight);
+    line-height: var(--line-height-tight);
+    text-decoration: none;
+}
+
+    .vs-tabs__tab:hover {
+        color: var(--tabs-text-color-hover);
+    }
+
+    .vs-tabs__tab[aria-selected="true"] {
+        color: var(--tabs-selected-text-color);
+        font-weight: var(--tabs-selected-font-weight);
+    }
+
+        .vs-tabs__tab[aria-selected="true"]::before {
+            content: "";
+            position: absolute;
+            inset-inline: 0;
+            inset-block-end: calc(-1 * var(--tabs-divider-width));
+            border-block-end: var(--tabs-indicator-width) solid var(--tabs-indicator-color);
+        }
+
+    .vs-tabs__tab:focus-visible {
+        z-index: 1;
+        outline: var(--focus-ring-width) solid var(--focus-ring-color);
+        outline-offset: var(--focus-ring-offset);
+        box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+    }
+
+.vs-tabs__list[data-vs-tabs-layout="stacked"] .vs-tabs__tab[aria-selected="true"]::before {
+    inset-block: 0;
+    inset-inline-start: calc(-1 * var(--tabs-divider-width));
+    inset-inline-end: auto;
+    border-block-end: none;
+    border-inline-start: var(--tabs-indicator-width) solid var(--tabs-indicator-color);
+}
+
+.vs-tabs__icon {
+    display: inline-flex;
+    flex: none;
+    width: var(--tabs-icon-size);
+    height: var(--tabs-icon-size);
+}
+
+    .vs-tabs__icon ::deep svg {
+        width: 100%;
+        height: 100%;
+    }
+
+.vs-tabs__title {
+    display: inline-flex;
+    flex-direction: column;
+}
+
+    /* unsichtbare halbfette Kopie: hält die Breite fest, damit beim Wechsel nichts springt */
+    .vs-tabs__title::after {
+        content: attr(data-text);
+        height: 0;
+        overflow: hidden;
+        visibility: hidden;
+        font-weight: var(--tabs-selected-font-weight);
+        pointer-events: none;
+        user-select: none;
+    }
+
+.vs-tabs__badge {
+    display: inline-flex;
+    align-items: center;
+    padding-inline: var(--tabs-badge-padding-inline);
+    border: var(--border-width-thin) solid transparent;
+    border-radius: var(--tabs-badge-radius);
+    background-color: var(--tabs-badge-background);
+    color: var(--tabs-badge-text-color);
+    font-size: var(--tabs-badge-font-size);
+    font-weight: var(--tabs-badge-font-weight);
+    line-height: var(--line-height-base);
+}
+
+.vs-tabs__hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}

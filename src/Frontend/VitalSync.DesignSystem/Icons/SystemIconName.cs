@@ -6,7 +6,9 @@ public enum SystemIconName
     Check,
     CheckCircle,
     Circle,
+    Info,
     Warning,
+    X,
     XCircle,
     Tag,
 }
