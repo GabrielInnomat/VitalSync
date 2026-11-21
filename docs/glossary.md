@@ -218,8 +218,8 @@ infrastructure, observable from the outside.
 
 ### Migration worker
 
-The short-lived process that applies a context's schema migrations and then exits. Its service does
-not start before it has completed.
+The short-lived process that creates a context's databases if they are missing, applies its schema
+migrations and then exits. Its service does not start before it has completed.
 
 ### Service defaults
 

@@ -401,3 +401,6 @@ FodyWeavers.xsd
 
 # Rendering of a failing persisted schema snapshot
 *.received.txt
+
+# Aspire publish and deploy output, including the generated .env with the passwords
+aspire-output/

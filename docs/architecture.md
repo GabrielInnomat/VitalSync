@@ -53,6 +53,11 @@ innermost layer that consumes it.
 
 Alongside each service sits a **migration worker**: a short-lived host that brings the context's
 databases to the current schema and then exits. The service waits for it to finish before starting.
+Its first step is to create the context's two databases if they do not exist yet, so a context
+brings its own databases into being wherever it runs, instead of relying on the orchestrator or on
+an initialization script that runs only once. The step can run any number of times, and it waits for
+the PostgreSQL server to accept connections, since a container start does not mean the server is
+ready.
 
 The building blocks these layers rest on — the aggregate bases, the dispatcher, the unit of work,
 the outbox — are not part of VitalSync. They come from the external

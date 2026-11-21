@@ -80,6 +80,21 @@ The same check runs two ways. `dotnet run --project tools/VitalSync.DesignTokens
 readable report for whoever is changing a color, and the test project asserts the same result, so the
 ordinary test run is the gate and no separate pipeline step is needed.
 
+## Hosted composition
+
+The settings that apply only when the AppHost is published — restart policies, published ports,
+volume names, the management port, plain HTTP — never run during development, so nothing would
+notice if one of them broke. A test therefore publishes the AppHost into a temporary directory and
+reads the generated Compose project back. It asserts what the hosted system promises: which ports
+are published and that each is bound to the loopback address, which services restart, that no
+password is written into the file, and that every hosted project listens on its application and its
+management port. The test needs neither Docker nor a running container, so it runs with the fast
+tests.
+
+Creating a context's databases is tested against a real PostgreSQL in a container: missing
+databases are created, existing ones are left in place, and a name that needs quoting comes out
+exactly as given.
+
 ## Continuous integration
 
 `.github/workflows/build.yml` runs on every push to `main`, on pull requests and on demand. It

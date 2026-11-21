@@ -79,7 +79,8 @@ the monitoring, as described under [Who can reach what](#who-can-reach-what).
 - **The application** — the Blazor frontend is the only part of VitalSync that is ever public. It is
   private in Stage 1, behind Access in Stage 2, and behind VitalSync's own login in Stage 3.
 - **Administration** — pgAdmin and the RabbitMQ management interface can change and delete data.
-  They are never public and are reachable only through Tailscale, in every stage.
+  They are never public and are reachable only through Tailscale, in every stage. Each asks for a
+  login of its own on top of that.
 - **Monitoring** — monitoring only reads. It is reachable through Tailscale in Stage 1, and from
   Stage 2 on also through its own subdomain behind Access, so it can be checked from a device that
   is not part of the private network.

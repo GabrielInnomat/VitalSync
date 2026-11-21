@@ -28,6 +28,7 @@ public static class AspireExtensions
     public const string LiveTag = "live";
     public const string ReadyTag = "ready";
     public const string DeadLetterTag = "dead-letters";
+    public const string AllowPlainHttpKey = "ServiceDiscovery:AllowPlainHttp";
 
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
@@ -40,7 +41,9 @@ public static class AspireExtensions
             http.AddServiceDiscovery();
         });
 
-        builder.Services.Configure<ServiceDiscoveryOptions>(options => options.AllowedSchemes = ["https"]);
+        var allowPlainHttp = builder.Configuration.GetValue<bool>(AllowPlainHttpKey);
+        builder.Services.Configure<ServiceDiscoveryOptions>(options =>
+            options.AllowedSchemes = allowPlainHttp ? ["https", "http"] : ["https"]);
 
         return builder;
     }
@@ -102,13 +105,7 @@ public static class AspireExtensions
         string connectionName = "postgres",
         string name = "postgres") where TBuilder : IHostApplicationBuilder
     {
-        var connectionString = builder.Configuration.GetConnectionString(connectionName);
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new InvalidOperationException(
-                $"No connection string named '{connectionName}' is configured, so the readiness check " +
-                $"'{name}' cannot be added. Does the AppHost reference a resource of that name?");
-        }
+        var connectionString = builder.RequireReadinessConnectionString(connectionName, name);
 
         builder.Services.AddHealthChecks()
             .AddNpgSql(
@@ -121,14 +118,33 @@ public static class AspireExtensions
 
     public static TBuilder AddRabbitMqReadinessCheck<TBuilder>(
         this TBuilder builder,
+        string connectionName = "messaging",
         string name = "rabbitmq") where TBuilder : IHostApplicationBuilder
     {
+        var connectionString = builder.RequireReadinessConnectionString(connectionName, name);
+
+        builder.Services.AddKeyedSingleton(name, (_, _) => new RabbitMqReadinessConnection(new Uri(connectionString)));
         builder.Services.AddHealthChecks()
             .AddRabbitMQ(
+                factory: services => services.GetRequiredKeyedService<RabbitMqReadinessConnection>(name).GetAsync(),
                 name: name,
                 tags: [ReadyTag]);
 
         return builder;
+    }
+
+    private static string RequireReadinessConnectionString<TBuilder>(
+        this TBuilder builder,
+        string connectionName,
+        string name) where TBuilder : IHostApplicationBuilder
+    {
+        var connectionString = builder.Configuration.GetConnectionString(connectionName);
+
+        return string.IsNullOrWhiteSpace(connectionString)
+            ? throw new InvalidOperationException(
+                $"No connection string named '{connectionName}' is configured, so the readiness check " +
+                $"'{name}' cannot be added. Does the AppHost reference a resource of that name?")
+            : connectionString;
     }
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)

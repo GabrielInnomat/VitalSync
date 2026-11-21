@@ -36,6 +36,17 @@ configuration was requested. The CI pipeline runs a Release build, so it starts 
 assembly directly with `dotnet <AppHost>.dll`. The `aspire.config.json` at the
 repository root points `aspire run` at `src/Aspire/VitalSync.AppHost`.
 
+The same AppHost also describes the hosted system. A Docker Compose compute environment turns every
+resource into a Compose service: each project becomes a container image built from its project file,
+with no hand-written Dockerfile, and `aspire deploy` builds the images and starts the Compose
+project. What differs from local development is declared in the AppHost and applies only when
+publishing — stable volume names, restart policies, plain HTTP between the containers, a separate
+management port for the health endpoints, a pgAdmin container of its own, the released dashboard
+image at the AppHost's Aspire version, and ports bound to the loopback address only. The dashboard
+version is pinned rather than following a moving tag, so a restart never brings a different
+dashboard, and it is moved up together with the Aspire packages. Where the hosted system runs and who can reach it is described in
+[Hosting](./hosting.md).
+
 ## Blazor
 
 **Blazor is the frontend.** It is the only externally reachable endpoint of the system and holds no
