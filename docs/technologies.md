@@ -26,7 +26,15 @@ It also owns start-up ordering, which matters here: a migration worker must fini
 service starts, and a service must not accept traffic before its databases and the broker are
 reachable.
 
-No Aspire workload has to be installed; the AppHost references the Aspire SDK as a package.
+No Aspire workload has to be installed; the AppHost references the Aspire SDK as a package. The
+orchestrator and the dashboard are taken from the Aspire CLI bundle rather than from NuGet packages.
+The build resolves the bundle by itself, through a compatible
+`aspire` on the `PATH` or through `dnx`.
+
+`dotnet run` on an AppHost hands over to the Aspire CLI, which starts the Debug build whatever
+configuration was requested. The CI pipeline runs a Release build, so it starts the built AppHost
+assembly directly with `dotnet <AppHost>.dll`. The `aspire.config.json` at the
+repository root points `aspire run` at `src/Aspire/VitalSync.AppHost`.
 
 ## Blazor
 

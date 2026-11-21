@@ -47,6 +47,9 @@ VitalSync/
 - Docker, for the local infrastructure and for container-backed tests
 
 > No Aspire workload install is needed: the AppHost references `Aspire.AppHost.Sdk` as a package.
+> The orchestrator and the dashboard come from the Aspire CLI bundle. The build uses a compatible
+> `aspire` on the `PATH` and otherwise fetches the matching CLI through `dnx`, which ships with the
+> .NET SDK.
 
 ### Build, run and test
 
@@ -56,7 +59,8 @@ dotnet run --project src/Aspire/VitalSync.AppHost
 dotnet test
 ```
 
-The AppHost composes the whole system — see [Architecture](./docs/architecture.md).
+The AppHost composes the whole system — see [Architecture](./docs/architecture.md). With the Aspire
+CLI installed, `aspire run` from the repository root starts the same AppHost.
 
 ## Contributing
 

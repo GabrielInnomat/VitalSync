@@ -21,7 +21,7 @@ dotnet test
 
 Solution file: `VitalSync.slnx`. The SDK is pinned in `global.json`, and Docker is required for the
 container-backed tests. **No Aspire workload** — the AppHost references `Aspire.AppHost.Sdk` as a
-package.
+package and uses the Aspire CLI bundle (`AspireUseCliBundle`), which the build resolves on its own.
 
 `Directory.Build.props` applies solution-wide and puts the build under the strictest analysis
 available, with warnings treated as errors. A build failing on a warning is expected behavior, not a
