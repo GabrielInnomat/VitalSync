@@ -96,6 +96,8 @@ database it owns, a readiness check for the broker, problem-details error handli
 global exception handler, and the default health endpoints. The connection names are the Aspire
 resource names.
 
+Where the composed system runs and who can reach it is described in [Hosting](./hosting.md).
+
 ## Principles
 
 - **Domain-Driven Design** in every microservice.
