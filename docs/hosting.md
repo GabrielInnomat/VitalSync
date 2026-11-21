@@ -18,7 +18,9 @@ entered only when its trigger is met, and each one keeps everything the previous
 - **Stage 3 — VitalSync's own login.** The target state.
 
 Throughout all three stages the system runs on the owner's own computer, as containers rather than
-in the Aspire development mode, and restarts on its own after the computer does.
+in the Aspire development mode, and comes back on its own once the owner signs in after a restart.
+Until then it is offline. While the owner is the only user that is accepted; it is revisited in
+Stage 2, when other people depend on the system.
 
 ## Stage 1 — private, through Tailscale
 
@@ -94,12 +96,13 @@ receives that telemetry.
 
 - **Protection** — from Stage 2 on the dashboard is reachable behind Access and additionally asks for
   its own login token, so reaching it takes two independent steps.
-- **History** — the standalone dashboard keeps telemetry in memory only. A restart clears it. This is
-  enough to start with; durable telemetry storage is a later step.
+- **History** — the standalone dashboard keeps telemetry in memory only. A restart clears it. That
+  is enough while the owner watches the system live. Durable storage is decided in the evaluation
+  after Stage 3, and it stays self-hosted: logs can carry personal health data, so telemetry is not
+  sent to a hosted service.
 - **Outages** — the dashboard runs on the same computer as the system it watches, so it cannot report
-  that the computer itself is down. Detecting that needs a check from outside. Such a check would
-  bring in another provider and would need its own Access credential, so it is noted as a later
-  option and not decided now.
+  that the computer itself is down. There is deliberately no check from outside: it would bring in
+  another provider for little gain while the owner is the main user.
 
 ## After Stage 3
 
