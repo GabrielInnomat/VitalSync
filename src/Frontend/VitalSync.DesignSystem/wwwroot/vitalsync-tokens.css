@@ -645,4 +645,36 @@
   --alert-banner-critical-background: var(--color-surface-critical-subtle);
   --alert-banner-critical-border-color: var(--color-border-critical);
   --alert-banner-critical-icon-color: var(--color-icon-critical);
+
+  --app-navigation-width: 16rem;
+  --app-navigation-background: var(--color-background-surface);
+  --app-navigation-divider-color: var(--color-border-subtle);
+  --app-navigation-divider-width: var(--border-width-thin);
+  --app-navigation-padding: var(--space-3);
+  --app-navigation-gap: var(--space-3);
+  --app-navigation-title-font-size: var(--font-size-300);
+  --app-navigation-title-font-weight: var(--font-weight-semibold);
+  --app-navigation-title-text-color: var(--color-text-primary);
+  --app-navigation-toggle-gap: var(--space-2);
+  --app-navigation-toggle-padding-inline: var(--space-3);
+  --app-navigation-toggle-icon-size: var(--icon-size-md);
+  --app-navigation-toggle-text-color: var(--color-text-primary);
+  --app-navigation-toggle-font-weight: var(--font-weight-semibold);
+  --app-navigation-toggle-border-width: var(--border-width-thin);
+  --app-navigation-toggle-border-color: var(--color-border-interactive);
+  --app-navigation-toggle-border-color-hover: var(--color-border-interactive-hover);
+  --app-navigation-toggle-radius: var(--radius-sm);
+  --app-navigation-list-gap: var(--space-1);
+  --app-navigation-link-min-height: var(--touch-target-min);
+  --app-navigation-link-padding-inline: var(--space-3);
+  --app-navigation-link-gap: var(--space-3);
+  --app-navigation-link-radius: var(--radius-sm);
+  --app-navigation-link-icon-size: var(--icon-size-md);
+  --app-navigation-link-font-weight: var(--font-weight-regular);
+  --app-navigation-link-text-color: var(--color-text-secondary);
+  --app-navigation-link-text-color-hover: var(--color-text-primary);
+  --app-navigation-current-font-weight: var(--font-weight-semibold);
+  --app-navigation-current-text-color: var(--color-action-primary);
+  --app-navigation-indicator-color: var(--color-action-primary);
+  --app-navigation-indicator-width: var(--space-1);
 }

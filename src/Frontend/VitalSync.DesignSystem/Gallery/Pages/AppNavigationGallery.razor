@@ -1,0 +1,63 @@
+@page "/design-system/app-navigation"
+@layout GalleryLayout
+@using VitalSync.DesignSystem.Layouts
+
+<PageTitle>Navigation · Design System · VitalSync</PageTitle>
+
+<h1>Navigation (<code>AppNavigation</code>)</h1>
+<p>
+    <code>AppNavigation</code> ist die Hauptnavigation der App. Ab 1024 Pixel Fensterbreite steht sie
+    dauerhaft als Seitenleiste mit Icon und Text links. Schmaler zeigt sie eine Kopfzeile mit dem
+    Produktnamen und der Schaltfläche „Menü“, die die Einträge auf- und zuklappt und den Inhalt dabei
+    nach unten schiebt. Die aktuelle Seite trägt <code>aria-current="page"</code> und ist mit einem
+    Balken und fetterer Schrift markiert, nicht nur mit Farbe. Die Form hängt von der Fensterbreite ab:
+    Fenster schmaler oder breiter ziehen, um beide zu sehen. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    <section data-theme="light" class="vs-gallery__theme-panel">
+        <h2>Hell</h2>
+        @renderNavigation()
+    </section>
+    <section data-theme="dark" class="vs-gallery__theme-panel">
+        <h2>Dunkel</h2>
+        @renderNavigation()
+    </section>
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;AppNavigation Title="VitalSync"&gt;
+    &lt;AppNavigationLink Href="" Title="Übersicht" Match="NavLinkMatch.All"&gt;
+        &lt;Icon&gt;&lt;SystemIcon Name="SystemIconName.House" /&gt;&lt;/Icon&gt;
+    &lt;/AppNavigationLink&gt;
+    &lt;AppNavigationLink Href="nutrition" Title="Ernährung"&gt;
+        &lt;Icon&gt;&lt;SystemIcon Name="SystemIconName.ForkKnife" /&gt;&lt;/Icon&gt;
+    &lt;/AppNavigationLink&gt;
+&lt;/AppNavigation&gt;
+</code></pre>
+
+@code {
+    private static RenderFragment renderNavigation() => @<text>
+        <div class="vs-app-navigation-gallery__frame">
+            <AppNavigation Title="VitalSync">
+                <AppNavigationLink Href="" Title="Übersicht" Match="Microsoft.AspNetCore.Components.Routing.NavLinkMatch.All">
+                    <Icon><SystemIcon Name="SystemIconName.House" /></Icon>
+                </AppNavigationLink>
+                <AppNavigationLink Href="nutrition" Title="Ernährung">
+                    <Icon><SystemIcon Name="SystemIconName.ForkKnife" /></Icon>
+                </AppNavigationLink>
+                <AppNavigationLink Href="fitness" Title="Fitness">
+                    <Icon><SystemIcon Name="SystemIconName.Barbell" /></Icon>
+                </AppNavigationLink>
+                <AppNavigationLink Href="analytics" Title="Auswertungen">
+                    <Icon><SystemIcon Name="SystemIconName.ChartLine" /></Icon>
+                </AppNavigationLink>
+                <AppNavigationLink Href="settings" Title="Einstellungen">
+                    <Icon><SystemIcon Name="SystemIconName.Gear" /></Icon>
+                </AppNavigationLink>
+                <AppNavigationLink Href="design-system/app-navigation" Title="Diese Seite, ohne Icon" />
+            </AppNavigation>
+        </div>
+    </text>;
+}

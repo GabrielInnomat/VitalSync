@@ -1,0 +1,115 @@
+.vs-app-navigation {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "title toggle"
+        "nav nav";
+    align-items: center;
+    column-gap: var(--app-navigation-gap);
+    padding: var(--app-navigation-padding);
+    background-color: var(--app-navigation-background);
+    border-block-end: var(--app-navigation-divider-width) solid var(--app-navigation-divider-color);
+    font-family: var(--font-family-ui);
+}
+
+.vs-app-navigation__title {
+    grid-area: title;
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    max-inline-size: 100%;
+    min-height: var(--touch-target-min);
+    padding-inline: var(--app-navigation-link-padding-inline);
+    border-radius: var(--app-navigation-link-radius);
+    color: var(--app-navigation-title-text-color);
+    font-size: var(--app-navigation-title-font-size);
+    font-weight: var(--app-navigation-title-font-weight);
+    line-height: var(--line-height-tight);
+    overflow-wrap: anywhere;
+    text-decoration: none;
+}
+
+    .vs-app-navigation__title:hover {
+        color: var(--app-navigation-title-text-color);
+        text-decoration: underline;
+    }
+
+.vs-app-navigation__toggle {
+    grid-area: toggle;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-navigation-toggle-gap);
+    min-width: var(--touch-target-min);
+    min-height: var(--touch-target-min);
+    padding-inline: var(--app-navigation-toggle-padding-inline);
+    border: var(--app-navigation-toggle-border-width) solid var(--app-navigation-toggle-border-color);
+    border-radius: var(--app-navigation-toggle-radius);
+    background-color: transparent;
+    color: var(--app-navigation-toggle-text-color);
+    font-family: inherit;
+    font-size: var(--font-size-200);
+    font-weight: var(--app-navigation-toggle-font-weight);
+    line-height: var(--line-height-tight);
+    cursor: pointer;
+}
+
+    .vs-app-navigation__toggle:hover {
+        border-color: var(--app-navigation-toggle-border-color-hover);
+    }
+
+.vs-app-navigation__title:focus-visible,
+.vs-app-navigation__toggle:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+    box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+}
+
+.vs-app-navigation__toggle-icon {
+    display: inline-flex;
+    flex: none;
+    width: var(--app-navigation-toggle-icon-size);
+    height: var(--app-navigation-toggle-icon-size);
+}
+
+.vs-app-navigation__toggle[aria-expanded="true"] .vs-app-navigation__toggle-icon--closed,
+.vs-app-navigation__toggle:not([aria-expanded="true"]) .vs-app-navigation__toggle-icon--open {
+    display: none;
+}
+
+.vs-app-navigation__nav {
+    grid-area: nav;
+    margin-block-start: var(--app-navigation-gap);
+}
+
+.vs-app-navigation__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-navigation-list-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+@media (max-width: 1023.98px) {
+    .vs-app-navigation__toggle:not([aria-expanded="true"]) ~ .vs-app-navigation__nav {
+        display: none;
+    }
+}
+
+@media (min-width: 1024px) {
+    .vs-app-navigation {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "title"
+            "nav";
+        align-content: start;
+        inline-size: var(--app-navigation-width);
+        min-block-size: 100%;
+        border-block-end: none;
+        border-inline-end: var(--app-navigation-divider-width) solid var(--app-navigation-divider-color);
+    }
+
+    .vs-app-navigation__toggle {
+        display: none;
+    }
+}

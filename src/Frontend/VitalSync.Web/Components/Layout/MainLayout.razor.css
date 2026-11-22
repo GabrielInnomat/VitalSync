@@ -1,77 +1,46 @@
+.skip-link {
+    position: absolute;
+    inset-block-start: -100%;
+    inset-inline-start: var(--space-4);
+    z-index: var(--z-index-toast);
+    padding: var(--space-2) var(--space-4);
+    background-color: var(--color-background-surface);
+    color: var(--color-text-primary);
+    border: var(--border-width-thin) solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+}
+
+    .skip-link:focus {
+        inset-block-start: var(--space-4);
+    }
+
 .page {
-    position: relative;
     display: flex;
     flex-direction: column;
+    min-height: 100vh;
 }
 
-main {
+.page__content {
     flex: 1;
+    min-width: 0;
+    padding: var(--space-4);
 }
 
-.sidebar {
-    background-color: var(--color-background-surface);
-    border-bottom: var(--border-width-thin) solid var(--color-border-subtle);
-}
-
-.top-row {
-    background-color: var(--color-background-primary);
-    border-bottom: var(--border-width-thin) solid var(--color-border-subtle);
-    justify-content: flex-end;
-    height: calc(var(--touch-target-min) + var(--space-3));
-    padding-inline: var(--space-6);
-    display: flex;
-    align-items: center;
-}
-
-    .top-row ::deep a {
-        color: var(--color-action-primary);
-        white-space: nowrap;
-        margin-left: var(--space-6);
-        text-decoration: none;
-    }
-
-    .top-row ::deep a:hover {
-        color: var(--color-action-primary-hover);
-        text-decoration: underline;
-    }
-
-    .top-row ::deep a:first-child {
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-.content {
-    padding-inline: var(--space-6);
-}
-
-@media (max-width: 640.98px) {
-    .top-row {
-        justify-content: space-between;
-    }
-
-    .top-row ::deep a {
-        margin-left: 0;
-    }
-}
-
-@media (min-width: 641px) {
+@media (min-width: 1024px) {
     .page {
         flex-direction: row;
     }
 
-    .sidebar {
-        width: 250px;
-        height: 100vh;
+    .page__navigation {
         position: sticky;
         top: 0;
-        border-bottom: none;
-        border-right: var(--border-width-thin) solid var(--color-border-subtle);
+        flex: none;
+        height: 100vh;
+        overflow-y: auto;
     }
 
-    .top-row {
-        position: sticky;
-        top: 0;
-        z-index: var(--z-index-sticky);
+    .page__content {
+        padding: var(--space-6);
     }
 }
 

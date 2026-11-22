@@ -47,11 +47,12 @@ what lets a subtree carry a different theme than the page — the gallery shows 
 without a component keeping the colours of the page it happens to sit on.
 
 This is the automatic default, not the only path. A manual override belongs in the settings area,
-not in the main navigation — a theme choice is an infrequent, per-user preference, not something
-that competes for space with everyday navigation. It is persisted as a user setting on the backend,
-not in `localStorage`: this product is used across devices, and a choice tied to one browser's
-storage would silently fail to follow the user anywhere else. The override, once set, replaces the
-system-preference read; `prefers-color-scheme` remains the fallback for a user who has not chosen.
+not in the main navigation — a theme choice is an infrequent, personal preference, not something
+that competes for space with everyday navigation. The choice is stored in the device's
+`localStorage`, not on the server, so it applies to that browser on that device only. The same
+inline script reads it before the first paint; a stored choice replaces the system-preference
+read, and `prefers-color-scheme` remains the fallback for a user who has not chosen. The switcher is
+not built yet; it comes with the settings page.
 
 ## The rule that replaced the two-shade system
 
@@ -167,20 +168,22 @@ principles above (calm, accessible by default, this user base) are the product's
 a neutral baseline. Icons follow the same logic: there is no reason to limit the set to what a
 generic library ships.
 
-Two layers:
+**Phosphor is the source of every icon.** Generic UI icons (warning, info, close, chevron) come
+from **Phosphor** (MIT-licensed, free), and so do the icons of the app's areas in the
+[navigation](#app-navigation): a house, a fork and knife, a barbell, a line chart, a gear. Phosphor
+ships every icon in several weights on one consistent 256-unit grid. VitalSync uses the **Fill**
+weight throughout. That matters directly for WCAG 1.4.1: a critical and a warning icon differ in
+shape, not in colour alone.
 
-- **Generic UI icons** — warning, info, close, chevron, and similar — come from **Phosphor**
-  (MIT-licensed, free). It ships every icon in several weights on one consistent 256-unit grid;
-  VitalSync uses the **Fill** weight throughout. That matters directly for WCAG 1.4.1: a critical
-  and a warning icon differ in shape, not in colour alone.
-- **Domain icons** — running, cycling, a dumbbell, a heart-rate trace, a meal, a scale — are
-  VitalSync-specific and Phosphor does not carry them at the needed specificity. These are drawn as
-  a small custom SVG set, matched to Phosphor's grid and Fill weight so the two do not visually
-  diverge. None exist yet; they are added when the first domain screen needs one.
+**Custom icons are only a supplement.** A custom SVG is drawn only where Phosphor has no fitting
+shape for a VitalSync-specific subject. It must resemble Phosphor's style closely enough not to
+stand out next to it. That means the same 256-unit grid, the Fill weight, and comparable mass and
+corner rounding. A custom icon never replaces a Phosphor icon that fits. None exist yet; one is
+added when a screen needs a shape Phosphor does not have.
 
-Both layers live in `VitalSync.DesignSystem`; a component never imports an icon library directly.
+All icons live in `VitalSync.DesignSystem`; a component never imports an icon library directly.
 
-**How the generic layer is delivered.** There is no package and no icon font. The few Phosphor
+**How the icons are delivered.** There is no package and no icon font. The few Phosphor
 icons the system uses are copied into the library as SVG path data, in the **Fill** weight, and
 rendered by one component, `SystemIcon`, selected by the `SystemIconName` enum. Phosphor's MIT
 licence travels with them in `Icons/PHOSPHOR-LICENSE.txt`. An icon is added by adding its path
@@ -257,6 +260,10 @@ A component in `Primitives/` or `Patterns/` that is reused in more than one layo
 wrapping container with `container-type` and no media query of its own. A media query inside a
 component's stylesheet ties it to the viewport rather than to the space it was given, which breaks
 reuse in a narrower column.
+
+Components in `Layouts/` are that page level: they frame the whole page rather than sit in a
+column, so they respond to the viewport with media queries. The [app navigation](#app-navigation)
+changes its form at `--breakpoint-lg`.
 
 `var()` is not allowed inside a media query condition, so the `--breakpoint-*` tokens are the
 documented source of truth and the pixel values are repeated literally in the `@media` rules.
@@ -1267,10 +1274,74 @@ empty text's colour; the scrollbar thumb; and the shadow's colour and size. Ten 
 themes: the cell text, the header, the caption and the empty text, each on the page and on a card,
 and the scrollbar thumb on both.
 
+## App navigation
+
+`AppNavigation` is the app's main navigation: the product name and one link per area of the app.
+It lives in `Layouts/`, because it frames every page rather than sitting inside one. It is page
+navigation made of ordinary links, not a menu in the ARIA sense: there is no `role="menu"` and no
+arrow-key handling, and Tab moves from link to link.
+
+**Two forms, chosen by the window width.** From `--breakpoint-lg` (1024 px) on, it is a sidebar on
+the start side that is always visible, with an icon and a text per entry. Narrower, it is a bar
+across the top with the product name and a "Menü" button. The button discloses the entries below
+the bar and pushes the content down; it does not cover the page. There is therefore no overlay, no
+focus trap and nothing that needs to be closed before the page can be used. The bar is not fixed
+while scrolling, so at 400 % zoom it does not take a share of the screen.
+
+**The button says "Menü".** A visible word rather than an icon alone, because a bare hamburger icon
+is not understood by everybody in this user base. Its icon changes between a list and an X with
+the state, as a second cue next to `aria-expanded`. Escape closes the entries and returns the focus
+to the button; following a link closes them as well.
+
+**The landmarks are named.** The whole component is a `<header>`; the entries are a `<nav>` named
+"Hauptnavigation", with a list inside, so a screen reader announces how many entries there are.
+The product name is a link to the start page.
+
+**The current page** has `aria-current="page"`. It is shown by a bar on the start side, semibold
+text and the action colour. The bar and the weight carry the state without colour (1.4.1); the bar
+is measured at 3:1 against the navigation's background (1.4.11). The other entries use the
+secondary text colour, and the primary one with an underline on hover. An entry counts as current
+for its own address and for every address below it. `Match="NavLinkMatch.All"` limits that to the
+exact address, which the start page always needs, because otherwise every address would be below
+it.
+
+**Every entry has a visible text.** The icon only supports it and is hidden from screen readers.
+There are no icon-only entries, not even in the narrow form.
+
+**One size.** Every entry, the button and the product name are at least 44 px high.
+
+**It works without the live connection.** The navigation is rendered statically, like the layout
+around it; the entries are plain links, and the current page is decided on the server for every
+address. Only the button needs script.
+
+**Script.** The page around the navigation is static, so there is no component instance to call
+into. The design system therefore ships a JavaScript initializer, `VitalSync.DesignSystem.lib.module.js`,
+which Blazor loads by itself for every app that references the library. It imports the navigation's
+module, which listens once on the document: a click on the button toggles `aria-expanded`, a click
+on an entry and Escape collapse it. The CSS shows or hides the entries from that attribute alone.
+Because the listener sits on the document, it keeps working after Blazor's enhanced navigation
+replaces the page.
+
+**How it is used.** `AppNavigation` takes the mandatory `Title`, the product name, and one
+`AppNavigationLink` per area. Each `AppNavigationLink` has a mandatory `Href`, the page's path
+(empty for the start page), and a mandatory `Title`. `Icon` and `Match` are optional. A blank title,
+a missing navigation title or entries, an address with a query or a fragment and an entry outside
+`AppNavigation` all throw. The app's layout puts a "Zum Inhalt springen" link in front of it, so a
+keyboard user does not have to pass every entry on every page.
+
+**Tokens and rules.** The `--app-navigation-*` set: the sidebar's width, padding and gaps; the
+background and the divider's colour and width; the product name's size, weight and colour; the
+button's gap, padding, icon size, text colour, weight, border colours at rest and on hover, border
+width and radius; the entry's minimum height, padding, gap, radius, icon size, weight and text
+colours at rest and on hover; the current entry's weight and colour; and the bar's colour and
+width. No new semantic role. Nine rules, each on the navigation's background in both themes: the
+product name, the button text, the button border at rest and on hover, the entry text at rest, on
+hover and current, the bar and the focus ring.
+
 ## How this is kept true
 
 `tools/VitalSync.DesignTokens.Contrast` resolves every `var()` chain per theme and measures the
-pairs named in the rule document — 598 contrast checks and 6 separation checks at the time of
+pairs named in the rule document — 616 contrast checks and 6 separation checks at the time of
 writing. All pass except the two status-colour separation checks, which run under a waiver (see
 [Data visualisation](#data-visualisation)).
 
@@ -1339,8 +1410,8 @@ Routes live under `/design-system/*`, guarded by a single check for
 `IWebHostEnvironment.IsDevelopment()` at the top of the gallery's own layout rather than repeated
 per page. In anything other than Development the layout calls `NavigationManager.NotFound()`, so
 the route answers with a 404 and no content, the same as an unknown URL. The gallery is a
-tool for building the system, not a part of the product; it therefore has no entry in `NavMenu` and
-is reached by URL only.
+tool for building the system, not a part of the product; it therefore has no entry in the
+[app navigation](#app-navigation) and is reached by URL only.
 
 Each component's page shows every visual state (default, hover, focus, disabled, and both themes
 side by side) together with the markup needed to use it. The markup is what makes the page a

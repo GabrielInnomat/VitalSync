@@ -1,0 +1,89 @@
+@namespace VitalSync.DesignSystem.Layouts
+@using Microsoft.AspNetCore.Components.Routing
+@implements IDisposable
+@inject NavigationManager Navigation
+
+<li class="vs-app-navigation__item">
+    <a class="vs-app-navigation__link" href="@Href" aria-current="@(IsCurrent ? "page" : null)">
+        @if (Icon is not null)
+        {
+            <span class="vs-app-navigation__icon" aria-hidden="true">@Icon</span>
+        }
+        <span class="vs-app-navigation__label">@Title</span>
+    </a>
+</li>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Href { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter]
+    public NavLinkMatch Match { get; set; } = NavLinkMatch.Prefix;
+
+    [Parameter]
+    public RenderFragment? Icon { get; set; }
+
+    [CascadingParameter]
+    private AppNavigation? Parent { get; set; }
+
+    private bool IsCurrent
+    {
+        get
+        {
+            var current = CurrentPath;
+            var target = Href.Trim('/');
+
+            return Match == NavLinkMatch.All || target.Length == 0
+                ? string.Equals(current, target, StringComparison.OrdinalIgnoreCase)
+                : string.Equals(current, target, StringComparison.OrdinalIgnoreCase)
+                  || current.StartsWith($"{target}/", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private string CurrentPath
+    {
+        get
+        {
+            var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+            var end = relative.IndexOfAny(['?', '#']);
+            return (end < 0 ? relative : relative[..end]).Trim('/');
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        if (Parent is null)
+        {
+            throw new InvalidOperationException("AppNavigationLink must be placed inside AppNavigation.");
+        }
+
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Href is null)
+        {
+            throw new InvalidOperationException(
+                "An AppNavigationLink requires an Href; use an empty string for the start page.");
+        }
+
+        if (Href.Contains('?', StringComparison.Ordinal) || Href.Contains('#', StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"An AppNavigationLink's Href must be a page path without query or fragment; '{Href}' is not.");
+        }
+
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            throw new InvalidOperationException("An AppNavigationLink requires a visible Title; icon-only entries are not supported.");
+        }
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+}

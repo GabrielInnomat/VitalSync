@@ -11,4 +11,10 @@ public enum SystemIconName
     X,
     XCircle,
     Tag,
+    House,
+    ForkKnife,
+    Barbell,
+    ChartLine,
+    Gear,
+    List,
 }

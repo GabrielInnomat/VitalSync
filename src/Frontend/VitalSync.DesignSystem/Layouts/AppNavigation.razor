@@ -1,0 +1,57 @@
+@namespace VitalSync.DesignSystem.Layouts
+@using VitalSync.DesignSystem.Primitives
+
+<header @attributes="AdditionalAttributes" class="@CssClass" data-vs-app-navigation>
+    <a class="vs-app-navigation__title" href="">@Title</a>
+    <button type="button"
+            class="vs-app-navigation__toggle"
+            aria-expanded="false"
+            aria-controls="@NavigationId"
+            data-vs-app-navigation-toggle>
+        <span class="vs-app-navigation__toggle-icon vs-app-navigation__toggle-icon--closed" aria-hidden="true">
+            <SystemIcon Name="SystemIconName.List" />
+        </span>
+        <span class="vs-app-navigation__toggle-icon vs-app-navigation__toggle-icon--open" aria-hidden="true">
+            <SystemIcon Name="SystemIconName.X" />
+        </span>
+        Menü
+    </button>
+    <nav id="@NavigationId" class="vs-app-navigation__nav" aria-label="Hauptnavigation">
+        <ul class="vs-app-navigation__list">
+            <CascadingValue Value="this" IsFixed="true">
+                @ChildContent
+            </CascadingValue>
+        </ul>
+    </nav>
+</header>
+
+@code {
+    private readonly string _id = $"vs-app-navigation-{Guid.NewGuid():N}";
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string NavigationId => $"{_id}-nav";
+
+    private string CssClass => CssClasses.Merge("vs-app-navigation", AdditionalAttributes);
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            throw new InvalidOperationException(
+                "AppNavigation requires a Title; it names the product and links to the start page.");
+        }
+
+        if (ChildContent is null)
+        {
+            throw new InvalidOperationException("AppNavigation requires ChildContent with AppNavigationLink components.");
+        }
+    }
+}

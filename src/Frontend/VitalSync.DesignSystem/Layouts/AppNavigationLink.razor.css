@@ -1,0 +1,52 @@
+.vs-app-navigation__link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--app-navigation-link-gap);
+    min-height: var(--app-navigation-link-min-height);
+    padding-block: var(--space-2);
+    padding-inline: var(--app-navigation-link-padding-inline);
+    border-radius: var(--app-navigation-link-radius);
+    color: var(--app-navigation-link-text-color);
+    font-family: var(--font-family-ui);
+    font-size: var(--font-size-200);
+    font-weight: var(--app-navigation-link-font-weight);
+    line-height: var(--line-height-tight);
+    text-decoration: none;
+}
+
+    .vs-app-navigation__link:hover {
+        color: var(--app-navigation-link-text-color-hover);
+        text-decoration: underline;
+    }
+
+    .vs-app-navigation__link[aria-current="page"] {
+        color: var(--app-navigation-current-text-color);
+        font-weight: var(--app-navigation-current-font-weight);
+    }
+
+        .vs-app-navigation__link[aria-current="page"]::before {
+            content: "";
+            position: absolute;
+            inset-block: 0;
+            inset-inline-start: 0;
+            border-inline-start: var(--app-navigation-indicator-width) solid var(--app-navigation-indicator-color);
+        }
+
+    .vs-app-navigation__link:focus-visible {
+        outline: var(--focus-ring-width) solid var(--focus-ring-color);
+        outline-offset: var(--focus-ring-offset);
+        box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+    }
+
+.vs-app-navigation__icon {
+    display: inline-flex;
+    flex: none;
+    width: var(--app-navigation-link-icon-size);
+    height: var(--app-navigation-link-icon-size);
+}
+
+.vs-app-navigation__label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}

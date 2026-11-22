@@ -1,21 +1,36 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@using VitalSync.DesignSystem.Icons
+@using VitalSync.DesignSystem.Layouts
 @using VitalSync.DesignSystem.Primitives
+@inject NavigationManager Navigation
+
+<a href="@($"{CurrentPathAndQuery}#main")" class="skip-link" data-enhance-nav="false">Zum Inhalt springen</a>
 
 <AlertBannerRegion @rendermode="InteractiveServer" />
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
+    <div class="page__navigation">
+        <AppNavigation Title="VitalSync">
+            <AppNavigationLink Href="" Title="Übersicht" Match="NavLinkMatch.All">
+                <Icon><SystemIcon Name="SystemIconName.House" /></Icon>
+            </AppNavigationLink>
+            <AppNavigationLink Href="nutrition" Title="Ernährung">
+                <Icon><SystemIcon Name="SystemIconName.ForkKnife" /></Icon>
+            </AppNavigationLink>
+            <AppNavigationLink Href="fitness" Title="Fitness">
+                <Icon><SystemIcon Name="SystemIconName.Barbell" /></Icon>
+            </AppNavigationLink>
+            <AppNavigationLink Href="analytics" Title="Auswertungen">
+                <Icon><SystemIcon Name="SystemIconName.ChartLine" /></Icon>
+            </AppNavigationLink>
+            <AppNavigationLink Href="settings" Title="Einstellungen">
+                <Icon><SystemIcon Name="SystemIconName.Gear" /></Icon>
+            </AppNavigationLink>
+        </AppNavigation>
     </div>
 
-    <main tabindex="-1">
-        <div class="top-row">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">Über ASP.NET Core</a>
-        </div>
-
-        <article class="content">
-            @Body
-        </article>
+    <main id="main" class="page__content" tabindex="-1">
+        @Body
     </main>
 </div>
 
@@ -26,3 +41,15 @@
     <a href="" class="reload">Neu laden</a>
     <button type="button" class="dismiss">Schliessen</button>
 </div>
+
+@code {
+    private string CurrentPathAndQuery
+    {
+        get
+        {
+            var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+            var end = relative.IndexOf('#', StringComparison.Ordinal);
+            return end < 0 ? relative : relative[..end];
+        }
+    }
+}

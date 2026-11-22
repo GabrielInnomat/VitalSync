@@ -2420,6 +2420,78 @@
       "foreground": "--focus-ring-color",
       "background": "--alert-banner-critical-background",
       "requirement": "non-text"
+    },
+    {
+      "id": "app-navigation-title-on-background",
+      "criterion": "1.4.3",
+      "description": "Product name at the top of the app navigation",
+      "foreground": "--app-navigation-title-text-color",
+      "background": "--app-navigation-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "app-navigation-toggle-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Text and icon of the menu button in the narrow app navigation",
+      "foreground": "--app-navigation-toggle-text-color",
+      "background": "--app-navigation-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "app-navigation-toggle-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Boundary of the menu button in the narrow app navigation",
+      "foreground": "--app-navigation-toggle-border-color",
+      "background": "--app-navigation-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "app-navigation-toggle-border-hover-on-background",
+      "criterion": "1.4.11",
+      "description": "Boundary of the hovered menu button in the narrow app navigation",
+      "foreground": "--app-navigation-toggle-border-color-hover",
+      "background": "--app-navigation-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "app-navigation-link-on-background",
+      "criterion": "1.4.3",
+      "description": "Entry of the app navigation that is not the current page",
+      "foreground": "--app-navigation-link-text-color",
+      "background": "--app-navigation-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "app-navigation-link-hover-on-background",
+      "criterion": "1.4.3",
+      "description": "Hovered entry of the app navigation that is not the current page",
+      "foreground": "--app-navigation-link-text-color-hover",
+      "background": "--app-navigation-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "app-navigation-current-on-background",
+      "criterion": "1.4.3",
+      "description": "Entry of the app navigation for the current page",
+      "foreground": "--app-navigation-current-text-color",
+      "background": "--app-navigation-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "app-navigation-indicator-on-background",
+      "criterion": "1.4.11",
+      "description": "Bar marking the current page in the app navigation",
+      "foreground": "--app-navigation-indicator-color",
+      "background": "--app-navigation-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "app-navigation-focus-ring-on-background",
+      "criterion": "1.4.11",
+      "description": "Focus indicator of the product name, the menu button or an entry in the app navigation",
+      "foreground": "--focus-ring-color",
+      "background": "--app-navigation-background",
+      "requirement": "non-text"
     }
   ],
   "waivers": [],
