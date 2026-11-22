@@ -41,7 +41,7 @@ VitalSync/
 │   └── Services/                   Nutrition | Fitness | HealthAnalytics, each Api + MigrationService
 ├── docs/                           architecture.md, patterns.md, technologies.md, testing.md,
 │                                   design-system.md, hosting.md, glossary.md, domains/
-├── tools/                          build-time checks, not shipped
+├── tools/                          build-time checks and hosting scripts, not shipped
 ├── plan.md                         throwaway: what is left to build; deleted when it is
 └── tests/
 ```

@@ -10,7 +10,10 @@ public sealed class PublishedComposeProject : IAsyncLifetime
     public IReadOnlyDictionary<string, Dictionary<object, object>> Services { get; private set; } =
         new Dictionary<string, Dictionary<object, object>>();
 
-    public IReadOnlyCollection<string> VolumeNames { get; private set; } = [];
+    public IReadOnlyDictionary<string, Dictionary<object, object>> Volumes { get; private set; } =
+        new Dictionary<string, Dictionary<object, object>>();
+
+    public IReadOnlyCollection<string> VolumeNames => [.. Volumes.Keys];
 
     public async ValueTask InitializeAsync()
     {
@@ -28,7 +31,8 @@ public sealed class PublishedComposeProject : IAsyncLifetime
 
         Services = ComposeNode.Section(document, "services")
             .ToDictionary(service => (string)service.Key, service => (Dictionary<object, object>)service.Value);
-        VolumeNames = [.. ComposeNode.Section(document, "volumes").Keys.Cast<string>()];
+        Volumes = ComposeNode.Section(document, "volumes")
+            .ToDictionary(volume => (string)volume.Key, volume => volume.Value as Dictionary<object, object> ?? []);
     }
 
     public ValueTask DisposeAsync()

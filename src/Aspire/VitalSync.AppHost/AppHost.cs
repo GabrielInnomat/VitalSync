@@ -14,10 +14,19 @@ builder.AddDockerComposeEnvironment("vitalsync")
     .ConfigureComposeFile(file =>
     {
         BindToLoopback(file.Services["vitalsync-dashboard"], "18888:18888");
-        file.AddVolume(new Volume { Name = WebKeysVolume, Driver = "local" });
+        file.AddVolume(new Volume { Name = WebKeysVolume });
+
+        foreach (var volume in file.Volumes.Values)
+        {
+            volume.External = true;
+            volume.Driver = null;
+        }
     });
 
-var messaging = builder.AddRabbitMQ("messaging")
+var hostedMessagingPassword = isPublishMode ? builder.AddParameter("hosted-messaging-password", secret: true) : null;
+var hostedPostgresPassword = isPublishMode ? builder.AddParameter("hosted-postgres-password", secret: true) : null;
+
+var messaging = builder.AddRabbitMQ("messaging", password: hostedMessagingPassword)
     .WithManagementPlugin()
     .WithDataVolume(isPublishMode ? "vitalsync-messaging-data" : null)
     .PublishAsDockerComposeService((_, service) =>
@@ -26,7 +35,7 @@ var messaging = builder.AddRabbitMQ("messaging")
         BindToLoopback(service, "15672:15672");
     });
 
-var postgres = builder.AddPostgres("postgres")
+var postgres = builder.AddPostgres("postgres", password: hostedPostgresPassword)
     .WithDataVolume(isPublishMode ? "vitalsync-postgres-data" : null)
     .PublishAsDockerComposeService((_, service) => service.Restart = "unless-stopped");
 

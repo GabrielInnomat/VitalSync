@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using static VitalSync.AppHost.Tests.ComposeNode;
 
 namespace VitalSync.AppHost.Tests;
@@ -77,6 +78,28 @@ public class HostedComposeProjectTests(PublishedComposeProject compose) : IClass
     }
 
     [Fact]
+    public void Volumes_AreExternalSoTheirNamesDoNotDependOnTheProjectName()
+    {
+        Assert.All(compose.Volumes, volume =>
+        {
+            Assert.Equal("true", Scalar(volume.Value, "external"));
+            Assert.Null(Scalar(volume.Value, "driver"));
+        });
+    }
+
+    [Fact]
+    public void VolumeSetupScript_CreatesExactlyThePublishedVolumes()
+    {
+        var script = File.ReadAllText(Path.Combine(RepositoryRoot(), "tools", "hosting", "New-VitalSyncVolumes.ps1"));
+
+        var created = Regex.Matches(script, "'(vitalsync-[a-z-]+)'")
+            .Select(match => match.Groups[1].Value)
+            .Order(StringComparer.Ordinal);
+
+        Assert.Equal(compose.VolumeNames.Order(StringComparer.Ordinal), created);
+    }
+
+    [Fact]
     public void WebFrontend_KeepsItsHomeDirectoryOnAVolume()
     {
         var volume = Assert.Single(Mappings(compose.Service("web-frontend"), "volumes"));
@@ -96,15 +119,26 @@ public class HostedComposeProjectTests(PublishedComposeProject compose) : IClass
     }
 
     [Fact]
-    public void Passwords_AreNotWrittenIntoTheComposeFile()
+    public void Passwords_ComeFromHostedParametersAndAreNotWrittenIntoTheComposeFile()
     {
-        Assert.Equal("${POSTGRES_PASSWORD}", Scalar(Section(compose.Service("postgres"), "environment"), "POSTGRES_PASSWORD"));
-        Assert.Equal("${MESSAGING_PASSWORD}", Scalar(Section(compose.Service("messaging"), "environment"), "RABBITMQ_DEFAULT_PASS"));
+        Assert.Equal("${HOSTED_POSTGRES_PASSWORD}", Scalar(Section(compose.Service("postgres"), "environment"), "POSTGRES_PASSWORD"));
+        Assert.Equal("${HOSTED_MESSAGING_PASSWORD}", Scalar(Section(compose.Service("messaging"), "environment"), "RABBITMQ_DEFAULT_PASS"));
     }
 
     [Fact]
     public void Dashboard_RunsTheReleasedImageAtAFixedVersion()
     {
         Assert.Equal("mcr.microsoft.com/dotnet/aspire-dashboard:13.6.5", Scalar(compose.Service("vitalsync-dashboard"), "image"));
+    }
+
+    private static string RepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "VitalSync.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new DirectoryNotFoundException("The repository root with VitalSync.slnx was not found.");
     }
 }

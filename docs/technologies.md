@@ -40,12 +40,19 @@ The same AppHost also describes the hosted system. A Docker Compose compute envi
 resource into a Compose service: each project becomes a container image built from its project file,
 with no hand-written Dockerfile, and `aspire deploy` builds the images and starts the Compose
 project. What differs from local development is declared in the AppHost and applies only when
-publishing — stable volume names, restart policies, plain HTTP between the containers, a separate
-management port for the health endpoints, a pgAdmin container of its own, the released dashboard
-image at the AppHost's Aspire version, and ports bound to the loopback address only. The dashboard
-version is pinned rather than following a moving tag, so a restart never brings a different
-dashboard, and it is moved up together with the Aspire packages. Where the hosted system runs and who can reach it is described in
-[Hosting](./hosting.md).
+publishing — restart policies, plain HTTP between the containers, a separate management port for
+the health endpoints, a pgAdmin container of its own, passwords of its own rather than those of the
+development run, the released dashboard image at the AppHost's Aspire version, and ports bound to
+the loopback address only. The dashboard version is pinned rather than following a moving tag, so a
+restart never brings a different dashboard, and it is moved up together with the Aspire packages.
+
+The data volumes of the hosted system are declared external, under fixed names. `aspire deploy`
+names the Compose project after a hash of the AppHost's path, and Compose would put that name in
+front of every volume it creates, so the same system started from a checkout at another path would
+silently begin on empty volumes. An external volume keeps its name whatever the project is called,
+and Compose neither creates nor removes it, so the volumes are created once before the first
+deployment and survive tearing the project down. Where the hosted system runs and who can reach it
+is described in [Hosting](./hosting.md).
 
 ## Blazor
 
