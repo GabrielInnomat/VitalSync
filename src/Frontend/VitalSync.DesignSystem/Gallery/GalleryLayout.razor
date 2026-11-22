@@ -1,6 +1,7 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Hosting
 @using Microsoft.Extensions.Hosting
+@using VitalSync.DesignSystem.Primitives
 @inherits LayoutComponentBase
 @inject IWebHostEnvironment Environment
 @inject NavigationManager Navigation
@@ -8,6 +9,7 @@
 @if (Environment.IsDevelopment())
 {
     <a href="@($"{CurrentPath}#vs-gallery-main")" class="vs-gallery__skip-link" data-enhance-nav="false">Zum Inhalt springen</a>
+    <AlertBannerRegion @rendermode="InteractiveServer" />
     <div class="vs-gallery">
         <nav class="vs-gallery__nav" aria-label="Design-System-Navigation">
             <ul>
@@ -26,12 +28,16 @@
                 <li><a href="design-system/alert" aria-current="@IsCurrent("design-system/alert")">Meldung</a></li>
                 <li><a href="design-system/dialog" aria-current="@IsCurrent("design-system/dialog")">Dialog</a></li>
                 <li><a href="design-system/tabs" aria-current="@IsCurrent("design-system/tabs")">Registerkarten</a></li>
+                <li><a href="design-system/toast" aria-current="@IsCurrent("design-system/toast")">Benachrichtigung</a></li>
+                <li><a href="design-system/alert-banner" aria-current="@IsCurrent("design-system/alert-banner")">Systemmeldung</a></li>
+                <li><a href="design-system/table" aria-current="@IsCurrent("design-system/table")">Tabelle</a></li>
             </ul>
         </nav>
         <main id="vs-gallery-main" class="vs-gallery__content" tabindex="-1">
             @Body
         </main>
     </div>
+    <ToastRegion @rendermode="InteractiveServer" />
 }
 
 @code {

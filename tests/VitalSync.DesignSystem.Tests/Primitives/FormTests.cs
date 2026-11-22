@@ -198,6 +198,87 @@ public sealed class FormTests : BunitContext
     }
 
     [Fact]
+    public void Shows_the_clicked_submit_button_as_loading_while_a_valid_submit_runs()
+    {
+        var cut = Render<FormSubmitTestHost>();
+
+        _ = cut.Find(".draft").ClickAsync();
+
+        Assert.Equal(1, cut.Instance.ValidSubmits);
+        Assert.Contains("vs-button--loading", cut.Find(".draft").ClassList);
+        Assert.Equal("button", cut.Find(".draft").GetAttribute("type"));
+        Assert.DoesNotContain("vs-button--loading", cut.Find(".save").ClassList);
+    }
+
+    [Fact]
+    public async Task Ends_the_loading_state_when_the_valid_submit_completes()
+    {
+        var cut = Render<FormSubmitTestHost>();
+
+        _ = cut.Find(".save").ClickAsync();
+        await cut.InvokeAsync(() => cut.Instance.Pending.SetResult());
+
+        cut.WaitForAssertion(() => Assert.DoesNotContain("vs-button--loading", cut.Find(".save").ClassList));
+        Assert.Equal("submit", cut.Find(".save").GetAttribute("type"));
+    }
+
+    [Fact]
+    public async Task Ends_the_loading_state_and_lets_the_exception_through_when_the_valid_submit_fails()
+    {
+        var cut = Render<FormSubmitTestHost>();
+
+        _ = cut.Find(".save").ClickAsync();
+        await cut.InvokeAsync(() => cut.Instance.Pending.SetException(new InvalidOperationException("Speichern fehlgeschlagen")));
+
+        Assert.IsType<InvalidOperationException>(await Renderer.UnhandledException);
+        Assert.DoesNotContain("vs-button--loading", cut.Find(".save").ClassList);
+    }
+
+    [Fact]
+    public void Ignores_a_second_submit_while_the_first_still_runs()
+    {
+        var cut = Render<FormSubmitTestHost>();
+
+        _ = cut.Find(".save").ClickAsync();
+        _ = cut.Find(".draft").ClickAsync();
+        _ = cut.Find("form").SubmitAsync();
+
+        Assert.Equal(1, cut.Instance.ValidSubmits);
+        Assert.Contains("vs-button--loading", cut.Find(".save").ClassList);
+        Assert.DoesNotContain("vs-button--loading", cut.Find(".draft").ClassList);
+    }
+
+    [Fact]
+    public void Shows_no_loading_state_on_an_invalid_submit_and_forgets_the_clicked_button()
+    {
+        JSInterop.SetupVoid("Blazor._internal.domWrapper.focus", _ => true);
+        var cut = Render<FormSubmitTestHost>(parameters => parameters
+            .Add(p => p.Name, null));
+
+        cut.Find(".save").Click();
+
+        Assert.Equal(0, cut.Instance.ValidSubmits);
+        Assert.DoesNotContain("vs-button--loading", cut.Find(".save").ClassList);
+
+        cut.Find("input").Change("Anna");
+        _ = cut.Find("form").SubmitAsync();
+
+        Assert.Equal(1, cut.Instance.ValidSubmits);
+        Assert.Empty(cut.FindAll(".vs-button--loading"));
+    }
+
+    [Fact]
+    public void Shows_no_loading_state_when_a_submit_was_not_started_by_a_button()
+    {
+        var cut = Render<FormSubmitTestHost>();
+
+        _ = cut.Find("form").SubmitAsync();
+
+        Assert.Equal(1, cut.Instance.ValidSubmits);
+        Assert.Empty(cut.FindAll(".vs-button--loading"));
+    }
+
+    [Fact]
     public void Throws_without_a_Model_or_an_EditContext()
     {
         Assert.Throws<InvalidOperationException>(() => Render<Form>());

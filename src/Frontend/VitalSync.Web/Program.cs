@@ -8,6 +8,8 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddOutputCache();
+builder.Services.AddScoped<ToastService>();
+builder.Services.AddScoped<AlertBannerService>();
 
 var app = builder.Build();
 

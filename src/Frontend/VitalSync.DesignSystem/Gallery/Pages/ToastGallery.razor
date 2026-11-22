@@ -1,0 +1,93 @@
+@page "/design-system/toast"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using VitalSync.DesignSystem.Primitives
+@inject ToastService Toasts
+
+<PageTitle>Benachrichtigung · Design System · VitalSync</PageTitle>
+
+<h1>Benachrichtigung (<code>Toast</code>)</h1>
+<p>
+    Eine Benachrichtigung meldet kurz, wie eine Aktion ausgegangen ist, und schwebt dabei unten
+    rechts über der Seite. Sie verschwindet nie von selbst, sondern erst, wenn sie geschlossen wird.
+    Seiten zeigen sie nur über den <code>ToastService</code>; der Bereich dafür steht bereits im
+    Layout. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    <section data-theme="light" class="vs-gallery__theme-panel">
+        <h2>Hell</h2>
+        @renderStates()
+    </section>
+    <section data-theme="dark" class="vs-gallery__theme-panel">
+        <h2>Dunkel</h2>
+        @renderStates()
+    </section>
+</div>
+
+<h2>Im echten Einsatz</h2>
+<p>
+    Diese Schaltflächen zeigen echte Benachrichtigungen. Hier lässt sich prüfen, ob ein Screenreader
+    sie ansagt – Erfolg und Information höflich, den Fehler sofort –, dass höchstens drei gleichzeitig
+    offen sind, und wohin der Fokus nach dem Schliessen geht: zur Benachrichtigung darunter, sonst
+    zu der darüber, sonst zum Hauptinhalt.
+</p>
+<div class="vs-gallery__row">
+    <Button Variant="ButtonVariant.Secondary" OnClick="ShowSuccess">Erfolg melden</Button>
+    <Button Variant="ButtonVariant.Secondary" OnClick="ShowInfo">Information melden</Button>
+    <Button Variant="ButtonVariant.Secondary" OnClick="ShowCritical">Fehler melden</Button>
+    <Button Variant="ButtonVariant.Secondary" OnClick="ShowFour">Vier nacheinander melden</Button>
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>@@inject ToastService Toasts
+
+Toasts.ShowSuccess("Plan gespeichert", "Dein Wochenplan ist gespeichert.");
+Toasts.ShowInfo("Neue Rezepte", "Drei neue Rezepte passen zu deinem Wochenplan.");
+Toasts.ShowCritical("Speichern fehlgeschlagen", "Es besteht keine Verbindung.");
+</code></pre>
+
+@code {
+    private int _count;
+
+    private void ShowSuccess() => Toasts.ShowSuccess("Plan gespeichert", "Dein Wochenplan ist gespeichert.");
+
+    private void ShowInfo() => Toasts.ShowInfo("Neue Rezepte", "Drei neue Rezepte passen zu deinem Wochenplan.");
+
+    private void ShowCritical() => Toasts.ShowCritical(
+        "Speichern fehlgeschlagen",
+        "Es besteht keine Verbindung. Deine Änderungen sind noch nicht gespeichert.");
+
+    private void ShowFour()
+    {
+        for (var i = 0; i < 4; i++)
+        {
+            _count++;
+            Toasts.ShowInfo($"Mahlzeit {_count} geplant", $"Mahlzeit {_count} steht jetzt in deinem Wochenplan.");
+        }
+    }
+
+    private static RenderFragment renderStates() => @<text>
+        <h3>Arten</h3>
+        <div class="vs-toast-gallery__stack">
+            <Toast Variant="ToastVariant.Info" Title="Neue Rezepte" Text="Drei neue Rezepte passen zu deinem Wochenplan." />
+            <Toast Variant="ToastVariant.Success" Title="Plan gespeichert" Text="Dein Wochenplan ist gespeichert." />
+            <Toast Variant="ToastVariant.Critical" Title="Speichern fehlgeschlagen" Text="Es besteht keine Verbindung. Deine Änderungen sind noch nicht gespeichert." />
+        </div>
+        <h3>Über einer Karte</h3>
+        <div class="vs-toast-gallery__card">
+            <div class="vs-toast-gallery__stack">
+                <Toast Variant="ToastVariant.Info" Title="Neue Rezepte" Text="Drei neue Rezepte passen zu deinem Wochenplan." />
+                <Toast Variant="ToastVariant.Success" Title="Plan gespeichert" Text="Dein Wochenplan ist gespeichert." />
+                <Toast Variant="ToastVariant.Critical" Title="Speichern fehlgeschlagen" Text="Es besteht keine Verbindung." />
+            </div>
+        </div>
+        <h3>Langer Text</h3>
+        <div class="vs-toast-gallery__stack">
+            <Toast Variant="ToastVariant.Success"
+                   Title="Einkaufsliste für die Woche mit allen Zutaten erstellt"
+                   Text="Die Einkaufsliste enthält jetzt alle Zutaten aus den sieben geplanten Tagen, zusammengefasst nach Abteilung im Laden. Nahrungsergänzungsmittelunverträglichkeiten wurden berücksichtigt." />
+        </div>
+    </text>;
+}

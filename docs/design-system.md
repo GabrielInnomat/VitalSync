@@ -302,6 +302,34 @@ submit it by accident; a submit button says `Type="submit"`. `OnClick` is an ord
 `EventCallback`. Any other attribute is passed through to the element, and a passed `class` is
 appended to the component's own classes rather than replacing them.
 
+**Loading.** `Loading` marks a running action. The label is replaced by `LoadingLabel`, by default
+"Bitte warten …", with a turning ring before it in place of the icon; a blank `LoadingLabel`
+throws. The button keeps its variant colours, so the user still sees which action is running, but
+it no longer darkens on hover and the cursor turns to `progress`. The width may change with the
+label, which is accepted rather than reserved in advance.
+
+**A loading button stays focusable.** It does not take the native `disabled`, which would drop focus
+to the page when the user has just activated it. It is `aria-disabled="true"` instead and ignores
+every click until it is done. `Loading` therefore wins over `Disabled`: a disabled button that
+starts loading becomes focusable for that time. A submit button that is loading renders as
+`type="button"`, so a click on it cannot submit the form again.
+
+**The change is announced once.** A visually hidden `role="status"` region next to the button holds
+the loading label while it loads and is empty otherwise. It exists from the first render, because a
+live region added together with its content is not reliably announced. The ring is `aria-hidden`.
+How the action ended is not the button's to say; the page reports it through a
+[toast or alert banner](#messages).
+
+**The ring follows the Spinner, sized to the icon.** It takes `--icon-size-md`, the stroke width of
+a thick border and `--motion-duration-spin`, so reduced motion slows it the same way. It is an arc
+only, without a track, drawn in the variant's text colour and held to 3:1 against the variant's
+fill — for `Secondary` against the page, a card, a dialog and every alert background it may sit on.
+Under forced colours the arc is drawn in `ButtonText`.
+
+**Inside a `Form` it loads on its own.** A submit button that triggered a valid submit is set to
+loading by the [`Form`](#form) until `OnValidSubmit` has finished, without the page binding
+`Loading`. Only the clicked button loads, not every submit button in the form.
+
 ## Form validation
 
 **Visual coding.** An error is border plus icon plus text, optionally the subtle fill. Never colour
@@ -356,6 +384,14 @@ error, in rendering order, each reading "label: first message". A link moves foc
 Its `href` also points at the field on the current page, so it stays correct with `<base href>`
 and without a live connection. The summary follows every further validation change and empties on
 a valid submit.
+
+**What happens on a valid submit.** While `OnValidSubmit` runs, a further submit is ignored without
+a message, whether it comes from a click or from Enter in a field. The [`Button`](#button) that
+started the submit shows its loading state for exactly that time and ends it when the handler
+completes or throws; an exception is passed on, not swallowed. A submit started without a button,
+such as Enter in a form that has none, is still guarded but shows no loading. The fields stay
+editable. Whether a submit is running is not exposed to the page; a page that needs to know keeps
+its own state, as for `Loading`.
 
 **What it leaves to the page.** The validator — `DataAnnotationsValidator` or another — is chosen by
 the page, as with `EditForm`. Field layout belongs to the page as well, because the `<form>` element
@@ -651,6 +687,11 @@ would have meant new palette stops (`green-800`/`amber-800` in light, `green-500
 dark) with their own contrast and separation checks, for a state that already has a working,
 cheaper signal.
 
+**It never wraps.** A badge is one short label on one line. Squeezed — a table column shrunk to its
+narrowest content, a tight row — it keeps its width and the surroundings give way, instead of
+breaking "Im Ziel" into two lines inside a pill. The label therefore has to stay short; a badge text
+too long for a 320 px screen is the wrong text, not a case for wrapping.
+
 **No compact size.** A table full of badges was a candidate for a smaller variant, but a smaller
 badge that is also a link cannot keep the 44×44 px target without an invisible enlarged hit area,
 which is a worse trade than one consistent size everywhere.
@@ -728,8 +769,9 @@ would paint the whole border in one system colour, and a ring of one colour turn
 ring opts out with `forced-color-adjust: none` and takes the two system colours directly, so it
 stays in the user's palette.
 
-**One size.** 24 px at the default text size, in rem so it grows with the user's text size. A
-smaller size waits for the loading state of `Button`, which is a separate step.
+**One size.** 24 px at the default text size, in rem so it grows with the user's text size. There
+is no smaller size: the loading state of [`Button`](#button) draws its own ring, sized to the icon
+it replaces, and has no track.
 
 **Tokens and rules.** The `--spinner-*` set: size, stroke width, arc, track and text colours, the
 gap and the duration, which points at the new global `--motion-duration-spin`. Five rules: the arc
@@ -747,7 +789,7 @@ each answers a different question:
 - **`Toast`** answers an action the user has just taken. It floats above the page, outside the
   content, and reports how the action went.
 
-`Alert` is built; `AlertBanner` and `Toast` are not yet, and their rules below are decided.
+All three are built.
 
 **What they share.** Every message has a mandatory title and a mandatory text. The kind is written
 out at the start of the title, followed by a dash — "Fehler – Speichern fehlgeschlagen" — so it
@@ -830,26 +872,75 @@ and the focus ring, all on the fill.
 
 ### Alert banner
 
-**Built on `Alert`.** Same fill, border, icon, title format, text and optional single action, such
-as "Mehr erfahren", across the full width.
+**Built like `Alert`.** Same subtle fill per kind, coloured icon, title format, text and ordinary
+text colour, but across the full width of the viewport: no radius, and only a bottom border, which
+separates it from the page below. The text keeps a readable line length of about 70 characters and
+stays left-aligned; a wide screen leaves the rest of the bar empty rather than stretching the line.
 
 **Three kinds:** `Info`, `Warning`, `Critical`. A success is never news for the whole application.
 
-**Announced like `Alert`.** A banner present when the page loads is not announced; one that appears
-later, such as "Du bist offline", is: `Warning` and `Critical` interrupt, `Info` waits.
+**The title is a fixed second-level heading.** It is reachable by heading navigation like
+`Alert`'s, but a banner sits outside every page, above the page's own `<h1>`, so no page could set
+its level. Level 2 places it below the document's top without claiming to be the page's title.
 
-**At the very top, in its own landmark.** Banners sit above the header in a region named
-"Systemmeldungen", which screen readers list among the landmarks and can jump to. The region exists
-only while there is a banner. The title is a heading, like `Alert`'s.
+**At most one action, and it is a link.** Such as "Mehr erfahren", leading to where the state is
+explained. A banner lives outside every page, so a button there would run code that belongs to no
+page; a link only needs a target. It has the 44×44 px target of every other control, and its name
+has to make sense together with the title (2.4.4).
+
+**Announced through live regions that are always there, as with `Toast`.** A banner present when
+the region first renders is not announced; it is found by reading, by heading and by landmark
+navigation. One that appears later, such as "Du bist offline", is: `Warning` and `Critical`
+interrupt (`role="alert"`), `Info` waits until the screen reader is idle (`role="status"`). Showing
+a banner again with exactly the same content is not news and is not announced again; showing it
+with a changed content is. Whether a banner shown while the page itself is still starting up is
+announced depends on which interactive component starts first, and is left to the manual
+screen-reader test.
+
+**At the very top, in its own landmark.** Banners sit above the header and the navigation, in a
+region named "Systemmeldungen", which screen readers list among the landmarks and can jump to. The
+region exists only while there is a banner; the live regions are always there.
 
 **It scrolls away.** A bar fixed to the top would cover too much of the page at high zoom and on
 small screens (1.4.10).
 
-**Closable like `Alert`.** Optional, never for a problem that still exists. Focus moves to the main
-content. A closed banner stays closed until the page is reloaded; nothing is stored.
+**Closable like `Alert`.** Optional, and never for a problem that still exists; the component
+cannot tell, so that stays the caller's responsibility. The close button is `Alert`'s: the bare X
+with an invisible 44×44 px hit area and the visually hidden name "Schliessen:" followed by the full
+title. Closing moves focus to the main content, as closing the last toast does. A closed banner
+stays closed until the page is reloaded, even when it is shown again; nothing is stored.
 
-**Several at once stack.** One under the other, the most severe first: `Critical`, `Warning`,
-`Info`.
+**Several at once stack.** One under the other, the most severe first — `Critical`, `Warning`,
+`Info` — and within a kind in the order they first appeared. There is no limit: each banner stands
+for a state that is true right now, and hiding one would hide that state.
+
+**Raised through a service, by key.** Pages inject the scoped `AlertBannerService` and call
+`ShowInfo`, `ShowWarning` or `ShowCritical` with a key, a title and a text, and optionally an
+`AlertBannerLink` (text and target) and `closable`. Key, title, text and both link values must not
+be blank. The key names the state the banner describes: showing again under the same key replaces
+the banner in place, and `Remove(key)` takes it away once the state is over — "offline" is shown
+when the connection drops and removed when it is back. A removed banner can be shown again; only one
+the user closed cannot. The service may be called from any thread. No page renders a banner itself;
+`AlertBanner` is public only because Razor makes every component public, and exists for the region
+and the gallery.
+
+**The region is an interactive island in a static layout,** for the same reasons as `Toast`'s:
+`AlertBannerRegion` is placed once in each layout with its own `@rendermode="InteractiveServer"`,
+shares the circuit and so the service with every interactive page, keeps its banners across
+enhanced navigation, and is prerendered, which puts both live regions into the first HTML. The same
+limit follows: a banner can only be raised from an interactive page. Nothing connects the service to
+the backend yet; deciding where states such as maintenance or being offline come from is left to
+the feature that needs them.
+
+**Narrow space breaks words, never the bar.** Long words in the title, the text and the link break
+inside the banner instead of running past its edge (1.4.4, 1.4.10).
+
+**Tokens and rules.** No new semantic role. The `--alert-banner-*` set: padding, gaps, the line
+length, a thin border, icon and close-icon size and colour, the text colour, the title weight, the
+link colour at rest and on hover, and fill, border and icon colour per kind — all pointing at the
+same semantic roles as `Alert`'s. Nine rules per kind, in both themes: the text, the icon, the close
+icon at rest and on hover, the link at rest and on hover and the focus ring, each on the fill, and
+the border against the page and against a card's surface, since the bar can sit above either.
 
 ### Toast
 
@@ -876,18 +967,53 @@ screen reader is idle, so a confirmation does not cut into what the user is doin
 interrupts.
 
 **It never takes focus.** Toasts sit in a region named "Benachrichtigungen" at the end of the page,
-reached with Tab and by landmark navigation. Closing a toast moves focus to the next toast's close
-button, or to the main content when none is left.
+reached with Tab and by landmark navigation. The region exists only while there is a toast. Inside
+it the toasts form a list in the order they appeared, oldest at the top and newest at the bottom,
+next to the corner — the order on screen is the order in the document, so reading and tabbing
+follow what is seen (1.3.2, 2.4.3). Closing a toast moves focus to the close button of the toast
+below it, or of the one above when it was the newest, or to the main content when none is left.
+For that, `<main>` carries `tabindex="-1"` in every layout, which closing an `AlertBanner` relies
+on too.
 
 **Bottom right; on narrow screens full width, and only the newest.** Three full-width toasts would
 cover too much of the page, and high zoom makes every screen narrow (1.4.10). The others wait in the
-stack and show again once the newest is closed.
+stack and show again once the newest is closed. Wide screens give the region 24rem; below the `md`
+breakpoint it spans the viewport. Because the region is fixed to the viewport, this is the one
+place where a viewport media query is right rather than a container query. When toasts outgrow the
+viewport's height, the region scrolls.
 
 **At most three.** A fourth makes the oldest give way, never the one that holds focus. A toast only
 reports on an action and carries nothing the user needs later, so giving way loses nothing.
 
-**Raised through a service.** Pages call a service; the region is placed once in the layout. No
-page renders a toast itself.
+**Looks like `Alert`, and floats.** The same subtle fill per kind, coloured border and icon and
+ordinary text colour, plus a shadow that lifts it off the page. Long words break inside the toast,
+never past its edge. The close button is `Alert`'s: the bare X with an invisible 44×44 px hit area
+and the visually hidden name "Schliessen:" followed by the full title.
+
+**Raised through a service.** Pages inject the scoped `ToastService` and call `ShowSuccess`,
+`ShowInfo` or `ShowCritical` with a title and a text, both plain strings; a blank one throws. The
+service may be called from any thread, such as when a background request finishes. No page renders
+a toast itself. `Toast` has to be public, because Razor generates every component as a public
+class, but it exists for the region and the gallery only.
+
+**The region is an interactive island in a static layout.** Layouts render statically, and only
+pages choose `InteractiveServer`, so a region rendered as part of the layout could never change
+after the page loaded. `ToastRegion` is therefore placed once in each layout with its own
+`@rendermode="InteractiveServer"`. All interactive components on a page share one circuit and so
+one `ToastService`, which is how a page's call reaches the region. The circuit survives enhanced
+navigation, so open toasts stay when the user moves to another page. The region is prerendered,
+which puts both live regions into the first HTML. Two limits follow. A toast can only be raised
+from an interactive page; a statically rendered page has no circuit to call the service in. And a
+modal [Dialog](#dialog) sits in the browser's top layer, above everything including toasts, and
+makes the rest of the page inert while it is open; a toast raised then is announced but can be
+reached only once the dialog closes.
+
+**Tokens and rules.** No new semantic role. The `--toast-*` set: width, the region's margin, the
+gap between toasts, padding, gaps, radius, a thin border, the shadow, the z-index, icon and
+close-icon size and colour, the text colour, the title weight, and fill, border and icon colour per
+kind — all pointing at the same semantic roles as `Alert`'s. Seven rules per kind, in both themes:
+the text, the icon, the close icon at rest and on hover and the focus ring, each on the fill, and
+the border against the page and against a card, since a toast can float over either.
 
 ## Dialog
 
@@ -1066,10 +1192,85 @@ colour and width, the badge's fill, text colour, size, weight, padding and radiu
 above the panel. No new semantic role. Nine rules: the tab text at rest, on hover and selected, and
 the bar, each on the page and on a card, in both themes, plus the badge text on the badge fill.
 
+## Table
+
+`Table` shows items of one kind in rows and columns, such as the nutrients of a few foods. It only
+displays; sorting, selection and paging belong to a later `DataTable` pattern, not to this
+component. It is our own markup, not QuickGrid, so it carries the system's structure and styling
+without a second set of conventions.
+
+**A real table.** A `<table>` with `<caption>`, a `<th scope="col">` per column and one row header
+per row. A screen reader therefore announces the column and the row with every cell (1.3.1).
+
+**The caption is visible and mandatory.** It names the table and the scroll area around it; a
+blank caption throws. It sits above the table, larger and semibold.
+
+**One column names the rows.** By default the first one; `RowHeader="true"` on another column moves
+it there, and `RowHeader="false"` on the first column leaves the table without row headers, for
+tables whose rows have no name. Two row-header columns throw. The row header keeps the cell's
+appearance with medium weight and the header's text colour, so it reads as the row's name without
+looking like a second header.
+
+**Numbers align on the right.** A `Numeric` column aligns its header and its cells to the end and
+uses tabular figures, so digits of the same place stand above each other. Numbers do not wrap.
+Every other column aligns to the start, and a column always shares one alignment from header to
+last row.
+
+**Only horizontal lines.** A thick line in `--color-border-default` under the header, thin lines in
+`--color-border-subtle` between the rows. No zebra stripes and no row hover: rows are not clickable,
+so nothing should suggest they are. Cells may hold links, buttons and badges; those carry their own
+interaction.
+
+**One density.** There is no compact or spacious variant.
+
+**Empty.** Caption and header stay, and one cell across all columns says "Keine Einträge
+vorhanden." in the secondary text colour. `EmptyText` replaces the sentence; a blank one throws.
+
+**Too wide scrolls sideways.** The table never squeezes its columns below their content. When it
+is wider than its space — a phone, 400 % zoom — it scrolls inside its own area, not the page
+(1.4.10). That area is then a region named by the caption and a Tab stop, so the keyboard can
+scroll it (2.1.1); while the table fits, it is neither, so there is no empty Tab stop. Before the
+page is interactive the area is always a Tab stop, because there is nothing yet to measure whether
+it overflows. The caption's text stays in view while the table scrolls under it.
+
+**The scroll edges show.** A soft shadow on the side where more content is hidden, in the new
+semantic role `--color-scroll-shadow`; it disappears at the end. The shadow is decoration only —
+the scrollbar is the real cue, and its thumb is measured at 3:1 against the page and the card
+(1.4.11). Both sides mirror in right-to-left text.
+
+**Focus rings are not clipped.** The first and last cells keep a padding at the table's edges as
+wide as the focus ring and its offset, so a focused link or button in an edge cell shows its full
+ring inside the scroll area.
+
+**No sticky header.** A header row that stays on top while the page scrolls cannot work inside an
+area that scrolls sideways — the browser ties it to the nearest scrolling ancestor, which is the
+table's own area. It is left out until a real use case shows how long tables get.
+
+**How it is used.** `Table` takes the mandatory `Items` and `Caption` and one `TableColumn` per
+column. Each `TableColumn` has a mandatory `Title` and a template that gets the item as `context`;
+`Numeric` and `RowHeader` are optional. A table without columns throws, as does a `TableColumn`
+outside a table. Columns may be shown conditionally; they keep the order they have in the markup,
+and a template that changes is shown at once.
+
+**It measures itself.** The table sits in an inline-size container, so it never widens a grid or
+flex parent; a parent that sizes itself to its content (an inline block, an auto-width grid or flex
+item) would therefore collapse it and has to give it a width.
+
+**Script.** One JavaScript module measures whether the area overflows and where it is scrolled,
+and sets the edge shadows. It tells the component only whether the area overflows; the component
+renders the region role, the name and the Tab stop itself.
+
+**Tokens and rules.** The new semantic role `--color-scroll-shadow` in both themes. The `--table-*`
+set: the text size and colour; the caption's size, weight, colour and spacing; the header's weight,
+colour and line; the row header's weight; the row line; the cell padding; the edge padding; the
+empty text's colour; the scrollbar thumb; and the shadow's colour and size. Ten rules, in both
+themes: the cell text, the header, the caption and the empty text, each on the page and on a card,
+and the scrollbar thumb on both.
+
 ## How this is kept true
 
 `tools/VitalSync.DesignTokens.Contrast` resolves every `var()` chain per theme and measures the
-pairs named in the rule document — 464 contrast checks and 6 separation checks at the time of
+pairs named in the rule document — 598 contrast checks and 6 separation checks at the time of
 writing. All pass except the two status-colour separation checks, which run under a waiver (see
 [Data visualisation](#data-visualisation)).
 

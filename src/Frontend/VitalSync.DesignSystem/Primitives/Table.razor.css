@@ -1,0 +1,122 @@
+.vs-table {
+    /* nicht entfernen: sonst drückt eine breite Tabelle ihren Container breiter, statt zu scrollen */
+    container-type: inline-size;
+    position: relative;
+}
+
+    .vs-table::before,
+    .vs-table::after {
+        content: "";
+        position: absolute;
+        inset-block: 0;
+        z-index: 1;
+        inline-size: var(--table-scroll-shadow-size);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity var(--motion-duration-fast) var(--motion-easing);
+    }
+
+    .vs-table::before {
+        inset-inline-start: 0;
+        background: linear-gradient(to right, var(--table-scroll-shadow-color), transparent);
+    }
+
+    .vs-table::after {
+        inset-inline-end: 0;
+        background: linear-gradient(to left, var(--table-scroll-shadow-color), transparent);
+    }
+
+    .vs-table:dir(rtl)::before {
+        background: linear-gradient(to left, var(--table-scroll-shadow-color), transparent);
+    }
+
+    .vs-table:dir(rtl)::after {
+        background: linear-gradient(to right, var(--table-scroll-shadow-color), transparent);
+    }
+
+    .vs-table[data-vs-table-start]::before,
+    .vs-table[data-vs-table-end]::after {
+        opacity: 1;
+    }
+
+.vs-table__scroller {
+    position: relative;
+    overflow-x: auto;
+    scrollbar-color: var(--table-scrollbar-thumb-color) transparent;
+}
+
+    .vs-table__scroller:focus-visible {
+        outline: var(--focus-ring-width) solid var(--focus-ring-color);
+        outline-offset: var(--focus-ring-offset);
+        box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+    }
+
+.vs-table__table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    color: var(--table-text-color);
+    font-family: var(--font-family-ui);
+    font-size: var(--table-font-size);
+    line-height: var(--line-height-base);
+}
+
+.vs-table__caption {
+    padding-block-end: var(--table-caption-spacing);
+    padding-inline: var(--table-edge-padding);
+    color: var(--table-caption-text-color);
+    font-size: var(--table-caption-font-size);
+    font-weight: var(--table-caption-font-weight);
+    line-height: var(--line-height-tight);
+    text-align: start;
+}
+
+.vs-table__caption-text {
+    position: sticky;
+    inset-inline-start: var(--table-edge-padding);
+    display: inline-block;
+    max-inline-size: calc(100cqi - 2 * var(--table-edge-padding));
+}
+
+.vs-table__header,
+.vs-table__cell,
+.vs-table__empty {
+    padding-block: var(--table-cell-padding-block);
+    padding-inline: var(--table-cell-padding-inline);
+    border-block-end: var(--table-row-divider-width) solid var(--table-row-divider-color);
+    text-align: start;
+    vertical-align: baseline;
+}
+
+    .vs-table__header:first-child,
+    .vs-table__cell:first-child,
+    .vs-table__empty {
+        padding-inline-start: var(--table-edge-padding);
+    }
+
+    .vs-table__header:last-child,
+    .vs-table__cell:last-child,
+    .vs-table__empty {
+        padding-inline-end: var(--table-edge-padding);
+    }
+
+.vs-table__header {
+    border-block-end: var(--table-header-divider-width) solid var(--table-header-divider-color);
+    color: var(--table-header-text-color);
+    font-weight: var(--table-header-font-weight);
+    vertical-align: bottom;
+}
+
+.vs-table__row-header {
+    color: var(--table-header-text-color);
+    font-weight: var(--table-row-header-font-weight);
+}
+
+.vs-table__empty {
+    color: var(--table-empty-text-color);
+}
+
+.vs-table__numeric {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}

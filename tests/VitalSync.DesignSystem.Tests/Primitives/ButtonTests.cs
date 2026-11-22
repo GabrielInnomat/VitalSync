@@ -109,4 +109,110 @@ public sealed class ButtonTests : BunitContext
         Assert.Contains("vs-button--primary", classes);
         Assert.Contains("extra", classes);
     }
+
+    [Fact]
+    public void Shows_the_loading_label_and_a_decorative_ring_in_place_of_the_icon_while_loading()
+    {
+        var cut = Render<Button>(parameters => parameters
+            .Add(p => p.Icon, "<svg></svg>")
+            .Add(p => p.Loading, true)
+            .AddChildContent("Speichern"));
+
+        Assert.Equal("Bitte warten\u00A0…", cut.Find(".vs-button__label").TextContent);
+        Assert.Equal("true", cut.Find(".vs-button__ring").GetAttribute("aria-hidden"));
+        Assert.Empty(cut.FindAll(".vs-button__icon"));
+    }
+
+    [Fact]
+    public void Uses_a_custom_LoadingLabel()
+    {
+        var cut = Render<Button>(parameters => parameters
+            .Add(p => p.Loading, true)
+            .Add(p => p.LoadingLabel, "Wird gespeichert\u00A0…")
+            .AddChildContent("Speichern"));
+
+        Assert.Equal("Wird gespeichert\u00A0…", cut.Find(".vs-button__label").TextContent);
+    }
+
+    [Fact]
+    public void Stays_focusable_while_loading_even_when_Disabled_is_also_set()
+    {
+        var cut = Render<Button>(parameters => parameters
+            .Add(p => p.Loading, true)
+            .Add(p => p.Disabled, true)
+            .AddChildContent("Speichern"));
+
+        var button = cut.Find("button");
+        Assert.False(button.HasAttribute("disabled"));
+        Assert.Equal("true", button.GetAttribute("aria-disabled"));
+        Assert.Contains("vs-button--loading", button.ClassList);
+    }
+
+    [Fact]
+    public void Omits_aria_disabled_and_the_loading_class_when_not_loading()
+    {
+        var cut = Render<Button>(parameters => parameters
+            .AddChildContent("Speichern"));
+
+        var button = cut.Find("button");
+        Assert.False(button.HasAttribute("aria-disabled"));
+        Assert.DoesNotContain("vs-button--loading", button.ClassList);
+        Assert.Empty(cut.FindAll(".vs-button__ring"));
+    }
+
+    [Fact]
+    public void Ignores_clicks_while_loading()
+    {
+        var clicked = false;
+        var cut = Render<Button>(parameters => parameters
+            .Add(p => p.Loading, true)
+            .Add(p => p.OnClick, () => clicked = true)
+            .AddChildContent("Speichern"));
+
+        cut.Find("button").Click();
+
+        Assert.False(clicked);
+    }
+
+    [Theory]
+    [InlineData(false, "submit")]
+    [InlineData(true, "button")]
+    public void Stops_being_a_submit_button_while_loading(bool loading, string expectedType)
+    {
+        var cut = Render<Button>(parameters => parameters
+            .Add(p => p.Type, "submit")
+            .Add(p => p.Loading, loading)
+            .AddChildContent("Speichern"));
+
+        Assert.Equal(expectedType, cut.Find("button").GetAttribute("type"));
+    }
+
+    [Fact]
+    public void Announces_the_loading_label_in_a_status_region_that_is_always_present()
+    {
+        var cut = Render<Button>(parameters => parameters
+            .AddChildContent("Speichern"));
+
+        Assert.Equal("status", cut.Find(".vs-button__status").GetAttribute("role"));
+        Assert.Empty(cut.Find(".vs-button__status").TextContent);
+
+        cut.Render(parameters => parameters.Add(p => p.Loading, true));
+
+        Assert.Equal("Bitte warten\u00A0…", cut.Find(".vs-button__status").TextContent);
+
+        cut.Render(parameters => parameters.Add(p => p.Loading, false));
+
+        Assert.Empty(cut.Find(".vs-button__status").TextContent);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Throws_when_the_LoadingLabel_is_blank(string loadingLabel)
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            Render<Button>(parameters => parameters
+                .Add(p => p.LoadingLabel, loadingLabel)
+                .AddChildContent("Speichern")));
+    }
 }

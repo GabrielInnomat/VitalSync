@@ -1,0 +1,111 @@
+@page "/design-system/table"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using VitalSync.DesignSystem.Primitives
+
+<PageTitle>Tabelle · Design System · VitalSync</PageTitle>
+
+<h1>Tabelle (<code>Table</code>, <code>TableColumn</code>)</h1>
+<p>
+    Eine Tabelle zeigt gleichartige Einträge in Zeilen und Spalten. Ihre sichtbare Beschriftung
+    benennt sie, die erste Spalte benennt jede Zeile, Zahlen stehen rechtsbündig. Ist die Tabelle
+    breiter als ihr Platz, scrollt sie seitwärts; dann ist sie ein Tab-Stopp, und ein Schatten zeigt,
+    wo es weitergeht. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    @foreach (var demo in _themes)
+    {
+        <section data-theme="@demo.Theme" class="vs-gallery__theme-panel">
+            <h2>@demo.Title</h2>
+
+            <h3>Auf der Seite</h3>
+            <p>Zuletzt hinzugefügt: @(demo.Added ?? "noch nichts")</p>
+            @RenderFoods(demo)
+
+            <h3>In einer Card</h3>
+            <div class="vs-table-gallery__card">
+                @RenderFoods(demo)
+            </div>
+
+            <h3>Leer</h3>
+            <Table Items="NoFoods" Caption="Heute gegessen">
+                <TableColumn Title="Lebensmittel">@context.Name</TableColumn>
+                <TableColumn Title="Energie (kcal)" Numeric="true">@context.Energy</TableColumn>
+            </Table>
+
+            <h3>Wenig Platz</h3>
+            <div class="vs-gallery__narrow">
+                @RenderFoods(demo)
+            </div>
+        </section>
+    }
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;Table Items="foods" Caption="Nährwerte pro 100 g"&gt;
+    &lt;TableColumn Title="Lebensmittel"&gt;@@context.Name&lt;/TableColumn&gt;
+    &lt;TableColumn Title="Energie (kcal)" Numeric="true"&gt;@@context.Energy&lt;/TableColumn&gt;
+    &lt;TableColumn Title="Bewertung"&gt;
+        &lt;Badge Variant="BadgeVariant.Success"&gt;Im Ziel&lt;/Badge&gt;
+    &lt;/TableColumn&gt;
+&lt;/Table&gt;
+
+&lt;Table Items="meals" Caption="Heute gegessen" EmptyText="Noch nichts eingetragen."&gt;
+    &lt;TableColumn Title="Zeit"&gt;@@context.Time&lt;/TableColumn&gt;
+    &lt;TableColumn Title="Mahlzeit" RowHeader="true"&gt;@@context.Name&lt;/TableColumn&gt;
+&lt;/Table&gt;
+</code></pre>
+
+@code {
+    private static readonly Food[] Foods =
+    [
+        new("Apfel", 52, 0, true),
+        new("Haferflocken", 372, 14, true),
+        new("Linsen, gekocht", 116, 9, true),
+        new("Griechischer Joghurt", 97, 9, true),
+        new("Milchschokolade", 546, 5, false),
+    ];
+
+    private static readonly Food[] NoFoods = [];
+
+    private readonly ThemeDemo[] _themes =
+    [
+        new("light", "Hell"),
+        new("dark", "Dunkel"),
+    ];
+
+    private RenderFragment RenderFoods(ThemeDemo demo) =>
+        @<Table Items="Foods" Caption="Nährwerte pro 100 g">
+            <TableColumn Title="Lebensmittel">@context.Name</TableColumn>
+            <TableColumn Title="Energie (kcal)" Numeric="true">@context.Energy</TableColumn>
+            <TableColumn Title="Eiweiss (g)" Numeric="true">@context.Protein</TableColumn>
+            <TableColumn Title="Bewertung">
+                @if (context.InTarget)
+                {
+                    <Badge Variant="BadgeVariant.Success">Im Ziel</Badge>
+                }
+                else
+                {
+                    <Badge Variant="BadgeVariant.Warning">Viel Zucker</Badge>
+                }
+            </TableColumn>
+            <TableColumn Title="Aktion">
+                <Button Variant="ButtonVariant.Secondary"
+                        aria-label="@($"{context.Name} hinzufügen")"
+                        OnClick="() => demo.Added = context.Name">Hinzufügen</Button>
+            </TableColumn>
+        </Table>;
+
+    private sealed record Food(string Name, int Energy, int Protein, bool InTarget);
+
+    private sealed class ThemeDemo(string theme, string title)
+    {
+        public string Theme { get; } = theme;
+
+        public string Title { get; } = title;
+
+        public string? Added { get; set; }
+    }
+}

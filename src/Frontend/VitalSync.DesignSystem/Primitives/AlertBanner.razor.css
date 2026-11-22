@@ -1,0 +1,156 @@
+.vs-alert-banner {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: var(--alert-banner-gap);
+    padding-block: var(--alert-banner-padding-block);
+    padding-inline: var(--alert-banner-padding-inline);
+    border-block-end: var(--alert-banner-border-width) solid;
+    color: var(--alert-banner-text-color);
+    font-family: var(--font-family-ui);
+    font-size: var(--font-size-200);
+    line-height: var(--line-height-base);
+}
+
+.vs-alert-banner--info {
+    background-color: var(--alert-banner-info-background);
+    border-block-end-color: var(--alert-banner-info-border-color);
+}
+
+.vs-alert-banner--warning {
+    background-color: var(--alert-banner-warning-background);
+    border-block-end-color: var(--alert-banner-warning-border-color);
+}
+
+.vs-alert-banner--critical {
+    background-color: var(--alert-banner-critical-background);
+    border-block-end-color: var(--alert-banner-critical-border-color);
+}
+
+.vs-alert-banner__icon {
+    display: inline-flex;
+    align-items: center;
+    height: calc(1em * var(--line-height-base));
+}
+
+    .vs-alert-banner__icon ::deep svg {
+        width: var(--alert-banner-icon-size);
+        height: var(--alert-banner-icon-size);
+    }
+
+.vs-alert-banner--info .vs-alert-banner__icon {
+    color: var(--alert-banner-info-icon-color);
+}
+
+.vs-alert-banner--warning .vs-alert-banner__icon {
+    color: var(--alert-banner-warning-icon-color);
+}
+
+.vs-alert-banner--critical .vs-alert-banner__icon {
+    color: var(--alert-banner-critical-icon-color);
+}
+
+.vs-alert-banner__content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--alert-banner-content-gap);
+    overflow-wrap: anywhere;
+}
+
+    .vs-alert-banner__content > * {
+        max-inline-size: var(--alert-banner-text-max-width);
+    }
+
+.vs-alert-banner__title {
+    margin: 0;
+    font-size: var(--font-size-200);
+    font-weight: var(--alert-banner-title-font-weight);
+    line-height: var(--line-height-base);
+}
+
+.vs-alert-banner__text {
+    margin: 0;
+}
+
+.vs-alert-banner__action {
+    margin-block-start: var(--alert-banner-action-spacing);
+}
+
+.vs-alert-banner__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-target-min);
+    color: var(--alert-banner-link-color);
+    text-decoration: underline;
+}
+
+    .vs-alert-banner__link:hover {
+        color: var(--alert-banner-link-color-hover);
+    }
+
+    .vs-alert-banner__link:focus-visible {
+        outline: var(--focus-ring-width) solid var(--focus-ring-color);
+        outline-offset: var(--focus-ring-offset);
+        box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+    }
+
+.vs-alert-banner__close {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--alert-banner-close-icon-size);
+    height: var(--alert-banner-close-icon-size);
+    margin: 0;
+    margin-block-start: calc((1em * var(--line-height-base) - var(--alert-banner-close-icon-size)) / 2);
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-xs);
+    background: none;
+    color: var(--alert-banner-close-icon-color);
+    font: inherit;
+    cursor: pointer;
+}
+
+    .vs-alert-banner__close::before {
+        content: "";
+        position: absolute;
+        inset-block-start: 50%;
+        inset-inline-start: 50%;
+        width: var(--touch-target-min);
+        height: var(--touch-target-min);
+        transform: translate(-50%, -50%);
+    }
+
+    .vs-alert-banner__close:hover {
+        color: var(--alert-banner-close-icon-color-hover);
+    }
+
+    .vs-alert-banner__close:focus-visible {
+        outline: var(--focus-ring-width) solid var(--focus-ring-color);
+        outline-offset: var(--focus-ring-offset);
+        box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+    }
+
+.vs-alert-banner__close-icon {
+    display: inline-flex;
+    width: 100%;
+    height: 100%;
+}
+
+    .vs-alert-banner__close-icon ::deep svg {
+        width: 100%;
+        height: 100%;
+    }
+
+.vs-alert-banner__close-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}

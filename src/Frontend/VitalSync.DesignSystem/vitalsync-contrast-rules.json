@@ -1133,6 +1133,78 @@
       "requirement": "text-normal"
     },
     {
+      "id": "button-primary-loading-arc-on-fill",
+      "criterion": "1.4.11",
+      "description": "Moving arc of a loading primary button against its fill",
+      "foreground": "--button-primary-loading-arc-color",
+      "background": "--button-primary-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "button-critical-loading-arc-on-fill",
+      "criterion": "1.4.11",
+      "description": "Moving arc of a loading critical button against its fill",
+      "foreground": "--button-critical-loading-arc-color",
+      "background": "--button-critical-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "button-secondary-loading-arc-on-background",
+      "criterion": "1.4.11",
+      "description": "Moving arc of a loading secondary button on the page background",
+      "foreground": "--button-secondary-loading-arc-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "button-secondary-loading-arc-on-card",
+      "criterion": "1.4.11",
+      "description": "Moving arc of a loading secondary button inside a card",
+      "foreground": "--button-secondary-loading-arc-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "button-secondary-loading-arc-on-dialog",
+      "criterion": "1.4.11",
+      "description": "Moving arc of a loading secondary button, such as Abbrechen, in a dialog",
+      "foreground": "--button-secondary-loading-arc-color",
+      "background": "--dialog-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "button-secondary-loading-arc-on-alert-info",
+      "criterion": "1.4.11",
+      "description": "Moving arc of a loading secondary action button inside an information alert",
+      "foreground": "--button-secondary-loading-arc-color",
+      "background": "--alert-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "button-secondary-loading-arc-on-alert-success",
+      "criterion": "1.4.11",
+      "description": "Moving arc of a loading secondary action button inside a success alert",
+      "foreground": "--button-secondary-loading-arc-color",
+      "background": "--alert-success-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "button-secondary-loading-arc-on-alert-warning",
+      "criterion": "1.4.11",
+      "description": "Moving arc of a loading secondary action button inside a warning alert",
+      "foreground": "--button-secondary-loading-arc-color",
+      "background": "--alert-warning-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "button-secondary-loading-arc-on-alert-critical",
+      "criterion": "1.4.11",
+      "description": "Moving arc of a loading secondary action button inside an error alert",
+      "foreground": "--button-secondary-loading-arc-color",
+      "background": "--alert-critical-background",
+      "requirement": "non-text"
+    },
+    {
       "id": "surface-critical-hover-on-card",
       "criterion": "1.4.11",
       "description": "Hovered critical button fill against the card it sits in",
@@ -1884,6 +1956,470 @@
       "foreground": "--tabs-badge-text-color",
       "background": "--tabs-badge-background",
       "requirement": "text-normal"
+    },
+    {
+      "id": "table-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Text of a table cell, on the page background",
+      "foreground": "--table-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "table-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Text of a table cell, inside a card",
+      "foreground": "--table-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "table-header-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Column and row header of a table, on the page background",
+      "foreground": "--table-header-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "table-header-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Column and row header of a table, inside a card",
+      "foreground": "--table-header-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "table-caption-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Caption of a table, on the page background",
+      "foreground": "--table-caption-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "table-caption-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Caption of a table, inside a card",
+      "foreground": "--table-caption-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "table-empty-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Text of an empty table, on the page background",
+      "foreground": "--table-empty-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "table-empty-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Text of an empty table, inside a card",
+      "foreground": "--table-empty-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "table-scrollbar-thumb-on-background",
+      "criterion": "1.4.11",
+      "description": "Scrollbar thumb of a table that scrolls sideways, on the page background",
+      "foreground": "--table-scrollbar-thumb-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "table-scrollbar-thumb-on-card",
+      "criterion": "1.4.11",
+      "description": "Scrollbar thumb of a table that scrolls sideways, inside a card",
+      "foreground": "--table-scrollbar-thumb-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-success-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Title and text of a success toast on its fill",
+      "foreground": "--toast-text-color",
+      "background": "--toast-success-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "toast-success-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Kind icon of a success toast on its fill",
+      "foreground": "--toast-success-icon-color",
+      "background": "--toast-success-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-success-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Border of a success toast floating over the page background",
+      "foreground": "--toast-success-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-success-border-on-card",
+      "criterion": "1.4.11",
+      "description": "Border of a success toast floating over a card",
+      "foreground": "--toast-success-border-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-success-close-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Close icon of a success toast on its fill",
+      "foreground": "--toast-close-icon-color",
+      "background": "--toast-success-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-success-close-icon-hover-on-fill",
+      "criterion": "1.4.11",
+      "description": "Hovered close icon of a success toast on its fill",
+      "foreground": "--toast-close-icon-color-hover",
+      "background": "--toast-success-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-success-focus-ring-on-fill",
+      "criterion": "1.4.11",
+      "description": "Focus indicator of the close button inside a success toast",
+      "foreground": "--focus-ring-color",
+      "background": "--toast-success-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-info-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Title and text of a information toast on its fill",
+      "foreground": "--toast-text-color",
+      "background": "--toast-info-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "toast-info-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Kind icon of a information toast on its fill",
+      "foreground": "--toast-info-icon-color",
+      "background": "--toast-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-info-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Border of a information toast floating over the page background",
+      "foreground": "--toast-info-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-info-border-on-card",
+      "criterion": "1.4.11",
+      "description": "Border of a information toast floating over a card",
+      "foreground": "--toast-info-border-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-info-close-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Close icon of a information toast on its fill",
+      "foreground": "--toast-close-icon-color",
+      "background": "--toast-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-info-close-icon-hover-on-fill",
+      "criterion": "1.4.11",
+      "description": "Hovered close icon of a information toast on its fill",
+      "foreground": "--toast-close-icon-color-hover",
+      "background": "--toast-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-info-focus-ring-on-fill",
+      "criterion": "1.4.11",
+      "description": "Focus indicator of the close button inside a information toast",
+      "foreground": "--focus-ring-color",
+      "background": "--toast-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-critical-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Title and text of a critical toast on its fill",
+      "foreground": "--toast-text-color",
+      "background": "--toast-critical-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "toast-critical-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Kind icon of a critical toast on its fill",
+      "foreground": "--toast-critical-icon-color",
+      "background": "--toast-critical-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-critical-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Border of a critical toast floating over the page background",
+      "foreground": "--toast-critical-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-critical-border-on-card",
+      "criterion": "1.4.11",
+      "description": "Border of a critical toast floating over a card",
+      "foreground": "--toast-critical-border-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-critical-close-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Close icon of a critical toast on its fill",
+      "foreground": "--toast-close-icon-color",
+      "background": "--toast-critical-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-critical-close-icon-hover-on-fill",
+      "criterion": "1.4.11",
+      "description": "Hovered close icon of a critical toast on its fill",
+      "foreground": "--toast-close-icon-color-hover",
+      "background": "--toast-critical-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "toast-critical-focus-ring-on-fill",
+      "criterion": "1.4.11",
+      "description": "Focus indicator of the close button inside a critical toast",
+      "foreground": "--focus-ring-color",
+      "background": "--toast-critical-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-info-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Title and text of an information banner on its fill",
+      "foreground": "--alert-banner-text-color",
+      "background": "--alert-banner-info-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-banner-info-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Kind icon of an information banner on its fill",
+      "foreground": "--alert-banner-info-icon-color",
+      "background": "--alert-banner-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-info-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Bottom border of an information banner against the page background below it",
+      "foreground": "--alert-banner-info-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-info-border-on-surface",
+      "criterion": "1.4.11",
+      "description": "Bottom border of an information banner against a surface below it, such as a navigation",
+      "foreground": "--alert-banner-info-border-color",
+      "background": "--color-background-surface",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-info-close-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Close icon of an information banner on its fill",
+      "foreground": "--alert-banner-close-icon-color",
+      "background": "--alert-banner-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-info-close-icon-hover-on-fill",
+      "criterion": "1.4.11",
+      "description": "Hovered close icon of an information banner on its fill",
+      "foreground": "--alert-banner-close-icon-color-hover",
+      "background": "--alert-banner-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-info-link-on-fill",
+      "criterion": "1.4.3",
+      "description": "Action link inside an information banner",
+      "foreground": "--alert-banner-link-color",
+      "background": "--alert-banner-info-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-banner-info-link-hover-on-fill",
+      "criterion": "1.4.3",
+      "description": "Hovered action link inside an information banner",
+      "foreground": "--alert-banner-link-color-hover",
+      "background": "--alert-banner-info-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-banner-info-focus-ring-on-fill",
+      "criterion": "1.4.11",
+      "description": "Focus indicator of the link or close button inside an information banner",
+      "foreground": "--focus-ring-color",
+      "background": "--alert-banner-info-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-warning-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Title and text of a warning banner on its fill",
+      "foreground": "--alert-banner-text-color",
+      "background": "--alert-banner-warning-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-banner-warning-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Kind icon of a warning banner on its fill",
+      "foreground": "--alert-banner-warning-icon-color",
+      "background": "--alert-banner-warning-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-warning-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Bottom border of a warning banner against the page background below it",
+      "foreground": "--alert-banner-warning-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-warning-border-on-surface",
+      "criterion": "1.4.11",
+      "description": "Bottom border of a warning banner against a surface below it, such as a navigation",
+      "foreground": "--alert-banner-warning-border-color",
+      "background": "--color-background-surface",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-warning-close-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Close icon of a warning banner on its fill",
+      "foreground": "--alert-banner-close-icon-color",
+      "background": "--alert-banner-warning-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-warning-close-icon-hover-on-fill",
+      "criterion": "1.4.11",
+      "description": "Hovered close icon of a warning banner on its fill",
+      "foreground": "--alert-banner-close-icon-color-hover",
+      "background": "--alert-banner-warning-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-warning-link-on-fill",
+      "criterion": "1.4.3",
+      "description": "Action link inside a warning banner",
+      "foreground": "--alert-banner-link-color",
+      "background": "--alert-banner-warning-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-banner-warning-link-hover-on-fill",
+      "criterion": "1.4.3",
+      "description": "Hovered action link inside a warning banner",
+      "foreground": "--alert-banner-link-color-hover",
+      "background": "--alert-banner-warning-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-banner-warning-focus-ring-on-fill",
+      "criterion": "1.4.11",
+      "description": "Focus indicator of the link or close button inside a warning banner",
+      "foreground": "--focus-ring-color",
+      "background": "--alert-banner-warning-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-critical-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Title and text of a critical banner on its fill",
+      "foreground": "--alert-banner-text-color",
+      "background": "--alert-banner-critical-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-banner-critical-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Kind icon of a critical banner on its fill",
+      "foreground": "--alert-banner-critical-icon-color",
+      "background": "--alert-banner-critical-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-critical-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Bottom border of a critical banner against the page background below it",
+      "foreground": "--alert-banner-critical-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-critical-border-on-surface",
+      "criterion": "1.4.11",
+      "description": "Bottom border of a critical banner against a surface below it, such as a navigation",
+      "foreground": "--alert-banner-critical-border-color",
+      "background": "--color-background-surface",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-critical-close-icon-on-fill",
+      "criterion": "1.4.11",
+      "description": "Close icon of a critical banner on its fill",
+      "foreground": "--alert-banner-close-icon-color",
+      "background": "--alert-banner-critical-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-critical-close-icon-hover-on-fill",
+      "criterion": "1.4.11",
+      "description": "Hovered close icon of a critical banner on its fill",
+      "foreground": "--alert-banner-close-icon-color-hover",
+      "background": "--alert-banner-critical-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "alert-banner-critical-link-on-fill",
+      "criterion": "1.4.3",
+      "description": "Action link inside a critical banner",
+      "foreground": "--alert-banner-link-color",
+      "background": "--alert-banner-critical-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-banner-critical-link-hover-on-fill",
+      "criterion": "1.4.3",
+      "description": "Hovered action link inside a critical banner",
+      "foreground": "--alert-banner-link-color-hover",
+      "background": "--alert-banner-critical-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "alert-banner-critical-focus-ring-on-fill",
+      "criterion": "1.4.11",
+      "description": "Focus indicator of the link or close button inside a critical banner",
+      "foreground": "--focus-ring-color",
+      "background": "--alert-banner-critical-background",
+      "requirement": "non-text"
     }
   ],
   "waivers": [],

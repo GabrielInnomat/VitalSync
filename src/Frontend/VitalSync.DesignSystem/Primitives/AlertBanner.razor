@@ -1,0 +1,76 @@
+@namespace VitalSync.DesignSystem.Primitives
+
+<div class="@CssClass">
+    <span class="vs-alert-banner__icon" aria-hidden="true">@RenderIcon()</span>
+    <div class="vs-alert-banner__content">
+        <h2 class="vs-alert-banner__title">@HeadingText</h2>
+        <p class="vs-alert-banner__text">@Text.Trim()</p>
+        @if (Link is not null)
+        {
+            <div class="vs-alert-banner__action">
+                <a class="vs-alert-banner__link" href="@Link.Href">@Link.Text</a>
+            </div>
+        }
+    </div>
+    @if (OnClose.HasDelegate)
+    {
+        <button type="button" class="vs-alert-banner__close" @onclick="OnClose">
+            <span class="vs-alert-banner__close-icon" aria-hidden="true">
+                <SystemIcon Name="SystemIconName.X" />
+            </span>
+            <span class="vs-alert-banner__close-name">Schliessen: @HeadingText</span>
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public AlertBannerVariant Variant { get; set; } = AlertBannerVariant.Info;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public string Text { get; set; } = "";
+
+    [Parameter]
+    public AlertBannerLink? Link { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    internal static string KindWord(AlertBannerVariant variant) => variant switch
+    {
+        AlertBannerVariant.Info => "Information",
+        AlertBannerVariant.Warning => "Warnung",
+        AlertBannerVariant.Critical => "Fehler",
+        _ => throw new ArgumentOutOfRangeException(nameof(variant), variant, null),
+    };
+
+    private string CssClass => $"vs-alert-banner vs-alert-banner--{Variant.ToString().ToLowerInvariant()}";
+
+    private string HeadingText => $"{KindWord(Variant)} – {Title.Trim()}";
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            throw new InvalidOperationException(
+                "AlertBanner requires a Title; every message has a title that names it.");
+        }
+
+        if (string.IsNullOrWhiteSpace(Text))
+        {
+            throw new InvalidOperationException(
+                "AlertBanner requires a Text; every message has a text below its title.");
+        }
+    }
+
+    private RenderFragment RenderIcon() => Variant switch
+    {
+        AlertBannerVariant.Info => @<SystemIcon Name="SystemIconName.Info" />,
+        AlertBannerVariant.Warning => @<SystemIcon Name="SystemIconName.Warning" />,
+        AlertBannerVariant.Critical => @<SystemIcon Name="SystemIconName.XCircle" />,
+        _ => throw new ArgumentOutOfRangeException(nameof(Variant), Variant, null),
+    };
+}

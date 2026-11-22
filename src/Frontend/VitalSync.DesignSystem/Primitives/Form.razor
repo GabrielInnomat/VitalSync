@@ -48,6 +48,8 @@
     private ElementReference _summary;
     private bool _summaryRequested;
     private bool _focusPending;
+    private Button? _submitter;
+    private bool _submitting;
 
     [Parameter]
     public object? Model { get; set; }
@@ -83,6 +85,22 @@
         var before = (HasSummary, HasRequiredField);
         _fields.Remove(field);
         RenderIfChanged(before);
+    }
+
+    internal void NoteSubmitter(Button button)
+    {
+        if (!_submitting)
+        {
+            _submitter = button;
+        }
+    }
+
+    internal void ForgetSubmitter(Button button)
+    {
+        if (ReferenceEquals(_submitter, button))
+        {
+            _submitter = null;
+        }
     }
 
     protected override void OnParametersSet()
@@ -142,10 +160,29 @@
 
     private async Task HandleSubmitAsync()
     {
+        if (_submitting)
+        {
+            return;
+        }
+
+        var submitter = _submitter;
+        _submitter = null;
+
         if (_editContext!.Validate())
         {
             _summaryRequested = false;
-            await OnValidSubmit.InvokeAsync(_editContext).ConfigureAwait(true);
+            _submitting = true;
+            submitter?.SetSubmitting(true);
+            try
+            {
+                await OnValidSubmit.InvokeAsync(_editContext).ConfigureAwait(true);
+            }
+            finally
+            {
+                _submitting = false;
+                submitter?.SetSubmitting(false);
+            }
+
             return;
         }
 

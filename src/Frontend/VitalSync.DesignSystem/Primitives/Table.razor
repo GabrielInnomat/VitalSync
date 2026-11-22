@@ -1,0 +1,225 @@
+@namespace VitalSync.DesignSystem.Primitives
+@typeparam TItem
+@attribute [CascadingTypeParameter(nameof(TItem))]
+@using Microsoft.AspNetCore.Components.Rendering
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<div @attributes="AdditionalAttributes" class="@CssClass">
+    <div @ref="_scroller"
+         class="vs-table__scroller"
+         role="@(Focusable ? "region" : null)"
+         aria-labelledby="@(Focusable ? CaptionId : null)"
+         tabindex="@(Focusable ? "0" : null)">
+        <CascadingValue Value="this" IsFixed="true">
+            @{ StartCollecting(); }
+            @ChildContent
+            @RenderDeferred
+        </CascadingValue>
+    </div>
+</div>
+
+@code {
+    private const string ModulePath = "./_content/VitalSync.DesignSystem/Primitives/Table.razor.js";
+
+    private readonly string _id = $"vs-table-{Guid.NewGuid():N}";
+    private readonly List<TableColumn<TItem>> _columns = [];
+    private ElementReference _scroller;
+    private Task<IJSObjectReference>? _module;
+    private DotNetObjectReference<Table<TItem>>? _self;
+    private bool _collecting;
+    private bool _scrollable = true;
+
+    [Parameter, EditorRequired]
+    public string Caption { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public IEnumerable<TItem> Items { get; set; } = default!;
+
+    [Parameter]
+    public string EmptyText { get; set; } = "Keine Einträge vorhanden.";
+
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => CssClasses.Merge("vs-table", AdditionalAttributes);
+
+    private string CaptionId => $"{_id}-caption";
+
+    private bool Focusable => !RendererInfo.IsInteractive || _scrollable;
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Caption))
+        {
+            throw new InvalidOperationException(
+                "A table requires a visible Caption; it names the table and its scroll region.");
+        }
+
+        if (Items is null)
+        {
+            throw new InvalidOperationException("A table requires Items; pass an empty list when there is nothing to show.");
+        }
+
+        if (string.IsNullOrWhiteSpace(EmptyText))
+        {
+            throw new InvalidOperationException(
+                "A table's EmptyText must not be blank; it is all an empty table has to say.");
+        }
+
+        if (ChildContent is null)
+        {
+            throw new InvalidOperationException("A table requires ChildContent with at least one TableColumn.");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_module is not null || !RendererInfo.IsInteractive)
+        {
+            return;
+        }
+
+        _module = JS.InvokeAsync<IJSObjectReference>("import", ModulePath).AsTask();
+        _self = DotNetObjectReference.Create(this);
+        var module = await _module.ConfigureAwait(true);
+        await module.InvokeVoidAsync("attach", _scroller, _self).ConfigureAwait(true);
+    }
+
+    [JSInvokable]
+    public async Task SetScrollable(bool scrollable)
+    {
+        if (scrollable == _scrollable)
+        {
+            return;
+        }
+
+        _scrollable = scrollable;
+        await InvokeAsync(StateHasChanged).ConfigureAwait(true);
+    }
+
+    internal void AddColumn(TableColumn<TItem> column)
+    {
+        if (_collecting)
+        {
+            _columns.Add(column);
+        }
+    }
+
+    private void StartCollecting()
+    {
+        _columns.Clear();
+        _collecting = true;
+    }
+
+    private int RowHeaderIndex()
+    {
+        var index = -1;
+
+        for (var i = 0; i < _columns.Count; i++)
+        {
+            if (_columns[i].RowHeader != true)
+            {
+                continue;
+            }
+
+            if (index >= 0)
+            {
+                throw new InvalidOperationException(
+                    "Only one table column can be the RowHeader; it is what names each row.");
+            }
+
+            index = i;
+        }
+
+        return index >= 0 || _columns[0].RowHeader == false ? index : 0;
+    }
+
+    private static string CellClass(string classes, TableColumn<TItem> column) =>
+        column.Numeric ? $"{classes} vs-table__numeric" : classes;
+
+    private void RenderDeferred(RenderTreeBuilder builder)
+    {
+        builder.OpenComponent<TableDeferred>(0);
+        builder.AddComponentParameter(1, nameof(TableDeferred.ChildContent), RenderTable());
+        builder.CloseComponent();
+    }
+
+    private RenderFragment RenderTable() =>
+        @<text>
+            @{
+                _collecting = false;
+
+                if (_columns.Count == 0)
+                {
+                    throw new InvalidOperationException("A table requires at least one TableColumn.");
+                }
+
+                var rowHeader = RowHeaderIndex();
+                var empty = true;
+            }
+            <table class="vs-table__table">
+                <caption id="@CaptionId" class="vs-table__caption">
+                    <span class="vs-table__caption-text">@Caption</span>
+                </caption>
+                <thead>
+                    <tr>
+                        @foreach (var column in _columns)
+                        {
+                            <th scope="col" class="@CellClass("vs-table__header", column)">@column.Title</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Items)
+                    {
+                        empty = false;
+                        <tr>
+                            @for (var i = 0; i < _columns.Count; i++)
+                            {
+                                var column = _columns[i];
+
+                                if (i == rowHeader)
+                                {
+                                    <th scope="row" class="@CellClass("vs-table__cell vs-table__row-header", column)">@column.ChildContent(item)</th>
+                                }
+                                else
+                                {
+                                    <td class="@CellClass("vs-table__cell", column)">@column.ChildContent(item)</td>
+                                }
+                            }
+                        </tr>
+                    }
+                    @if (empty)
+                    {
+                        <tr>
+                            <td class="vs-table__empty" colspan="@_columns.Count">@EmptyText</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </text>;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            try
+            {
+                var module = await _module.ConfigureAwait(true);
+                await module.InvokeVoidAsync("detach", _scroller).ConfigureAwait(true);
+                await module.DisposeAsync().ConfigureAwait(true);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        _self?.Dispose();
+        GC.SuppressFinalize(this);
+    }
+}

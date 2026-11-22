@@ -1,18 +1,31 @@
 @namespace VitalSync.DesignSystem.Primitives
+@implements IDisposable
 
 <button @attributes="AdditionalAttributes"
-        type="@Type"
+        type="@EffectiveType"
         class="@CssClass"
-        disabled="@Disabled"
-        @onclick="OnClick">
-    @if (Icon is not null)
+        disabled="@(Disabled && !IsLoading)"
+        aria-disabled="@(IsLoading ? "true" : null)"
+        @onclick="HandleClickAsync">
+    @if (IsLoading)
     {
-        <span class="vs-button__icon" aria-hidden="true">@Icon</span>
+        <span class="vs-button__ring" aria-hidden="true"></span>
+        <span class="vs-button__label">@LoadingLabel.Trim()</span>
     }
-    <span class="vs-button__label">@ChildContent</span>
+    else
+    {
+        @if (Icon is not null)
+        {
+            <span class="vs-button__icon" aria-hidden="true">@Icon</span>
+        }
+        <span class="vs-button__label">@ChildContent</span>
+    }
 </button>
+<span class="vs-button__status" role="status">@(IsLoading ? LoadingLabel.Trim() : null)</span>
 
 @code {
+    private bool _submitting;
+
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
@@ -29,13 +42,30 @@
     public bool Disabled { get; set; }
 
     [Parameter]
+    public bool Loading { get; set; }
+
+    [Parameter]
+    public string LoadingLabel { get; set; } = "Bitte warten\u00A0…";
+
+    [Parameter]
     public EventCallback<MouseEventArgs> OnClick { get; set; }
 
     [Parameter(CaptureUnmatchedValues = true)]
     public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
+    [CascadingParameter]
+    private Form? ParentForm { get; set; }
+
+    private bool IsLoading => Loading || _submitting;
+
+    private bool IsSubmit => string.Equals(Type, "submit", StringComparison.OrdinalIgnoreCase);
+
+    private string EffectiveType => IsLoading && IsSubmit ? "button" : Type;
+
     private string CssClass => CssClasses.Merge(
-        $"vs-button vs-button--{Variant.ToString().ToLowerInvariant()}",
+        IsLoading
+            ? $"vs-button vs-button--{Variant.ToString().ToLowerInvariant()} vs-button--loading"
+            : $"vs-button vs-button--{Variant.ToString().ToLowerInvariant()}",
         AdditionalAttributes);
 
     protected override void OnParametersSet()
@@ -45,5 +75,39 @@
             throw new InvalidOperationException(
                 "Button requires a visible label alongside an icon; icon-only buttons are not supported.");
         }
+
+        if (string.IsNullOrWhiteSpace(LoadingLabel))
+        {
+            throw new InvalidOperationException(
+                "Button requires a LoadingLabel; it replaces the label while loading and is what gets announced.");
+        }
+    }
+
+    internal void SetSubmitting(bool submitting)
+    {
+        if (_submitting == submitting)
+        {
+            return;
+        }
+
+        _submitting = submitting;
+        StateHasChanged();
+    }
+
+    public void Dispose() => ParentForm?.ForgetSubmitter(this);
+
+    private async Task HandleClickAsync(MouseEventArgs args)
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        if (IsSubmit)
+        {
+            ParentForm?.NoteSubmitter(this);
+        }
+
+        await OnClick.InvokeAsync(args).ConfigureAwait(true);
     }
 }

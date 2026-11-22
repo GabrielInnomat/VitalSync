@@ -1,7 +1,10 @@
 @page "/design-system/button"
 @layout GalleryLayout
 @rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
 @using VitalSync.DesignSystem.Primitives
+@inject ToastService Toasts
 
 <PageTitle>Schaltfläche · Design System · VitalSync</PageTitle>
 
@@ -13,6 +16,15 @@
     <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
     Schaltflächen nur mit Symbol werden nicht unterstützt: <code>Icon</code> ohne Beschriftung
     löst eine Ausnahme aus.
+</p>
+<p>
+    Mit <code>Loading</code> zeigt die Schaltfläche, dass ihre Aktion läuft: Ein Ring ersetzt das
+    Symbol, die Beschriftung wird zu <code>LoadingLabel</code> («Bitte warten …»), und ein
+    Statusbereich sagt sie an. Die Schaltfläche bleibt fokussierbar, ist aber mit
+    <code>aria-disabled</code> gesperrt und nimmt keine Klicks an. In einem
+    <a href="design-system/form"><code>Form</code></a> setzt das Formular den Ladezustand des
+    geklickten Submit-Buttons selbst, solange <code>OnValidSubmit</code> läuft, und ignoriert ein
+    zweites Absenden.
 </p>
 
 <div class="vs-gallery__themes">
@@ -26,6 +38,21 @@
     </section>
 </div>
 
+<h2>Ausprobieren</h2>
+<p>Beide Beispiele arbeiten drei Sekunden und melden das Ergebnis dann mit einer Benachrichtigung.</p>
+
+<h3>Schaltfläche</h3>
+<div class="vs-gallery__row">
+    <Button Variant="ButtonVariant.Primary" Loading="_saving" OnClick="SaveAsync">Speichern</Button>
+</div>
+
+<h3>Formular</h3>
+<Form Model="_demo" OnValidSubmit="SendAsync">
+    <DataAnnotationsValidator />
+    <Input TValue="string" @bind-Value="_demo.Name" Label="Name" Required="true" autocomplete="name" />
+    <Button Variant="ButtonVariant.Primary" Type="submit">Absenden</Button>
+</Form>
+
 <h2>Verwendung</h2>
 <pre><code>&lt;Button Variant="ButtonVariant.Primary" OnClick="Save"&gt;Speichern&lt;/Button&gt;
 
@@ -35,9 +62,40 @@
 &lt;/Button&gt;
 
 &lt;Button Variant="ButtonVariant.Secondary" Disabled="true"&gt;Abbrechen&lt;/Button&gt;
+
+&lt;Button Variant="ButtonVariant.Primary" Loading="saving" OnClick="SaveAsync"&gt;Speichern&lt;/Button&gt;
 </code></pre>
 
 @code {
+    private readonly DemoModel _demo = new();
+    private bool _saving;
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3)).ConfigureAwait(true);
+            Toasts.ShowSuccess("Gespeichert", "Die Änderungen sind gespeichert.");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task SendAsync()
+    {
+        await Task.Delay(TimeSpan.FromSeconds(3)).ConfigureAwait(true);
+        Toasts.ShowSuccess("Gesendet", $"Danke, {_demo.Name}.");
+    }
+
+    private sealed class DemoModel
+    {
+        [Required(ErrorMessage = "Bitte gib einen Namen ein.")]
+        public string? Name { get; set; }
+    }
+
     private RenderFragment renderStates() => @<text>
         <div class="vs-gallery__row">
             <Button Variant="ButtonVariant.Primary">Primär</Button>
@@ -48,6 +106,11 @@
             <Button Variant="ButtonVariant.Primary" Disabled="true">Primär</Button>
             <Button Variant="ButtonVariant.Secondary" Disabled="true">Sekundär</Button>
             <Button Variant="ButtonVariant.Critical" Disabled="true">Kritisch</Button>
+        </div>
+        <div class="vs-gallery__row">
+            <Button Variant="ButtonVariant.Primary" Loading="true">Primär</Button>
+            <Button Variant="ButtonVariant.Secondary" Loading="true">Sekundär</Button>
+            <Button Variant="ButtonVariant.Critical" Loading="true">Kritisch</Button>
         </div>
         <div class="vs-gallery__row">
             <Button Variant="ButtonVariant.Primary">

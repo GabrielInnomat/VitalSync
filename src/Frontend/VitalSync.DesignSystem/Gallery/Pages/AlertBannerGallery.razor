@@ -1,0 +1,106 @@
+@page "/design-system/alert-banner"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using VitalSync.DesignSystem.Primitives
+@inject AlertBannerService Banners
+
+<PageTitle>Systemmeldung · Design System · VitalSync</PageTitle>
+
+<h1>Systemmeldung (<code>AlertBanner</code>)</h1>
+<p>
+    Eine Systemmeldung betrifft die ganze Anwendung, etwa eine Wartung oder eine fehlende
+    Verbindung. Sie steht ganz oben, über allem anderen, im Bereich „Systemmeldungen", und scrollt
+    mit der Seite weg. Seiten zeigen sie nur über den <code>AlertBannerService</code>; der Bereich
+    dafür steht bereits im Layout. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    <section data-theme="light" class="vs-gallery__theme-panel">
+        <h2>Hell</h2>
+        @renderStates()
+    </section>
+    <section data-theme="dark" class="vs-gallery__theme-panel">
+        <h2>Dunkel</h2>
+        @renderStates()
+    </section>
+</div>
+
+<h2>Im echten Einsatz</h2>
+<p>
+    Diese Schaltflächen zeigen echte Systemmeldungen oben auf der Seite. Hier lässt sich prüfen, ob
+    ein Screenreader sie ansagt – die Information höflich, Warnung und Fehler sofort –, dass die
+    schwerste zuoberst steht und dass der Fokus nach dem Schliessen zum Hauptinhalt geht. Nur die
+    Wartung lässt sich schliessen; danach bleibt sie bis zum Neuladen weg, auch wenn sie erneut
+    angekündigt wird.
+</p>
+<div class="vs-gallery__row">
+    <Button Variant="ButtonVariant.Secondary" OnClick="ShowMaintenance">Wartung ankündigen</Button>
+    <Button Variant="ButtonVariant.Secondary" OnClick="ShowOffline">Offline melden</Button>
+    <Button Variant="ButtonVariant.Secondary" OnClick="RemoveOffline">Wieder online</Button>
+    <Button Variant="ButtonVariant.Secondary" OnClick="ShowSyncFailure">Abgleich fehlgeschlagen</Button>
+    <Button Variant="ButtonVariant.Secondary" OnClick="RemoveSyncFailure">Abgleich wieder möglich</Button>
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>@@inject AlertBannerService Banners
+
+Banners.ShowWarning("offline", "Du bist offline", "Änderungen werden gespeichert, sobald die Verbindung zurück ist.");
+Banners.Remove("offline");
+
+Banners.ShowInfo(
+    "wartung",
+    "Wartung am Sonntag",
+    "Am Sonntag von 2 bis 4 Uhr ist VitalSync nicht erreichbar.",
+    new AlertBannerLink("Mehr zur Wartung", "wartung"),
+    closable: true);
+</code></pre>
+
+@code {
+    private static readonly AlertBannerLink MaintenanceLink = new("Mehr zur Wartung", "design-system");
+
+    private void ShowMaintenance() => Banners.ShowInfo(
+        "wartung",
+        "Wartung am Sonntag",
+        "Am Sonntag von 2 bis 4 Uhr ist VitalSync nicht erreichbar.",
+        MaintenanceLink,
+        closable: true);
+
+    private void ShowOffline() => Banners.ShowWarning(
+        "offline",
+        "Du bist offline",
+        "Änderungen werden gespeichert, sobald die Verbindung zurück ist.");
+
+    private void RemoveOffline() => Banners.Remove("offline");
+
+    private void ShowSyncFailure() => Banners.ShowCritical(
+        "abgleich",
+        "Abgleich fehlgeschlagen",
+        "Deine Daten konnten nicht mit dem Server abgeglichen werden. Neue Einträge bleiben vorerst auf diesem Gerät.");
+
+    private void RemoveSyncFailure() => Banners.Remove("abgleich");
+
+    private RenderFragment renderStates() => @<text>
+        <h3>Arten</h3>
+        <div class="vs-alert-banner-gallery__stack">
+            <AlertBanner Variant="AlertBannerVariant.Critical"
+                         Title="Abgleich fehlgeschlagen"
+                         Text="Deine Daten konnten nicht mit dem Server abgeglichen werden." />
+            <AlertBanner Variant="AlertBannerVariant.Warning"
+                         Title="Du bist offline"
+                         Text="Änderungen werden gespeichert, sobald die Verbindung zurück ist." />
+            <AlertBanner Variant="AlertBannerVariant.Info"
+                         Title="Wartung am Sonntag"
+                         Text="Am Sonntag von 2 bis 4 Uhr ist VitalSync nicht erreichbar."
+                         Link="MaintenanceLink"
+                         OnClose="() => { }" />
+        </div>
+        <h3>Langer Text</h3>
+        <div class="vs-alert-banner-gallery__stack">
+            <AlertBanner Variant="AlertBannerVariant.Warning"
+                         Title="Eingeschränkte Synchronisierung zwischen Smartwatch und Ernährungstagebuch"
+                         Text="Trainingseinheiten von der Smartwatch erscheinen derzeit mit bis zu einer Stunde Verzögerung. Ernährungsempfehlungsberechnungsgrundlagen werden danach automatisch aktualisiert."
+                         Link="MaintenanceLink" />
+        </div>
+    </text>;
+}

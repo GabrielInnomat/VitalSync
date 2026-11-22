@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using VitalSync.DesignSystem.Gallery;
+using VitalSync.DesignSystem.Primitives;
 
 namespace VitalSync.DesignSystem.Tests.Gallery;
 
@@ -29,6 +30,8 @@ public sealed class GalleryLayoutTests : BunitContext
     public void Renders_the_gallery_in_development()
     {
         Services.AddSingleton<IWebHostEnvironment>(new StubWebHostEnvironment("Development"));
+        Services.AddScoped<ToastService>();
+        Services.AddScoped<AlertBannerService>();
         var notFound = false;
         Services.GetRequiredService<NavigationManager>().OnNotFound += (_, _) => notFound = true;
 
@@ -38,6 +41,8 @@ public sealed class GalleryLayoutTests : BunitContext
         Assert.False(notFound);
         Assert.NotEmpty(cut.FindAll("nav"));
         Assert.Equal("Galerie", cut.Find("main h1").TextContent);
+        Assert.Single(cut.FindAll(".vs-toast-region__announcer[role=status]"));
+        Assert.Single(cut.FindAll(".vs-alert-banner-region__announcer[role=status]"));
     }
 
     private sealed class StubWebHostEnvironment(string environmentName) : IWebHostEnvironment

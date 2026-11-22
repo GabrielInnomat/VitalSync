@@ -1,0 +1,137 @@
+@namespace VitalSync.DesignSystem.Primitives
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject AlertBannerService Service
+@inject IJSRuntime JS
+
+<div class="vs-alert-banner-region__announcer" role="status">
+    @if (_politeAnnouncement is { } polite)
+    {
+        <div @key="polite.Sequence">
+            <p>@HeadingText(polite)</p>
+            <p>@polite.Text</p>
+        </div>
+    }
+</div>
+<div class="vs-alert-banner-region__announcer" role="alert">
+    @if (_assertiveAnnouncement is { } assertive)
+    {
+        <div @key="assertive.Sequence">
+            <p>@HeadingText(assertive)</p>
+            <p>@assertive.Text</p>
+        </div>
+    }
+</div>
+@if (_banners.Count > 0)
+{
+    <section class="vs-alert-banner-region" aria-label="Systemmeldungen">
+        @foreach (var banner in _banners)
+        {
+            <AlertBanner @key="banner.Key"
+                         Variant="banner.Variant"
+                         Title="@banner.Title"
+                         Text="@banner.Text"
+                         Link="banner.Link"
+                         OnClose="CloseCallback(banner)" />
+        }
+    </section>
+}
+
+@code {
+    private const string ModulePath = "./_content/VitalSync.DesignSystem/Primitives/AlertBannerRegion.razor.js";
+
+    private IReadOnlyList<AlertBannerMessage> _banners = [];
+    private AlertBannerMessage? _politeAnnouncement;
+    private AlertBannerMessage? _assertiveAnnouncement;
+    private long _lastSeenSequence;
+    private bool _focusMainContent;
+    private Task<IJSObjectReference>? _module;
+
+    protected override void OnInitialized()
+    {
+        _banners = Service.Banners;
+        _lastSeenSequence = _banners.Count > 0 ? _banners.Max(banner => banner.Sequence) : 0;
+        Service.Changed += OnChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusMainContent)
+        {
+            return;
+        }
+
+        _focusMainContent = false;
+        _module ??= JS.InvokeAsync<IJSObjectReference>("import", ModulePath).AsTask();
+        var module = await _module.ConfigureAwait(true);
+        await module.InvokeVoidAsync("focusMainContent").ConfigureAwait(true);
+    }
+
+    private static string HeadingText(AlertBannerMessage banner) =>
+        $"{AlertBanner.KindWord(banner.Variant)} – {banner.Title}";
+
+    private EventCallback CloseCallback(AlertBannerMessage banner) => banner.Closable
+        ? EventCallback.Factory.Create(this, () => Close(banner.Key))
+        : default;
+
+    private void OnChanged() => _ = InvokeAsync(() =>
+    {
+        Refresh();
+        StateHasChanged();
+    });
+
+    private void Refresh()
+    {
+        _banners = Service.Banners;
+
+        foreach (var banner in _banners.Where(banner => banner.Sequence > _lastSeenSequence).OrderBy(banner => banner.Sequence))
+        {
+            if (banner.Variant is AlertBannerVariant.Info)
+            {
+                _politeAnnouncement = banner;
+            }
+            else
+            {
+                _assertiveAnnouncement = banner;
+            }
+
+            _lastSeenSequence = banner.Sequence;
+        }
+
+        if (_politeAnnouncement is { } polite && !_banners.Contains(polite))
+        {
+            _politeAnnouncement = null;
+        }
+
+        if (_assertiveAnnouncement is { } assertive && !_banners.Contains(assertive))
+        {
+            _assertiveAnnouncement = null;
+        }
+    }
+
+    private void Close(string key)
+    {
+        _focusMainContent = true;
+        Service.Close(key);
+        Refresh();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Service.Changed -= OnChanged;
+
+        if (_module is not null)
+        {
+            try
+            {
+                var module = await _module.ConfigureAwait(true);
+                await module.DisposeAsync().ConfigureAwait(true);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        GC.SuppressFinalize(this);
+    }
+}

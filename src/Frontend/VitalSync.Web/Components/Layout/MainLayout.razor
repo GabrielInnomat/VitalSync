@@ -1,11 +1,14 @@
 ﻿@inherits LayoutComponentBase
+@using VitalSync.DesignSystem.Primitives
+
+<AlertBannerRegion @rendermode="InteractiveServer" />
 
 <div class="page">
     <div class="sidebar">
         <NavMenu />
     </div>
 
-    <main>
+    <main tabindex="-1">
         <div class="top-row">
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">Über ASP.NET Core</a>
         </div>
@@ -15,6 +18,8 @@
         </article>
     </main>
 </div>
+
+<ToastRegion @rendermode="InteractiveServer" />
 
 <div id="blazor-error-ui" role="alert">
     <span class="error-message">Ein unerwarteter Fehler ist aufgetreten.</span>

@@ -1,0 +1,23 @@
+@using VitalSync.DesignSystem.Primitives
+
+<Table Items="Items" Caption="Nährwerte">
+    <TableColumn Title="Lebensmittel">@context.Name</TableColumn>
+    @if (ShowEnergy)
+    {
+        <TableColumn Title="Energie" Numeric="true">@context.Energy</TableColumn>
+    }
+    <TableColumn Title="Kategorie">@Prefix@context.Category</TableColumn>
+</Table>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<Food> Items { get; set; } = [new("Apfel", 52, "Obst")];
+
+    [Parameter]
+    public bool ShowEnergy { get; set; }
+
+    [Parameter]
+    public string Prefix { get; set; } = "";
+
+    public sealed record Food(string Name, int Energy, string Category);
+}
