@@ -1329,6 +1329,13 @@ a missing navigation title or entries, an address with a query or a fragment and
 `AppNavigation` all throw. The app's layout puts a "Zum Inhalt springen" link in front of it, so a
 keyboard user does not have to pass every entry on every page.
 
+**Where the focus goes.** After a page change inside the app, the app moves the focus to the new
+page's `<h1>`, so a screen reader announces the page and reading continues in its content. A
+change of the query string alone is not a page change and leaves the focus where it is. A fresh
+load or a reload moves nothing: the page starts at the top like any other web page, and the first
+Tab reaches the skip link. Blazor's `FocusOnNavigate` cannot do the second part, because it also
+focuses the heading on a fresh load; the app uses its own JavaScript initializer instead.
+
 **Tokens and rules.** The `--app-navigation-*` set: the sidebar's width, padding and gaps; the
 background and the divider's colour and width; the product name's size, weight and colour; the
 button's gap, padding, icon size, text colour, weight, border colours at rest and on hover, border
