@@ -1,3 +1,5 @@
+import { startTheme } from './theme.js';
+
 let lastPage = pageOf(location.href);
 
 function pageOf(href) {
@@ -32,4 +34,5 @@ function onEnhancedLoad() {
 
 export function afterWebStarted(blazor) {
     blazor.addEventListener('enhancedload', onEnhancedLoad);
+    startTheme(blazor);
 }

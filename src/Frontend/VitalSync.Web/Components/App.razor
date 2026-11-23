@@ -5,9 +5,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
-        document.documentElement.setAttribute(
-            'data-theme',
-            window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        (function () {
+            var theme = null;
+            try {
+                theme = localStorage.getItem('vitalsync-theme');
+            } catch (e) {
+                theme = null;
+            }
+            if (theme !== 'light' && theme !== 'dark') {
+                theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
     </script>
     <base href="/" />
     <link rel="stylesheet" href="@Assets["_content/VitalSync.DesignSystem/vitalsync-tokens.css"]" />

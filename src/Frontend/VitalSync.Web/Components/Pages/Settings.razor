@@ -1,7 +1,95 @@
 @page "/settings"
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+@inject IJSRuntime JS
 
 <PageTitle>Einstellungen · VitalSync</PageTitle>
 
 <h1>Einstellungen</h1>
 
-<p>Hier entstehen die Einstellungen der App.</p>
+<Form Model="_settings">
+    <RadioGroup @bind-Value="_settings.Appearance"
+                @bind-Value:after="ChooseAsync"
+                Label="Darstellung"
+                Info="„System“ folgt der Einstellung deines Geräts.">
+        <RadioOption Value="@("light")" Label="Hell" />
+        <RadioOption Value="@("dark")" Label="Dunkel" />
+        <RadioOption Value="@("system")" Label="@SystemLabel" />
+    </RadioGroup>
+</Form>
+
+@code {
+    private const string ModulePath = "./theme.js";
+
+    private readonly SettingsModel _settings = new();
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _watch;
+    private DotNetObjectReference<Settings>? _self;
+    private string? _systemTheme;
+
+    private string SystemLabel => _systemTheme switch
+    {
+        "dark" => "System (Dunkel)",
+        "light" => "System (Hell)",
+        _ => "System",
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _module = await JS.InvokeAsync<IJSObjectReference>("import", ModulePath).ConfigureAwait(true);
+        _settings.Appearance = await _module.InvokeAsync<string>("storedChoice").ConfigureAwait(true);
+        _systemTheme = await _module.InvokeAsync<string>("systemTheme").ConfigureAwait(true);
+        _self = DotNetObjectReference.Create(this);
+        _watch = await _module.InvokeAsync<IJSObjectReference>("watchTheme", _self).ConfigureAwait(true);
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task OnThemeChanged(string choice, string systemTheme)
+    {
+        _settings.Appearance = choice;
+        _systemTheme = systemTheme;
+        await InvokeAsync(StateHasChanged).ConfigureAwait(true);
+    }
+
+    private async Task ChooseAsync()
+    {
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("chooseTheme", _settings.Appearance).ConfigureAwait(true);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_watch is not null)
+            {
+                await _watch.InvokeVoidAsync("stop").ConfigureAwait(true);
+                await _watch.DisposeAsync().ConfigureAwait(true);
+            }
+
+            if (_module is not null)
+            {
+                await _module.DisposeAsync().ConfigureAwait(true);
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+
+        _self?.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private sealed class SettingsModel
+    {
+        public string? Appearance { get; set; }
+    }
+}

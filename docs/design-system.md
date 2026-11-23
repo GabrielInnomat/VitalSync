@@ -51,8 +51,25 @@ not in the main navigation — a theme choice is an infrequent, personal prefere
 that competes for space with everyday navigation. The choice is stored in the device's
 `localStorage`, not on the server, so it applies to that browser on that device only. The same
 inline script reads it before the first paint; a stored choice replaces the system-preference
-read, and `prefers-color-scheme` remains the fallback for a user who has not chosen. The switcher is
-not built yet; it comes with the settings page.
+read, and `prefers-color-scheme` remains the fallback for a user who has not chosen.
+
+**The switcher is a [radio group](#radio-group), not a select and not a toggle.** Hell, Dunkel and
+System are three mutually exclusive choices, and all three stay visible without opening anything; a
+toggle has only two states. Choosing applies at once, without a save button — the result is the
+feedback. That is a change of content, not of context, so it stays within WCAG 3.2.2. "System"
+removes the stored choice rather than storing a third value, and its label names what the device
+currently delivers — "System (Hell)" — so the option never hides which theme it means, and a screen
+reader hears it as part of the option's name.
+
+**The settings page is interactive; the theme itself stays in the browser.** The page renders over
+the server and binds the radio group like any other form field, so the choice passes through the
+server and can later be stored with the user instead of the device. Writing the choice and setting
+`data-theme` is one call into a small JavaScript module. Until the circuit connects, the page cannot
+know the stored choice, so it renders with nothing selected and the plain label "System", and then
+reads both the choice and the current system theme. While the page is open, it follows a change of
+the system preference and a choice made in another tab. On every other page, the module started by
+the web app's JavaScript initializer does the same, and it restores `data-theme` after an enhanced
+navigation, which replaces the attributes of `<html>` with the server's.
 
 ## The rule that replaced the two-shade system
 
