@@ -1,0 +1,45 @@
+@namespace VitalSync.DesignSystem.Primitives.Display
+@using VitalSync.DesignSystem.Icons
+
+<span class="vs-toggletip">
+    <button type="button"
+            class="vs-toggletip__button"
+            popovertarget="@_popupId"
+            style="anchor-name: @AnchorName">
+        <span class="vs-toggletip__icon" aria-hidden="true">
+            <SystemIcon Name="SystemIconName.Info" />
+        </span>
+        <span class="vs-toggletip__name">Hilfe zu @Subject</span>
+    </button>
+    <span id="@_popupId"
+          class="vs-toggletip__popup"
+          popover="auto"
+          style="position-anchor: @AnchorName">@Text</span>
+</span>
+
+@code {
+    private readonly string _popupId = $"vs-toggletip-{Guid.NewGuid():N}";
+
+    [Parameter, EditorRequired]
+    public string Subject { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public string Text { get; set; } = "";
+
+    private string AnchorName => $"--{_popupId}";
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Subject))
+        {
+            throw new InvalidOperationException(
+                "Toggletip requires a Subject; it names the help button as \"Hilfe zu …\".");
+        }
+
+        if (string.IsNullOrWhiteSpace(Text))
+        {
+            throw new InvalidOperationException(
+                "Toggletip requires a Text; an empty help popup is not supported.");
+        }
+    }
+}

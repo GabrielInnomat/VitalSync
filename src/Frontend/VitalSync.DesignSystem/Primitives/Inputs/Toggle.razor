@@ -1,0 +1,82 @@
+@namespace VitalSync.DesignSystem.Primitives.Inputs
+
+<div class="vs-toggle">
+    <div class="vs-toggle__label-row">
+        <label for="@_inputId" class="vs-toggle__label @(Disabled ? "vs-toggle__label--disabled" : null)">
+            <span class="vs-toggle__text">@Label</span>
+        </label>
+        @if (!string.IsNullOrWhiteSpace(Info))
+        {
+            <Toggletip Subject="@Label" Text="@Info" />
+        }
+    </div>
+    <label for="@_inputId" class="vs-toggle__switch @(Disabled ? "vs-toggle__switch--disabled" : null)">
+        <span class="vs-toggle__row">
+            <span class="vs-toggle__control">
+                <input @attributes="AdditionalAttributes"
+                       id="@_inputId"
+                       type="checkbox"
+                       role="switch"
+                       class="vs-toggle__input"
+                       checked="@Value"
+                       disabled="@Disabled"
+                       aria-describedby="@HelperIdOrNull"
+                       @onchange="HandleChangeAsync" />
+                <span class="vs-toggle__mark" aria-hidden="true">
+                    <SystemIcon Name="SystemIconName.Check" />
+                </span>
+                <span class="vs-toggle__thumb" aria-hidden="true"></span>
+            </span>
+            <span class="vs-toggle__state" aria-hidden="true">@(Value ? "Ein" : "Aus")</span>
+        </span>
+    </label>
+
+    @if (!string.IsNullOrEmpty(HelperText))
+    {
+        <p id="@HelperId" class="vs-toggle__helper">@HelperText</p>
+    }
+</div>
+
+@code {
+    private readonly string _inputId = $"vs-toggle-{Guid.NewGuid():N}";
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public bool Value { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> ValueChanged { get; set; }
+
+    [Parameter]
+    public string? HelperText { get; set; }
+
+    [Parameter]
+    public string? Info { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string HelperId => $"{_inputId}-helper";
+
+    private string? HelperIdOrNull => string.IsNullOrEmpty(HelperText) ? null : HelperId;
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Label))
+        {
+            throw new InvalidOperationException(
+                "Toggle requires a visible Label; label-less toggles are not supported.");
+        }
+    }
+
+    private async Task HandleChangeAsync(ChangeEventArgs e)
+    {
+        Value = e.Value is true;
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

@@ -1,7 +1,6 @@
 @page "/design-system/tabs"
 @layout GalleryLayout
 @rendermode InteractiveServer
-@using VitalSync.DesignSystem.Primitives
 
 <PageTitle>Registerkarten · Design System · VitalSync</PageTitle>
 
@@ -28,7 +27,7 @@
                     <Tab Key="@key" Title="@title">
                         <p>@meals</p>
                         <Form Model="demo.Notes[key]">
-                            <VitalSync.DesignSystem.Primitives.Input TValue="string" @bind-Value="demo.Notes[key].Text" Label="Notiz" HelperText="Bleibt beim Wechseln erhalten." />
+                            <VitalSync.DesignSystem.Primitives.Inputs.Input TValue="string" @bind-Value="demo.Notes[key].Text" Label="Notiz" HelperText="Bleibt beim Wechseln erhalten." />
                         </Form>
                     </Tab>
                 }

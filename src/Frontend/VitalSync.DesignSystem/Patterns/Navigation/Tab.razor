@@ -1,0 +1,94 @@
+@namespace VitalSync.DesignSystem.Patterns.Navigation
+@implements IDisposable
+
+<div id="@PanelId"
+     class="vs-tabs__panel"
+     role="tabpanel"
+     tabindex="0"
+     aria-labelledby="@TabId"
+     hidden="@(!ParentTabs.IsSelected(Key))">
+    @ChildContent
+</div>
+
+@code {
+    private readonly string _id = $"vs-tab-{Guid.NewGuid():N}";
+    private string? _registeredKey;
+    private string? _shown;
+
+    [Parameter, EditorRequired]
+    public string Key { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter]
+    public RenderFragment? Icon { get; set; }
+
+    [Parameter]
+    public string? Badge { get; set; }
+
+    [Parameter]
+    public string? BadgeDescription { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    [CascadingParameter]
+    private Tabs? Parent { get; set; }
+
+    internal string TabId => $"{_id}-tab";
+
+    internal string PanelId => $"{_id}-panel";
+
+    private Tabs ParentTabs => Parent
+        ?? throw new InvalidOperationException("Tab must be placed inside Tabs.");
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Key))
+        {
+            throw new InvalidOperationException("A tab requires a Key; it identifies the tab in the address.");
+        }
+
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            throw new InvalidOperationException("A tab requires a visible Title; icon-only tabs are not supported.");
+        }
+
+        if (ChildContent is null)
+        {
+            throw new InvalidOperationException("A tab requires ChildContent; it is what the tab shows.");
+        }
+
+        if (Badge is not null && string.IsNullOrWhiteSpace(Badge))
+        {
+            throw new InvalidOperationException("A tab's Badge must not be blank; leave it out instead.");
+        }
+
+        if (BadgeDescription is not null && (Badge is null || string.IsNullOrWhiteSpace(BadgeDescription)))
+        {
+            throw new InvalidOperationException(
+                "A tab's BadgeDescription completes its Badge for screen readers; it needs a Badge and must not be blank.");
+        }
+
+        var shown = string.Join('\n', Title, Badge, BadgeDescription);
+
+        if (_registeredKey is null)
+        {
+            _registeredKey = Key;
+            ParentTabs.Register(this);
+        }
+        else if (!string.Equals(Key, _registeredKey, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("A tab's Key cannot change once it is shown.");
+        }
+        else if (!string.Equals(shown, _shown, StringComparison.Ordinal))
+        {
+            ParentTabs.Refresh();
+        }
+
+        _shown = shown;
+    }
+
+    public void Dispose() => Parent?.Unregister(this);
+}

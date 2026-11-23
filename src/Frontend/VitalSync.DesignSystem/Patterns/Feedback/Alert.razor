@@ -1,0 +1,159 @@
+@namespace VitalSync.DesignSystem.Patterns.Feedback
+
+<div @attributes="AdditionalAttributes" class="@CssClass">
+    <span class="vs-alert__icon" aria-hidden="true">@RenderIcon()</span>
+    <div class="vs-alert__content">
+        @switch (HeadingLevel)
+        {
+            case 2:
+                <h2 @ref="_title" class="vs-alert__title" tabindex="-1" aria-describedby="@TextId">@HeadingText</h2>
+                break;
+            case 3:
+                <h3 @ref="_title" class="vs-alert__title" tabindex="-1" aria-describedby="@TextId">@HeadingText</h3>
+                break;
+            case 4:
+                <h4 @ref="_title" class="vs-alert__title" tabindex="-1" aria-describedby="@TextId">@HeadingText</h4>
+                break;
+            case 5:
+                <h5 @ref="_title" class="vs-alert__title" tabindex="-1" aria-describedby="@TextId">@HeadingText</h5>
+                break;
+            default:
+                <h6 @ref="_title" class="vs-alert__title" tabindex="-1" aria-describedby="@TextId">@HeadingText</h6>
+                break;
+        }
+        <div id="@TextId" class="vs-alert__text">@ChildContent</div>
+        @if (Action is not null)
+        {
+            <div class="vs-alert__action">@Action</div>
+        }
+    </div>
+    @if (OnClose.HasDelegate)
+    {
+        <button type="button" class="vs-alert__close" @onclick="CloseAsync">
+            <span class="vs-alert__close-icon" aria-hidden="true">
+                <SystemIcon Name="SystemIconName.X" />
+            </span>
+            <span class="vs-alert__close-name">Schliessen: @HeadingText</span>
+        </button>
+    }
+</div>
+
+@code {
+    private readonly string _id = $"vs-alert-{Guid.NewGuid():N}";
+    private ElementReference _title;
+    private bool _announced;
+
+    [Inject]
+    private LiveAnnouncer Announcer { get; set; } = default!;
+
+    [Parameter]
+    public AlertVariant Variant { get; set; } = AlertVariant.Info;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public int HeadingLevel { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? Action { get; set; }
+
+    [Parameter]
+    public bool Announce { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public Func<ElementReference>? CloseFocusTarget { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => CssClasses.Merge(
+        $"vs-alert vs-alert--{Variant.ToString().ToLowerInvariant()}",
+        AdditionalAttributes);
+
+    private string TextId => $"{_id}-text";
+
+    private string HeadingText => $"{KindWord} – {Title.Trim()}";
+
+    private string KindWord => Variant switch
+    {
+        AlertVariant.Info => "Information",
+        AlertVariant.Success => "Erfolg",
+        AlertVariant.Warning => "Warnung",
+        AlertVariant.Critical => "Fehler",
+        _ => throw new ArgumentOutOfRangeException(nameof(Variant), Variant, null),
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            throw new InvalidOperationException(
+                "Alert requires a Title; every message has a title that names it.");
+        }
+
+        if (ChildContent is null)
+        {
+            throw new InvalidOperationException(
+                "Alert requires ChildContent; every message has a text below its title.");
+        }
+
+        if (HeadingLevel is < 2 or > 6)
+        {
+            throw new InvalidOperationException(
+                "Alert requires a HeadingLevel from 2 to 6; only the page knows where the message sits in its outline.");
+        }
+
+        if (OnClose.HasDelegate && CloseFocusTarget is null)
+        {
+            throw new InvalidOperationException(
+                "Alert with OnClose requires a CloseFocusTarget; without one, focus falls back to the start of the page when the message closes.");
+        }
+
+        if (Announce && !_announced && RendererInfo.IsInteractive)
+        {
+            _announced = true;
+            AnnounceMessage();
+        }
+    }
+
+    private void AnnounceMessage()
+    {
+        var heading = HeadingText;
+        var content = ChildContent;
+        Announcer.Announce(
+            builder =>
+            {
+                builder.OpenElement(0, "p");
+                builder.AddContent(1, heading);
+                builder.CloseElement();
+                builder.OpenElement(2, "div");
+                builder.AddContent(3, content);
+                builder.CloseElement();
+            },
+            urgent: Variant is AlertVariant.Warning or AlertVariant.Critical);
+    }
+
+    public ValueTask FocusAsync() => _title.FocusAsync();
+
+    private RenderFragment RenderIcon() => Variant switch
+    {
+        AlertVariant.Info => @<SystemIcon Name="SystemIconName.Info" />,
+        AlertVariant.Success => @<SystemIcon Name="SystemIconName.CheckCircle" />,
+        AlertVariant.Warning => @<SystemIcon Name="SystemIconName.Warning" />,
+        AlertVariant.Critical => @<SystemIcon Name="SystemIconName.XCircle" />,
+        _ => throw new ArgumentOutOfRangeException(nameof(Variant), Variant, null),
+    };
+
+    private async Task CloseAsync()
+    {
+        await CloseFocusTarget!().FocusAsync().ConfigureAwait(true);
+        await OnClose.InvokeAsync().ConfigureAwait(true);
+    }
+}

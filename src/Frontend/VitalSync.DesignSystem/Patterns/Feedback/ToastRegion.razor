@@ -1,0 +1,113 @@
+@namespace VitalSync.DesignSystem.Patterns.Feedback
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject ToastService Service
+@inject IJSRuntime JS
+
+@if (_toasts.Count > 0)
+{
+    <section class="vs-toast-region" aria-label="Benachrichtigungen">
+        <ol class="vs-toast-region__list">
+            @foreach (var toast in _toasts)
+            {
+                <li @key="toast.Id" class="vs-toast-region__item">
+                    <Toast @ref="_rendered[toast.Id]"
+                           Variant="toast.Variant"
+                           Title="@toast.Title"
+                           Text="@toast.Text"
+                           OnClose="() => Close(toast.Id)"
+                           OnFocus="() => Service.SetFocused(toast.Id)"
+                           OnBlur="() => Service.SetFocused(null)" />
+                </li>
+            }
+        </ol>
+    </section>
+}
+
+@code {
+    private const string ModulePath = "./_content/VitalSync.DesignSystem/Patterns/Feedback/ToastRegion.razor.js";
+    private const long MainContent = 0;
+
+    private readonly Dictionary<long, Toast> _rendered = [];
+    private IReadOnlyList<ToastMessage> _toasts = [];
+    private long? _focusTarget;
+    private Task<IJSObjectReference>? _module;
+
+    protected override void OnInitialized()
+    {
+        _toasts = Service.Toasts;
+        Service.Changed += OnChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusTarget is not { } target)
+        {
+            return;
+        }
+
+        _focusTarget = null;
+
+        if (target != MainContent && _rendered.TryGetValue(target, out var toast))
+        {
+            await toast.FocusCloseButtonAsync().ConfigureAwait(true);
+            return;
+        }
+
+        _module ??= JS.InvokeAsync<IJSObjectReference>("import", ModulePath).AsTask();
+        var module = await _module.ConfigureAwait(true);
+        await module.InvokeVoidAsync("focusMainContent").ConfigureAwait(true);
+    }
+
+    private void OnChanged() => _ = InvokeAsync(() =>
+    {
+        Refresh();
+        StateHasChanged();
+    });
+
+    private void Refresh()
+    {
+        _toasts = Service.Toasts;
+
+        foreach (var id in _rendered.Keys.Where(id => _toasts.All(toast => toast.Id != id)).ToList())
+        {
+            _rendered.Remove(id);
+        }
+    }
+
+    private void Close(long id)
+    {
+        var index = _toasts.ToList().FindIndex(toast => toast.Id == id);
+
+        if (index < 0)
+        {
+            return;
+        }
+
+        _focusTarget = index + 1 < _toasts.Count
+            ? _toasts[index + 1].Id
+            : index > 0 ? _toasts[index - 1].Id : MainContent;
+
+        Service.Close(id);
+        Refresh();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Service.Changed -= OnChanged;
+
+        if (_module is not null)
+        {
+            try
+            {
+                var module = await _module.ConfigureAwait(true);
+                await module.DisposeAsync().ConfigureAwait(true);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        GC.SuppressFinalize(this);
+    }
+}

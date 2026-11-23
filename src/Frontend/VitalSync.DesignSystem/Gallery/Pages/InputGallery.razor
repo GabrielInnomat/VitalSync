@@ -3,7 +3,6 @@
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Forms
-@using VitalSync.DesignSystem.Primitives
 
 <PageTitle>Eingabefeld · Design System · VitalSync</PageTitle>
 
@@ -30,9 +29,9 @@
 
                 <Input TValue="string" @bind-Value="demo.Form.Name" Label="Name" Required="true" HelperText="Wie du angesprochen werden möchtest." autocomplete="name" />
 
-                <VitalSync.DesignSystem.Primitives.Input TValue="int?" @bind-Value="demo.Form.WeightKg" Label="Gewicht" Type="number" Placeholder="0">
+                <VitalSync.DesignSystem.Primitives.Inputs.Input TValue="int?" @bind-Value="demo.Form.WeightKg" Label="Gewicht" Type="number" Placeholder="0">
                     <Suffix>kg</Suffix>
-                </VitalSync.DesignSystem.Primitives.Input>
+                </VitalSync.DesignSystem.Primitives.Inputs.Input>
 
                 <Input TValue="string" @bind-Value="demo.Form.Password" Label="Passwort" Type="password" Required="true" autocomplete="current-password" />
 
@@ -45,9 +44,9 @@
             <Form EditContext="demo.States">
                 <Input TValue="string" @bind-Value="demo.StatesModel.Email" Label="E-Mail" Type="email" Required="true" autocomplete="off" />
 
-                <VitalSync.DesignSystem.Primitives.Input TValue="decimal?" @bind-Value="demo.StatesModel.Price" Label="Preis" Type="number" HelperText="Preis pro Packung.">
+                <VitalSync.DesignSystem.Primitives.Inputs.Input TValue="decimal?" @bind-Value="demo.StatesModel.Price" Label="Preis" Type="number" HelperText="Preis pro Packung.">
                     <Prefix>CHF</Prefix>
-                </VitalSync.DesignSystem.Primitives.Input>
+                </VitalSync.DesignSystem.Primitives.Inputs.Input>
 
                 <Input TValue="string" @bind-Value="demo.StatesModel.Locked" Label="Konto" Disabled="true" HelperText="Kann nicht geändert werden." />
             </Form>

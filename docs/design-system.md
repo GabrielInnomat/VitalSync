@@ -481,7 +481,7 @@ error message are wired to those exact values.
 **Razor caveat.** The component is named `Input`, and inside a C# block (`@if`, `@foreach`) Razor
 reads `<Input>…</Input>` with child content as the void HTML `<input>`. Inside such a block, an
 `Input` with `Prefix` or `Suffix` is written with its full name,
-`<VitalSync.DesignSystem.Primitives.Input>`. A self-closing `<Input … />` is unaffected.
+`<VitalSync.DesignSystem.Primitives.Inputs.Input>`. A self-closing `<Input … />` is unaffected.
 
 **`Required`.** Sets the native `required` attribute and, next to the label, a decorative `*`
 (`aria-hidden`, inherits the label's already-verified text colour via `currentColor`). The
@@ -1467,6 +1467,24 @@ only needs to be a little darker, check what else moves: uniform darkening is wh
 chart series into one colour for red-green blind readers.
 
 ## Adding a component
+
+A component first needs its place in the library. Primitives and patterns are told apart by one
+question: is it a single control or display, or is it put together from several parts, often with a
+service or a JavaScript module of its own? Inside each level, components are grouped by family, so
+a page imports a handful of namespaces rather than one per component. The folder is the namespace,
+which `.editorconfig` enforces.
+
+- **`Primitives/`** holds single controls and displays: `Actions/` (button), `Inputs/` (form and
+  every field that takes input), `Display/` (badge, avatar, spinner, toggletip).
+- **`Patterns/`** holds composed components: `Feedback/` (alert, alert banner, toast), `Overlays/`
+  (dialogs), `Data/` (table, later the data table and charts), `Navigation/` (tabs).
+- **`Layouts/`** frames the whole page: the app navigation, later page header and dashboard grid.
+- **`Accessibility/`** holds infrastructure without a look of its own: the live announcer.
+- **`Icons/`** holds the icon component and its paths.
+
+A family folder is never named like a type inside it — `Tabs/Tabs` would make the namespace and the
+component collide. A new family is added to both `_Imports.razor` files, the library's and the web
+app's.
 
 1. Add its component tokens first. They point **only** at semantic tokens, never straight at a
    global. Every dark-mode break this system has had came from that shortcut: a component token

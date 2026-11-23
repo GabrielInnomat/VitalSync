@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
+using VitalSync.DesignSystem.Accessibility;
 using VitalSync.DesignSystem.Gallery;
-using VitalSync.DesignSystem.Primitives;
+using VitalSync.DesignSystem.Patterns.Feedback;
 
 namespace VitalSync.DesignSystem.Tests.Gallery;
 

@@ -1,0 +1,81 @@
+@namespace VitalSync.DesignSystem.Patterns.Feedback
+
+<div class="@CssClass">
+    <span class="vs-toast__icon" aria-hidden="true">@RenderIcon()</span>
+    <div class="vs-toast__content">
+        <strong class="vs-toast__title">@HeadingText</strong>
+        <p class="vs-toast__text">@Text</p>
+    </div>
+    <button @ref="_closeButton"
+            type="button"
+            class="vs-toast__close"
+            @onclick="OnClose"
+            @onfocus="OnFocus"
+            @onblur="OnBlur">
+        <span class="vs-toast__close-icon" aria-hidden="true">
+            <SystemIcon Name="SystemIconName.X" />
+        </span>
+        <span class="vs-toast__close-name">Schliessen: @HeadingText</span>
+    </button>
+</div>
+
+@code {
+    private ElementReference _closeButton;
+
+    [Parameter]
+    public ToastVariant Variant { get; set; } = ToastVariant.Info;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public string Text { get; set; } = "";
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback OnFocus { get; set; }
+
+    [Parameter]
+    public EventCallback OnBlur { get; set; }
+
+    internal static string KindWord(ToastVariant variant) => variant switch
+    {
+        ToastVariant.Info => "Information",
+        ToastVariant.Success => "Erfolg",
+        ToastVariant.Critical => "Fehler",
+        _ => throw new ArgumentOutOfRangeException(nameof(variant), variant, null),
+    };
+
+    internal ElementReference CloseButton => _closeButton;
+
+    internal ValueTask FocusCloseButtonAsync() => _closeButton.FocusAsync();
+
+    private string CssClass => $"vs-toast vs-toast--{Variant.ToString().ToLowerInvariant()}";
+
+    private string HeadingText => $"{KindWord(Variant)} – {Title.Trim()}";
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            throw new InvalidOperationException(
+                "Toast requires a Title; every message has a title that names it.");
+        }
+
+        if (string.IsNullOrWhiteSpace(Text))
+        {
+            throw new InvalidOperationException(
+                "Toast requires a Text; every message has a text below its title.");
+        }
+    }
+
+    private RenderFragment RenderIcon() => Variant switch
+    {
+        ToastVariant.Info => @<SystemIcon Name="SystemIconName.Info" />,
+        ToastVariant.Success => @<SystemIcon Name="SystemIconName.CheckCircle" />,
+        ToastVariant.Critical => @<SystemIcon Name="SystemIconName.XCircle" />,
+        _ => throw new ArgumentOutOfRangeException(nameof(Variant), Variant, null),
+    };
+}

@@ -1,0 +1,70 @@
+@namespace VitalSync.DesignSystem.Patterns.Overlays
+
+<DialogFrame @attributes="AdditionalAttributes"
+             Open="Open"
+             Title="@Title"
+             Fullscreen="Fullscreen"
+             OnRequestClose="OnClose"
+             CloseFocusTarget="CloseFocusTarget"
+             Footer="@(CancelButton || Actions is not null ? RenderFooter() : null)">
+    @ChildContent
+</DialogFrame>
+
+@code {
+    [Parameter]
+    public bool Open { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    [Parameter]
+    public bool CancelButton { get; set; }
+
+    [Parameter]
+    public bool Fullscreen { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public Func<ElementReference>? CloseFocusTarget { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            throw new InvalidOperationException(
+                "Dialog requires a Title; it names the dialog for everyone, including screen readers.");
+        }
+
+        if (ChildContent is null)
+        {
+            throw new InvalidOperationException(
+                "Dialog requires ChildContent; a dialog without content has nothing to ask or show.");
+        }
+
+        if (!OnClose.HasDelegate)
+        {
+            throw new InvalidOperationException(
+                "Dialog requires OnClose; the X, Abbrechen and Escape all ask the page to close it.");
+        }
+    }
+
+    private RenderFragment RenderFooter() =>
+        @<text>
+            @if (CancelButton)
+            {
+                <Button Variant="ButtonVariant.Secondary" OnClick="() => OnClose.InvokeAsync()">Abbrechen</Button>
+            }
+            @Actions
+        </text>;
+}

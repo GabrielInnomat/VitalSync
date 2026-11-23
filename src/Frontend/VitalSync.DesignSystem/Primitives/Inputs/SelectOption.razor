@@ -1,0 +1,40 @@
+@namespace VitalSync.DesignSystem.Primitives.Inputs
+@typeparam TValue
+@implements IDisposable
+
+<option value="@Key">@Label</option>
+
+@code {
+    [Parameter, EditorRequired]
+    public TValue Value { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    [CascadingParameter]
+    private Select<TValue>? Parent { get; set; }
+
+    private string Key => Select<TValue>.KeyOf(Value);
+
+    private Select<TValue> ParentSelect => Parent
+        ?? throw new InvalidOperationException("SelectOption must be placed inside a Select.");
+
+    protected override void OnInitialized()
+    {
+        if (string.IsNullOrWhiteSpace(Label))
+        {
+            throw new InvalidOperationException(
+                "SelectOption requires a visible Label; label-less options are not supported.");
+        }
+
+        if (string.IsNullOrEmpty(Key))
+        {
+            throw new InvalidOperationException(
+                "SelectOption requires a Value; an empty value is reserved for the placeholder.");
+        }
+
+        ParentSelect.Register(this);
+    }
+
+    public void Dispose() => Parent?.Unregister(this);
+}

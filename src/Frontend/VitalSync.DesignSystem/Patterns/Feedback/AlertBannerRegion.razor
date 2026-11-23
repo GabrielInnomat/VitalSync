@@ -1,0 +1,83 @@
+@namespace VitalSync.DesignSystem.Patterns.Feedback
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject AlertBannerService Service
+@inject IJSRuntime JS
+
+@if (_banners.Count > 0)
+{
+    <section class="vs-alert-banner-region" aria-label="Systemmeldungen">
+        @foreach (var banner in _banners)
+        {
+            <AlertBanner @key="banner.Key"
+                         Variant="banner.Variant"
+                         Title="@banner.Title"
+                         Text="@banner.Text"
+                         Link="banner.Link"
+                         OnClose="CloseCallback(banner)" />
+        }
+    </section>
+}
+
+@code {
+    private const string ModulePath = "./_content/VitalSync.DesignSystem/Patterns/Feedback/AlertBannerRegion.razor.js";
+
+    private IReadOnlyList<AlertBannerMessage> _banners = [];
+    private bool _focusMainContent;
+    private Task<IJSObjectReference>? _module;
+
+    protected override void OnInitialized()
+    {
+        _banners = Service.Banners;
+        Service.Changed += OnChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusMainContent)
+        {
+            return;
+        }
+
+        _focusMainContent = false;
+        _module ??= JS.InvokeAsync<IJSObjectReference>("import", ModulePath).AsTask();
+        var module = await _module.ConfigureAwait(true);
+        await module.InvokeVoidAsync("focusMainContent").ConfigureAwait(true);
+    }
+
+    private EventCallback CloseCallback(AlertBannerMessage banner) => banner.Closable
+        ? EventCallback.Factory.Create(this, () => Close(banner.Key))
+        : default;
+
+    private void OnChanged() => _ = InvokeAsync(() =>
+    {
+        _banners = Service.Banners;
+        StateHasChanged();
+    });
+
+    private void Close(string key)
+    {
+        _focusMainContent = true;
+        Service.Close(key);
+        _banners = Service.Banners;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Service.Changed -= OnChanged;
+
+        if (_module is not null)
+        {
+            try
+            {
+                var module = await _module.ConfigureAwait(true);
+                await module.DisposeAsync().ConfigureAwait(true);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        GC.SuppressFinalize(this);
+    }
+}

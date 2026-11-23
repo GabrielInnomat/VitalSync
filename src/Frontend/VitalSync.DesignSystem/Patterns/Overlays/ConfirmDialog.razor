@@ -1,0 +1,79 @@
+@namespace VitalSync.DesignSystem.Patterns.Overlays
+
+<DialogFrame @attributes="AdditionalAttributes"
+             Open="Open"
+             Title="@Title"
+             Confirmation="true"
+             OnRequestClose="OnCancel"
+             CloseFocusTarget="CloseFocusTarget"
+             Footer="@RenderFooter()">
+    @ChildContent
+</DialogFrame>
+
+@code {
+    [Parameter]
+    public bool Open { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string ConfirmLabel { get; set; } = "";
+
+    [Parameter]
+    public ButtonVariant ConfirmVariant { get; set; } = ButtonVariant.Primary;
+
+    [Parameter, EditorRequired]
+    public EventCallback OnConfirm { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public Func<ElementReference>? CloseFocusTarget { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            throw new InvalidOperationException(
+                "ConfirmDialog requires a Title; it asks the question, such as Mahlzeit löschen?");
+        }
+
+        if (ChildContent is null)
+        {
+            throw new InvalidOperationException(
+                "ConfirmDialog requires ChildContent; the text says what confirming will do.");
+        }
+
+        if (string.IsNullOrWhiteSpace(ConfirmLabel))
+        {
+            throw new InvalidOperationException(
+                "ConfirmDialog requires a ConfirmLabel; the button names what happens, such as Löschen.");
+        }
+
+        if (ConfirmVariant == ButtonVariant.Secondary)
+        {
+            throw new InvalidOperationException(
+                "ConfirmDialog requires a Primary or Critical ConfirmVariant; Secondary is reserved for Abbrechen.");
+        }
+
+        if (!OnConfirm.HasDelegate || !OnCancel.HasDelegate)
+        {
+            throw new InvalidOperationException(
+                "ConfirmDialog requires OnConfirm and OnCancel; Abbrechen and Escape cancel, the other button confirms.");
+        }
+    }
+
+    private RenderFragment RenderFooter() =>
+        @<text>
+            <Button Variant="ButtonVariant.Secondary" OnClick="() => OnCancel.InvokeAsync()" data-vs-dialog-start="">Abbrechen</Button>
+            <Button Variant="ConfirmVariant" OnClick="() => OnConfirm.InvokeAsync()">@ConfirmLabel</Button>
+        </text>;
+}

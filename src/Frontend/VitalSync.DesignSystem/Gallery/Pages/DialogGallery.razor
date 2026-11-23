@@ -3,7 +3,6 @@
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Forms
-@using VitalSync.DesignSystem.Primitives
 
 <PageTitle>Dialog · Design System · VitalSync</PageTitle>
 
@@ -59,9 +58,9 @@
                 <ChildContent>
                     <Form Model="demo.Draft" OnValidSubmit="demo.Save" id="@demo.FormId">
                         <DataAnnotationsValidator />
-                        <VitalSync.DesignSystem.Primitives.Input TValue="int?" @bind-Value="demo.Draft.Grams" Label="Menge" Type="number" Required="true" HelperText="Zwischen 1 und 2000 Gramm.">
+                        <VitalSync.DesignSystem.Primitives.Inputs.Input TValue="int?" @bind-Value="demo.Draft.Grams" Label="Menge" Type="number" Required="true" HelperText="Zwischen 1 und 2000 Gramm.">
                             <Suffix>g</Suffix>
-                        </VitalSync.DesignSystem.Primitives.Input>
+                        </VitalSync.DesignSystem.Primitives.Inputs.Input>
                     </Form>
                 </ChildContent>
                 <Actions>

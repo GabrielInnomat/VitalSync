@@ -1,0 +1,36 @@
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using VitalSync.DesignSystem.Primitives.Actions
+@using VitalSync.DesignSystem.Primitives.Inputs
+
+<Form Model="_model" OnValidSubmit="HandleValidSubmitAsync">
+    <DataAnnotationsValidator />
+    <Input TValue="string" @bind-Value="_model.Name" Label="Name" />
+    <Button Type="submit" class="save">Speichern</Button>
+    <Button Type="submit" Variant="ButtonVariant.Secondary" class="draft">Als Entwurf speichern</Button>
+</Form>
+
+@code {
+    private readonly HostModel _model = new();
+
+    [Parameter]
+    public string? Name { get; set; } = "Anna";
+
+    public TaskCompletionSource Pending { get; } = new();
+
+    public int ValidSubmits { get; private set; }
+
+    protected override void OnInitialized() => _model.Name = Name;
+
+    private Task HandleValidSubmitAsync()
+    {
+        ValidSubmits++;
+        return Pending.Task;
+    }
+
+    private sealed class HostModel
+    {
+        [Required(ErrorMessage = "Bitte gib einen Namen ein.")]
+        public string? Name { get; set; }
+    }
+}
