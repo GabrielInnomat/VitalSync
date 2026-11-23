@@ -1,6 +1,6 @@
 namespace VitalSync.DesignSystem.Primitives;
 
-public sealed class AlertBannerService
+public sealed class AlertBannerService(LiveAnnouncer announcer)
 {
     private readonly Lock _gate = new();
     private readonly List<AlertBannerMessage> _banners = [];
@@ -124,5 +124,9 @@ public sealed class AlertBannerService
         }
 
         Changed?.Invoke();
+        announcer.AnnounceMessage(
+            $"{AlertBanner.KindWord(variant)} – {trimmedTitle}",
+            trimmedText,
+            urgent: variant is not AlertBannerVariant.Info);
     }
 }

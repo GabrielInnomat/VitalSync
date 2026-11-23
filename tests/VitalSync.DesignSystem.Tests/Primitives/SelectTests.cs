@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.Extensions.DependencyInjection;
 using VitalSync.DesignSystem.Primitives;
 
 namespace VitalSync.DesignSystem.Tests.Primitives;
@@ -68,6 +69,11 @@ public sealed class SelectTests : BunitContext
             AddSelectParameters(parameters, model);
             configure?.Invoke(parameters);
         });
+
+    public SelectTests()
+    {
+        Services.AddScoped<LiveAnnouncer>();
+    }
 
     [Fact]
     public void Renders_a_native_select_labelled_by_its_label()
@@ -263,7 +269,7 @@ public sealed class SelectTests : BunitContext
         var error = cut.Find(".vs-select__error");
         var select = cut.Find("select");
         Assert.Contains("Bitte wähle eine Ernährungsform.", error.TextContent, StringComparison.Ordinal);
-        Assert.Equal("alert", error.GetAttribute("role"));
+        Assert.False(error.HasAttribute("role"));
         Assert.Equal("true", cut.Find(".vs-select__error-icon").GetAttribute("aria-hidden"));
         Assert.Empty(cut.FindAll(".vs-select__helper"));
         Assert.Equal(error.Id, select.GetAttribute("aria-describedby"));

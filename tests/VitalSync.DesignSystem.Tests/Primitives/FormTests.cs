@@ -17,6 +17,11 @@ public sealed class FormTests : BunitContext
     private static string[] InputElementIds(IRenderedComponent<FormTestHost> cut) =>
         [.. cut.FindComponents<Input<string>>().Select(input => input.Instance.Element!.Value.Id)];
 
+    public FormTests()
+    {
+        Services.AddScoped<LiveAnnouncer>();
+    }
+
     [Fact]
     public void Turns_off_native_validation_and_passes_attributes_to_the_form()
     {
@@ -70,13 +75,13 @@ public sealed class FormTests : BunitContext
     }
 
     [Fact]
-    public void Renders_an_empty_polite_live_region_before_the_first_submit_beyond_three_fields()
+    public void Renders_an_empty_focusable_summary_that_is_not_a_live_region_before_the_first_submit_beyond_three_fields()
     {
         var cut = Render<FormTestHost>(parameters => parameters
             .Add(p => p.FieldCount, 4));
 
         var summary = cut.Find(".vs-form__summary");
-        Assert.Equal("polite", summary.GetAttribute("aria-live"));
+        Assert.False(summary.HasAttribute("aria-live"));
         Assert.Equal("-1", summary.GetAttribute("tabindex"));
         Assert.Empty(summary.Children);
     }
@@ -174,6 +179,116 @@ public sealed class FormTests : BunitContext
         var links = cut.FindAll(".vs-form__summary-link");
         Assert.Equal(3, links.Count);
         Assert.DoesNotContain(links, link => link.TextContent.StartsWith("Vorname", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Keeps_the_summary_unchanged_while_typing_and_announces_the_fix_with_the_remaining_count_once_committed()
+    {
+        JSInterop.SetupVoid("Blazor._internal.domWrapper.focus", _ => true);
+        var region = Render<LiveAnnouncerRegion>();
+        var cut = Render<FormTestHost>(parameters => parameters
+            .Add(p => p.FieldCount, 4));
+        cut.Find("form").Submit();
+
+        cut.FindAll("input")[0].Input("Alex");
+        Assert.Equal(4, cut.FindAll(".vs-form__summary-link").Count);
+        Assert.Empty(region.FindAll("[role=status] > div"));
+
+        cut.FindAll("input")[0].Change("Alex");
+        Assert.Equal(3, cut.FindAll(".vs-form__summary-link").Count);
+        var message = Assert.Single(region.FindAll("[role=status] > div"));
+        Assert.Equal("Vorname: in Ordnung. Noch 3 Angaben.", message.TextContent);
+    }
+
+    [Fact]
+    public void Announces_a_new_summary_entry_with_its_message_and_the_remaining_count()
+    {
+        JSInterop.SetupVoid("Blazor._internal.domWrapper.focus", _ => true);
+        var region = Render<LiveAnnouncerRegion>();
+        var cut = Render<FormTestHost>(parameters => parameters
+            .Add(p => p.FieldCount, 4)
+            .Add(p => p.First, "Alex"));
+        cut.Find("form").Submit();
+
+        cut.FindAll("input")[0].Change("");
+
+        var message = Assert.Single(region.FindAll("[role=status] > div"));
+        Assert.Equal("Vorname: Bitte gib einen Vornamen ein. Noch 4 Angaben.", message.TextContent);
+    }
+
+    [Fact]
+    public void Announces_that_all_entries_are_in_order_once_the_last_summary_entry_is_fixed()
+    {
+        JSInterop.SetupVoid("Blazor._internal.domWrapper.focus", _ => true);
+        var region = Render<LiveAnnouncerRegion>();
+        var cut = Render<FormTestHost>(parameters => parameters
+            .Add(p => p.FieldCount, 4));
+        cut.Find("form").Submit();
+
+        string[] values = ["Alex", "Muster", "Bern", "Schweiz"];
+        for (var i = 0; i < values.Length; i++)
+        {
+            cut.FindAll("input")[i].Change(values[i]);
+        }
+
+        var messages = region.FindAll("[role=status] > div");
+        Assert.Equal(4, messages.Count);
+        Assert.Equal("Alle Angaben in Ordnung.", messages[^1].TextContent);
+        Assert.Empty(cut.FindAll(".vs-form__summary-link"));
+    }
+
+    [Fact]
+    public void Announces_nothing_when_a_committed_change_leaves_the_summary_as_it_was()
+    {
+        JSInterop.SetupVoid("Blazor._internal.domWrapper.focus", _ => true);
+        var cut = Render<FormTestHost>(parameters => parameters
+            .Add(p => p.FieldCount, 4));
+        cut.Find("form").Submit();
+
+        cut.FindAll("input")[0].Change(" ");
+
+        Assert.Empty(Services.GetRequiredService<LiveAnnouncer>().Announcements);
+    }
+
+    [Fact]
+    public void Announces_an_error_when_a_field_is_left_after_typing_even_if_its_content_ends_where_it_started()
+    {
+        var region = Render<LiveAnnouncerRegion>();
+        var cut = Render<FormTestHost>();
+
+        cut.FindAll("input")[0].Input("Alex");
+        cut.FindAll("input")[0].Input("");
+        cut.FindAll("input")[0].Blur();
+
+        Assert.Equal("true", cut.FindAll("input")[0].GetAttribute("aria-invalid"));
+        var message = Assert.Single(region.FindAll("[role=status] > div"));
+        Assert.Equal("Vorname: Bitte gib einen Vornamen ein.", message.TextContent);
+    }
+
+    [Fact]
+    public void Announces_a_new_field_error_with_its_label_once_the_field_is_committed()
+    {
+        var region = Render<LiveAnnouncerRegion>();
+        var cut = Render<FormTestHost>();
+        cut.FindAll("input")[0].Change("Alex");
+
+        cut.FindAll("input")[0].Change("");
+
+        var message = Assert.Single(region.FindAll("[role=status] > div"));
+        Assert.Equal("Vorname: Bitte gib einen Vornamen ein.", message.TextContent);
+        Assert.Empty(region.FindAll("[role=alert] > div"));
+    }
+
+    [Fact]
+    public void Does_not_announce_an_error_that_is_already_shown()
+    {
+        var cut = Render<FormTestHost>();
+        cut.FindAll("input")[0].Change("Alex");
+        cut.FindAll("input")[0].Change("");
+
+        cut.FindAll("input")[0].Change(" ");
+
+        Assert.Single(Services.GetRequiredService<LiveAnnouncer>().Announcements);
     }
 
     [Fact]

@@ -15,7 +15,7 @@
                        checked="@CurrentValue"
                        required="@Required"
                        disabled="@Disabled"
-                       aria-invalid="@(HasError ? "true" : null)"
+                       aria-invalid="@(HasError ? "true" : "false")"
                        aria-describedby="@DescribedBy"
                        @onchange="HandleChange" />
                 <span class="vs-checkbox__mark" aria-hidden="true">
@@ -40,7 +40,7 @@
 
     @if (HasError)
     {
-        <p id="@ErrorId" class="vs-checkbox__error" role="alert">
+        <p id="@ErrorId" class="vs-checkbox__error">
             <span class="vs-checkbox__error-icon" aria-hidden="true">
                 <SystemIcon Name="SystemIconName.XCircle" />
             </span>
@@ -117,7 +117,12 @@
         base.Dispose(disposing);
     }
 
-    private void HandleChange(ChangeEventArgs e) => CurrentValue = e.Value is true;
+    private void HandleChange(ChangeEventArgs e)
+    {
+        var before = CurrentErrors.FirstOrDefault();
+        CurrentValue = e.Value is true;
+        ParentForm?.ReportChange(this, before);
+    }
 
     protected override bool TryParseValueFromString(string? value, out bool result, out string validationErrorMessage) =>
         throw new NotSupportedException($"{nameof(Checkbox)} binds a bool directly and never parses a string.");

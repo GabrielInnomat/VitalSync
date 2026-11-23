@@ -1,6 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 using VitalSync.DesignSystem.Primitives;
 
 namespace VitalSync.DesignSystem.Tests.Primitives;
@@ -14,6 +15,7 @@ public sealed class DialogTests : BunitContext
 
     public DialogTests()
     {
+        Services.AddScoped<LiveAnnouncer>();
         _module = JSInterop.SetupModule(ModulePath);
         _module.SetupVoid("open", _ => true).SetVoidResult();
         _module.SetupVoid("close", _ => true).SetVoidResult();
@@ -39,6 +41,7 @@ public sealed class DialogTests : BunitContext
         var dialog = cut.Find("dialog");
         var title = cut.Find("h2.vs-dialog__title");
         Assert.Equal("Mahlzeit bearbeiten", title.TextContent);
+        Assert.Equal("-1", title.GetAttribute("tabindex"));
         Assert.Equal(title.Id, dialog.GetAttribute("aria-labelledby"));
         Assert.False(dialog.HasAttribute("role"));
         Assert.False(dialog.HasAttribute("aria-describedby"));

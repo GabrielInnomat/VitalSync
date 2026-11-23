@@ -6,7 +6,9 @@
         class="@CssClass"
         disabled="@(Disabled && !IsLoading)"
         aria-disabled="@(IsLoading ? "true" : null)"
-        @onclick="HandleClickAsync">
+        @onclick="HandleClickAsync"
+        @onfocus="() => _focused = true"
+        @onblur="() => _focused = false">
     @if (IsLoading)
     {
         <span class="vs-button__ring" aria-hidden="true"></span>
@@ -21,10 +23,15 @@
         <span class="vs-button__label">@ChildContent</span>
     }
 </button>
-<span class="vs-button__status" role="status">@(IsLoading ? LoadingLabel.Trim() : null)</span>
 
 @code {
     private bool _submitting;
+    private bool _focused;
+    private bool _wasLoading;
+    private bool _parametersSet;
+
+    [Inject]
+    private LiveAnnouncer Announcer { get; set; } = default!;
 
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
@@ -81,6 +88,8 @@
             throw new InvalidOperationException(
                 "Button requires a LoadingLabel; it replaces the label while loading and is what gets announced.");
         }
+
+        NoteLoadingChange();
     }
 
     internal void SetSubmitting(bool submitting)
@@ -91,7 +100,19 @@
         }
 
         _submitting = submitting;
+        NoteLoadingChange();
         StateHasChanged();
+    }
+
+    private void NoteLoadingChange()
+    {
+        if (IsLoading && _parametersSet && !_wasLoading && !_focused)
+        {
+            Announcer.Announce(LoadingLabel);
+        }
+
+        _parametersSet = true;
+        _wasLoading = IsLoading;
     }
 
     public void Dispose() => ParentForm?.ForgetSubmitter(this);

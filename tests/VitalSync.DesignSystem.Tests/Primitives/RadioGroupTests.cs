@@ -1,7 +1,9 @@
+using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.Extensions.DependencyInjection;
 using VitalSync.DesignSystem.Primitives;
 
 namespace VitalSync.DesignSystem.Tests.Primitives;
@@ -10,6 +12,7 @@ public sealed class RadioGroupTests : BunitContext
 {
     private sealed class TestModel
     {
+        [Required(ErrorMessage = "Bitte wähle ein Aktivitätsniveau.")]
         public string? Level { get; set; }
     }
 
@@ -60,6 +63,11 @@ public sealed class RadioGroupTests : BunitContext
             AddGroupParameters(parameters, model);
             configure?.Invoke(parameters);
         });
+
+    public RadioGroupTests()
+    {
+        Services.AddScoped<LiveAnnouncer>();
+    }
 
     [Fact]
     public void Renders_a_fieldset_named_by_its_legend()
@@ -212,7 +220,7 @@ public sealed class RadioGroupTests : BunitContext
 
         var error = cut.Find(".vs-radio-group__error");
         Assert.Contains("Bitte wähle ein Aktivitätsniveau.", error.TextContent, StringComparison.Ordinal);
-        Assert.Equal("alert", error.GetAttribute("role"));
+        Assert.False(error.HasAttribute("role"));
         Assert.Equal("true", cut.Find(".vs-radio-group__error-icon").GetAttribute("aria-hidden"));
         Assert.Empty(cut.FindAll(".vs-radio-group__helper"));
         Assert.Equal(error.Id, cut.Find("fieldset").GetAttribute("aria-describedby"));
@@ -234,7 +242,7 @@ public sealed class RadioGroupTests : BunitContext
         });
 
         Assert.Empty(cut.FindAll(".vs-radio-group__error"));
-        Assert.All(cut.FindAll("input"), input => Assert.False(input.HasAttribute("aria-invalid")));
+        Assert.All(cut.FindAll("input"), input => Assert.Equal("false", input.GetAttribute("aria-invalid")));
     }
 
     [Fact]
@@ -287,6 +295,25 @@ public sealed class RadioGroupTests : BunitContext
                 OptionElementId(cut, 1),
                 ((ElementReference)call.Arguments[0]!).Id);
         });
+    }
+
+    [Fact]
+    public void Announces_that_the_group_is_in_order_once_a_choice_clears_its_error()
+    {
+        JSInterop.SetupVoid("Blazor._internal.domWrapper.focus", _ => true);
+        var region = Render<LiveAnnouncerRegion>();
+        var model = new TestModel();
+        var cut = Render<Form>(parameters => parameters
+            .Add(p => p.Model, model)
+            .AddChildContent<DataAnnotationsValidator>()
+            .AddChildContent<RadioGroup<string?>>(group => AddGroupParameters(group, model)));
+        cut.Find("form").Submit();
+
+        cut.FindAll("input")[1].Change("on");
+
+        var message = Assert.Single(region.FindAll("[role=status] > div"));
+        Assert.Equal("Aktivitätsniveau: in Ordnung.", message.TextContent);
+        Assert.Empty(region.FindAll("[role=alert] > div"));
     }
 
     [Fact]

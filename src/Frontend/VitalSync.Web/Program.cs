@@ -8,6 +8,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddOutputCache();
+builder.Services.AddScoped<LiveAnnouncer>();
 builder.Services.AddScoped<ToastService>();
 builder.Services.AddScoped<AlertBannerService>();
 

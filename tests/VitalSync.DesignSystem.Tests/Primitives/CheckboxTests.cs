@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.Extensions.DependencyInjection;
 using VitalSync.DesignSystem.Primitives;
 
 namespace VitalSync.DesignSystem.Tests.Primitives;
@@ -44,6 +45,11 @@ public sealed class CheckboxTests : BunitContext
 
             configure?.Invoke(parameters);
         });
+    }
+
+    public CheckboxTests()
+    {
+        Services.AddScoped<LiveAnnouncer>();
     }
 
     [Fact]
@@ -165,11 +171,21 @@ public sealed class CheckboxTests : BunitContext
         var error = cut.Find(".vs-checkbox__error");
         var input = cut.Find("input");
         Assert.Contains("Bitte bestätige die Datenschutzerklärung.", error.TextContent, StringComparison.Ordinal);
-        Assert.Equal("alert", error.GetAttribute("role"));
+        Assert.False(error.HasAttribute("role"));
         Assert.Equal("true", cut.Find(".vs-checkbox__error-icon").GetAttribute("aria-hidden"));
         Assert.Empty(cut.FindAll(".vs-checkbox__helper"));
         Assert.Equal("true", input.GetAttribute("aria-invalid"));
         Assert.Equal(error.GetAttribute("id"), input.GetAttribute("aria-describedby"));
+    }
+
+    [Fact]
+    public void Marks_the_box_as_valid_explicitly_when_there_is_no_error()
+    {
+        var (editContext, model) = CreateEditContext();
+
+        var cut = RenderCheckbox(editContext, model);
+
+        Assert.Equal("false", cut.Find("input").GetAttribute("aria-invalid"));
     }
 
     [Fact]

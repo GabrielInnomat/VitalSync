@@ -12,7 +12,7 @@
     @if (Open)
     {
         <div class="vs-dialog__header">
-            <h2 id="@TitleId" class="vs-dialog__title">@Title</h2>
+            <h2 id="@TitleId" class="vs-dialog__title" tabindex="-1">@Title</h2>
             @if (!Confirmation)
             {
                 <button type="button" class="vs-dialog__close" @onclick="RequestClose">

@@ -35,6 +35,19 @@ a.vs-badge {
         height: 100%;
     }
 
+.vs-badge__kind {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    /* pre keeps the trailing space that separates the prefix from the label when read aloud. */
+    white-space: pre;
+    border: 0;
+}
+
 .vs-badge--neutral {
     background-color: var(--badge-neutral-background);
     color: var(--badge-neutral-text);

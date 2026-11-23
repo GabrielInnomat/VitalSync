@@ -2,6 +2,7 @@
 @layout GalleryLayout
 @rendermode InteractiveServer
 @using VitalSync.DesignSystem.Primitives
+@inject LiveAnnouncer Announcer
 
 <PageTitle>Tabelle · Design System · VitalSync</PageTitle>
 
@@ -94,9 +95,15 @@
             <TableColumn Title="Aktion">
                 <Button Variant="ButtonVariant.Secondary"
                         aria-label="@($"{context.Name} hinzufügen")"
-                        OnClick="() => demo.Added = context.Name">Hinzufügen</Button>
+                        OnClick="() => Add(demo, context.Name)">Hinzufügen</Button>
             </TableColumn>
         </Table>;
+
+    private void Add(ThemeDemo demo, string name)
+    {
+        demo.Added = name;
+        Announcer.Announce($"{name} hinzugefügt.");
+    }
 
     private sealed record Food(string Name, int Energy, int Protein, bool InTarget);
 

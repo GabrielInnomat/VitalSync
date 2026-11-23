@@ -1,6 +1,6 @@
 namespace VitalSync.DesignSystem.Primitives;
 
-public sealed class ToastService
+public sealed class ToastService(LiveAnnouncer announcer)
 {
     internal const int Limit = 3;
 
@@ -59,10 +59,13 @@ public sealed class ToastService
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
 
+        var trimmedTitle = title.Trim();
+        var trimmedText = text.Trim();
+
         lock (_gate)
         {
             _lastId++;
-            _toasts.Add(new ToastMessage(_lastId, variant, title.Trim(), text.Trim()));
+            _toasts.Add(new ToastMessage(_lastId, variant, trimmedTitle, trimmedText));
 
             while (_toasts.Count > Limit)
             {
@@ -71,5 +74,9 @@ public sealed class ToastService
         }
 
         Changed?.Invoke();
+        announcer.AnnounceMessage(
+            $"{Toast.KindWord(variant)} – {trimmedTitle}",
+            trimmedText,
+            urgent: variant is ToastVariant.Critical);
     }
 }

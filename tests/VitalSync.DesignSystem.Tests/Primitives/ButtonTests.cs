@@ -1,10 +1,16 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using VitalSync.DesignSystem.Primitives;
 
 namespace VitalSync.DesignSystem.Tests.Primitives;
 
 public sealed class ButtonTests : BunitContext
 {
+    public ButtonTests()
+    {
+        Services.AddScoped<LiveAnnouncer>();
+    }
+
     [Fact]
     public void Renders_label_from_ChildContent()
     {
@@ -188,22 +194,54 @@ public sealed class ButtonTests : BunitContext
     }
 
     [Fact]
-    public void Announces_the_loading_label_in_a_status_region_that_is_always_present()
+    public void Announces_the_loading_label_once_when_loading_starts_on_an_unfocused_button()
     {
+        var announcer = Services.GetRequiredService<LiveAnnouncer>();
         var cut = Render<Button>(parameters => parameters
             .AddChildContent("Speichern"));
 
-        Assert.Equal("status", cut.Find(".vs-button__status").GetAttribute("role"));
-        Assert.Empty(cut.Find(".vs-button__status").TextContent);
+        Assert.Empty(cut.FindAll("[role=status]"));
 
         cut.Render(parameters => parameters.Add(p => p.Loading, true));
+        cut.Render(parameters => parameters.Add(p => p.Loading, true));
 
-        Assert.Equal("Bitte warten\u00A0…", cut.Find(".vs-button__status").TextContent);
+        Assert.Single(announcer.Announcements);
+        Assert.False(announcer.Announcements[0].Urgent);
+        Assert.Equal("Bitte warten\u00A0…", Text(announcer.Announcements[0]));
 
         cut.Render(parameters => parameters.Add(p => p.Loading, false));
 
-        Assert.Empty(cut.Find(".vs-button__status").TextContent);
+        Assert.Single(announcer.Announcements);
     }
+
+    [Fact]
+    public void Leaves_the_announcement_to_the_new_name_when_the_button_has_focus()
+    {
+        var announcer = Services.GetRequiredService<LiveAnnouncer>();
+        var cut = Render<Button>(parameters => parameters
+            .AddChildContent("Speichern"));
+
+        cut.Find("button").Focus();
+        cut.Render(parameters => parameters.Add(p => p.Loading, true));
+
+        Assert.Empty(announcer.Announcements);
+        Assert.Equal("Bitte warten\u00A0…", cut.Find(".vs-button__label").TextContent);
+    }
+
+    [Fact]
+    public void Does_not_announce_a_button_that_is_already_loading_when_it_appears()
+    {
+        var announcer = Services.GetRequiredService<LiveAnnouncer>();
+
+        Render<Button>(parameters => parameters
+            .Add(p => p.Loading, true)
+            .AddChildContent("Speichern"));
+
+        Assert.Empty(announcer.Announcements);
+    }
+
+    private string Text(LiveAnnouncement announcement) =>
+        string.Concat(Render(announcement.Content).Nodes.Select(node => node.TextContent));
 
     [Theory]
     [InlineData("")]

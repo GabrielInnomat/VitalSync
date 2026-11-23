@@ -42,6 +42,17 @@
     <Button Variant="ButtonVariant.Secondary" OnClick="RemoveSyncFailure">Abgleich wieder möglich</Button>
 </div>
 
+<h3>Beim Start der Seite</h3>
+<p>
+    Diese Links laden die Seite ganz neu und zeigen die Meldung schon, während die Seite startet,
+    nicht erst nach einem Klick. Hier lässt sich prüfen, ob ein Screenreader auch eine solche
+    Meldung ansagt. F5 lädt die Seite mit derselben Meldung erneut.
+</p>
+<ul>
+    <li><a href="design-system/alert-banner?beim-start=offline" data-enhance-nav="false">Neu laden mit der Warnung „Du bist offline"</a></li>
+    <li><a href="design-system/alert-banner?beim-start=wartung" data-enhance-nav="false">Neu laden mit der Information „Wartung am Sonntag"</a></li>
+</ul>
+
 <h2>Verwendung</h2>
 <pre><code>@@inject AlertBannerService Banners
 
@@ -58,6 +69,21 @@ Banners.ShowInfo(
 
 @code {
     private static readonly AlertBannerLink MaintenanceLink = new("Mehr zur Wartung", "design-system");
+
+    [SupplyParameterFromQuery(Name = "beim-start")]
+    private string? StartBanner { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (StartBanner == "offline")
+        {
+            ShowOffline();
+        }
+        else if (StartBanner == "wartung")
+        {
+            ShowMaintenance();
+        }
+    }
 
     private void ShowMaintenance() => Banners.ShowInfo(
         "wartung",

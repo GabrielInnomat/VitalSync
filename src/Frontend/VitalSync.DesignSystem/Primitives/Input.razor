@@ -5,6 +5,9 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using System.Globalization
 
+@{
+    _shownError = ShownError();
+}
 <div class="vs-input">
     <div class="vs-input__label-row">
         <label for="@_inputId" class="vs-input__label">
@@ -24,10 +27,10 @@
         }
     </div>
 
-    <div class="vs-input__field @(HasError ? "vs-input__field--error" : null) @(Disabled ? "vs-input__field--disabled" : null)">
+    <div class="vs-input__field @(_shownError is not null ? "vs-input__field--error" : null) @(Disabled ? "vs-input__field--disabled" : null)">
         @if (Prefix is not null)
         {
-            <span class="vs-input__affix vs-input__affix--prefix">@Prefix</span>
+            <span id="@PrefixId" class="vs-input__affix vs-input__affix--prefix">@Prefix</span>
         }
         <input @attributes="AdditionalAttributes"
                @ref="Element"
@@ -37,14 +40,15 @@
                placeholder="@Placeholder"
                required="@Required"
                disabled="@Disabled"
-               aria-invalid="@(HasError ? "true" : null)"
+               aria-invalid="@(_shownError is not null ? "true" : null)"
                aria-describedby="@DescribedBy"
                value="@CurrentValueAsString"
                @onchange="HandleChange"
-               @oninput="HandleInput" />
+               @oninput="HandleInput"
+               @onblur="HandleBlur" />
         @if (Suffix is not null)
         {
-            <span class="vs-input__affix vs-input__affix--suffix">@Suffix</span>
+            <span id="@SuffixId" class="vs-input__affix vs-input__affix--suffix">@Suffix</span>
         }
         @if (Type == "password")
         {
@@ -59,13 +63,13 @@
         }
     </div>
 
-    @if (HasError)
+    @if (_shownError is not null)
     {
-        <p id="@ErrorId" class="vs-input__error" role="alert">
+        <p id="@ErrorId" class="vs-input__error">
             <span class="vs-input__error-icon" aria-hidden="true">
                 <SystemIcon Name="SystemIconName.XCircle" />
             </span>
-            @CurrentErrors.First()
+            @_shownError
         </p>
     }
     else if (!string.IsNullOrEmpty(HelperText))
@@ -78,6 +82,9 @@
     private readonly string _inputId = $"vs-input-{Guid.NewGuid():N}";
     private bool _showPassword;
     private bool _validateWhileTyping;
+    private bool _typing;
+    private string? _typedValue;
+    private string? _shownError;
 
     [Parameter, EditorRequired]
     public string Label { get; set; } = "";
@@ -128,13 +135,48 @@
 
     private string HelperId => $"{_inputId}-helper";
 
-    private string? DescribedBy => HasError
-        ? ErrorId
-        : string.IsNullOrEmpty(HelperText) ? null : HelperId;
+    private string PrefixId => $"{_inputId}-prefix";
+
+    private string SuffixId => $"{_inputId}-suffix";
+
+    private string? DescribedBy
+    {
+        get
+        {
+            var ids = new List<string>(3);
+
+            if (Prefix is not null)
+            {
+                ids.Add(PrefixId);
+            }
+
+            if (Suffix is not null)
+            {
+                ids.Add(SuffixId);
+            }
+
+            if (_shownError is not null)
+            {
+                ids.Add(ErrorId);
+            }
+            else if (!string.IsNullOrEmpty(HelperText))
+            {
+                ids.Add(HelperId);
+            }
+
+            return ids.Count == 0 ? null : string.Join(' ', ids);
+        }
+    }
 
     private IEnumerable<string> CurrentErrors => EditContext.GetValidationMessages(FieldIdentifier);
 
     private bool HasError => CurrentErrors.Any();
+
+    private string? ShownError()
+    {
+        var current = CurrentErrors.FirstOrDefault();
+        return current is null || !_typing ? current : _shownError;
+    }
 
     protected override void OnInitialized()
     {
@@ -165,17 +207,43 @@
 
     private void HandleChange(ChangeEventArgs e)
     {
+        var before = _shownError;
+        _typing = false;
         _validateWhileTyping = true;
         CurrentValueAsString = e.Value as string;
+        ParentForm?.ReportChange(this, before);
     }
 
     private void HandleInput(ChangeEventArgs e)
     {
+        _typing = true;
+        _typedValue = e.Value as string;
+
         if (_validateWhileTyping || HasError)
         {
             _validateWhileTyping = true;
-            CurrentValueAsString = e.Value as string;
+            CurrentValueAsString = _typedValue;
         }
+    }
+
+    private void HandleBlur()
+    {
+        if (!_typing)
+        {
+            return;
+        }
+
+        var before = _shownError;
+        _typing = false;
+
+        if (!_validateWhileTyping)
+        {
+            _validateWhileTyping = true;
+            CurrentValueAsString = _typedValue;
+            EditContext.NotifyFieldChanged(FieldIdentifier);
+        }
+
+        ParentForm?.ReportChange(this, before);
     }
 
     protected override bool TryParseValueFromString(string? value, out TValue result, out string validationErrorMessage)

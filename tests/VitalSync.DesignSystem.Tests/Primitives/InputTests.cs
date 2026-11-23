@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.Extensions.DependencyInjection;
 using VitalSync.DesignSystem.Primitives;
 
 namespace VitalSync.DesignSystem.Tests.Primitives;
@@ -42,6 +43,11 @@ public sealed class InputTests : BunitContext
 
             configure?.Invoke(parameters);
         });
+    }
+
+    public InputTests()
+    {
+        Services.AddScoped<LiveAnnouncer>();
     }
 
     [Fact]
@@ -214,6 +220,104 @@ public sealed class InputTests : BunitContext
     }
 
     [Fact]
+    public void Describes_the_field_with_its_prefix_suffix_and_helper_text()
+    {
+        var (editContext, model) = CreateEditContext();
+
+        var cut = RenderInput(editContext, model, parameters => parameters
+            .Add(p => p.Prefix, "CHF")
+            .Add(p => p.Suffix, "kg")
+            .Add(p => p.HelperText, "Ganze Zahl."));
+
+        var ids = cut.Find("input").GetAttribute("aria-describedby")?.Split(' ') ?? [];
+        Assert.Equal(
+            [cut.Find(".vs-input__affix--prefix").Id, cut.Find(".vs-input__affix--suffix").Id, cut.Find(".vs-input__helper").Id],
+            ids);
+    }
+
+    [Fact]
+    public void Keeps_the_shown_error_while_typing_and_updates_it_once_the_field_is_committed()
+    {
+        var (editContext, model) = CreateEditContext();
+        ValidateName(editContext, model);
+        var cut = RenderInput(editContext, model);
+
+        cut.Find("input").Change("A");
+        Assert.Contains("Mindestens drei Zeichen.", cut.Find(".vs-input__error").TextContent, StringComparison.Ordinal);
+
+        cut.Find("input").Input("A1x");
+        Assert.Contains("Mindestens drei Zeichen.", cut.Find(".vs-input__error").TextContent, StringComparison.Ordinal);
+
+        cut.Find("input").Change("A1x");
+        Assert.Contains("Keine Ziffern.", cut.Find(".vs-input__error").TextContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Shows_an_error_that_appeared_while_typing_only_once_the_field_is_left()
+    {
+        var (editContext, model) = CreateEditContext();
+        ValidateName(editContext, model);
+        var cut = RenderInput(editContext, model);
+        cut.Find("input").Change("Alex");
+
+        cut.Find("input").Input("Al");
+
+        Assert.Empty(cut.FindAll(".vs-input__error"));
+        Assert.False(cut.Find("input").HasAttribute("aria-invalid"));
+
+        cut.Find("input").Blur();
+
+        Assert.Contains("Mindestens drei Zeichen.", cut.Find(".vs-input__error").TextContent, StringComparison.Ordinal);
+        Assert.Equal("true", cut.Find("input").GetAttribute("aria-invalid"));
+    }
+
+    [Fact]
+    public void Validates_on_leaving_after_typing_even_if_the_content_ends_where_it_started()
+    {
+        var (editContext, model) = CreateEditContext();
+        ValidateName(editContext, model);
+        var cut = RenderInput(editContext, model);
+
+        cut.Find("input").Input("Alex");
+        cut.Find("input").Input("");
+        cut.Find("input").Blur();
+
+        Assert.Contains("Mindestens drei Zeichen.", cut.Find(".vs-input__error").TextContent, StringComparison.Ordinal);
+        Assert.Equal("true", cut.Find("input").GetAttribute("aria-invalid"));
+    }
+
+    [Fact]
+    public void Removes_the_error_as_soon_as_typing_fixes_it()
+    {
+        var (editContext, model) = CreateEditContext();
+        ValidateName(editContext, model);
+        var cut = RenderInput(editContext, model);
+        cut.Find("input").Change("Al");
+
+        cut.Find("input").Input("Alex");
+
+        Assert.Empty(cut.FindAll(".vs-input__error"));
+    }
+
+    private static void ValidateName(EditContext editContext, TestModel model)
+    {
+        var field = FieldIdentifier.Create(() => model.Name);
+        var messageStore = new ValidationMessageStore(editContext);
+        editContext.OnFieldChanged += (_, _) =>
+        {
+            messageStore.Clear(field);
+            if (model.Name.Any(char.IsDigit))
+            {
+                messageStore.Add(field, "Keine Ziffern.");
+            }
+            else if (model.Name.Length < 3)
+            {
+                messageStore.Add(field, "Mindestens drei Zeichen.");
+            }
+        };
+    }
+
+    [Fact]
     public void Renders_a_visible_password_reveal_toggle_for_password_inputs()
     {
         var (editContext, model) = CreateEditContext();
@@ -295,7 +399,7 @@ public sealed class InputTests : BunitContext
 
         var error = cut.Find(".vs-input__error");
         Assert.Contains("Bitte gib einen Namen ein.", error.TextContent, StringComparison.Ordinal);
-        Assert.Equal("alert", error.GetAttribute("role"));
+        Assert.False(error.HasAttribute("role"));
         Assert.Empty(cut.FindAll(".vs-input__helper"));
         Assert.Equal("true", cut.Find("input").GetAttribute("aria-invalid"));
     }

@@ -4,24 +4,6 @@
 @inject ToastService Service
 @inject IJSRuntime JS
 
-<div class="vs-toast-region__announcer" role="status">
-    @if (_politeAnnouncement is { } polite)
-    {
-        <div @key="polite.Id">
-            <p>@HeadingText(polite)</p>
-            <p>@polite.Text</p>
-        </div>
-    }
-</div>
-<div class="vs-toast-region__announcer" role="alert">
-    @if (_assertiveAnnouncement is { } assertive)
-    {
-        <div @key="assertive.Id">
-            <p>@HeadingText(assertive)</p>
-            <p>@assertive.Text</p>
-        </div>
-    }
-</div>
 @if (_toasts.Count > 0)
 {
     <section class="vs-toast-region" aria-label="Benachrichtigungen">
@@ -48,16 +30,12 @@
 
     private readonly Dictionary<long, Toast> _rendered = [];
     private IReadOnlyList<ToastMessage> _toasts = [];
-    private ToastMessage? _politeAnnouncement;
-    private ToastMessage? _assertiveAnnouncement;
-    private long _lastSeenId;
     private long? _focusTarget;
     private Task<IJSObjectReference>? _module;
 
     protected override void OnInitialized()
     {
         _toasts = Service.Toasts;
-        _lastSeenId = _toasts.Count > 0 ? _toasts.Max(toast => toast.Id) : 0;
         Service.Changed += OnChanged;
     }
 
@@ -81,8 +59,6 @@
         await module.InvokeVoidAsync("focusMainContent").ConfigureAwait(true);
     }
 
-    private static string HeadingText(ToastMessage toast) => $"{Toast.KindWord(toast.Variant)} – {toast.Title}";
-
     private void OnChanged() => _ = InvokeAsync(() =>
     {
         Refresh();
@@ -92,30 +68,6 @@
     private void Refresh()
     {
         _toasts = Service.Toasts;
-
-        foreach (var toast in _toasts.Where(toast => toast.Id > _lastSeenId))
-        {
-            if (toast.Variant is ToastVariant.Critical)
-            {
-                _assertiveAnnouncement = toast;
-            }
-            else
-            {
-                _politeAnnouncement = toast;
-            }
-
-            _lastSeenId = toast.Id;
-        }
-
-        if (_politeAnnouncement is { } polite && !_toasts.Contains(polite))
-        {
-            _politeAnnouncement = null;
-        }
-
-        if (_assertiveAnnouncement is { } assertive && !_toasts.Contains(assertive))
-        {
-            _assertiveAnnouncement = null;
-        }
 
         foreach (var id in _rendered.Keys.Where(id => _toasts.All(toast => toast.Id != id)).ToList())
         {

@@ -28,8 +28,9 @@
 <h2 @ref="demoHeading" tabindex="-1">Nach dem Speichern eingefügt</h2>
 <p>
     So erscheint eine Meldung im echten Einsatz: erst nach einer Aktion. Hier lässt sich prüfen, ob
-    ein Screenreader sie beim Einfügen ansagt – den Erfolg höflich, den Fehler sofort – und ob der
-    Fokus nach dem Schliessen und nach „Erneut versuchen" auf dieser Überschrift landet.
+    ein Screenreader sie beim Einfügen ansagt – den Erfolg höflich, den Fehler sofort –, ob der
+    Fokus nach dem Schliessen auf dieser Überschrift landet und ob er nach „Erneut versuchen" auf
+    den Titel der Erfolgsmeldung springt, der dann samt Text vorgelesen wird.
 </p>
 <div class="vs-alert-gallery__demo">
     <div class="vs-gallery__row">
@@ -38,10 +39,11 @@
     </div>
     @if (outcome == Outcome.Saved)
     {
-        <Alert Variant="AlertVariant.Success"
+        <Alert @ref="savedAlert"
+               Variant="AlertVariant.Success"
                Title="Plan gespeichert"
                HeadingLevel="3"
-               Announce="true"
+               Announce="!retried"
                OnClose="Dismiss"
                CloseFocusTarget="() => demoHeading">
             Dein Wochenplan ist gespeichert.
@@ -86,27 +88,34 @@
     }
 
     private ElementReference demoHeading;
+    private Alert? savedAlert;
     private Outcome outcome;
-    private bool focusHeadingAfterRender;
+    private bool retried;
+    private bool focusAlertAfterRender;
 
-    private void SaveSucceeds() => outcome = Outcome.Saved;
+    private void SaveSucceeds()
+    {
+        outcome = Outcome.Saved;
+        retried = false;
+    }
 
     private void SaveFails() => outcome = Outcome.Failed;
 
     private void RetrySave()
     {
         outcome = Outcome.Saved;
-        focusHeadingAfterRender = true;
+        retried = true;
+        focusAlertAfterRender = true;
     }
 
     private void Dismiss() => outcome = Outcome.None;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (focusHeadingAfterRender)
+        if (focusAlertAfterRender && savedAlert is not null)
         {
-            focusHeadingAfterRender = false;
-            await demoHeading.FocusAsync().ConfigureAwait(true);
+            focusAlertAfterRender = false;
+            await savedAlert.FocusAsync().ConfigureAwait(true);
         }
     }
 

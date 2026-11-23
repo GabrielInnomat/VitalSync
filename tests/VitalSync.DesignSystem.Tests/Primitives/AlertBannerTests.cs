@@ -17,6 +17,7 @@ public sealed class AlertBannerTests : BunitContext
 
     public AlertBannerTests()
     {
+        Services.AddScoped<LiveAnnouncer>();
         Services.AddScoped<AlertBannerService>();
         _service = Services.GetRequiredService<AlertBannerService>();
         _module = JSInterop.SetupModule(ModulePath);
@@ -209,54 +210,40 @@ public sealed class AlertBannerTests : BunitContext
     public void Announces_information_politely_and_warnings_and_errors_immediately()
     {
         var cut = Render<AlertBannerRegion>();
+        var announcer = Render<LiveAnnouncerRegion>();
 
         Show(cut, AlertBannerVariant.Info, "wartung", "Wartung", "Am Sonntag.");
         Show(cut, AlertBannerVariant.Warning, "offline", "Du bist offline", "Keine Verbindung.");
 
-        Assert.Equal(["Information – Wartung", "Am Sonntag."], Announcement(cut, "status"));
-        Assert.Equal(["Warnung – Du bist offline", "Keine Verbindung."], Announcement(cut, "alert"));
+        Assert.Equal(["Information – Wartung", "Am Sonntag."], Announcement(announcer, "status"));
+        Assert.Equal(["Warnung – Du bist offline", "Keine Verbindung."], Announcement(announcer, "alert"));
 
         Show(cut, AlertBannerVariant.Critical, "abgleich", "Abgleich fehlgeschlagen", "Daten bleiben lokal.");
 
-        Assert.Equal(["Fehler – Abgleich fehlgeschlagen", "Daten bleiben lokal."], Announcement(cut, "alert"));
+        Assert.Equal(
+            ["Warnung – Du bist offline", "Keine Verbindung.", "Fehler – Abgleich fehlgeschlagen", "Daten bleiben lokal."],
+            Announcement(announcer, "alert"));
+        Assert.Empty(cut.FindAll("[role=status], [role=alert]"));
     }
 
     [Fact]
     public void Announces_a_replaced_banner_again_but_not_an_unchanged_repeat()
     {
         var cut = Render<AlertBannerRegion>();
+        var announcer = Render<LiveAnnouncerRegion>();
         Show(cut, AlertBannerVariant.Warning, "offline", "Du bist offline", "Keine Verbindung.");
         var renders = cut.RenderCount;
 
         Show(cut, AlertBannerVariant.Warning, "offline", "Du bist offline", "Keine Verbindung.");
 
         Assert.Equal(renders, cut.RenderCount);
+        Assert.Equal(["Warnung – Du bist offline", "Keine Verbindung."], Announcement(announcer, "alert"));
 
         Show(cut, AlertBannerVariant.Warning, "offline", "Du bist offline", "Seit fünf Minuten keine Verbindung.");
 
-        Assert.Equal(["Warnung – Du bist offline", "Seit fünf Minuten keine Verbindung."], Announcement(cut, "alert"));
-    }
-
-    [Fact]
-    public void Clears_an_announcement_once_its_banner_is_removed()
-    {
-        var cut = Render<AlertBannerRegion>();
-        Show(cut, AlertBannerVariant.Warning, "offline", "Du bist offline", "Keine Verbindung.");
-
-        Run(cut, () => _service.Remove("offline"));
-
-        Assert.Empty(cut.Find(".vs-alert-banner-region__announcer[role=alert]").Children);
-    }
-
-    [Fact]
-    public void Does_not_announce_banners_that_were_shown_before_the_region_rendered()
-    {
-        _service.ShowCritical("abgleich", "Abgleich fehlgeschlagen", "Text.");
-
-        var cut = Render<AlertBannerRegion>();
-
-        Assert.Single(cut.FindAll(".vs-alert-banner"));
-        Assert.Empty(cut.Find(".vs-alert-banner-region__announcer[role=alert]").Children);
+        Assert.Equal(
+            ["Warnung – Du bist offline", "Keine Verbindung.", "Warnung – Du bist offline", "Seit fünf Minuten keine Verbindung."],
+            Announcement(announcer, "alert"));
     }
 
     [Fact]
@@ -283,8 +270,8 @@ public sealed class AlertBannerTests : BunitContext
     private static List<string> Headings(IRenderedComponent<AlertBannerRegion> cut) =>
         [.. cut.FindAll(".vs-alert-banner__title").Select(title => title.TextContent)];
 
-    private static List<string> Announcement(IRenderedComponent<AlertBannerRegion> cut, string role) =>
-        [.. cut.FindAll($".vs-alert-banner-region__announcer[role={role}] p").Select(p => p.TextContent)];
+    private static List<string> Announcement(IRenderedComponent<LiveAnnouncerRegion> announcer, string role) =>
+        [.. announcer.FindAll($"[role={role}] p").Select(p => p.TextContent)];
 
     private static void Run(IRenderedComponent<AlertBannerRegion> cut, Action action) =>
         cut.InvokeAsync(action).GetAwaiter().GetResult();

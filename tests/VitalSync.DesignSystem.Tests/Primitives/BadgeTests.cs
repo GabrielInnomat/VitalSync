@@ -87,6 +87,30 @@ public sealed class BadgeTests : BunitContext
                 .AddChildContent("Status")));
     }
 
+    [Theory]
+    [InlineData(BadgeVariant.Success, "Erfolg: ")]
+    [InlineData(BadgeVariant.Warning, "Warnung: ")]
+    [InlineData(BadgeVariant.Critical, "Fehler: ")]
+    public void Prefixes_a_status_label_with_its_kind_for_screen_readers_only(BadgeVariant variant, string expectedPrefix)
+    {
+        var cut = Render<Badge>(parameters => parameters
+            .Add(p => p.Variant, variant)
+            .AddChildContent("Im Ziel"));
+
+        Assert.Equal(expectedPrefix, cut.Find(".vs-badge__label > .vs-badge__kind").TextContent);
+        Assert.Equal($"{expectedPrefix}Im Ziel", cut.Find(".vs-badge__label").TextContent);
+    }
+
+    [Fact]
+    public void Adds_no_kind_prefix_to_a_neutral_badge()
+    {
+        var cut = Render<Badge>(parameters => parameters
+            .Add(p => p.Href, "/rezepte/vegetarisch")
+            .AddChildContent("Vegetarisch"));
+
+        Assert.Empty(cut.FindAll(".vs-badge__kind"));
+    }
+
     [Fact]
     public void Renders_the_icon_as_decorative()
     {

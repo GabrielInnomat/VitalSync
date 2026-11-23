@@ -1,30 +1,30 @@
 @namespace VitalSync.DesignSystem.Primitives
-@implements IDisposable
 @using Microsoft.AspNetCore.Components.Forms
 @inject NavigationManager Navigation
+@inject LiveAnnouncer Announcer
 
 <CascadingValue Value="this" IsFixed="true">
     <EditForm @attributes="AdditionalAttributes" EditContext="_editContext" OnSubmit="HandleSubmitAsync" novalidate="novalidate">
         @if (HasSummary)
         {
-            <div @ref="_summary" class="vs-form__summary" tabindex="-1" aria-live="polite">
-                @if (_summaryRequested && FieldsInError() is { Count: > 0 } fieldsInError)
+            <div @ref="_summary" class="vs-form__summary" tabindex="-1">
+                @if (_summaryFields.Count > 0)
                 {
                     <div class="vs-form__summary-box">
                         <p class="vs-form__summary-title">
                             <span class="vs-form__summary-icon" aria-hidden="true">
                                 <SystemIcon Name="SystemIconName.XCircle" />
                             </span>
-                            @SummaryTitle(fieldsInError.Count)
+                            @SummaryTitle(_summaryFields.Count)
                         </p>
                         <ul class="vs-form__summary-list">
-                            @foreach (var field in fieldsInError)
+                            @foreach (var entry in _summaryFields)
                             {
                                 <li>
-                                    <a href="@FieldHref(field)"
+                                    <a href="@FieldHref(entry.Field)"
                                        class="vs-form__summary-link"
-                                       @onclick="() => FocusFieldAsync(field)"
-                                       @onclick:preventDefault="true">@field.Label: @FirstMessage(field)</a>
+                                       @onclick="() => FocusFieldAsync(entry.Field)"
+                                       @onclick:preventDefault="true">@entry.Field.Label: @entry.Message</a>
                                 </li>
                             }
                         </ul>
@@ -44,6 +44,7 @@
     private const int SummaryFieldThreshold = 3;
 
     private readonly List<IFormField> _fields = [];
+    private List<(IFormField Field, string Message)> _summaryFields = [];
     private EditContext? _editContext;
     private ElementReference _summary;
     private bool _summaryRequested;
@@ -84,6 +85,7 @@
     {
         var before = (HasSummary, HasRequiredField);
         _fields.Remove(field);
+        _summaryFields.RemoveAll(entry => ReferenceEquals(entry.Field, field));
         RenderIfChanged(before);
     }
 
@@ -103,6 +105,32 @@
         }
     }
 
+    internal void ReportChange(IFormField field, string? shownBefore)
+    {
+        var message = _editContext!.GetValidationMessages(field.FieldIdentifier).FirstOrDefault();
+
+        if (HasSummary && _summaryRequested)
+        {
+            var listed = _summaryFields
+                .Where(entry => ReferenceEquals(entry.Field, field))
+                .Select(entry => (string?)entry.Message)
+                .FirstOrDefault();
+            RefreshSummary();
+            StateHasChanged();
+            AnnounceSummaryChange(field, listed, message);
+            return;
+        }
+
+        if (message is not null && message != shownBefore)
+        {
+            Announcer.Announce($"{field.Label}: {message}");
+        }
+        else if (message is null && shownBefore is not null)
+        {
+            Announcer.Announce($"{field.Label}: in Ordnung.");
+        }
+    }
+
     protected override void OnParametersSet()
     {
         if ((Model is null) == (EditContext is null))
@@ -111,21 +139,8 @@
                 "Form requires exactly one of Model or EditContext.");
         }
 
-        var next = EditContext
+        _editContext = EditContext
             ?? (_editContext is not null && ReferenceEquals(_editContext.Model, Model) ? _editContext : new EditContext(Model!));
-
-        if (ReferenceEquals(next, _editContext))
-        {
-            return;
-        }
-
-        if (_editContext is not null)
-        {
-            _editContext.OnValidationStateChanged -= HandleValidationStateChanged;
-        }
-
-        _editContext = next;
-        _editContext.OnValidationStateChanged += HandleValidationStateChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -137,7 +152,7 @@
 
         _focusPending = false;
 
-        if (HasSummary && FieldsInError().Count > 0)
+        if (HasSummary && _summaryFields.Count > 0)
         {
             await _summary.FocusAsync().ConfigureAwait(true);
             return;
@@ -147,14 +162,6 @@
         if (firstInError is not null)
         {
             await firstInError.FocusAsync().ConfigureAwait(true);
-        }
-    }
-
-    public void Dispose()
-    {
-        if (_editContext is not null)
-        {
-            _editContext.OnValidationStateChanged -= HandleValidationStateChanged;
         }
     }
 
@@ -171,6 +178,7 @@
         if (_editContext!.Validate())
         {
             _summaryRequested = false;
+            _summaryFields = [];
             _submitting = true;
             submitter?.SetSubmitting(true);
             try
@@ -187,16 +195,33 @@
         }
 
         _summaryRequested = true;
+        RefreshSummary();
         _focusPending = true;
         await OnInvalidSubmit.InvokeAsync(_editContext).ConfigureAwait(true);
     }
 
-    private void HandleValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
+    private void RefreshSummary() => _summaryFields = _fields
+        .Select(field => (Field: field, Message: _editContext!.GetValidationMessages(field.FieldIdentifier).FirstOrDefault()))
+        .Where(entry => entry.Message is not null)
+        .Select(entry => (entry.Field, entry.Message!))
+        .ToList();
+
+    private void AnnounceSummaryChange(IFormField field, string? listed, string? message)
     {
-        if (_summaryRequested)
+        if (message == listed)
         {
-            StateHasChanged();
+            return;
         }
+
+        var count = _summaryFields.Count;
+        if (count == 0)
+        {
+            Announcer.Announce("Alle Angaben in Ordnung.");
+            return;
+        }
+
+        var remaining = count == 1 ? "Noch 1 Angabe." : $"Noch {count} Angaben.";
+        Announcer.Announce($"{field.Label}: {message ?? "in Ordnung."} {remaining}");
     }
 
     private void RenderIfChanged((bool HasSummary, bool HasRequiredField) before)
@@ -207,13 +232,8 @@
         }
     }
 
-    private List<IFormField> FieldsInError() => _fields.FindAll(HasErrors);
-
     private bool HasErrors(IFormField field) =>
         _editContext!.GetValidationMessages(field.FieldIdentifier).Any();
-
-    private string FirstMessage(IFormField field) =>
-        _editContext!.GetValidationMessages(field.FieldIdentifier).First();
 
     private static string SummaryTitle(int count) =>
         count == 1 ? "Bitte prüfe 1 Angabe:" : $"Bitte prüfe {count} Angaben:";

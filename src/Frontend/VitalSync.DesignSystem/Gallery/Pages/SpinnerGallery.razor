@@ -2,6 +2,7 @@
 @layout GalleryLayout
 @rendermode InteractiveServer
 @using VitalSync.DesignSystem.Primitives
+@inject LiveAnnouncer Announcer
 
 <PageTitle>Ladeanzeige · Design System · VitalSync</PageTitle>
 
@@ -28,7 +29,8 @@
 <h2>Beim Laden eingefügt</h2>
 <p>
     So erscheint der Spinner im echten Einsatz: erst wenn das Laden beginnt. Hier lässt sich prüfen,
-    ob ein Screenreader den Text beim Einfügen ansagt.
+    ob ein Screenreader den Text beim Einfügen ansagt und ob er den Abschluss „Rezepte geladen.“
+    meldet.
 </p>
 <div class="vs-spinner-gallery__demo">
     <Button Variant="ButtonVariant.Secondary" OnClick="LoadAsync">Laden starten</Button>
@@ -63,6 +65,7 @@
         await Task.Delay(TimeSpan.FromSeconds(4));
         isLoading = false;
         hasLoaded = true;
+        Announcer.Announce("Rezepte geladen.");
     }
 
     private static RenderFragment renderStates() => @<text>

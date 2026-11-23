@@ -44,7 +44,7 @@
 
     @if (HasError)
     {
-        <p id="@ErrorId" class="vs-select__error" role="alert">
+        <p id="@ErrorId" class="vs-select__error">
             <span class="vs-select__error-icon" aria-hidden="true">
                 <SystemIcon Name="SystemIconName.XCircle" />
             </span>
@@ -145,7 +145,12 @@
         base.Dispose(disposing);
     }
 
-    private void HandleChange(ChangeEventArgs e) => CurrentValueAsString = e.Value as string;
+    private void HandleChange(ChangeEventArgs e)
+    {
+        var before = CurrentErrors.FirstOrDefault();
+        CurrentValueAsString = e.Value as string;
+        ParentForm?.ReportChange(this, before);
+    }
 
     protected override string FormatValueAsString(TValue? value) => KeyOf(value);
 

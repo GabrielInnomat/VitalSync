@@ -1,4 +1,5 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using VitalSync.DesignSystem.Primitives;
 
 namespace VitalSync.DesignSystem.Tests.Primitives;
@@ -9,6 +10,7 @@ public sealed class ConfirmDialogTests : BunitContext
 
     public ConfirmDialogTests()
     {
+        Services.AddScoped<LiveAnnouncer>();
         var module = JSInterop.SetupModule(ModulePath);
         module.SetupVoid("open", _ => true).SetVoidResult();
         module.SetupVoid("close", _ => true).SetVoidResult();

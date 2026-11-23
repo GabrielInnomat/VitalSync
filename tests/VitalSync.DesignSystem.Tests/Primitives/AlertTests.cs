@@ -1,6 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 using VitalSync.DesignSystem.Primitives;
 
 namespace VitalSync.DesignSystem.Tests.Primitives;
@@ -13,6 +14,11 @@ public sealed class AlertTests : BunitContext
     private const string WarningPathStart = "M236.8,188.09";
     private const string XCirclePathStart = "M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm37.66";
     private const string XPathStart = "M208.49,191.51";
+
+    public AlertTests()
+    {
+        Services.AddScoped<LiveAnnouncer>();
+    }
 
     [Theory]
     [InlineData(AlertVariant.Info, "Information – Neue Rezepte", "vs-alert--info", InfoPathStart)]
@@ -106,26 +112,67 @@ public sealed class AlertTests : BunitContext
     [Fact]
     public void Is_not_announced_by_default()
     {
+        Renderer.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
+
         var cut = RenderAlert(AlertVariant.Critical);
 
         Assert.False(cut.Find(".vs-alert").HasAttribute("role"));
+        Assert.Empty(Services.GetRequiredService<LiveAnnouncer>().Announcements);
     }
 
     [Theory]
-    [InlineData(AlertVariant.Info, "status")]
-    [InlineData(AlertVariant.Success, "status")]
-    [InlineData(AlertVariant.Warning, "alert")]
-    [InlineData(AlertVariant.Critical, "alert")]
-    public void Announces_with_the_urgency_of_its_kind_when_asked_to(AlertVariant variant, string expectedRole)
+    [InlineData(AlertVariant.Info, false)]
+    [InlineData(AlertVariant.Success, false)]
+    [InlineData(AlertVariant.Warning, true)]
+    [InlineData(AlertVariant.Critical, true)]
+    public void Announces_once_with_the_urgency_of_its_kind_when_asked_to(AlertVariant variant, bool expectedUrgent)
     {
+        Renderer.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
+        var announcer = Services.GetRequiredService<LiveAnnouncer>();
+
         var cut = Render<Alert>(parameters => parameters
             .Add(p => p.Variant, variant)
             .Add(p => p.Title, "Gespeichert")
             .Add(p => p.HeadingLevel, 2)
             .Add(p => p.Announce, true)
             .AddChildContent("Dein Plan ist gespeichert."));
+        cut.Render(parameters => parameters.Add(p => p.Title, "Gespeichert"));
 
-        Assert.Equal(expectedRole, cut.Find(".vs-alert").GetAttribute("role"));
+        var announcement = Assert.Single(announcer.Announcements);
+        Assert.Equal(expectedUrgent, announcement.Urgent);
+        var spoken = Render(announcement.Content);
+        Assert.Equal(cut.Find("h2").TextContent, spoken.Find("p").TextContent);
+        Assert.Equal("Dein Plan ist gespeichert.", spoken.Find("div").TextContent);
+        Assert.False(cut.Find(".vs-alert").HasAttribute("role"));
+    }
+
+    [Fact]
+    public void Is_not_announced_while_prerendering()
+    {
+        Renderer.SetRendererInfo(new RendererInfo("Static", isInteractive: false));
+
+        Render<Alert>(parameters => parameters
+            .Add(p => p.Variant, AlertVariant.Critical)
+            .Add(p => p.Title, "Speichern fehlgeschlagen")
+            .Add(p => p.HeadingLevel, 2)
+            .Add(p => p.Announce, true)
+            .AddChildContent("Bitte versuche es erneut."));
+
+        Assert.Empty(Services.GetRequiredService<LiveAnnouncer>().Announcements);
+    }
+
+    [Fact]
+    public async Task Lets_its_title_take_focus_and_describes_it_with_the_text()
+    {
+        JSInterop.SetupVoid(FocusIdentifier, _ => true).SetVoidResult();
+        var cut = RenderAlert();
+
+        await cut.InvokeAsync(() => cut.Instance.FocusAsync().AsTask());
+
+        var title = cut.Find("h2.vs-alert__title");
+        Assert.Equal("-1", title.GetAttribute("tabindex"));
+        Assert.Equal(cut.Find(".vs-alert__text").Id, title.GetAttribute("aria-describedby"));
+        Assert.Single(JSInterop.Invocations[FocusIdentifier]);
     }
 
     [Fact]
@@ -203,20 +250,17 @@ public sealed class AlertTests : BunitContext
     }
 
     [Fact]
-    public void Keeps_its_own_role_and_appends_a_passed_class()
+    public void Passes_attributes_through_and_appends_a_passed_class()
     {
         var cut = Render<Alert>(parameters => parameters
             .Add(p => p.Variant, AlertVariant.Critical)
             .Add(p => p.Title, "Speichern fehlgeschlagen")
             .Add(p => p.HeadingLevel, 2)
-            .Add(p => p.Announce, true)
-            .AddUnmatched("role", "note")
             .AddUnmatched("class", "plan-alert")
             .AddUnmatched("data-test", "x")
             .AddChildContent("Bitte versuche es erneut."));
 
         var alert = cut.Find(".vs-alert");
-        Assert.Equal("alert", alert.GetAttribute("role"));
         Assert.Equal("vs-alert vs-alert--critical plan-alert", alert.GetAttribute("class"));
         Assert.Equal("x", alert.GetAttribute("data-test"));
     }

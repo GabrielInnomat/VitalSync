@@ -33,7 +33,7 @@
 
     @if (HasError)
     {
-        <p id="@ErrorId" class="vs-radio-group__error" role="alert">
+        <p id="@ErrorId" class="vs-radio-group__error">
             <span class="vs-radio-group__error-icon" aria-hidden="true">
                 <SystemIcon Name="SystemIconName.XCircle" />
             </span>
@@ -119,7 +119,12 @@
 
     internal bool IsSelected(TValue value) => EqualityComparer<TValue>.Default.Equals(CurrentValue, value);
 
-    internal void Select(TValue value) => CurrentValue = value;
+    internal void Select(TValue value)
+    {
+        var before = CurrentErrors.FirstOrDefault();
+        CurrentValue = value;
+        ParentForm?.ReportChange(this, before);
+    }
 
     protected override void Dispose(bool disposing)
     {

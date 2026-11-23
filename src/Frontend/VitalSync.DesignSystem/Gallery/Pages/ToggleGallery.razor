@@ -2,6 +2,7 @@
 @layout GalleryLayout
 @rendermode InteractiveServer
 @using VitalSync.DesignSystem.Primitives
+@inject LiveAnnouncer Announcer
 
 <PageTitle>Schalter · Design System · VitalSync</PageTitle>
 
@@ -24,9 +25,9 @@
 
             <h3>Beispiel</h3>
             <div class="vs-gallery__stack">
-                <Toggle @bind-Value="demo.Reminders" Label="Erinnerungen" HelperText="Wir erinnern dich an geplante Trainings." />
+                <Toggle @bind-Value="demo.Reminders" @bind-Value:after="() => AnnounceReminders(demo)" Label="Erinnerungen" HelperText="Wir erinnern dich an geplante Trainings." />
 
-                <p class="vs-gallery__status">@(demo.Reminders ? "Erinnerungen sind eingeschaltet." : "Erinnerungen sind ausgeschaltet.")</p>
+                <p class="vs-gallery__status">@RemindersStatus(demo)</p>
             </div>
 
             <h3>Zustände</h3>
@@ -51,6 +52,11 @@
 
 @code {
     private readonly ThemeDemo[] _themes = [new("light", "Hell"), new("dark", "Dunkel")];
+
+    private static string RemindersStatus(ThemeDemo demo) =>
+        demo.Reminders ? "Erinnerungen sind eingeschaltet." : "Erinnerungen sind ausgeschaltet.";
+
+    private void AnnounceReminders(ThemeDemo demo) => Announcer.Announce(RemindersStatus(demo));
 
     private sealed class ThemeDemo(string theme, string title)
     {

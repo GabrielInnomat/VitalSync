@@ -9,6 +9,8 @@ const focusableSelector = [
     '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
+const fieldSelector = 'input:not([type="hidden"]), select, textarea';
+
 const states = new WeakMap();
 let lockCount = 0;
 let previousOverflow = '';
@@ -145,6 +147,7 @@ export function open(dialog, dotNet) {
     }
 
     const start = dialog.querySelector('[data-vs-dialog-start]')
+        ?? (body && !body.querySelector(fieldSelector) ? dialog.querySelector('.vs-dialog__title') : null)
         ?? focusablesIn(body)[0]
         ?? focusablesIn(footer)[0]
         ?? dialog.querySelector('.vs-dialog__close');

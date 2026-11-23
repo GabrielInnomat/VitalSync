@@ -1,27 +1,27 @@
 @namespace VitalSync.DesignSystem.Primitives
 
-<div @attributes="AdditionalAttributes" class="@CssClass" role="@Role">
+<div @attributes="AdditionalAttributes" class="@CssClass">
     <span class="vs-alert__icon" aria-hidden="true">@RenderIcon()</span>
     <div class="vs-alert__content">
         @switch (HeadingLevel)
         {
             case 2:
-                <h2 class="vs-alert__title">@HeadingText</h2>
+                <h2 @ref="_title" class="vs-alert__title" tabindex="-1" aria-describedby="@TextId">@HeadingText</h2>
                 break;
             case 3:
-                <h3 class="vs-alert__title">@HeadingText</h3>
+                <h3 @ref="_title" class="vs-alert__title" tabindex="-1" aria-describedby="@TextId">@HeadingText</h3>
                 break;
             case 4:
-                <h4 class="vs-alert__title">@HeadingText</h4>
+                <h4 @ref="_title" class="vs-alert__title" tabindex="-1" aria-describedby="@TextId">@HeadingText</h4>
                 break;
             case 5:
-                <h5 class="vs-alert__title">@HeadingText</h5>
+                <h5 @ref="_title" class="vs-alert__title" tabindex="-1" aria-describedby="@TextId">@HeadingText</h5>
                 break;
             default:
-                <h6 class="vs-alert__title">@HeadingText</h6>
+                <h6 @ref="_title" class="vs-alert__title" tabindex="-1" aria-describedby="@TextId">@HeadingText</h6>
                 break;
         }
-        <div class="vs-alert__text">@ChildContent</div>
+        <div id="@TextId" class="vs-alert__text">@ChildContent</div>
         @if (Action is not null)
         {
             <div class="vs-alert__action">@Action</div>
@@ -39,6 +39,13 @@
 </div>
 
 @code {
+    private readonly string _id = $"vs-alert-{Guid.NewGuid():N}";
+    private ElementReference _title;
+    private bool _announced;
+
+    [Inject]
+    private LiveAnnouncer Announcer { get; set; } = default!;
+
     [Parameter]
     public AlertVariant Variant { get; set; } = AlertVariant.Info;
 
@@ -70,9 +77,7 @@
         $"vs-alert vs-alert--{Variant.ToString().ToLowerInvariant()}",
         AdditionalAttributes);
 
-    private string? Role => !Announce
-        ? null
-        : Variant is AlertVariant.Warning or AlertVariant.Critical ? "alert" : "status";
+    private string TextId => $"{_id}-text";
 
     private string HeadingText => $"{KindWord} – {Title.Trim()}";
 
@@ -110,7 +115,32 @@
             throw new InvalidOperationException(
                 "Alert with OnClose requires a CloseFocusTarget; without one, focus falls back to the start of the page when the message closes.");
         }
+
+        if (Announce && !_announced && RendererInfo.IsInteractive)
+        {
+            _announced = true;
+            AnnounceMessage();
+        }
     }
+
+    private void AnnounceMessage()
+    {
+        var heading = HeadingText;
+        var content = ChildContent;
+        Announcer.Announce(
+            builder =>
+            {
+                builder.OpenElement(0, "p");
+                builder.AddContent(1, heading);
+                builder.CloseElement();
+                builder.OpenElement(2, "div");
+                builder.AddContent(3, content);
+                builder.CloseElement();
+            },
+            urgent: Variant is AlertVariant.Warning or AlertVariant.Critical);
+    }
+
+    public ValueTask FocusAsync() => _title.FocusAsync();
 
     private RenderFragment RenderIcon() => Variant switch
     {

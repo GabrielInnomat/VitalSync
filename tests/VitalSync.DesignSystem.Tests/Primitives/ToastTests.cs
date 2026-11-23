@@ -19,6 +19,7 @@ public sealed class ToastTests : BunitContext
 
     public ToastTests()
     {
+        Services.AddScoped<LiveAnnouncer>();
         Services.AddScoped<ToastService>();
         _service = Services.GetRequiredService<ToastService>();
         _module = JSInterop.SetupModule(ModulePath);
@@ -151,38 +152,34 @@ public sealed class ToastTests : BunitContext
     public void Announces_success_and_information_politely_and_critical_immediately()
     {
         var cut = Render<ToastRegion>();
+        var announcer = Render<LiveAnnouncerRegion>();
 
         Show(cut, ToastVariant.Success, "Plan gespeichert", "Dein Wochenplan ist gespeichert.");
         Show(cut, ToastVariant.Critical, "Speichern fehlgeschlagen", "Keine Verbindung.");
 
         Assert.Equal(
             ["Erfolg – Plan gespeichert", "Dein Wochenplan ist gespeichert."],
-            cut.FindAll(".vs-toast-region__announcer[role=status] p").Select(p => p.TextContent));
+            announcer.FindAll("[role=status] p").Select(p => p.TextContent));
         Assert.Equal(
             ["Fehler – Speichern fehlgeschlagen", "Keine Verbindung."],
-            cut.FindAll(".vs-toast-region__announcer[role=alert] p").Select(p => p.TextContent));
+            announcer.FindAll("[role=alert] p").Select(p => p.TextContent));
+        Assert.Empty(cut.FindAll("[role=status], [role=alert]"));
     }
 
     [Fact]
-    public void Clears_an_announcement_once_its_toast_closes()
+    public void Announces_every_toast_of_a_burst_once()
     {
         var cut = Render<ToastRegion>();
-        Show(cut, ToastVariant.Info, "Neue Rezepte", "Drei neue Rezepte.");
+        var announcer = Render<LiveAnnouncerRegion>();
 
-        cut.Find(".vs-toast__close").Click();
+        Show(cut, ToastVariant.Info, "Mahlzeit 1", "Text.");
+        Show(cut, ToastVariant.Info, "Mahlzeit 2", "Text.");
+        Show(cut, ToastVariant.Info, "Mahlzeit 3", "Text.");
+        Show(cut, ToastVariant.Info, "Mahlzeit 4", "Text.");
 
-        Assert.Empty(cut.Find(".vs-toast-region__announcer[role=status]").Children);
-    }
-
-    [Fact]
-    public void Does_not_announce_toasts_that_were_open_before_the_region_rendered()
-    {
-        _service.ShowCritical("Speichern fehlgeschlagen", "Keine Verbindung.");
-
-        var cut = Render<ToastRegion>();
-
-        Assert.Single(cut.FindAll(".vs-toast"));
-        Assert.Empty(cut.Find(".vs-toast-region__announcer[role=alert]").Children);
+        Assert.Equal(
+            ["Information – Mahlzeit 1", "Information – Mahlzeit 2", "Information – Mahlzeit 3", "Information – Mahlzeit 4"],
+            announcer.FindAll("[role=status] > div > p:first-child").Select(p => p.TextContent));
     }
 
     [Fact]

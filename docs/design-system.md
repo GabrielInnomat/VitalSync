@@ -321,10 +321,13 @@ every click until it is done. `Loading` therefore wins over `Disabled`: a disabl
 starts loading becomes focusable for that time. A submit button that is loading renders as
 `type="button"`, so a click on it cannot submit the form again.
 
-**The change is announced once.** A visually hidden `role="status"` region next to the button holds
-the loading label while it loads and is empty otherwise. It exists from the first render, because a
-live region added together with its content is not reliably announced. The ring is `aria-hidden`.
-How the action ended is not the button's to say; the page reports it through a
+**The change is announced once.** The label itself turns into the loading label, so a screen reader
+on the focused button reads it from there. When the button is not focused — the page started the
+action, or focus has moved on — the start is announced once through the
+[`LiveAnnouncer`](#live-announcer), only on the change from idle to loading and not for a button
+that is already loading when it appears. There is no extra live region next to the button: JAWS
+read the label and such a region one after the other, so "Bitte warten" came twice. The ring is
+`aria-hidden`. How the action ended is not the button's to say; the page reports it through a
 [toast or alert banner](#messages).
 
 **The ring follows the Spinner, sized to the icon.** It takes `--icon-size-md`, the stroke width of
@@ -344,9 +347,15 @@ alone. The icon is the X in a circle, the same mark a critical `Badge` carries. 
 success tick — flagging every valid field is visual noise in a long form, so the error is the only
 actively signalled state.
 
-**Timing.** First check on blur, not while typing. After the first error, revalidate live on every
-further keystroke in that field, so a correction is acknowledged immediately. On submit, everything
-is validated again and focus moves to the first field in error.
+**Timing.** A field is checked once the user has typed in it and leaves it, not while typing and
+not when focus merely passes over an untouched field — tabbing through an empty form raises no
+errors. Typing counts even when the content ends where it started: typing a name and deleting it
+again is checked on leaving, although the browser reports no change. After the first error, the
+field is revalidated on every further keystroke, but what is shown follows two rules: an error that
+is fixed disappears at once, so a correction is acknowledged
+immediately; a new or different error appears only when the field is left. The message therefore
+never changes under the user's fingers while they type. On submit, everything is validated again
+and focus moves to the first field in error.
 
 **Native validation is off.** `Form` sets `novalidate`. The browser's own bubbles appear before
 the designed error state, in the browser's language and styling, and disappear again on their own;
@@ -356,14 +365,33 @@ submit goes.
 **ARIA is contextual, not a blanket obligation.** `aria-describedby` only when helper or error text
 actually exists — a plain search field needs none. `aria-required` only on custom controls with no
 native equivalent; on a native `<input required>` it is redundant. `aria-invalid` on any control
-that can enter an error state. `role="alert"` goes on the individual message, never on a container
-around several of them, or the screen reader announces twice.
+that can enter an error state; a checkbox or radio button states `aria-invalid="false"` while it
+has no error, because a required control without the attribute is reported as invalid by the
+browser before the user has done anything.
+
+**An error message is not a live region.** The message carries no `role="alert"`. A field that is
+already in error when the page loads — a pre-filled value, a restored draft — would otherwise be
+read out on load, and a message present in the first HTML was read before the page's heading. A
+message is announced instead when it newly appears after a change, once, through the
+[`LiveAnnouncer`](#live-announcer), as "label: message", politely. An error that is already shown
+is not announced again. A change that clears a shown error is announced as "label: in Ordnung.":
+choosing a radio option, a checkbox or a select option is read out by the screen reader at once,
+before the server's answer removes `aria-invalid`, so the stale "invalid" would otherwise stand. A
+text field stays silent here: its error disappears as soon as the typing fixes it, while the user
+is still in the field. Once a summary is shown, the summary changes are announced instead, see
+below, and the individual fields stay silent.
 
 **Error summary.** Beyond three fields we add a summary at the top of the form in addition to the
-inline errors, in an `aria-live="polite"` region — not `assertive`, which would interrupt someone
-mid-entry — focusable with `tabindex="-1"` and focused programmatically, with skip links to each
-field in error. The three-field threshold is our own convention; WCAG techniques G83 and G85 do not
-name one.
+inline errors, focusable with `tabindex="-1"` and focused programmatically on an invalid submit, so
+the screen reader reads it there, with skip links to each field in error. It follows the same
+timing as the fields: it changes when a field is left, not on every keystroke. Each change is
+announced politely through the [`LiveAnnouncer`](#live-announcer), after the screen reader has
+named the field the user moved to: what changed and what is left, as "E-Mail: in Ordnung. Noch 3
+Angaben." or "label: message. Noch 4 Angaben.", and "Alle Angaben in Ordnung." once the last entry
+is gone. Not `assertive`, which would cut off the name of that field. The summary itself is not a
+live region: it would only say the new count, because removing a list entry is not read out, and
+it would repeat what the announcement already says. The three-field threshold is our own
+convention; WCAG techniques G83 and G85 do not name one.
 
 **Required fields.** Not the asterisk alone: the native `required` attribute as well, plus one
 "* = Pflichtfeld" note per form, because some screen readers do not announce a bare asterisk.
@@ -381,16 +409,15 @@ registers on first render. The form therefore knows its fields in rendering orde
 listing them. A field rendered later, behind an `@if`, joins at the end of that order.
 
 **What it renders.** The "* = Pflichtfeld" note appears as soon as one registered field is
-required, and disappears with the last one. The `aria-live` region for the summary exists from the
-first render, empty, once more than three fields are registered — a live region added together with
-its content is not reliably announced.
+required, and disappears with the last one. The summary's focus target exists from the first
+render, empty, once more than three fields are registered.
 
 **What happens on an invalid submit.** With up to three fields, focus moves to the first enabled
 field in error. Beyond three, the summary fills, receives focus, and lists one link per field in
 error, in rendering order, each reading "label: first message". A link moves focus to its field.
 Its `href` also points at the field on the current page, so it stays correct with `<base href>`
-and without a live connection. The summary follows every further validation change and empties on
-a valid submit.
+and without a live connection. The summary follows every further validation change once the field
+is left, announces it as described under the error summary, and empties on a valid submit.
 
 **What happens on a valid submit.** While `OnValidSubmit` runs, a further submit is ignored without
 a message, whether it comes from a click or from Enter in a field. The [`Button`](#button) that
@@ -431,7 +458,9 @@ the field's accessible name. With or without it, the label only spans its own te
 to its right is not a click target for the field.
 
 **Optional `Prefix` / `Suffix`.** `RenderFragment`s for units (`kg`, `kcal`) or fixed adornments,
-rendered inside the field so they share its border.
+rendered inside the field so they share its border. Both are part of the field's description
+(`aria-describedby`, before the helper or error text), so a screen reader names the unit along with
+the field rather than leaving it to be found by reading around it.
 
 **Password reveal toggle.** Only rendered when `Type="password"`. A visible text button
 ("Anzeigen" / "Verbergen"), never icon-only, following the same rule as `Button`. Its accessible
@@ -482,8 +511,8 @@ mark against the fill it sits on.
 
 **Errors follow [Form validation](#form-validation)**, with one difference in timing: a checkbox
 has no typing phase, so it is checked when it changes rather than on blur. An unchecked box in
-error takes the subtle critical fill and border; the message below carries the icon and
-`role="alert"`, and the input carries `aria-invalid` and `aria-describedby`. A checked box keeps
+error takes the subtle critical fill and border; the message below carries the icon, and the input
+carries `aria-invalid` and `aria-describedby`. A checked box keeps
 its checked look even while in error, because the fill already marks the state the user chose.
 
 **No indeterminate state.** It only makes sense for a parent of a nested selection, and there is
@@ -526,8 +555,9 @@ disabled, through the native `disabled` of the `<fieldset>`.
 every unselected option, and a selected option in error keeps its selected look. The message — or
 the helper text — sits below the options, aligned with the legend rather than indented, because it
 belongs to the group and not to one option; the `<fieldset>` points at it with `aria-describedby`.
-`aria-invalid` sits on every radio button and never on the `<fieldset>`, whose role does not support
-it; the component removes it from the attributes it passes through.
+`aria-invalid` sits on every radio button, `false` while there is no error as on
+[`Select`](#select), and never on the `<fieldset>`, whose role does not support it; the component
+removes it from the attributes it passes through.
 
 **In a `Form`.** A summary link points at the first option. Focus — after an invalid submit or from
 a summary link — goes to the selected option, or to the first one while nothing is selected, which
@@ -663,6 +693,12 @@ for a status. Every badge has a text label and an icon; the variant decides whic
 **The text is mandatory.** A badge without `ChildContent` throws. The label carries the meaning,
 the icon only supports it.
 
+**A status badge says its kind to screen readers.** A visually hidden "Erfolg:", "Warnung:" or
+"Fehler:" comes before the label, so "Im Ziel" is read as "Erfolg: Im Ziel". The icon that shows the
+kind on screen is `aria-hidden`, and a label alone rarely says whether it is good or bad news. The
+prefix is not shown: on screen the icon and the colour already say it, and the word would only add
+length. A neutral badge has no prefix.
+
 **A neutral badge takes any icon.** By default it shows a tag; `Icon` replaces that with a
 `RenderFragment` of the page's choosing, for a category that has its own symbol.
 
@@ -757,8 +793,13 @@ of the word before it.
 **The text is announced, the ring is not.** The component is a `role="status"` live region, so a
 screen reader reads its text politely, without interrupting. The ring is `aria-hidden`. A live
 region inserted together with its text, which is how a spinner normally appears, is not announced
-reliably by every screen reader; whether it is in practice is left to the manual screen-reader
-test, and the component gallery has a demo that inserts the spinner on demand for exactly that.
+reliably by every screen reader. JAWS announces it, as the manual screen-reader test with the
+gallery demo that inserts the spinner on demand showed; other screen readers are untested.
+
+**The end is the page's to say.** A spinner that disappears says nothing, so a screen reader hears
+that loading started but not that it finished. The page announces the outcome through the
+[`LiveAnnouncer`](#live-announcer) once the content is there, such as "Rezepte geladen.", or a
+failure as a message.
 
 **Reduced motion slows it, never stops it.** The rotation takes `--motion-duration-spin`, one
 second, and three seconds under `prefers-reduced-motion`. A ring that stood still would look like
@@ -783,6 +824,32 @@ it replaces, and has no track.
 **Tokens and rules.** The `--spinner-*` set: size, stroke width, arc, track and text colours, the
 gap and the duration, which points at the new global `--motion-duration-spin`. Five rules: the arc
 against page, card and track, and the text against page and card.
+
+## Live announcer
+
+One place per page that speaks to screen readers. Everything that has to be announced without
+moving focus — a toast, a banner, a message that appears later, a new field error, the start of a
+button's loading when the button is not focused, a page's own "Rezepte geladen." — goes through
+it, rather than each component bringing its own live region.
+
+**Why one.** Live regions spread across components were read twice, once as the live region and once
+as the visible message in front of or after it; a region with `role="alert"` in the first HTML was
+read on page load, before the page's heading; and a region whose content is replaced announced only
+the last of several messages raised in a row. One region, always present and visually hidden, is a
+single place where those rules can be kept.
+
+**Two regions, by urgency.** `LiveAnnouncerRegion` renders a polite one (`role="status"`) and an
+assertive one (`role="alert"`), both empty at first. Each announcement is added as its own entry, so
+every message of a burst is read, and removed again after five seconds, so the hidden text does not
+pile up for someone reading the whole page. Nothing in them is focusable or visible.
+
+**How it is used.** `LiveAnnouncer` is a scoped service: `AddScoped<LiveAnnouncer>()` in the host,
+and `<LiveAnnouncerRegion @rendermode="InteractiveServer" />` once in each layout, next to the
+toast and banner regions and for the same reasons. A page injects it and calls `Announce(text)` for
+news that can wait or `AnnounceUrgent(text)` for news that cannot; a blank text throws. The
+components use it on their own; a page only calls it for what is the page's to say, such as the end
+of loading or the result of an action that shows no message of its own. Visible text on the page
+stays where it is; the announcement is only the spoken copy.
 
 ## Messages
 
@@ -836,10 +903,17 @@ icon roles that so far only critical had.
 **Only a message that appears later is announced.** A message that is part of the page when it
 loads is not announced; it is found by reading and by heading navigation, like the rest of the
 content, and announcing it on top of the page would interrupt the page's own announcement. A message
-that appears later — after saving, after a check — is announced, and the page states that it does:
-`Warning` and `Critical` interrupt (`role="alert"`), `Info` and `Success` wait until the screen
-reader is idle (`role="status"`). Whether a message inserted together with its text is announced
-reliably is left to the manual screen-reader test, as with the [Spinner](#spinner).
+that appears later — after saving, after a check — is announced once, and the page states that it
+does: the title and text are handed to the [`LiveAnnouncer`](#live-announcer), `Warning` and
+`Critical` interrupting, `Info` and `Success` waiting until the screen reader is idle. The message
+itself carries no live-region role, so a re-render cannot repeat it, and a screen reader reading the
+page meets it once, with its title read once.
+
+**When the user's own action brings the message, focus can go to it.** The title has
+`tabindex="-1"` and is described by the text, so `FocusAsync()` moves focus there and a screen
+reader reads title and text together. That suits a message that answers a button the user has just
+pressed and that may stay where it is, such as a failed retry; the message then needs no
+`Announce`, because moving focus already reads it.
 
 **It can be closable, and is not by default.** Closing suits a message that is no longer needed
 once read, such as a success. A message about a problem that still exists is never closable; it
@@ -851,7 +925,8 @@ the page knows what comes next.
 **How it is used.** `Variant` defaults to `Info`. `Title`, `HeadingLevel` (2 to 6) and the text as
 `ChildContent` are mandatory, and a blank title, a missing text or a level outside that range
 throws. The single action is passed as `Action`. `Announce` marks a message that appears later and
-gives it its live-region role. `OnClose` adds the close button; it requires `CloseFocusTarget`, a
+has it announced once, only from an interactive render, never from prerendering. `OnClose` adds the
+close button; it requires `CloseFocusTarget`, a
 function that returns the element to focus, and throws without it. Focus moves first and `OnClose`
 runs after, so the page can remove the message without focus being lost on the way. A message about
 a problem that still exists must not be given `OnClose`; the component cannot tell, so that stays
@@ -895,18 +970,21 @@ explained. A banner lives outside every page, so a button there would run code t
 page; a link only needs a target. It has the 44×44 px target of every other control, and its name
 has to make sense together with the title (2.4.4).
 
-**Announced through live regions that are always there, as with `Toast`.** A banner present when
-the region first renders is not announced; it is found by reading, by heading and by landmark
+**Announced through the [`LiveAnnouncer`](#live-announcer), as with `Toast`.** A banner present
+when the region first renders is not announced; it is found by reading, by heading and by landmark
 navigation. One that appears later, such as "Du bist offline", is: `Warning` and `Critical`
-interrupt (`role="alert"`), `Info` waits until the screen reader is idle (`role="status"`). Showing
-a banner again with exactly the same content is not news and is not announced again; showing it
-with a changed content is. Whether a banner shown while the page itself is still starting up is
-announced depends on which interactive component starts first, and is left to the manual
-screen-reader test.
+interrupt, `Info` waits until the screen reader is idle. Showing a banner again with exactly the
+same content is not news and is not announced again; showing it with a changed content is. The
+banner region holds no live region of its own, so the message exists once on the page, with its
+close button, and not a second time without it. A banner shown while the page itself is still
+starting up follows the same urgency: `Warning` and `Critical` are announced, an `Info` is not, as
+the manual test with JAWS showed. Such an `Info` was there when the
+page opened, so it is no news; it is found in the "Systemmeldungen" landmark and by its heading. The
+component gallery has a demo that shows a banner during start-up.
 
 **At the very top, in its own landmark.** Banners sit above the header and the navigation, in a
 region named "Systemmeldungen", which screen readers list among the landmarks and can jump to. The
-region exists only while there is a banner; the live regions are always there.
+region exists only while there is a banner.
 
 **It scrolls away.** A bar fixed to the top would cover too much of the page at high zoom and on
 small screens (1.4.10).
@@ -934,7 +1012,7 @@ and the gallery.
 **The region is an interactive island in a static layout,** for the same reasons as `Toast`'s:
 `AlertBannerRegion` is placed once in each layout with its own `@rendermode="InteractiveServer"`,
 shares the circuit and so the service with every interactive page, keeps its banners across
-enhanced navigation, and is prerendered, which puts both live regions into the first HTML. The same
+enhanced navigation, and is prerendered. The same
 limit follows: a banner can only be raised from an interactive page. Nothing connects the service to
 the backend yet; deciding where states such as maintenance or being offline come from is left to
 the feature that needs them.
@@ -967,11 +1045,13 @@ landmark, and are found through that.
 **It stays until it is closed.** No time limit, so 2.2.1 is met without a setting to extend or turn
 off a timeout, and a message can be read at any pace.
 
-**Announced through live regions that are always there.** The layout holds one polite and one
-assertive live region from the start, and the toast's text is written into them; a live region
-created together with its text is not announced reliably. `Success` and `Info` wait until the
-screen reader is idle, so a confirmation does not cut into what the user is doing; `Critical`
-interrupts.
+**Announced through the [`LiveAnnouncer`](#live-announcer).** Showing a toast hands its title and
+text to the announcer, which is in the page from the start; a live region created together with its
+text is not announced reliably. `Success` and `Info` wait until the screen reader is idle, so a
+confirmation does not cut into what the user is doing; `Critical` interrupts. Each toast is its own
+announcement, so several raised in a row are all read, not only the last one. The toast region
+itself is not a live region: it would be a second copy of the same message, and a screen reader
+reading the page would find the message twice.
 
 **It never takes focus.** Toasts sit in a region named "Benachrichtigungen" at the end of the page,
 reached with Tab and by landmark navigation. The region exists only while there is a toast. Inside
@@ -1008,8 +1088,8 @@ pages choose `InteractiveServer`, so a region rendered as part of the layout cou
 after the page loaded. `ToastRegion` is therefore placed once in each layout with its own
 `@rendermode="InteractiveServer"`. All interactive components on a page share one circuit and so
 one `ToastService`, which is how a page's call reaches the region. The circuit survives enhanced
-navigation, so open toasts stay when the user moves to another page. The region is prerendered,
-which puts both live regions into the first HTML. Two limits follow. A toast can only be raised
+navigation, so open toasts stay when the user moves to another page. The region is prerendered.
+Two limits follow. A toast can only be raised
 from an interactive page; a statically rendered page has no circuit to call the service in. And a
 modal [Dialog](#dialog) sits in the browser's top layer, above everything including toasts, and
 makes the rest of the page inert while it is open; a toast raised then is announced but can be
@@ -1051,10 +1131,12 @@ and open a confirmation on top instead, such as "Änderungen verwerfen?". That i
 allowed over another one; nothing else nests. Esc then closes only the confirmation. A
 [`Toggletip`](#toggletip) open inside a dialog takes Esc first; the next Esc closes the dialog.
 
-**Focus on opening is fixed.** In the ordinary dialog it moves to the first operable element below
-the title, in a form the first field, so typing can start at once; when nothing below the title is
-operable, it moves to the X. In the confirmation it moves to "Abbrechen", so an Enter pressed too
-early never confirms. The page cannot change either.
+**Focus on opening is fixed.** In the ordinary dialog with a form it moves to the first field, so
+typing can start at once. A dialog whose content has no field — text to read, perhaps with a link
+or a button in it — puts focus on its title instead, which takes `tabindex="-1"` for that, so a
+screen reader starts reading at the top rather than in the middle or at the buttons, and Tab from
+there follows the order on screen. In the confirmation it moves to "Abbrechen", so an Enter
+pressed too early never confirms. The page cannot change either.
 
 **Focus on closing** returns to the element that opened the dialog. When that element is gone —
 after a deletion, say — the page must name the target, as it does when an [`Alert`](#alert) closes;

@@ -12,7 +12,7 @@
                checked="@ParentGroup.IsSelected(Value)"
                required="@ParentGroup.Required"
                disabled="@ParentGroup.Disabled"
-               aria-invalid="@(ParentGroup.HasError ? "true" : null)"
+               aria-invalid="@(ParentGroup.HasError ? "true" : "false")"
                @onchange="HandleChange" />
         <span class="vs-radio__mark" aria-hidden="true">
             <SystemIcon Name="SystemIconName.Circle" />
