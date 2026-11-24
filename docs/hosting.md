@@ -1,117 +1,147 @@
 # Hosting
 
-This document records how VitalSync is hosted and how that hosting is meant to grow. It is a
-decision and a roadmap, not an operations manual: it states where the system runs, who can reach
-it, and when the next step is taken.
+This document describes how VitalSync is hosted today: where it runs, what runs there, how the
+owner reaches it and how its data is kept safe. It states what exists and why, not how to operate
+it.
 
-How the system is composed at runtime is described in [Architecture](./architecture.md#runtime-composition).
+- **Where hosting goes next** — the later stages are described in the
+  [Hosting roadmap](./hosting-roadmap.md).
+- **How to operate it** — setting up a computer, deploying, the addresses, backups and moving to
+  another computer are in the [operations guide](../tools/hosting/README.md).
+- **How the system is composed** — see [Architecture](./architecture.md#runtime-composition), and
+  [Technologies](./technologies.md#net-aspire) for how the hosted composition differs from
+  development.
 
-## The decision
+## Where it runs
 
-**VitalSync starts at zero running cost and grows in three stages.** The project is at its
-beginning, so hosting is kept free until the system has something worth exposing. Each stage is
-entered only when its trigger is met, and each one keeps everything the previous stage established.
+**VitalSync runs on the owner's own, always-on Windows computer, at no running cost.** It is the
+first of the stages described in the roadmap: private, reachable only through Tailscale.
 
-- **Stage 1 — private, through Tailscale.** Free.
-- **Stage 2 — public, through Cloudflare Tunnel behind Cloudflare Access.** The only cost is the
-  project's own domain.
-- **Stage 3 — VitalSync's own login.** The target state.
+- **As containers** — `aspire deploy` turns the same AppHost that runs the development system into a
+  Docker Compose project and starts it. The images are built on the computer itself, so no
+  container registry is involved.
+- **After a restart** — every long-running container restarts on its own once Docker is running,
+  and Docker starts when the owner signs in to Windows. Until then the system is offline. That is
+  accepted while the owner is the only user. Windows asks before restarting for updates instead of
+  restarting on its own, and it does not sign in automatically.
+- **Not tied to the computer** — moving the system to another computer means deploying it there and
+  restoring the newest backup. Nothing in the repository names the computer.
 
-Throughout all three stages the system runs on the owner's own computer, as containers rather than
-in the Aspire development mode, and comes back on its own once the owner signs in after a restart.
-Until then it is offline. While the owner is the only user that is accepted; it is revisited in
-Stage 2, when other people depend on the system.
+## What runs
 
-The computer is replaceable. Moving the system to another one means deploying it there and
-restoring the newest backup; the steps are described with the
-[hosting scripts](../tools/hosting/README.md#moving-to-another-computer).
+- **The application** — the three services, the BFF and the web frontend. Each restarts unless it
+  was stopped deliberately.
+- **The migration workers** — one per bounded context. Each runs once per deployment, creates its
+  context's two databases if they are missing, and exits.
+- **The infrastructure** — PostgreSQL and RabbitMQ.
+- **The tools** — pgAdmin and the Aspire dashboard, each as a container of its own.
 
-## Stage 1 — private, through Tailscale
+Inside the container network the hosted projects speak plain HTTP. Each listens on an application
+port and on a separate management port for its health endpoints. The management port is never
+published, so the health endpoints answer only inside that network.
 
-**VitalSync is reachable only from the owner's own devices, at home and on the road.** The computer
-joins a private Tailscale network, and only devices in that network can reach it. Nothing is
-published to the internet, and no port is opened on the home router.
+### Data
 
-- **Address** — the computer has a stable name inside the private network, so the address does not
-  change between restarts. A fixed address is therefore not the reason for moving to Stage 2.
-- **Login** — none is needed. Only the owner's devices get in, so the network itself is the access
-  control.
-- **Cost** — none.
+The data lives on four Docker volumes with fixed names, which survive tearing the Compose project
+down and do not depend on the name `aspire deploy` gives the project:
 
-**Moving on** — Stage 2 begins as soon as the first service is complete and tested.
+- **`vitalsync-postgres-data`** — every database of every bounded context.
+- **`vitalsync-messaging-data`** — the broker's queues.
+- **`vitalsync-pgadmin-data`** — pgAdmin's settings and its server registration.
+- **`vitalsync-web-keys`** — the web frontend's Data Protection keys, so browser sessions survive a
+  restart of its container.
 
-## Stage 2 — public, through Cloudflare Tunnel and Cloudflare Access
+### Secrets
 
-**VitalSync becomes reachable from the internet, but only for people the owner lets in.** The
-computer opens an outbound tunnel to Cloudflare, so the home router still exposes no port and the
-home address stays hidden. Cloudflare Access sits in front of every public address and admits only
-the email addresses the owner has approved.
+The hosted system has passwords of its own, separate from those of the development run. They are
+chosen when deploying for the first time. `aspire deploy` keeps them on the computer, readable only
+by the owner's Windows account, because every redeployment needs them, and the owner keeps them in
+a password manager as well. They are never committed and never copied into a backup.
 
-- **Why the own domain** — public reachability and Cloudflare Access require a domain managed by
-  Cloudflare. Without one, Cloudflare offers only temporary addresses that change on every restart
-  and cannot be protected by Access.
-- **Login** — VitalSync has no login of its own yet. Access stands in for it: it decides who may
-  reach the application at all, but it cannot tell users apart inside it.
-- **Further applications** — every application gets its own subdomain of the same domain, routed
-  through the same tunnel.
-- **Cost** — the domain, nothing else.
-- **Privacy** — Cloudflare terminates TLS, so traffic is readable on Cloudflare's side. This is
-  acceptable while access is limited to approved people, and it is one of the questions the
-  re-evaluation after Stage 3 has to answer.
+## How the owner reaches it
 
-**Moving on** — Stage 3 begins as soon as either of these holds:
+**Every published port is bound to the computer's loopback address, and Tailscale is the only way
+in from another device.** The computer and the owner's devices form a private Tailscale network.
+Tailscale Serve terminates HTTPS on the computer with a certificate for its name in that network and
+forwards each address to a loopback port.
 
-- someone other than the owner is to use VitalSync with their own real data;
-- VitalSync has to keep one user's data apart from another's, which Access cannot do.
+- **Nothing is public** — no port is opened on the home router, and Tailscale Funnel, which would
+  publish an address to the internet, is not used.
+- **At home as well** — a device in the home network that is not part of the Tailscale network
+  cannot reach the system. On the computer itself the loopback ports work directly.
+- **A stable address** — the address is the computer's name in the Tailscale network, which does not
+  change between restarts.
+- **A public name** — the certificate makes the computer's full name in the Tailscale network
+  visible in the public Certificate Transparency logs, so that name is chosen with that in mind,
+  before the first certificate is issued.
 
-## Stage 3 — VitalSync's own login
-
-**VitalSync identifies its users itself.** Authentication runs through the
-[BFF](./architecture.md#logical-tiers), the single entry point of the frontend, and every request
-inside the system knows whose data it concerns.
-
-How authentication works — which identity provider, which protocol, how users register — is not yet
-decided. It is an architectural decision of its own and will be recorded when it is made.
-
-Cloudflare Access is not removed in this stage. It moves from guarding the application to guarding
-the monitoring, as described under [Who can reach what](#who-can-reach-what).
+The application has the default HTTPS port; the dashboard, pgAdmin and the RabbitMQ management
+interface each have a port of their own. The addresses are listed in the
+[operations guide](../tools/hosting/README.md#addresses).
 
 ## Who can reach what
 
-**The more a surface can do, the smaller the circle that can reach it.**
+**The more a surface can do, the smaller the circle that can reach it.** This rule holds in every
+stage; how each surface is reached in the later stages is described in the
+[roadmap](./hosting-roadmap.md#who-can-reach-what-in-each-stage).
 
-- **The application** — the Blazor frontend is the only part of VitalSync that is ever public. It is
-  private in Stage 1, behind Access in Stage 2, and behind VitalSync's own login in Stage 3.
+- **The application** — the Blazor frontend is the only part of VitalSync that is ever meant to be
+  public. Today it is private: the Tailscale network is its access control, so it has no login.
 - **Administration** — pgAdmin and the RabbitMQ management interface can change and delete data.
-  They are never public and are reachable only through Tailscale, in every stage. Each asks for a
-  login of its own on top of that.
-- **Monitoring** — monitoring only reads. It is reachable through Tailscale in Stage 1, and from
-  Stage 2 on also through its own subdomain behind Access, so it can be checked from a device that
-  is not part of the private network.
+  They are reachable only through Tailscale and each asks for a login of its own on top.
+- **Monitoring** — the dashboard only reads. It is reachable through Tailscale and asks for its
+  login token.
 - **Health endpoints** — the health, liveness and dead-letter endpoints stay on the internal
-  management port. They are never routed through Cloudflare.
+  management port.
 
-Tailscale stays in place in every stage as the owner's private way into the system.
+## Backups
+
+**The databases are backed up as dumps, outside Docker, and every backup is proven restorable
+before it counts.**
+
+- **What** — one dump per database, the server's roles, and a manifest listing every database and
+  its table counts. Each dump is read back once before it is kept, and an interrupted run never
+  leaves something that looks like a backup.
+- **Where** — in a folder outside the Docker volumes, so losing a volume does not lose its backups.
+  A fixed number of the newest backups is kept.
+- **Checking** — a backup can be restored into a throwaway PostgreSQL container and compared with
+  its manifest, without touching the running system.
+- **Restoring** — a restore into the running system stops every service that uses the databases,
+  recreates each database from the backup, checks it against the manifest and starts the services
+  again.
+- **The broker** — its volume is not backed up. Integration events leave a service through its
+  outbox, which lives in that service's database, so the databases are what has to survive. This
+  is to be confirmed once real messages flow.
+- **Schedule** — backups are meant to run as a scheduled task on the computer.
 
 ## Monitoring
 
-**The services already emit logs, traces and metrics through OpenTelemetry.** In development the
-Aspire dashboard displays them. When hosted, the same dashboard runs as a standalone container and
-receives that telemetry.
+**The services emit logs, traces and metrics through OpenTelemetry, and the Aspire dashboard
+displays them.** When hosted, the dashboard runs as a standalone container at the released version
+that matches the AppHost's Aspire packages.
 
-- **Protection** — from Stage 2 on the dashboard is reachable behind Access and additionally asks for
-  its own login token, so reaching it takes two independent steps.
-- **History** — the standalone dashboard keeps telemetry in memory only. A restart clears it. That
-  is enough while the owner watches the system live. Durable storage is decided in the evaluation
-  after Stage 3, and it stays self-hosted: logs can carry personal health data, so telemetry is not
-  sent to a hosted service.
-- **Outages** — the dashboard runs on the same computer as the system it watches, so it cannot report
-  that the computer itself is down. There is deliberately no check from outside: it would bring in
-  another provider for little gain while the owner is the main user.
+- **Login** — the dashboard asks for a browser token, which it creates anew whenever its container
+  starts.
+- **Telemetry endpoint** — the endpoint the services send their telemetry to accepts it without a
+  key. It is not published and is reachable only inside the container network. The dashboard
+  displays a warning about it.
+- **History** — the dashboard keeps telemetry in memory only, so a restart clears it. That is enough
+  while the owner watches the system live. Telemetry stays self-hosted: logs can carry personal
+  health data, so it is never sent to a hosted service.
+- **Outages** — the dashboard runs on the computer it watches, so it cannot report that the computer
+  itself is down. There is deliberately no check from outside: it would bring in another provider
+  for little gain while the owner is the only user.
 
-## After Stage 3
+## Decisions taken
 
-**Hosting is evaluated again once Stage 3 is reached.** Running on the owner's own computer is the
-starting point, not a commitment. One conceivable direction is to run production in the cloud — on
-Azure, for example — while the Cloudflare setup on the own computer becomes the test environment.
-That evaluation also covers monitoring, since a cloud platform brings its own tooling.
+- **Deployment through `aspire deploy`** — Aspire's Docker Compose deployment is still labelled a
+  preview. That is acceptable while the owner is the only user, and `aspire publish` followed by
+  `docker compose up` remains a fallback that needs no change to the AppHost.
+- **Plain HTTP inside the container network** — HTTPS ends at the entry point in front of the
+  system, and the containers talk to each other only inside the container network.
+- **Volumes with fixed names** — the reason is described in
+  [Technologies](./technologies.md#net-aspire).
+- **No container registry** — the images are built where they run.
+- **No external uptime check** and **no durable telemetry** yet — see [Monitoring](#monitoring).
+  When durable storage becomes necessary, a self-hosted, OpenTelemetry-native stack is the
+  candidate, for example the `grafana/otel-lgtm` container.

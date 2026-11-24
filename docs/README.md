@@ -13,8 +13,10 @@ code, or in the [Thessera](./technologies.md) repository for anything the platfo
   persistence strategies, the read side and integration events.
 - **[Technologies](./technologies.md)** — what the system is built on and why each product was
   chosen.
-- **[Hosting](./hosting.md)** — where the system runs, who can reach which part of it, and the
-  stages the hosting grows through.
+- **[Hosting](./hosting.md)** — where the system runs today, what runs there, who can reach which
+  part of it and how its data is backed up.
+- **[Hosting roadmap](./hosting-roadmap.md)** — the stages the hosting grows through, what triggers
+  each one and what each changes.
 - **[Testing](./testing.md)** — what is tested at which level, and the principles behind it.
 - **[Design System](./design-system.md)** — the token architecture, the accessibility rules the
   colors are held to, and the conventions that no token can enforce on its own.
