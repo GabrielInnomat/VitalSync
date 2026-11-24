@@ -42,8 +42,8 @@ with no hand-written Dockerfile, and `aspire deploy` builds the images and start
 project. What differs from local development is declared in the AppHost and applies only when
 publishing — restart policies, plain HTTP between the containers, a separate management port for
 the health endpoints, a pgAdmin container of its own, passwords of its own rather than those of the
-development run, the released dashboard image at the AppHost's Aspire version, and ports bound to
-the loopback address only. The dashboard version is pinned rather than following a moving tag, so a
+development run, the released dashboard image at the AppHost's Aspire version, a dashboard that takes
+the scheme from the HTTPS proxy in front of it, and ports bound to the loopback address only. The dashboard version is pinned rather than following a moving tag, so a
 restart never brings a different dashboard, and it is moved up together with the Aspire packages.
 
 The data volumes of the hosted system are declared external, under fixed names. `aspire deploy`

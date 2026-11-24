@@ -22,6 +22,10 @@ in the Aspire development mode, and comes back on its own once the owner signs i
 Until then it is offline. While the owner is the only user that is accepted; it is revisited in
 Stage 2, when other people depend on the system.
 
+The computer is replaceable. Moving the system to another one means deploying it there and
+restoring the newest backup; the steps are described with the
+[hosting scripts](../tools/hosting/README.md#moving-to-another-computer).
+
 ## Stage 1 — private, through Tailscale
 
 **VitalSync is reachable only from the owner's own devices, at home and on the road.** The computer

@@ -10,7 +10,8 @@ builder.AddDockerComposeEnvironment("vitalsync")
     .WithDashboard(dashboard => dashboard
         .WithImageRegistry("mcr.microsoft.com")
         .WithImage("dotnet/aspire-dashboard", "13.6.5")
-        .WithHostPort(18888))
+        .WithHostPort(18888)
+        .WithEnvironment("ASPNETCORE_FORWARDEDHEADERS_ENABLED", "true"))
     .ConfigureComposeFile(file =>
     {
         BindToLoopback(file.Services["vitalsync-dashboard"], "18888:18888");

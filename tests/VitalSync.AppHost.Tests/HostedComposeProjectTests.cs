@@ -131,6 +131,14 @@ public class HostedComposeProjectTests(PublishedComposeProject compose) : IClass
         Assert.Equal("mcr.microsoft.com/dotnet/aspire-dashboard:13.6.5", Scalar(compose.Service("vitalsync-dashboard"), "image"));
     }
 
+    [Fact]
+    public void Dashboard_TakesTheSchemeFromTheProxyInFrontOfIt()
+    {
+        var environment = Section(compose.Service("vitalsync-dashboard"), "environment");
+
+        Assert.Equal("true", Scalar(environment, "ASPNETCORE_FORWARDEDHEADERS_ENABLED"));
+    }
+
     private static string RepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
