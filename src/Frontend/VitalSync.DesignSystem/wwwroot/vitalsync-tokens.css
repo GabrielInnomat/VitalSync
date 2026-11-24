@@ -677,4 +677,17 @@
   --app-navigation-current-text-color: var(--color-action-primary);
   --app-navigation-indicator-color: var(--color-action-primary);
   --app-navigation-indicator-width: var(--space-1);
+
+  --page-header-gap: var(--space-4);
+  --page-header-spacing-after: var(--space-6);
+  --page-header-text-gap: var(--space-2);
+  --page-header-text-min-width: 20rem;
+  --page-header-title-font-size: var(--font-size-500);
+  --page-header-title-font-weight: var(--font-weight-semibold);
+  --page-header-title-line-height: var(--line-height-tight);
+  --page-header-title-text-color: var(--color-text-primary);
+  --page-header-description-font-size: var(--font-size-200);
+  --page-header-description-max-width: 70ch;
+  --page-header-description-text-color: var(--color-text-secondary);
+  --page-header-actions-gap: var(--space-2);
 }

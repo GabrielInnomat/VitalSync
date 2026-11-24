@@ -1,0 +1,48 @@
+@namespace VitalSync.DesignSystem.Layouts
+
+<header @attributes="AdditionalAttributes" class="@CssClass">
+    <div class="vs-page-header__text">
+        <h1 class="vs-page-header__title">@Title</h1>
+        @if (Description is not null)
+        {
+            <p class="vs-page-header__description">@Description</p>
+        }
+    </div>
+    @if (Actions is not null)
+    {
+        <div class="vs-page-header__actions">
+            @Actions
+        </div>
+    }
+</header>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => CssClasses.Merge("vs-page-header", AdditionalAttributes);
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            throw new InvalidOperationException(
+                "PageHeader requires a Title; it is the page's only first-level heading.");
+        }
+
+        if (Description is not null && string.IsNullOrWhiteSpace(Description))
+        {
+            throw new InvalidOperationException(
+                "PageHeader received a blank Description; leave it out instead.");
+        }
+    }
+}

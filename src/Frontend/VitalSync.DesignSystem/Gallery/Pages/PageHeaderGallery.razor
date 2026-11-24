@@ -1,0 +1,76 @@
+@page "/design-system/page-header"
+@layout GalleryLayout
+@rendermode InteractiveServer
+@using VitalSync.DesignSystem.Layouts
+@inject LiveAnnouncer Announcer
+
+<PageTitle>Seitenkopf · Design System · VitalSync</PageTitle>
+
+<h1>Seitenkopf (<code>PageHeader</code>)</h1>
+<p>
+    <code>PageHeader</code> steht oben auf jeder Seite der App. Er trägt die einzige Überschrift
+    erster Ebene, darunter auf Wunsch einen einleitenden Satz und daneben die Aktionen der Seite.
+    Reicht der Platz nicht, rutschen die Aktionen unter den Titel. Nach einem Seitenwechsel in der
+    App landet der Fokus auf dem Titel. Die Beispiele unten tragen deshalb eigene Überschriften
+    erster Ebene; auf einer echten Seite gibt es nur eine. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    <section data-theme="light" class="vs-gallery__theme-panel">
+        <h2>Hell</h2>
+        @RenderStates()
+    </section>
+    <section data-theme="dark" class="vs-gallery__theme-panel">
+        <h2>Dunkel</h2>
+        @RenderStates()
+    </section>
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;PageHeader Title="Ernährung" /&gt;
+
+&lt;PageHeader Title="Rezepte"
+            Description="Deine gespeicherten Rezepte, nach Name sortiert."&gt;
+    &lt;Actions&gt;
+        &lt;Button OnClick="AddRecipe"&gt;Rezept hinzufügen&lt;/Button&gt;
+    &lt;/Actions&gt;
+&lt;/PageHeader&gt;
+</code></pre>
+
+@code {
+    private void Choose(string action) => Announcer.Announce($"{action} gewählt.");
+
+    private RenderFragment RenderStates() => @<text>
+        <h3>Nur Titel</h3>
+        <div class="vs-page-header-gallery__frame">
+            <PageHeader Title="Einstellungen" />
+        </div>
+
+        <h3>Mit Beschreibung</h3>
+        <div class="vs-page-header-gallery__frame">
+            <PageHeader Title="Ernährung"
+                        Description="Hier entstehen Zutaten, Rezepte, Speisepläne und Einkaufslisten." />
+        </div>
+
+        <h3>Mit Aktion</h3>
+        <div class="vs-page-header-gallery__frame">
+            <PageHeader Title="Rezepte" Description="Deine gespeicherten Rezepte, nach Name sortiert.">
+                <Actions>
+                    <Button OnClick="@(() => Choose("Rezept hinzufügen"))">Rezept hinzufügen</Button>
+                </Actions>
+            </PageHeader>
+        </div>
+
+        <h3>Langer Titel und zwei Aktionen bei wenig Platz</h3>
+        <div class="vs-page-header-gallery__frame vs-page-header-gallery__narrow">
+            <PageHeader Title="Wochenplan für die Ernährung im November"
+                        Description="Drei Mahlzeiten pro Tag, abgestimmt auf dein Trainingsziel.">
+                <Actions>
+                    <Button Variant="ButtonVariant.Secondary" OnClick="@(() => Choose("Einkaufsliste"))">Einkaufsliste</Button>
+                    <Button OnClick="@(() => Choose("Mahlzeit planen"))">Mahlzeit planen</Button>
+                </Actions>
+            </PageHeader>
+        </div>
+    </text>;
+}

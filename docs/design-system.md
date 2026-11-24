@@ -280,7 +280,8 @@ reuse in a narrower column.
 
 Components in `Layouts/` are that page level: they frame the whole page rather than sit in a
 column, so they respond to the viewport with media queries. The [app navigation](#app-navigation)
-changes its form at `--breakpoint-lg`.
+changes its form at `--breakpoint-lg`. The [page header](#page-header) needs none: its actions wrap
+below the title when the space runs out.
 
 `var()` is not allowed inside a media query condition, so the `--breakpoint-*` tokens are the
 documented source of truth and the pixel values are repeated literally in the `@media` rules.
@@ -1435,6 +1436,15 @@ load or a reload moves nothing: the page starts at the top like any other web pa
 Tab reaches the skip link. Blazor's `FocusOnNavigate` cannot do the second part, because it also
 focuses the heading on a fresh load; the app uses its own JavaScript initializer instead.
 
+**The focus survives an interactive start.** Blazor does not take over prerendered markup: when an
+interactive page starts, it removes that markup and renders the page anew, which replaces the
+`<h1>` the focus was just moved to, and the focus falls back to the document body. After a page
+change, the script therefore keeps following the heading: if the one it focused is removed while
+the focus sits on the body, it focuses the new `<h1>`. It stops at the user's first key press or
+pointer press and at the next page change, so it never takes the focus from where the user has put
+it. A page can therefore be static or interactive as a whole without affecting where the focus
+goes.
+
 **Tokens and rules.** The `--app-navigation-*` set: the sidebar's width, padding and gaps; the
 background and the divider's colour and width; the product name's size, weight and colour; the
 button's gap, padding, icon size, text colour, weight, border colours at rest and on hover, border
@@ -1444,10 +1454,49 @@ width. No new semantic role. Nine rules, each on the navigation's background in 
 product name, the button text, the button border at rest and on hover, the entry text at rest, on
 hover and current, the bar and the focus ring.
 
+## Page header
+
+`PageHeader` opens every page of the app: the page's title, optionally one introductory sentence
+below it, and optionally the page's actions beside it. It lives in `Layouts/` next to the app
+navigation, because it frames a page rather than sitting inside one of its sections.
+
+**It carries the page's only `<h1>`.** Every page has exactly one first-level heading, and it is
+this one. That is also where the focus lands after a page change inside the app (see
+[App navigation](#app-navigation)), so the title is the first thing a screen reader announces. The
+component does not add `tabindex`; the app's script does that when it moves the focus.
+
+**It does not set the document title.** `<PageTitle>` stays on the page, because the document title
+names the product as well and is not always the visible heading word for word. Keeping the two apart
+leaves that choice with the page.
+
+**It belongs inside `<main>`.** The component is a `<header>`; inside `<main>` that is not a banner
+landmark, so it adds no landmark of its own and does not compete with the app navigation's.
+
+**Actions follow the title.** In the markup the actions come after the text block, so reading order
+and focus order both start with the title. On a wide screen they sit at the end of the same line;
+when the space is narrower than the title needs, they wrap below it. That is plain flex wrapping
+with a minimum width for the text block, not a media query, so it also holds at 400 % zoom and in a
+narrow column. A long title breaks rather than overflowing.
+
+**The description is short.** One sentence that says what the page is for, in the secondary text
+colour, at most about 70 characters per line so it stays readable. Longer explanations belong in
+the page's content.
+
+**How it is used.** `PageHeader` takes the mandatory `Title`, an optional `Description` and an
+optional `Actions` fragment, typically one or two buttons. Further attributes, including `class`,
+are passed on to the `<header>`. A blank title throws, and so does a description that is set but
+blank, because an empty paragraph would still be announced.
+
+**Tokens and rules.** The `--page-header-*` set: the gap between text and actions, the space after
+the header, the gap between title and description, the text block's minimum width, the title's
+size, weight, line height and colour, the description's size, maximum width and colour, and the gap
+between actions. No new semantic role. Two rules, each on the page background in both themes: the
+title and the description.
+
 ## How this is kept true
 
 `tools/VitalSync.DesignTokens.Contrast` resolves every `var()` chain per theme and measures the
-pairs named in the rule document — 616 contrast checks and 6 separation checks at the time of
+pairs named in the rule document — 620 contrast checks and 6 separation checks at the time of
 writing. All pass except the two status-colour separation checks, which run under a waiver (see
 [Data visualisation](#data-visualisation)).
 
@@ -1495,7 +1544,8 @@ which `.editorconfig` enforces.
   every field that takes input), `Display/` (badge, avatar, spinner, toggletip).
 - **`Patterns/`** holds composed components: `Feedback/` (alert, alert banner, toast), `Overlays/`
   (dialogs), `Data/` (table, later the data table and charts), `Navigation/` (tabs).
-- **`Layouts/`** frames the whole page: the app navigation, later page header and dashboard grid.
+- **`Layouts/`** frames the whole page: the app navigation and the page header, later the dashboard
+  grid.
 - **`Accessibility/`** holds infrastructure without a look of its own: the live announcer.
 - **`Icons/`** holds the icon component and its paths.
 

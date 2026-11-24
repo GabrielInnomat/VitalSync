@@ -2492,6 +2492,22 @@
       "foreground": "--focus-ring-color",
       "background": "--app-navigation-background",
       "requirement": "non-text"
+    },
+    {
+      "id": "page-header-title-on-background",
+      "criterion": "1.4.3",
+      "description": "Page title in the page header",
+      "foreground": "--page-header-title-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "page-header-description-on-background",
+      "criterion": "1.4.3",
+      "description": "Introductory sentence below the page title",
+      "foreground": "--page-header-description-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
     }
   ],
   "waivers": [],

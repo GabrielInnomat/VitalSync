@@ -1,0 +1,23 @@
+.vs-gallery__themes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--container-breakpoint-sm)), 1fr));
+    gap: var(--space-6);
+}
+
+.vs-gallery__theme-panel {
+    background-color: var(--color-background-primary);
+    color: var(--color-text-primary);
+    border: var(--border-width-thin) solid var(--color-border-subtle);
+    border-radius: var(--card-radius);
+    padding: var(--card-padding);
+}
+
+.vs-page-header-gallery__frame {
+    padding: var(--space-4);
+    border: var(--border-width-thin) dashed var(--color-border-default);
+    margin-block-end: var(--space-4);
+}
+
+.vs-page-header-gallery__narrow {
+    max-inline-size: var(--container-breakpoint-sm);
+}
