@@ -32,7 +32,7 @@ The build resolves the bundle by itself, through a compatible
 `aspire` on the `PATH` or through `dnx`.
 
 `dotnet run` on an AppHost hands over to the Aspire CLI, which starts the Debug build whatever
-configuration was requested. The CI pipeline runs a Release build, so it starts the built AppHost
+configuration was requested. The CI pipelines run a Release build, so they start the built AppHost
 assembly directly with `dotnet <AppHost>.dll`. The `aspire.config.json` at the
 repository root points `aspire run` at `src/Aspire/VitalSync.AppHost`.
 

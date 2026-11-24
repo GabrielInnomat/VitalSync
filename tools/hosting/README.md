@@ -6,7 +6,8 @@ How to set up, deploy, reach and maintain the hosted system described in
 
 The scripts in this folder run in Windows PowerShell 5.1 and in PowerShell 7, need only Docker, and
 find the Compose project that `aspire deploy` created on their own. If there is more than one, pass
-`-Project`. Every command below runs from the repository root.
+`-Project`. Every command below runs from the root of a checkout. `aspire deploy` runs only in the
+runner's checkout, as described under [First deployment](#first-deployment).
 
 ## Setting up a computer
 
@@ -23,6 +24,12 @@ find the Compose project that `aspire deploy` created on their own. If there is 
 - **The .NET SDK** pinned in `global.json`.
 - **The Aspire CLI** at the Aspire version in `Directory.Packages.props`.
 - **Git** and a checkout of the repository.
+- **PowerShell scripts allowed** for the owner's account. Windows blocks them by default, and both
+  the scripts in this folder and every step of the pipeline are PowerShell scripts.
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
 
 ### Tailscale
 
@@ -41,16 +48,67 @@ find the Compose project that `aspire deploy` created on their own. If there is 
    computer stays in the tailnet while nobody is signed in.
 5. Install Tailscale on every device that is to reach the system and sign in with the same account.
 
+### The pipeline
+
+The pipeline in `.github/workflows/deploy.yml` runs on a GitHub Actions runner on this computer.
+What it does and when is described in [Hosting](../../docs/hosting.md#how-a-change-reaches-it).
+
+1. In the repository's settings on GitHub, before the runner exists — every step below closes a way
+   for someone else's code to reach this computer:
+   - **Actions → General** — under the approval for fork pull request workflows, choose
+     **Require approval for all external contributors**. A pull request can change a workflow to
+     run on this runner, so it must never run without approval.
+   - **Actions → General** — allow only actions created by GitHub, and keep the workflow
+     permissions at reading the repository contents.
+   - **Environments** — create the environment `production`. Under deployment branches choose
+     **Selected branches and tags** and add `main`. Create it before the first run; a run that
+     names a missing environment creates it without that restriction.
+2. Under **Actions → Runners → New self-hosted runner**, choose Windows x64 and follow the download
+   steps shown there into `C:\actions-runner`. Run them in a PowerShell window in which `dotnet`,
+   `aspire`, `docker` and `git` are found, because the runner keeps that window's `PATH`.
+3. Configure the runner with the token shown on that page, then answer its questions:
+
+```powershell
+.\config.cmd --url https://github.com/GabrielInnomat/VitalSync --token <token>
+```
+
+   - **Additional labels** — `vitalsync`. The pipeline runs only on a runner with this label.
+   - **Work folder** — keep `_work`. The runner checks the repository out into
+     `C:\actions-runner\_work\VitalSync\VitalSync`, and the deployment depends on that path.
+   - **Run as service** — yes, under the owner's Windows account and its password, not the proposed
+     `NETWORK SERVICE`. Docker Desktop, the kept parameters and the development certificate belong to
+     that account.
+4. Check that the runner appears as **Idle** under **Actions → Runners**, and that its service runs:
+
+```powershell
+Get-Service actions.runner.*
+```
+
 ## First deployment
 
-1. Create the volumes. The script creates the missing ones and leaves existing ones alone, so it is
+The first deployment on a computer runs by hand, because it asks for the parameters; every later one
+runs in the pipeline. It runs in the runner's checkout, since the Compose project's name and the
+kept parameters depend on the checkout's path.
+
+1. Clone the repository into the runner's checkout. The runner reuses this clone for its jobs. If
+   the runner has already run a job, the folder exists and only the `Set-Location` is needed.
+
+```powershell
+git clone https://github.com/GabrielInnomat/VitalSync.git C:\actions-runner\_work\VitalSync\VitalSync
+```
+
+```powershell
+Set-Location C:\actions-runner\_work\VitalSync\VitalSync
+```
+
+2. Create the volumes. The script creates the missing ones and leaves existing ones alone, so it is
    safe to run before every deployment.
 
 ```powershell
 .\tools\hosting\New-VitalSyncVolumes.ps1
 ```
 
-2. Deploy. On the first run `aspire deploy` asks for the parameters of the hosted system and keeps
+3. Deploy. On the first run `aspire deploy` asks for the parameters of the hosted system and keeps
    them for every later run.
 
 ```powershell
@@ -67,7 +125,7 @@ Keep all four in a password manager as well. `aspire deploy` stores them in plai
 `src/Aspire/VitalSync.AppHost/aspire-output/.env.Production`, which Git ignores, and below
 `%USERPROFILE%\.aspire\deployments\`.
 
-3. Check that the containers run. The three migration workers have exited, which is expected; every
+4. Check that the containers run. The three migration workers have exited, which is expected; every
    other container is `Up`. The Compose project defines no health checks, so Docker shows no health
    state.
 
@@ -75,7 +133,7 @@ Keep all four in a password manager as well. `aspire deploy` stores them in plai
 docker ps --format "table {{.Names}}\t{{.Status}}"
 ```
 
-4. Check the health endpoints from inside the container network, since the management port is not
+5. Check the health endpoints from inside the container network, since the management port is not
    published. The network is the one ending in `_aspire`.
 
 ```powershell
@@ -87,6 +145,13 @@ foreach ($service in 'web-frontend', 'backend-for-frontend', 'nutrition-service'
 ```
 
 Each answers `Healthy`.
+
+6. Start the pipeline once by hand and check that both of its jobs pass. From then on every push to
+   `main` that changes more than Markdown deploys on its own.
+
+```powershell
+gh workflow run deploy.yml --ref main
+```
 
 ## Tailscale Serve
 
@@ -162,9 +227,26 @@ After setting up or changing anything around Tailscale:
 
 ## Redeploying
 
-1. Pull `main`.
-2. Optionally take a backup first.
-3. Create any volume a change has added, then deploy.
+Every push to `main` that changes more than Markdown is deployed by the pipeline. The pipeline takes
+no backup first; when a change is risky, take one by hand before pushing.
+
+To deploy without a push, start the pipeline by hand, from the **Actions** tab or with:
+
+```powershell
+gh workflow run deploy.yml --ref main
+```
+
+`aspire deploy` never runs in a development checkout: from another path it would start a second
+Compose project next to the first, on the same ports. If the pipeline cannot run, deploy by hand in
+the runner's checkout instead, with the runner's service stopped meanwhile.
+
+```powershell
+Set-Location C:\actions-runner\_work\VitalSync\VitalSync
+```
+
+```powershell
+git pull
+```
 
 ```powershell
 .\tools\hosting\New-VitalSyncVolumes.ps1
@@ -174,7 +256,7 @@ After setting up or changing anything around Tailscale:
 aspire deploy
 ```
 
-4. Check that the containers run and the application opens. The dashboard has a new token.
+Afterwards check that the containers run and the application opens. The dashboard has a new token.
 
 ## Stopping and starting
 
@@ -228,18 +310,26 @@ backup is lost.
 The system is not tied to one computer. Moving it means preparing the new one, deploying there and
 restoring the newest backup into it.
 
-1. Set up the new computer as described under [Setting up a computer](#setting-up-a-computer),
-   signed in to the same tailnet.
-2. Deploy as described under [First deployment](#first-deployment). New passwords may be chosen,
+1. Stop the runner's service on the old computer, so that from now on the pipeline runs only on the
+   new one.
+
+```powershell
+Stop-Service actions.runner.*
+```
+
+2. Set up the new computer as described under [Setting up a computer](#setting-up-a-computer),
+   signed in to the same tailnet and with a runner of its own.
+3. Deploy as described under [First deployment](#first-deployment). New passwords may be chosen,
    since the old ones are kept only on the old computer. The system starts with empty databases.
-3. Stop the old system, then take a last backup there. Nothing written afterwards is carried over.
-4. Copy the backup to the new computer, check it with `Restore-VitalSync.ps1`, then restore it with
+4. Stop the old system, then take a last backup there. Nothing written afterwards is carried over.
+5. Copy the backup to the new computer, check it with `Restore-VitalSync.ps1`, then restore it with
    `-IntoRunningSystem`.
-5. Remove the old computer from the tailnet, give the new one the old name so the addresses stay
+6. Remove the old computer from the tailnet, give the new one the old name so the addresses stay
    the same, and create the [Serve mappings](#tailscale-serve) again.
-6. [Check access](#checking-access) from outside and from the home network.
-7. Move the scheduled backup to the new computer.
-8. Only then remove the Compose project and the volumes on the old computer.
+7. [Check access](#checking-access) from outside and from the home network.
+8. Move the scheduled backup to the new computer.
+9. Only then remove the Compose project and the volumes on the old computer, and remove its runner
+   with the removal command shown under **Actions → Runners**.
 
 Only the databases are carried over. What is left behind is either recreated or not worth keeping:
 
@@ -261,3 +351,16 @@ Only the databases are carried over. What is left behind is either recreated or 
 - **The dashboard warns that its endpoint is unsecured** — this concerns the telemetry endpoint,
   which accepts telemetry without a key. It is not published and is reachable only inside the
   container network.
+- **A pipeline run waits for a runner** — the computer is off, nobody is signed in, or the runner's
+  service is stopped. `Get-Service actions.runner.*` shows the service; the run starts once it is
+  back.
+- **A pipeline step fails because running scripts is disabled** — PowerShell scripts are not allowed
+  for the owner's account; see [Tools](#tools).
+- **The pipeline does not find `dotnet`, `aspire` or `docker`** — the runner keeps the `PATH` from
+  when it was configured. Add the missing folder to the `.path` file in `C:\actions-runner`, then
+  restart the service.
+- **The runner's service does not start after a password change** — the service still has the old
+  password. Enter the new one in the service's properties under **Log On**.
+- **The deployment fails because a port is already allocated** — a second Compose project runs next
+  to the hosted one, usually from `aspire deploy` in another checkout. `docker compose ls` shows it;
+  remove it with `docker compose -p <project> down`. The volumes are external and stay.

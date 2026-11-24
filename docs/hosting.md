@@ -6,8 +6,8 @@ it.
 
 - **Where hosting goes next** — the later stages are described in the
   [Hosting roadmap](./hosting-roadmap.md).
-- **How to operate it** — setting up a computer, deploying, the addresses, backups and moving to
-  another computer are in the [operations guide](../tools/hosting/README.md).
+- **How to operate it** — setting up a computer and its pipeline runner, deploying, the addresses,
+  backups and moving to another computer are in the [operations guide](../tools/hosting/README.md).
 - **How the system is composed** — see [Architecture](./architecture.md#runtime-composition), and
   [Technologies](./technologies.md#net-aspire) for how the hosted composition differs from
   development.
@@ -26,6 +26,29 @@ first of the stages described in the roadmap: private, reachable only through Ta
   restarting on its own, and it does not sign in automatically.
 - **Not tied to the computer** — moving the system to another computer means deploying it there and
   restoring the newest backup. Nothing in the repository names the computer.
+
+## How a change reaches it
+
+**Every push to `main` that changes more than Markdown is built, tested and deployed on the computer
+itself.** A GitHub Actions runner is installed there as a Windows service under the owner's account.
+GitHub announces the push, the runner fetches the job and runs it locally. The runner only connects
+out to GitHub, so this opens nothing on the computer.
+
+- **What triggers it** — a push to `main` that changes at least one file that is not Markdown. A push
+  that changes only `*.md` files, wherever they are, starts nothing. The pipeline can also be started
+  by hand.
+- **Tests first** — the same Release build, tests and smoke tests as for a pull request. The system is
+  deployed only once all of them have passed; otherwise the running system stays as it is.
+- **The deployment** — creates any volume a change has added, runs `aspire deploy` without asking
+  anything, and then checks each hosted project's health endpoint from inside the container network.
+- **One at a time** — a deployment is never cancelled midway. Pushes that arrive meanwhile wait, and
+  of those only the newest is deployed.
+- **From one checkout** — the Compose project's name and the kept parameters follow the path of the
+  AppHost, as described in [Technologies](./technologies.md#net-aspire). The system is therefore
+  deployed only from the runner's checkout, never from a development checkout.
+- **Only while signed in** — the runner needs Docker, which starts when the owner signs in. Until
+  then a push waits, just as the system itself is offline.
+- **Pull requests** — are built and tested on GitHub's own machines and never run on the computer.
 
 ## What runs
 
@@ -142,6 +165,13 @@ that matches the AppHost's Aspire packages.
 - **Volumes with fixed names** — the reason is described in
   [Technologies](./technologies.md#net-aspire).
 - **No container registry** — the images are built where they run.
+- **A runner on the computer itself** — GitHub's own machines could only deploy if the computer were
+  reachable from the internet. A runner on the computer deploys without that, and it is free.
+- **A public repository** — a pull request from a fork could otherwise change a workflow so that it
+  runs on the computer. Workflows of outside contributors therefore wait for the owner's approval,
+  and the `production` environment accepts deployments from `main` only. The pipeline's logs are
+  public as well, so it never prints anything of the hosted system: no container logs and no
+  parameters.
 - **No external uptime check** and **no durable telemetry** yet — see [Monitoring](#monitoring).
   When durable storage becomes necessary, a self-hosted, OpenTelemetry-native stack is the
   candidate, for example the `grafana/otel-lgtm` container.

@@ -97,9 +97,12 @@ exactly as given.
 
 ## Continuous integration
 
-`.github/workflows/build.yml` runs on every push to `main`, on pull requests and on demand. It
-builds in Release — which, with warnings as errors, is also the analyzer and style gate — and then
-runs the tests.
+Two workflows run the same build and tests. `.github/workflows/build.yml` runs on GitHub's own
+machines for every pull request and on demand. `.github/workflows/deploy.yml` runs on the hosting
+computer for every push to `main` that changes more than Markdown, and deploys only once everything
+has passed — see [Hosting](./hosting.md#how-a-change-reaches-it). Both build in Release — which,
+with warnings as errors, is also the analyzer and style gate — then run the tests, and then start the
+samples AppHost and run the smoke tests against it.
 
 Container-backed tests skip when Docker is unavailable, which keeps the suite usable locally. In CI
 that would be dangerous: an agent without Docker would report success while entire test classes

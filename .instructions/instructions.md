@@ -30,6 +30,10 @@ reason to work around the rule.
 Package versions are managed centrally in `Directory.Packages.props`: a `.csproj` carries
 `<PackageReference Include="..." />` with no `Version`.
 
+Every push to `main` that changes more than Markdown is built, tested and **deployed** by
+`.github/workflows/deploy.yml` on the hosting computer — see `docs/hosting.md`. Its steps run in
+Windows PowerShell 5.1.
+
 ## Repository map
 
 ```text
