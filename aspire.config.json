@@ -2,5 +2,8 @@
   "$schema": "https://aspire.dev/reference/cli/configuration/schema.json",
   "appHost": {
     "path": "src/Aspire/VitalSync.AppHost/VitalSync.AppHost.csproj"
+  },
+  "sdk": {
+    "version": "17.0.0"
   }
 }

@@ -156,7 +156,8 @@ that matches the AppHost's Aspire packages.
   displays a warning about it.
 - **History** — the dashboard keeps telemetry in memory only, so a restart clears it. That is enough
   while the owner watches the system live. Telemetry stays self-hosted: logs can carry personal
-  health data, so it is never sent to a hosted service.
+  health data, so it is never sent to a hosted service, and the dashboard's own usage telemetry is
+  switched off.
 - **Outages** — the dashboard runs on the computer it watches, so it cannot report that the computer
   itself is down. There is deliberately no check from outside: it would bring in another provider
   for little gain while the owner is the only user.

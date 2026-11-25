@@ -1,26 +1,16 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <UserSecretsId>52bb3f43-aa36-4f96-a5ec-8475cc4481b3</UserSecretsId>
-    <AspireUseCliBundle>true</AspireUseCliBundle>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="Aspire.Hosting.Docker" />
+    <PackageReference Include="Aspire.Hosting.Dotnet" />
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <PackageReference Include="Aspire.Hosting.RabbitMQ" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Bff\VitalSync.Bff\VitalSync.Bff.csproj" />
-    <ProjectReference Include="..\..\Frontend\VitalSync.Web\VitalSync.Web.csproj" />
-    <ProjectReference Include="..\..\Services\HealthAnalytics\VitalSync.HealthAnalytics.Api\VitalSync.HealthAnalytics.Api.csproj" />
-    <ProjectReference Include="..\..\Services\HealthAnalytics\VitalSync.HealthAnalytics.MigrationService\VitalSync.HealthAnalytics.MigrationService.csproj" />
-    <ProjectReference Include="..\..\Services\Fitness\VitalSync.Fitness.MigrationService\VitalSync.Fitness.MigrationService.csproj" />
-    <ProjectReference Include="..\..\Services\Nutrition\VitalSync.Nutrition.Api\VitalSync.Nutrition.Api.csproj" />
-    <ProjectReference Include="..\..\Services\Fitness\VitalSync.Fitness.Api\VitalSync.Fitness.Api.csproj" />
-    <ProjectReference Include="..\..\Services\Nutrition\VitalSync.Nutrition.MigrationService\VitalSync.Nutrition.MigrationService.csproj" />
   </ItemGroup>
 
 </Project>

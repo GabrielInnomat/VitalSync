@@ -10,7 +10,9 @@ within its feature band, so every machine and every build agent compiles against
 and analyzers.
 
 Solution-wide settings live in `Directory.Build.props`: nullable reference types and implicit usings
-are on, the analysis level is the strictest available, and warnings are errors. There is no
+are on, the analysis level is the strictest available, and warnings are errors — those of the
+compiler and the analyzers as well as those that MSBuild itself and the targets of SDKs and packages
+report. There is no
 "we will clean up the warnings later" state — the build either is clean or it fails.
 
 Package versions are managed centrally in `Directory.Packages.props`, so a project file references a
@@ -26,14 +28,19 @@ It also owns start-up ordering, which matters here: a migration worker must fini
 service starts, and a service must not accept traffic before its databases and the broker are
 reachable.
 
-No Aspire workload has to be installed; the AppHost references the Aspire SDK as a package. The
-orchestrator and the dashboard are taken from the Aspire CLI bundle rather than from NuGet packages.
-The build resolves the bundle by itself, through a compatible
+No Aspire workload has to be installed; the AppHost is a plain .NET project that references the
+Aspire hosting packages. The orchestrator and the dashboard are taken from the Aspire CLI bundle
+rather than from NuGet packages. The build resolves the bundle by itself, through a compatible
 `aspire` on the `PATH` or through `dnx`.
+
+The AppHost registers each project by the path of its project file, not through a project
+reference, so it compiles without the projects it starts. When it runs, it builds them itself in its
+own configuration before starting them; publishing and deploying never take that step.
 
 `dotnet run` on an AppHost hands over to the Aspire CLI, which starts the Debug build whatever
 configuration was requested. The CI pipeline runs a Release build, so it starts the built AppHost
-assembly directly with `dotnet <AppHost>.dll`. The `aspire.config.json` at the
+assembly directly with `dotnet <AppHost>.dll`, and the AppHost builds the projects once more in
+Release before starting them. The `aspire.config.json` at the
 repository root points `aspire run` at `src/Aspire/VitalSync.AppHost`.
 
 The same AppHost also describes the hosted system. A Docker Compose compute environment turns every

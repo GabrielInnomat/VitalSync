@@ -20,11 +20,14 @@ dotnet test
 ```
 
 Solution file: `VitalSync.slnx`. The SDK is pinned in `global.json`, and Docker is required for the
-container-backed tests. **No Aspire workload** — the AppHost references `Aspire.AppHost.Sdk` as a
-package and uses the Aspire CLI bundle (`AspireUseCliBundle`), which the build resolves on its own.
+container-backed tests. **No Aspire workload** — the AppHost is a `Microsoft.NET.Sdk` project that
+references `Aspire.Hosting.AppHost` and `Aspire.Hosting.Dotnet`, registers every project with
+`AddDotnetProject` by its path, and uses the Aspire CLI bundle, which the build resolves on its own.
 
 `Directory.Build.props` applies solution-wide and puts the build under the strictest analysis
-available, with warnings treated as errors. A build failing on a warning is expected behavior, not a
+available, with warnings treated as errors — compiler and analyzer warnings through
+`TreatWarningsAsErrors`, and warnings from MSBuild and from SDK or package targets through
+`MSBuildTreatWarningsAsErrors`. A build failing on a warning is expected behavior, not a
 reason to work around the rule.
 
 Package versions are managed centrally in `Directory.Packages.props`: a `.csproj` carries

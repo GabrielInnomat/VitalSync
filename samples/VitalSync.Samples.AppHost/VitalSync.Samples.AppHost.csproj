@@ -1,22 +1,16 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <UserSecretsId>7f0a1c2e-58d4-4a1b-9c3f-2ad6b0e91f47</UserSecretsId>
-    <AspireUseCliBundle>true</AspireUseCliBundle>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="GaWeCodes.Thessera.Analyzers" PrivateAssets="all" />
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.Dotnet" />
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <PackageReference Include="Aspire.Hosting.RabbitMQ" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\EventSourced\VitalSync.Sample.EventSourced.Api\VitalSync.Sample.EventSourced.Api.csproj" />
-    <ProjectReference Include="..\EventSourced\VitalSync.Sample.EventSourced.MigrationService\VitalSync.Sample.EventSourced.MigrationService.csproj" />
-    <ProjectReference Include="..\StateStored\VitalSync.Sample.StateStored.Api\VitalSync.Sample.StateStored.Api.csproj" />
-    <ProjectReference Include="..\StateStored\VitalSync.Sample.StateStored.MigrationService\VitalSync.Sample.StateStored.MigrationService.csproj" />
   </ItemGroup>
 
 </Project>

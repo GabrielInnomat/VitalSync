@@ -128,7 +128,16 @@ public class HostedComposeProjectTests(PublishedComposeProject compose) : IClass
     [Fact]
     public void Dashboard_RunsTheReleasedImageAtAFixedVersion()
     {
-        Assert.Equal("mcr.microsoft.com/aspire/dashboard:13.6.5", Scalar(compose.Service("vitalsync-dashboard"), "image"));
+        Assert.Equal("mcr.microsoft.com/aspire/dashboard:17.0.0", Scalar(compose.Service("vitalsync-dashboard"), "image"));
+    }
+
+    [Theory]
+    [InlineData("postgres", "docker.io/library/postgres:18.3")]
+    [InlineData("messaging", "docker.io/library/rabbitmq:4.3-management")]
+    [InlineData("pgadmin", "docker.io/dpage/pgadmin4:9.15.0")]
+    public void Infrastructure_RunsItsImageAtAFixedVersion(string name, string image)
+    {
+        Assert.Equal(image, Scalar(compose.Service(name), "image"));
     }
 
     [Fact]

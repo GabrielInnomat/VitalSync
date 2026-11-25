@@ -281,7 +281,7 @@ everything is complete, so an interrupted run never looks like a backup. The new
 backups stay, older ones are removed.
 
 ```powershell
-.\tools\hosting\Backup-VitalSync.ps1 -Destination D:\Backups\VitalSync -Keep 14
+.\tools\hosting\Backup-VitalSync.ps1 -Destination "$env:USERPROFILE\Documents\Backups\VitalSync" -Keep 14
 ```
 
 ## Restore
@@ -294,7 +294,7 @@ container, compares every database with the manifest and removes the container a
 system is not touched, so this can run as often as wanted.
 
 ```powershell
-.\tools\hosting\Restore-VitalSync.ps1 -Destination D:\Backups\VitalSync
+.\tools\hosting\Restore-VitalSync.ps1 -Destination "$env:USERPROFILE\Documents\Backups\VitalSync"
 ```
 
 With `-IntoRunningSystem` it replaces the databases of the running system. It asks for
@@ -303,7 +303,7 @@ backup, checks it against the manifest and starts the services again. Everything
 backup is lost.
 
 ```powershell
-.\tools\hosting\Restore-VitalSync.ps1 -Destination D:\Backups\VitalSync -IntoRunningSystem
+.\tools\hosting\Restore-VitalSync.ps1 -Destination "$env:USERPROFILE\Documents\Backups\VitalSync" -IntoRunningSystem
 ```
 
 ## Moving to another computer
