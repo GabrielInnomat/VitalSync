@@ -14,147 +14,18 @@ concurrency:
   group: deploy
   cancel-in-progress: false
 
-defaults:
-  run:
-    shell: powershell
-
 jobs:
-  build:
-    runs-on: [self-hosted, windows, vitalsync]
-    timeout-minutes: 45
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Restore
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
-
-      - name: Test
-        env:
-          THESSERA_REQUIRE_CONTAINERS: "1"
-        run: dotnet test --configuration Release --no-build -- --output Detailed --report-xunit-trx
-
-      - name: Failed test detail
-        if: failure()
-        run: |
-          $failed = @(Get-ChildItem -Recurse -Filter *.trx -File | Where-Object { Select-String -LiteralPath $_.FullName -Pattern 'outcome="Failed"' -Quiet })
-          if ($failed.Count -eq 0) {
-            Write-Output 'No TRX report contained a failed test - the failure came from outside the test run.'
-          }
-          foreach ($trx in $failed) {
-            Write-Output "::group::$($trx.FullName)"
-            Select-Xml -LiteralPath $trx.FullName -XPath "//*[local-name()='UnitTestResult'][@outcome='Failed']" | ForEach-Object { $_.Node.OuterXml }
-            Write-Output '::endgroup::'
-          }
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-results
-          path: "TestResults/**"
-          if-no-files-found: ignore
-
-      - name: Create the ASP.NET development certificate
-        run: dotnet dev-certs https
-
-      - name: Start the samples AppHost
-        env:
-          ASPIRE_ALLOW_UNSECURED_TRANSPORT: "true"
-        run: |
-          $apphost = Start-Process dotnet -ArgumentList 'samples/VitalSync.Samples.AppHost/bin/Release/net10.0/VitalSync.Samples.AppHost.dll' -RedirectStandardOutput apphost.log -RedirectStandardError apphost.err.log -NoNewWindow -PassThru
-          Set-Content -Path apphost.pid -Value $apphost.Id
-
-      - name: Wait for both sample APIs
-        run: |
-          for ($attempt = 1; $attempt -le 100; $attempt++) {
-            curl.exe -sk --max-time 3 https://localhost:54230/health | Out-Null
-            $stateStored = $LASTEXITCODE
-            curl.exe -sk --max-time 3 https://localhost:54240/health | Out-Null
-            $eventSourced = $LASTEXITCODE
-            if ($stateStored -eq 0 -and $eventSourced -eq 0) {
-              Write-Output "Both sample APIs are up after $attempt attempts."
-              exit 0
-            }
-            if ($attempt % 6 -eq 0) {
-              Write-Output "Still waiting after $attempt attempts. Containers:"
-              docker ps --all --format '{{json .}}' | ConvertFrom-Json | Where-Object { $_.Labels -notmatch 'com\.docker\.compose\.project=' } | ForEach-Object { "  $($_.Names) | $($_.Image) | $($_.Status)" }
-            }
-            Start-Sleep -Seconds 5
-          }
-          Write-Output 'The sample APIs did not become reachable.'
-          exit 1
-
-      - name: Smoke tests
-        env:
-          SAMPLE_STATESTORED_API_URL: https://localhost:54230
-          SAMPLE_EVENTSOURCED_API_URL: https://localhost:54240
-          VITALSYNC_REQUIRE_SMOKE: "1"
-          THESSERA_REQUIRE_CONTAINERS: "1"
-        run: |
-          if (Test-Path TestResults) { Remove-Item TestResults -Recurse -Force }
-          dotnet test samples/StateStored/VitalSync.Sample.StateStored.Tests --configuration Release --no-build -- --output Detailed --report-xunit-trx
-          $stateStored = $LASTEXITCODE
-          dotnet test samples/EventSourced/VitalSync.Sample.EventSourced.Tests --configuration Release --no-build -- --output Detailed --report-xunit-trx
-          if ($stateStored -ne 0 -or $LASTEXITCODE -ne 0) { exit 1 }
-
-      - name: Failed smoke test detail
-        if: failure()
-        run: |
-          if (Test-Path TestResults) {
-            foreach ($trx in Get-ChildItem TestResults -Recurse -Filter *.trx -File) {
-              if (Select-String -LiteralPath $trx.FullName -Pattern 'outcome="Failed"' -Quiet) {
-                Write-Output "::group::$($trx.FullName)"
-                Select-Xml -LiteralPath $trx.FullName -XPath "//*[local-name()='UnitTestResult'][@outcome='Failed']" | ForEach-Object { $_.Node.OuterXml }
-                Write-Output '::endgroup::'
-              }
-            }
-          }
-
-      - name: Upload smoke test results
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: smoke-test-results
-          path: "TestResults/**"
-          if-no-files-found: ignore
-
-      - name: Diagnostics
-        if: failure()
-        run: |
-          $ErrorActionPreference = 'Continue'
-          foreach ($log in 'apphost.log', 'apphost.err.log') {
-            Write-Output "=== $log ==="
-            if (Test-Path $log) {
-              Get-Content $log
-            } else {
-              Write-Output "$log not found - the AppHost was never started (an earlier step failed)."
-            }
-          }
-          $containers = @(docker ps --all --format '{{json .}}' | ConvertFrom-Json | Where-Object { $_.Labels -notmatch 'com\.docker\.compose\.project=' })
-          Write-Output '=== containers outside the hosted system ==='
-          $containers | ForEach-Object { "  $($_.Names) | $($_.Image) | $($_.Status)" }
-          foreach ($container in $containers) {
-            Write-Output "=== docker logs $($container.Names) ==="
-            docker logs --tail 200 $container.ID 2>&1 | ForEach-Object { "$_" }
-          }
-          exit 0
-
-      - name: Stop the samples AppHost
-        if: always()
-        run: |
-          if (Test-Path apphost.pid) {
-            Stop-Process -Id ([int](Get-Content apphost.pid)) -ErrorAction SilentlyContinue
-          }
+  ci:
+    uses: ./.github/workflows/build.yml
 
   deploy:
-    needs: build
+    needs: ci
     runs-on: [self-hosted, windows, vitalsync]
     timeout-minutes: 30
     environment: production
+    defaults:
+      run:
+        shell: powershell
 
     steps:
       - uses: actions/checkout@v7

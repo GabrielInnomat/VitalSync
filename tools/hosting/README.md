@@ -25,7 +25,7 @@ runner's checkout, as described under [First deployment](#first-deployment).
 - **The Aspire CLI** at the Aspire version in `Directory.Packages.props`.
 - **Git** and a checkout of the repository.
 - **PowerShell scripts allowed** for the owner's account. Windows blocks them by default, and both
-  the scripts in this folder and every step of the pipeline are PowerShell scripts.
+  the scripts in this folder and every step of the deployment job are PowerShell scripts.
 
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
@@ -50,8 +50,9 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 
 ### The pipeline
 
-The pipeline in `.github/workflows/deploy.yml` runs on a GitHub Actions runner on this computer.
-What it does and when is described in [Hosting](../../docs/hosting.md#how-a-change-reaches-it).
+The pipeline in `.github/workflows/deploy.yml` first builds and tests on GitHub's own machines, then
+runs its deployment job on a GitHub Actions runner on this computer. What it does and when is
+described in [Hosting](../../docs/hosting.md#how-a-change-reaches-it).
 
 1. In the repository's settings on GitHub, before the runner exists — every step below closes a way
    for someone else's code to reach this computer:
@@ -76,8 +77,7 @@ What it does and when is described in [Hosting](../../docs/hosting.md#how-a-chan
    - **Work folder** — keep `_work`. The runner checks the repository out into
      `C:\actions-runner\_work\VitalSync\VitalSync`, and the deployment depends on that path.
    - **Run as service** — yes, under the owner's Windows account and its password, not the proposed
-     `NETWORK SERVICE`. Docker Desktop, the kept parameters and the development certificate belong to
-     that account.
+     `NETWORK SERVICE`. Docker Desktop and the kept parameters belong to that account.
 4. Check that the runner appears as **Idle** under **Actions → Runners**, and that its service runs:
 
 ```powershell
@@ -146,8 +146,9 @@ foreach ($service in 'web-frontend', 'backend-for-frontend', 'nutrition-service'
 
 Each answers `Healthy`.
 
-6. Start the pipeline once by hand and check that both of its jobs pass. From then on every push to
-   `main` that changes more than Markdown deploys on its own.
+6. Start the pipeline once by hand and check that both of its jobs pass: `ci` on GitHub's machines,
+   then `deploy` on this computer. From then on every push to `main` that changes more than Markdown
+   deploys on its own.
 
 ```powershell
 gh workflow run deploy.yml --ref main
@@ -351,7 +352,7 @@ Only the databases are carried over. What is left behind is either recreated or 
 - **The dashboard warns that its endpoint is unsecured** — this concerns the telemetry endpoint,
   which accepts telemetry without a key. It is not published and is reachable only inside the
   container network.
-- **A pipeline run waits for a runner** — the computer is off, nobody is signed in, or the runner's
+- **The deployment job waits for a runner** — the computer is off, nobody is signed in, or the runner's
   service is stopped. `Get-Service actions.runner.*` shows the service; the run starts once it is
   back.
 - **A pipeline step fails because running scripts is disabled** — PowerShell scripts are not allowed

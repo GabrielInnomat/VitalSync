@@ -128,7 +128,7 @@ public class HostedComposeProjectTests(PublishedComposeProject compose) : IClass
     [Fact]
     public void Dashboard_RunsTheReleasedImageAtAFixedVersion()
     {
-        Assert.Equal("mcr.microsoft.com/dotnet/aspire-dashboard:13.6.5", Scalar(compose.Service("vitalsync-dashboard"), "image"));
+        Assert.Equal("mcr.microsoft.com/aspire/dashboard:13.6.5", Scalar(compose.Service("vitalsync-dashboard"), "image"));
     }
 
     [Fact]
