@@ -48,7 +48,9 @@ GitHub, so this opens nothing on the computer.
   of those only the newest is deployed.
 - **From one checkout** — the Compose project's name and the kept parameters follow the path of the
   AppHost, as described in [Technologies](./technologies.md#net-aspire). The system is therefore
-  deployed only from the runner's checkout, never from a development checkout.
+  deployed only from the runner's checkout, never from a development checkout. That path contains
+  the repository's name but not its owner, so the repository can move to another account but is
+  never renamed.
 - **Only while signed in** — the runner needs Docker, which starts when the owner signs in. Until
   then the deployment waits, just as the system itself is offline. The build and tests run
   regardless.
