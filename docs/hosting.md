@@ -29,23 +29,26 @@ first of the stages described in the roadmap: private, reachable only through Ta
 
 ## How a change reaches it
 
-**Every push to `main` that changes more than Markdown is built and tested on GitHub's own machines
-and then deployed on the computer itself.** Only the deployment runs on the computer. A GitHub
+**Every push to `main` is built and tested on GitHub's own machines, and one that changes more than
+Markdown is then deployed on the computer itself.** Only the deployment runs on the computer. A GitHub
 Actions runner is installed there as a Windows service under the owner's account. GitHub announces
 the deployment, the runner fetches the job and runs it locally. The runner only connects out to
 GitHub, so this opens nothing on the computer.
 
-- **What triggers it** — a push to `main` that changes at least one file that is not Markdown. A push
-  that changes only `*.md` files, wherever they are, starts nothing. The pipeline can also be started
-  by hand.
+- **What triggers it** — every push to `main` is built and tested, but deployed only when it changes
+  at least one file that is not Markdown. A push that changes only `*.md` files, wherever they are,
+  is tested and then stops: the Markdown is checked too, for comments in prose and code examples.
+  When the changed files cannot be determined, as after a force push, the change is deployed. The
+  pipeline can also be started by hand, and then always deploys.
 - **Tests first, on GitHub** — the same Release build and tests as for a pull request,
   on GitHub's own machines. The system is deployed only once all of them have passed; otherwise the
   running system stays as it is.
 - **The deployment** — creates any volume a change has added, runs `aspire deploy` without asking
   anything, and then checks each hosted project's health endpoint from inside the container network.
   Nothing else runs on the computer: no tests, no test containers next to the hosted system.
-- **One at a time** — a deployment is never cancelled midway. Pushes that arrive meanwhile wait, and
-  of those only the newest is deployed.
+- **One at a time** — a deployment is never cancelled midway. Pushes that arrive meanwhile are
+  already built and tested, but their deployment waits, and of those only the newest is deployed.
+  A newer push also cancels the tests of an older one that are still running.
 - **From one checkout** — the Compose project's name and the kept parameters follow the path of the
   AppHost, as described in [Technologies](./technologies.md#net-aspire). The system is therefore
   deployed only from the runner's checkout, never from a development checkout. That path contains

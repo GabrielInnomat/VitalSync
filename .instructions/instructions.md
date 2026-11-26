@@ -33,9 +33,9 @@ reason to work around the rule.
 Package versions are managed centrally in `Directory.Packages.props`: a `.csproj` carries
 `<PackageReference Include="..." />` with no `Version`.
 
-Every push to `main` that changes more than Markdown is built and tested on GitHub's own machines by
-`.github/workflows/build.yml`, then **deployed** by `.github/workflows/deploy.yml` on the hosting
-computer — see `docs/hosting.md`. Only the deployment job runs there, and its steps run in Windows
+Every push to `main` is built and tested on GitHub's own machines by `.github/workflows/build.yml`;
+one that changes more than Markdown is then **deployed** by `.github/workflows/deploy.yml` on the
+hosting computer — see `docs/hosting.md`. Only the deployment job runs there, and its steps run in Windows
 PowerShell 5.1.
 
 ## Repository map

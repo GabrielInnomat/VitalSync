@@ -141,8 +141,9 @@ exactly as given.
 
 One workflow, `.github/workflows/build.yml`, builds and tests, always on GitHub's own machines: for
 every pull request, on demand, and as the first job of `.github/workflows/deploy.yml` for every push
-to `main` that changes more than Markdown. The deployment on the hosting computer runs only once it
-has passed — see [Hosting](./hosting.md#how-a-change-reaches-it). It builds in Release — which, with
+to `main`, Markdown-only pushes included. The deployment on the hosting computer runs only once it
+has passed, and only for a push that changes more than Markdown — see
+[Hosting](./hosting.md#how-a-change-reaches-it). It builds in Release — which, with
 warnings as errors, is also the analyzer and style gate — and then runs the tests.
 
 Container-backed tests skip when Docker is unavailable, which keeps the suite usable locally. In CI

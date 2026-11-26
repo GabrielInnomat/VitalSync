@@ -146,9 +146,9 @@ foreach ($service in 'web-frontend', 'backend-for-frontend', 'nutrition-service'
 
 Each answers `Healthy`.
 
-6. Start the pipeline once by hand and check that both of its jobs pass: `ci` on GitHub's machines,
-   then `deploy` on this computer. From then on every push to `main` that changes more than Markdown
-   deploys on its own.
+6. Start the pipeline once by hand and check that all of its jobs pass: `ci` and `changes` on
+   GitHub's machines, then `deploy` on this computer. From then on every push to `main` that changes
+   more than Markdown deploys on its own.
 
 ```powershell
 gh workflow run deploy.yml --ref main
