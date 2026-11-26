@@ -4,6 +4,10 @@ Automated tests cover the services and their integrations. This document describ
 at which level and the principles behind it; the tools themselves are described in
 [Technologies](./technologies.md).
 
+**Status:** the BFF and the services exist as skeletons without domain code and have no test
+projects yet. The test categories and the one-to-one mirroring below describe intent for them; the
+sections from [Design token contrast](#design-token-contrast) onward describe tests that exist.
+
 ## Test categories
 
 - **Unit tests** — a single class or method in isolation.

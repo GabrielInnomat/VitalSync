@@ -32,6 +32,18 @@ public class HostedComposeProjectTests(PublishedComposeProject compose) : IClass
         Assert.Null(Scalar(compose.Service(name), "restart"));
     }
 
+    [Theory]
+    [MemberData(nameof(MigrationWorkerNames))]
+    public void MigrationWorker_NeedsOnlyTheDatabaseServer(string name)
+    {
+        var service = compose.Service(name);
+
+        Assert.Equal(["postgres"], Section(service, "depends_on").Keys.Cast<string>());
+        Assert.DoesNotContain(
+            Section(service, "environment").Keys.Cast<string>(),
+            key => key.Contains("messaging", StringComparison.OrdinalIgnoreCase));
+    }
+
     [Fact]
     public void PublishedPorts_AreExactlyTheIntendedOnesAndBoundToLoopback()
     {

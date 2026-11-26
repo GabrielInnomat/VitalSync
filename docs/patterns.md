@@ -4,6 +4,9 @@ This document describes the design patterns every VitalSync service applies. The
 is in [Architecture](./architecture.md); the products these patterns run on are in
 [Technologies](./technologies.md).
 
+**Status:** the services exist as skeletons without domain code, so everything below describes the
+intended design rather than shipped behavior.
+
 ## Domain-Driven Design
 
 The domain layer is the heart of each service. It models the business explicitly and depends on

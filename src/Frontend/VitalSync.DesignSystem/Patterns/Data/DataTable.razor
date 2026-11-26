@@ -82,6 +82,8 @@
 
     internal TimeSpan FilterDelay { get; set; } = TimeSpan.FromMilliseconds(800);
 
+    internal TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+
     internal RenderFragment? EmptyContent => _loading || !_loaded || HasActiveFilter ? RenderEmpty : null;
 
     private string CssClass => CssClasses.Merge("vs-data-table", AdditionalAttributes);
@@ -509,14 +511,15 @@
     {
         try
         {
-            await Task.Delay(FilterDelay, cancellationToken).ConfigureAwait(true);
+            await Task.Delay(FilterDelay, TimeProvider, cancellationToken).ConfigureAwait(true);
         }
         catch (OperationCanceledException)
         {
             return;
         }
 
-        await InvokeAsync(ApplyFiltersAsync).ConfigureAwait(true);
+        await InvokeAsync(() => cancellationToken.IsCancellationRequested ? Task.CompletedTask : ApplyFiltersAsync())
+            .ConfigureAwait(true);
     }
 
     private async Task ApplyFiltersAsync()

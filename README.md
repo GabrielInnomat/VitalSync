@@ -1,6 +1,5 @@
 # VitalSync
 
-[![build](https://github.com/GabrielInnomat/VitalSync/actions/workflows/build.yml/badge.svg)](https://github.com/GabrielInnomat/VitalSync/actions/workflows/build.yml)
 [![deploy](https://github.com/GabrielInnomat/VitalSync/actions/workflows/deploy.yml/badge.svg)](https://github.com/GabrielInnomat/VitalSync/actions/workflows/deploy.yml)
 
 > A cloud-native, distributed platform unifying **nutrition**, **fitness**, and **health analytics**

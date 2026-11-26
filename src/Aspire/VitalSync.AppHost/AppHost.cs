@@ -61,25 +61,19 @@ var nutritionMigrationService = builder.AddDotnetProject("nutrition-migration-se
     .WithReference(nutritionWrite)
     .WaitFor(nutritionWrite)
     .WithReference(nutritionRead)
-    .WaitFor(nutritionRead)
-    .WithReference(messaging)
-    .WaitFor(messaging);
+    .WaitFor(nutritionRead);
 
 var fitnessMigrationService = builder.AddDotnetProject("fitness-migration-service", "../../Services/Fitness/VitalSync.Fitness.MigrationService/VitalSync.Fitness.MigrationService.csproj")
     .WithReference(fitnessWrite)
     .WaitFor(fitnessWrite)
     .WithReference(fitnessRead)
-    .WaitFor(fitnessRead)
-    .WithReference(messaging)
-    .WaitFor(messaging);
+    .WaitFor(fitnessRead);
 
 var healthAnalyticsMigrationService = builder.AddDotnetProject("health-analytics-migration-service", "../../Services/HealthAnalytics/VitalSync.HealthAnalytics.MigrationService/VitalSync.HealthAnalytics.MigrationService.csproj")
     .WithReference(healthAnalyticsWrite)
     .WaitFor(healthAnalyticsWrite)
     .WithReference(healthAnalyticsRead)
-    .WaitFor(healthAnalyticsRead)
-    .WithReference(messaging)
-    .WaitFor(messaging);
+    .WaitFor(healthAnalyticsRead);
 
 var nutritionService = AsHostedService(builder.AddDotnetProject("nutrition-service", "../../Services/Nutrition/VitalSync.Nutrition.Api/VitalSync.Nutrition.Api.csproj"))
     .WithReference(nutritionRead)

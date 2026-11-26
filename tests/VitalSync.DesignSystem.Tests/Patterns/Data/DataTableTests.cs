@@ -2,6 +2,7 @@ using AngleSharp.Dom;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using VitalSync.DesignSystem.Accessibility;
 using VitalSync.DesignSystem.Patterns.Data;
 using Food = VitalSync.DesignSystem.Tests.Patterns.Data.DataTableTestHost.Food;
@@ -191,11 +192,34 @@ public sealed class DataTableTests : BunitContext
     public void Keeps_waiting_while_the_pause_has_not_passed()
     {
         var cut = RenderTable();
+        var time = ControlTime(cut);
 
         Type(cut, 0, "hafer");
-        Thread.Sleep(200);
+        time.Advance(FilterDelay(cut) - TimeSpan.FromTicks(1));
 
         Assert.Equal(4, RowNames(cut).Length);
+        time.Advance(TimeSpan.FromTicks(1));
+        cut.WaitForAssertion(() => Assert.Equal(["Haferflocken"], RowNames(cut)));
+    }
+
+    [Fact]
+    public async Task A_keystroke_while_the_finished_pause_waits_to_be_handled_starts_a_new_pause()
+    {
+        var cut = RenderTable();
+        var time = ControlTime(cut);
+        Type(cut, 0, "hafe");
+
+        await cut.InvokeAsync(() =>
+        {
+            Task.Run(() => time.Advance(FilterDelay(cut)), Xunit.TestContext.Current.CancellationToken)
+                .Wait(Xunit.TestContext.Current.CancellationToken);
+            Type(cut, 0, "hafer");
+        });
+        await cut.InvokeAsync(() => { });
+
+        Assert.Equal(4, RowNames(cut).Length);
+        time.Advance(FilterDelay(cut));
+        cut.WaitForAssertion(() => Assert.Equal(["Haferflocken"], RowNames(cut)));
     }
 
     [Fact]
@@ -575,6 +599,16 @@ public sealed class DataTableTests : BunitContext
 
     private static void Type(IRenderedComponent<DataTableTestHost> cut, int index, string text) =>
         FilterInput(cut, index).Input(text);
+
+    private static FakeTimeProvider ControlTime(IRenderedComponent<DataTableTestHost> cut)
+    {
+        var time = new FakeTimeProvider();
+        cut.FindComponent<DataTable<Food>>().Instance.TimeProvider = time;
+        return time;
+    }
+
+    private static TimeSpan FilterDelay(IRenderedComponent<DataTableTestHost> cut) =>
+        cut.FindComponent<DataTable<Food>>().Instance.FilterDelay;
 
     private static IElement SortButton(IRenderedComponent<DataTableTestHost> cut, int index) =>
         cut.FindAll("thead th")[index].QuerySelector("button")!;
