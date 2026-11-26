@@ -80,6 +80,25 @@ The same check runs two ways. `dotnet run --project tools/VitalSync.DesignTokens
 readable report for whoever is changing a color, and the test project asserts the same result, so the
 ordinary test run is the gate and no separate pipeline step is needed.
 
+## No comments
+
+The repository holds no comments of any kind, in any file. Generated code such as EF Core migrations
+is the only exemption. A convention that nothing checks erodes one review at a time, so this one is
+checked in two places.
+
+- **The build** fails on a comment in C#, Razor, CSS or JavaScript. A Roslyn analyzer, added to
+  every project, reads the C# syntax tree and the project's Razor, CSS and JavaScript files, so a
+  violation shows up in the editor and in the build output with the exact file and line. Code that the
+  Razor compiler generates is skipped, except for the lines it maps back to a `.razor` file, so a
+  comment written in an `@code` block is still caught.
+- **A repository test** checks every other file under version control: project files, JSON, workflow
+  YAML, PowerShell, `.editorconfig`, `.gitignore` and the code blocks in Markdown. A file type, or a
+  code block language, whose comment syntax the scanner does not know fails the test instead of
+  passing silently, so a new kind of file cannot slip past the rule.
+
+Both sides share one scanner per syntax, which understands strings, so a URL or a `/*` inside a
+string literal is not taken for a comment.
+
 ## Checks by hand
 
 Some accessibility properties cannot be proven by an automated browser with emulated settings,
@@ -97,7 +116,7 @@ page. A new or changed component is therefore also checked by hand:
   content does not fit.
 
 A finding from such a check is fixed in the component and, where the reason is not obvious from the
-code, written down in the [design system](./design-system.md) next to the component it concerns.
+code, written down in the [design system](./design-system/README.md) next to the component it concerns.
 
 ## Hosted composition
 

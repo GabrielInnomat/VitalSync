@@ -13,6 +13,16 @@
     <MSBuildTreatWarningsAsErrors>true</MSBuildTreatWarningsAsErrors>
     <WarningLevel>9999</WarningLevel>
     <TargetFramework>net10.0</TargetFramework>
+    <VitalSyncAnalyzersProject>$(MSBuildThisFileDirectory)tools/VitalSync.Analyzers/VitalSync.Analyzers.csproj</VitalSyncAnalyzersProject>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'VitalSync.Analyzers'">
+    <ProjectReference Include="$(VitalSyncAnalyzersProject)"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all"
+                      IsAspireProjectResource="false" />
+    <AdditionalFiles Include="**/*.css;**/*.js" Exclude="bin/**;obj/**" />
+  </ItemGroup>
 
 </Project>

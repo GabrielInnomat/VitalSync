@@ -18,7 +18,7 @@ code, or in the [Thessera](./technologies.md) repository for anything the platfo
 - **[Hosting roadmap](./hosting-roadmap.md)** — the stages the hosting grows through, what triggers
   each one and what each changes.
 - **[Testing](./testing.md)** — what is tested at which level, and the principles behind it.
-- **[Design System](./design-system.md)** — the token architecture, the accessibility rules the
+- **[Design System](./design-system/README.md)** — the token architecture, the accessibility rules the
   colors are held to, and the conventions that no token can enforce on its own.
 
 ## The business

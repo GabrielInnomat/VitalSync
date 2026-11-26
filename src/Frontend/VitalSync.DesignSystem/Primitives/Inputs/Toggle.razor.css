@@ -83,7 +83,6 @@
     cursor: not-allowed;
 }
 
-/* nur Rand, keine Füllung: in Forced Colors bleibt der Daumen so sichtbar */
 .vs-toggle__thumb {
     position: absolute;
     top: calc((var(--toggle-track-height) - var(--toggle-thumb-size)) / 2);

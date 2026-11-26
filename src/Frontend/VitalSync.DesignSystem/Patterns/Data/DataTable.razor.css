@@ -148,7 +148,6 @@
     padding: 0;
     overflow: hidden;
     clip-path: inset(50%);
-    /* pre keeps the trailing space that separates "Seite" from the number when read aloud. */
     white-space: pre;
     border: 0;
 }

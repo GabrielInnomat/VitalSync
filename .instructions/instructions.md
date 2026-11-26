@@ -48,7 +48,7 @@ VitalSync/
 │   ├── Frontend/                   VitalSync.Web | VitalSync.DesignSystem (RCL: tokens + components)
 │   └── Services/                   Nutrition | Fitness | HealthAnalytics, each Api + MigrationService
 ├── docs/                           architecture.md, patterns.md, technologies.md, testing.md,
-│                                   design-system.md, hosting.md, hosting-roadmap.md,
+│                                   design-system/, hosting.md, hosting-roadmap.md,
 │                                   glossary.md, domains/
 ├── tools/                          build-time checks, hosting scripts and the operations guide,
 │                                   not shipped
@@ -78,13 +78,14 @@ Bounded-context decomposition is iterative — see `docs/domains/`.
   there: the connection names **are** the Aspire resource names, and `AddServiceDefaults()` already
   registers the OpenTelemetry sources `Thessera`, `Npgsql`, `Wolverine` and `Marten` — do not re-add
   them.
-- **No comments** — not in `*.cs`, `*.csproj`, workflow YAML, or code examples in `*.md`.
-- **CSS is the one exception, and a narrow one.** A comment is allowed only where the value would
-  otherwise read as a mistake and be "fixed": a deliberate duplicate, a shade that must not be
-  reused, a unit chosen to work around browser behavior. One line, stating the constraint. Never
-  a value that a tool computes — a contrast ratio in a comment goes stale the moment a color
-  changes, and the check in `tools/VitalSync.DesignTokens.Contrast` already owns those numbers.
-  Rationale, derivations and conventions belong in `docs/`, not in the stylesheet.
+- **No comments, anywhere, of any kind** — no line, trailing, block or XML documentation comments.
+  This covers every file: C#, Razor (`@* *@` and HTML comments), CSS, JavaScript, JSON, project and
+  props files, workflow YAML, PowerShell, `.editorconfig`, `.gitignore`, and code examples in
+  `*.md`. There is no exception for CSS. Knowledge a comment would carry belongs in a clearer name or
+  in `docs/`. Only generated code is exempt, such as EF Core migrations. The rule is enforced: the
+  analyzer in `tools/VitalSync.Analyzers` fails the build with `VSY0001` on comments in C#, Razor,
+  CSS and JavaScript, and a repository test in `tests/VitalSync.Analyzers.Tests` checks every other
+  file. A file type without known comment syntax fails that test until it is added to the scanner.
 - **No FluentAssertions** — xUnit built-in asserts only.
 - **Every HTML and CSS change must be WCAG 2.1 AA conformant.** Colour contrast is enforced by
   `tools/VitalSync.DesignTokens.Contrast`, but AA covers more than contrast: keyboard reachability,

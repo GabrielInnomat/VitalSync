@@ -43,7 +43,6 @@ a.vs-badge {
     padding: 0;
     overflow: hidden;
     clip-path: inset(50%);
-    /* pre keeps the trailing space that separates the prefix from the label when read aloud. */
     white-space: pre;
     border: 0;
 }

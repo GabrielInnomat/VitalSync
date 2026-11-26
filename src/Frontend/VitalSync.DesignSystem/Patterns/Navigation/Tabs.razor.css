@@ -1,5 +1,4 @@
 .vs-tabs__list {
-    /* nicht entfernen: sonst drückt die Reihe ihren Container breiter, statt sich zu stapeln */
     contain: inline-size;
     display: flex;
     flex-wrap: wrap;
@@ -82,7 +81,6 @@
     flex-direction: column;
 }
 
-    /* unsichtbare halbfette Kopie: hält die Breite fest, damit beim Wechsel nichts springt */
     .vs-tabs__title::after {
         content: attr(data-text);
         height: 0;

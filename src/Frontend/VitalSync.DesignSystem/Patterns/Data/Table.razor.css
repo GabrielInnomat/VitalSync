@@ -1,5 +1,4 @@
 .vs-table {
-    /* nicht entfernen: sonst drückt eine breite Tabelle ihren Container breiter, statt zu scrollen */
     container-type: inline-size;
     position: relative;
 }

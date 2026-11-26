@@ -1,6 +1,3 @@
-/* VitalSync Design System - Tokens. Begruendungen und Konventionen: docs/design-system.md.
-   Kontrastwerte stehen bewusst nicht hier, sie werden von tools/VitalSync.DesignTokens.Contrast berechnet. */
-
 :root {
   --neutral-50:  #F8FAFC;
   --neutral-100: #F1F5F9;
@@ -8,7 +5,6 @@
   --neutral-300: #CBD5E1;
   --neutral-400: #94A3B8;
   --neutral-500: #64748B;
-  /* Zwischenstufe ausserhalb der Slate-Skala: Placeholder braucht sie fuer 4.5:1 */
   --neutral-550: #5B6B81;
   --neutral-600: #475569;
   --neutral-700: #334155;
@@ -30,14 +26,12 @@
 
   --green-50:  #F0FDF4;
   --green-400: #4ADE80;
-  /* ungenutzt: verfehlt 3:1 auf der Card */
   --green-600: #16A34A;
   --green-700: #15803D;
   --green-950: #052E16;
 
   --amber-50:  #FFFBEB;
   --amber-400: #FBBF24;
-  /* ungenutzt: verfehlt 3:1 auf der Card */
   --amber-600: #D97706;
   --amber-700: #B45309;
   --amber-950: #451A03;
@@ -50,7 +44,6 @@
   --red-800: #991B1B;
   --red-950: #450A0A;
 
-  /* Aus Okabe-Ito abgeleitet. Werte nur zusammen mit der Trennungspruefung aendern, siehe docs/design-system.md */
   --data-1-light: #C07500;
   --data-2-light: #0090C6;
   --data-3-light: #007C49;
@@ -76,7 +69,6 @@
 
   --font-size-100: 0.875rem;
   --font-size-200: 1rem;
-  /* 20px: die 3:1-Ausnahme aus 1.4.3 gilt hier NUR ab bold */
   --font-size-300: 1.25rem;
   --font-size-400: 1.5625rem;
   --font-size-500: 1.953rem;
@@ -123,7 +115,6 @@
   --icon-size-lg: 1.5rem;
   --icon-size-xl: 2rem;
 
-  /* nur Nicht-Text; Text nimmt --color-text-disabled, nie beides */
   --opacity-disabled: 0.5;
   --opacity-hover-overlay: 0.08;
   --opacity-pressed-overlay: 0.12;
@@ -152,7 +143,6 @@
   --color-border-subtle: var(--neutral-200);
   --color-border-default: var(--neutral-300);
 
-  /* Grenze bedienbarer Elemente, 1.4.11: nicht --color-border-default verwenden */
   --color-border-interactive: var(--neutral-500);
   --color-border-interactive-hover: var(--neutral-600);
 
@@ -165,7 +155,6 @@
   --color-action-primary: var(--blue-600);
   --color-action-primary-hover: var(--blue-700);
 
-  /* absichtlich neutral statt Markenfarbe, siehe docs/design-system.md */
   --color-focus-ring: var(--neutral-900);
   --color-focus-ring-offset: #FFFFFF;
 
@@ -198,7 +187,6 @@
   --color-border-warning: var(--amber-700);
   --color-icon-warning: var(--amber-700);
 
-  /* Bewusst eigener Wert statt weiterer Abdunkelung von red-700, siehe docs/design-system.md */
   --color-surface-critical-hover: var(--red-800);
 
   --color-surface-disabled: var(--neutral-200);
@@ -210,11 +198,9 @@
   --color-data-nutrition: var(--data-1-light);
 
   --color-background-elevated-1: var(--color-background-surface);
-  /* Stufe 2 und 3 sind im Light Mode absichtlich gleich, siehe docs/design-system.md */
   --color-background-elevated-2: #FFFFFF;
   --color-background-elevated-3: #FFFFFF;
 
-  /* trennt das Feld NICHT von der Card, das leistet --color-border-interactive */
   --color-background-input: #FFFFFF;
 
   --color-scrim: color-mix(in srgb, var(--neutral-950) calc(var(--opacity-scrim) * 100%), transparent);
@@ -296,10 +282,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   :root {
-    /* nicht 0ms: dann feuert transitionend in manchen Browsern nicht */
     --motion-duration-fast: 0.01ms;
     --motion-duration-base: 0.01ms;
-    /* länger statt kürzer: eine Endlosdrehung mit 0.01ms würde rasen statt ruhen */
     --motion-duration-spin: 3000ms;
   }
 }
