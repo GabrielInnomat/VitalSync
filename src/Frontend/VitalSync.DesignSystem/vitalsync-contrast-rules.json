@@ -2038,6 +2038,206 @@
       "requirement": "non-text"
     },
     {
+      "id": "data-table-legend-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Legend above the filters of a data table, on the page background",
+      "foreground": "--data-table-legend-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-legend-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Legend above the filters of a data table, inside a card",
+      "foreground": "--data-table-legend-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-link-on-background",
+      "criterion": "1.4.3",
+      "description": "Reset link of a data table, on the page background",
+      "foreground": "--data-table-link-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-link-on-card",
+      "criterion": "1.4.3",
+      "description": "Reset link of a data table, inside a card",
+      "foreground": "--data-table-link-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-link-hover-on-background",
+      "criterion": "1.4.3",
+      "description": "Hovered reset link of a data table, on the page background",
+      "foreground": "--data-table-link-text-color-hover",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-link-hover-on-card",
+      "criterion": "1.4.3",
+      "description": "Hovered reset link of a data table, inside a card",
+      "foreground": "--data-table-link-text-color-hover",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-sort-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Sort button in a data table header, on the page background",
+      "foreground": "--data-table-sort-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-sort-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Sort button in a data table header, inside a card",
+      "foreground": "--data-table-sort-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-sort-text-hover-on-background",
+      "criterion": "1.4.3",
+      "description": "Hovered sort button in a data table header, on the page background",
+      "foreground": "--data-table-sort-text-color-hover",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-sort-text-hover-on-card",
+      "criterion": "1.4.3",
+      "description": "Hovered sort button in a data table header, inside a card",
+      "foreground": "--data-table-sort-text-color-hover",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-sort-state-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Sort direction under a data table header, on the page background",
+      "foreground": "--data-table-sort-state-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-sort-state-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Sort direction under a data table header, inside a card",
+      "foreground": "--data-table-sort-state-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-sort-icon-idle-on-background",
+      "criterion": "1.4.11",
+      "description": "Icon of a sortable, unsorted data table column, on the page background",
+      "foreground": "--data-table-sort-icon-color-idle",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-table-sort-icon-idle-on-card",
+      "criterion": "1.4.11",
+      "description": "Icon of a sortable, unsorted data table column, inside a card",
+      "foreground": "--data-table-sort-icon-color-idle",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-table-page-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Page link of a data table, on the page background",
+      "foreground": "--data-table-page-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-page-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Page link of a data table, inside a card",
+      "foreground": "--data-table-page-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-page-text-hover-on-background",
+      "criterion": "1.4.3",
+      "description": "Hovered page link of a data table, on the page background",
+      "foreground": "--data-table-page-text-color-hover",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-page-text-hover-on-card",
+      "criterion": "1.4.3",
+      "description": "Hovered page link of a data table, inside a card",
+      "foreground": "--data-table-page-text-color-hover",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "data-table-page-border-on-background",
+      "criterion": "1.4.11",
+      "description": "Border of a page link of a data table, on the page background",
+      "foreground": "--data-table-page-border-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-table-page-border-on-card",
+      "criterion": "1.4.11",
+      "description": "Border of a page link of a data table, inside a card",
+      "foreground": "--data-table-page-border-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-table-page-border-hover-on-background",
+      "criterion": "1.4.11",
+      "description": "Border of a hovered page link of a data table, on the page background",
+      "foreground": "--data-table-page-border-color-hover",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-table-page-border-hover-on-card",
+      "criterion": "1.4.11",
+      "description": "Border of a hovered page link of a data table, inside a card",
+      "foreground": "--data-table-page-border-color-hover",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-table-page-current-on-background",
+      "criterion": "1.4.11",
+      "description": "Fill of the current page of a data table, on the page background",
+      "foreground": "--data-table-page-current-background",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-table-page-current-on-card",
+      "criterion": "1.4.11",
+      "description": "Fill of the current page of a data table, inside a card",
+      "foreground": "--data-table-page-current-background",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "data-table-page-current-text-on-fill",
+      "criterion": "1.4.3",
+      "description": "Number of the current page of a data table on its fill",
+      "foreground": "--data-table-page-current-text-color",
+      "background": "--data-table-page-current-background",
+      "requirement": "text-normal"
+    },
+    {
       "id": "toast-success-text-on-fill",
       "criterion": "1.4.3",
       "description": "Title and text of a success toast on its fill",
@@ -2508,6 +2708,326 @@
       "foreground": "--page-header-description-text-color",
       "background": "--color-background-primary",
       "requirement": "text-normal"
+    },
+    {
+      "id": "empty-state-title-on-background",
+      "criterion": "1.4.3",
+      "description": "Title of an empty state, on the page background",
+      "foreground": "--empty-state-title-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "empty-state-title-on-card",
+      "criterion": "1.4.3",
+      "description": "Title of an empty state, inside a card",
+      "foreground": "--empty-state-title-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "empty-state-text-on-background",
+      "criterion": "1.4.3",
+      "description": "Text of an empty state, on the page background",
+      "foreground": "--empty-state-text-color",
+      "background": "--color-background-primary",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "empty-state-text-on-card",
+      "criterion": "1.4.3",
+      "description": "Text of an empty state, inside a card",
+      "foreground": "--empty-state-text-color",
+      "background": "--card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "empty-state-icon-on-background",
+      "criterion": "1.4.11",
+      "description": "Icon of an empty state, on the page background",
+      "foreground": "--empty-state-icon-color",
+      "background": "--color-background-primary",
+      "requirement": "non-text"
+    },
+    {
+      "id": "empty-state-icon-on-card",
+      "criterion": "1.4.11",
+      "description": "Icon of an empty state, inside a card",
+      "foreground": "--empty-state-icon-color",
+      "background": "--card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "vitals-card-title-on-card",
+      "criterion": "1.4.3",
+      "description": "Title of a vitals card",
+      "foreground": "--vitals-card-title-text-color",
+      "background": "--vitals-card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "vitals-card-link-on-card",
+      "criterion": "1.4.3",
+      "description": "Linked title of a vitals card",
+      "foreground": "--vitals-card-link-text-color",
+      "background": "--vitals-card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "vitals-card-link-hover-on-card",
+      "criterion": "1.4.3",
+      "description": "Linked title of a vitals card, hovered",
+      "foreground": "--vitals-card-link-text-color-hover",
+      "background": "--vitals-card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "vitals-card-value-on-card",
+      "criterion": "1.4.3",
+      "description": "Value of a vitals card",
+      "foreground": "--vitals-card-value-text-color",
+      "background": "--vitals-card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "vitals-card-unit-on-card",
+      "criterion": "1.4.3",
+      "description": "Unit next to the value of a vitals card",
+      "foreground": "--vitals-card-unit-text-color",
+      "background": "--vitals-card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "vitals-card-detail-on-card",
+      "criterion": "1.4.3",
+      "description": "Goal, trend and no-data text of a vitals card",
+      "foreground": "--vitals-card-detail-text-color",
+      "background": "--vitals-card-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "vitals-card-trend-icon-on-card",
+      "criterion": "1.4.11",
+      "description": "Trend arrow of a vitals card",
+      "foreground": "--vitals-card-trend-icon-color",
+      "background": "--vitals-card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "vitals-card-accent-on-card",
+      "criterion": "1.4.11",
+      "description": "Icon and goal bar of a vitals card without a category",
+      "foreground": "--vitals-card-accent-color",
+      "background": "--vitals-card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "vitals-card-accent-activity-on-card",
+      "criterion": "1.4.11",
+      "description": "Icon and goal bar of an activity vitals card",
+      "foreground": "--vitals-card-accent-color-activity",
+      "background": "--vitals-card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "vitals-card-accent-nutrition-on-card",
+      "criterion": "1.4.11",
+      "description": "Icon and goal bar of a nutrition vitals card",
+      "foreground": "--vitals-card-accent-color-nutrition",
+      "background": "--vitals-card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "vitals-card-accent-heartrate-on-card",
+      "criterion": "1.4.11",
+      "description": "Icon and goal bar of a heart rate vitals card",
+      "foreground": "--vitals-card-accent-color-heartrate",
+      "background": "--vitals-card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "vitals-card-accent-sleep-on-card",
+      "criterion": "1.4.11",
+      "description": "Icon and goal bar of a sleep vitals card",
+      "foreground": "--vitals-card-accent-color-sleep",
+      "background": "--vitals-card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "vitals-card-bar-on-track",
+      "criterion": "1.4.11",
+      "description": "Goal bar fill of a vitals card without a category, on its track",
+      "foreground": "--vitals-card-accent-color",
+      "background": "--vitals-card-bar-track-color",
+      "requirement": "non-text"
+    },
+    {
+      "id": "vitals-card-bar-activity-on-track",
+      "criterion": "1.4.11",
+      "description": "Goal bar fill of an activity vitals card, on its track",
+      "foreground": "--vitals-card-accent-color-activity",
+      "background": "--vitals-card-bar-track-color",
+      "requirement": "non-text"
+    },
+    {
+      "id": "vitals-card-bar-nutrition-on-track",
+      "criterion": "1.4.11",
+      "description": "Goal bar fill of a nutrition vitals card, on its track",
+      "foreground": "--vitals-card-accent-color-nutrition",
+      "background": "--vitals-card-bar-track-color",
+      "requirement": "non-text"
+    },
+    {
+      "id": "vitals-card-bar-heartrate-on-track",
+      "criterion": "1.4.11",
+      "description": "Goal bar fill of a heart rate vitals card, on its track",
+      "foreground": "--vitals-card-accent-color-heartrate",
+      "background": "--vitals-card-bar-track-color",
+      "requirement": "non-text"
+    },
+    {
+      "id": "vitals-card-bar-sleep-on-track",
+      "criterion": "1.4.11",
+      "description": "Goal bar fill of a sleep vitals card, on its track",
+      "foreground": "--vitals-card-accent-color-sleep",
+      "background": "--vitals-card-bar-track-color",
+      "requirement": "non-text"
+    },
+    {
+      "id": "vitals-card-bar-track-border-on-card",
+      "criterion": "1.4.11",
+      "description": "Outline of the goal bar track of a vitals card",
+      "foreground": "--vitals-card-bar-track-border-color",
+      "background": "--vitals-card-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "metric-chart-title-on-card",
+      "criterion": "1.4.3",
+      "description": "Title of a metric chart",
+      "foreground": "--metric-chart-title-text-color",
+      "background": "--metric-chart-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "metric-chart-value-on-card",
+      "criterion": "1.4.3",
+      "description": "Latest value of a metric chart",
+      "foreground": "--metric-chart-value-text-color",
+      "background": "--metric-chart-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "metric-chart-unit-on-card",
+      "criterion": "1.4.3",
+      "description": "Unit next to the latest value of a metric chart",
+      "foreground": "--metric-chart-unit-text-color",
+      "background": "--metric-chart-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "metric-chart-detail-on-card",
+      "criterion": "1.4.3",
+      "description": "Summary sentence, date and legend of a metric chart",
+      "foreground": "--metric-chart-detail-text-color",
+      "background": "--metric-chart-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "metric-chart-axis-on-card",
+      "criterion": "1.4.3",
+      "description": "Axis labels of a metric chart",
+      "foreground": "--metric-chart-axis-text-color",
+      "background": "--metric-chart-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "metric-chart-toggle-on-card",
+      "criterion": "1.4.3",
+      "description": "Table toggle of a metric chart",
+      "foreground": "--metric-chart-toggle-text-color",
+      "background": "--metric-chart-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "metric-chart-toggle-hover-on-card",
+      "criterion": "1.4.3",
+      "description": "Hovered table toggle of a metric chart",
+      "foreground": "--metric-chart-toggle-text-color-hover",
+      "background": "--metric-chart-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "metric-chart-link-on-card",
+      "criterion": "1.4.3",
+      "description": "Link at the bottom of a metric chart",
+      "foreground": "--metric-chart-link-text-color",
+      "background": "--metric-chart-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "metric-chart-link-hover-on-card",
+      "criterion": "1.4.3",
+      "description": "Hovered link at the bottom of a metric chart",
+      "foreground": "--metric-chart-link-text-color-hover",
+      "background": "--metric-chart-background",
+      "requirement": "text-normal"
+    },
+    {
+      "id": "metric-chart-series-on-card",
+      "criterion": "1.4.11",
+      "description": "Bars, line and dots of a metric chart without a category",
+      "foreground": "--metric-chart-series-color",
+      "background": "--metric-chart-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "metric-chart-series-activity-on-card",
+      "criterion": "1.4.11",
+      "description": "Bars, line and dots of an activity metric chart",
+      "foreground": "--metric-chart-series-color-activity",
+      "background": "--metric-chart-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "metric-chart-series-nutrition-on-card",
+      "criterion": "1.4.11",
+      "description": "Bars, line and dots of a nutrition metric chart",
+      "foreground": "--metric-chart-series-color-nutrition",
+      "background": "--metric-chart-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "metric-chart-series-heartrate-on-card",
+      "criterion": "1.4.11",
+      "description": "Bars, line and dots of a heart rate metric chart",
+      "foreground": "--metric-chart-series-color-heartrate",
+      "background": "--metric-chart-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "metric-chart-series-sleep-on-card",
+      "criterion": "1.4.11",
+      "description": "Bars, line and dots of a sleep metric chart",
+      "foreground": "--metric-chart-series-color-sleep",
+      "background": "--metric-chart-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "metric-chart-missing-on-card",
+      "criterion": "1.4.11",
+      "description": "Dashed outline marking a day without data in a metric chart",
+      "foreground": "--metric-chart-missing-color",
+      "background": "--metric-chart-background",
+      "requirement": "non-text"
+    },
+    {
+      "id": "metric-chart-goal-on-card",
+      "criterion": "1.4.11",
+      "description": "Dashed goal line of a metric chart",
+      "foreground": "--metric-chart-goal-color",
+      "background": "--metric-chart-background",
+      "requirement": "non-text"
     }
   ],
   "waivers": [],

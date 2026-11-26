@@ -24,6 +24,11 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseRequestLocalization(new RequestLocalizationOptions()
+    .SetDefaultCulture("de-CH")
+    .AddSupportedCultures("de-CH")
+    .AddSupportedUICultures("de-CH"));
+
 app.UseAntiforgery();
 
 app.UseOutputCache();

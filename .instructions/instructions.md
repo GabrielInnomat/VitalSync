@@ -52,7 +52,6 @@ VitalSync/
 │                                   glossary.md, domains/
 ├── tools/                          build-time checks, hosting scripts and the operations guide,
 │                                   not shipped
-├── plan.md                         throwaway: what is left to build; deleted when it is
 └── tests/
 ```
 
@@ -91,6 +90,8 @@ Bounded-context decomposition is iterative — see `docs/domains/`.
   `tools/VitalSync.DesignTokens.Contrast`, but AA covers more than contrast: keyboard reachability,
   visible focus, semantic landmarks and headings, `aria-*` used correctly, and never colour as the
   only carrier of meaning (state, current-page, error, etc. all need a second, non-colour cue).
+- **No "ß" in German text.** The interface is German for Switzerland (`de-CH`), which writes "ss"
+  instead — "schliessen", "ausserhalb".
 
 ## Documentation
 

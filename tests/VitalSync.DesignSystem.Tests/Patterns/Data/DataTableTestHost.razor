@@ -1,0 +1,18 @@
+@using VitalSync.DesignSystem.Patterns.Data
+
+<DataTable TItem="Food" Items="Items" ItemsProvider="ItemsProvider" Caption="Lebensmittel" QueryName="essen">
+    <DataTableColumn Title="Name" Value="food => food.Name" Key="name" Sortable="true" Filterable="true" />
+    <DataTableColumn Title="Energie" Value="food => food.Energy" Key="energie" Sortable="true" Filterable="true" />
+    <DataTableColumn Title="Erfasst" Value="food => food.Added" Key="erfasst" Filterable="true" />
+    <DataTableTemplateColumn Title="Notiz">@context.Name!</DataTableTemplateColumn>
+</DataTable>
+
+@code {
+    [Parameter]
+    public IEnumerable<Food>? Items { get; set; }
+
+    [Parameter]
+    public DataTableItemsProvider<Food>? ItemsProvider { get; set; }
+
+    public sealed record Food(string Name, int Energy, DateOnly Added);
+}

@@ -1,0 +1,93 @@
+@page "/design-system/vitals-card"
+@layout GalleryLayout
+
+<PageTitle>Kennzahl · Design System · VitalSync</PageTitle>
+
+<h1>Kennzahl (<code>VitalsCard</code>)</h1>
+<p>
+    Eine Kennzahl zeigt einen einzelnen Messwert auf einen Blick: was gemessen wird, den Wert mit
+    Einheit, auf Wunsch das Ziel und die Veränderung. Der Titel ist eine echte Überschrift, deren Stufe
+    die Seite festlegt. Mit einem Link wird die ganze Karte anklickbar, bleibt aber ein einziger
+    Tabulatorstopp. Pfeile, Symbol und Balken sind Schmuck; alles, was sie zeigen, steht auch im Text.
+    Zahlen erscheinen im Schweizer Format. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    <section data-theme="light" class="vs-gallery__theme-panel">
+        <h2>Hell</h2>
+        @renderStates()
+    </section>
+    <section data-theme="dark" class="vs-gallery__theme-panel">
+        <h2>Dunkel</h2>
+        @renderStates()
+    </section>
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;VitalsCard Title="Schritte" HeadingLevel="2" Value="steps" Unit="Schritte"
+            Goal="10000m" Trend="stepsTrend" Icon="SystemIconName.Footprints"
+            Category="VitalsCategory.Activity" Href="aktivitaet" /&gt;
+
+&lt;VitalsCard Title="Schlaf" HeadingLevel="2" Value="sleepHours" Unit="Stunden" Decimals="1"
+            Icon="SystemIconName.Moon" Category="VitalsCategory.Sleep" /&gt;
+</code></pre>
+
+@code {
+    private static readonly VitalsTrend StepsTrend =
+        new(VitalsTrendDirection.Up, "1’200 Schritte mehr als gestern");
+
+    private static readonly VitalsTrend PulseTrend =
+        new(VitalsTrendDirection.Steady, "Gleich wie gestern");
+
+    private static readonly VitalsTrend SleepTrend =
+        new(VitalsTrendDirection.Down, "0.5 Stunden weniger als gestern");
+
+    private static readonly VitalsTrend EnergyTrend =
+        new(VitalsTrendDirection.Down, "8% weniger als gestern");
+
+    private static RenderFragment renderStates() => @<text>
+        <h3>Mit Ziel, Veränderung und Link</h3>
+        <div class="vs-vitals-card-gallery__item">
+            <VitalsCard Title="Schritte" HeadingLevel="4" Value="7500m" Unit="Schritte" Goal="10000m"
+                        Trend="StepsTrend" Icon="SystemIconName.Footprints"
+                        Category="VitalsCategory.Activity" Href="design-system/vitals-card" />
+        </div>
+
+        <h3>Ohne Link</h3>
+        <div class="vs-vitals-card-gallery__item">
+            <VitalsCard Title="Ruhepuls" HeadingLevel="4" Value="62m" Unit="Schläge pro Minute"
+                        Trend="PulseTrend" Icon="SystemIconName.Heartbeat" Category="VitalsCategory.HeartRate" />
+        </div>
+
+        <h3>Mit Nachkommastelle</h3>
+        <div class="vs-vitals-card-gallery__item">
+            <VitalsCard Title="Schlaf" HeadingLevel="4" Value="7.5m" Unit="Stunden" Decimals="1" Goal="8m"
+                        Trend="SleepTrend" Icon="SystemIconName.Moon" Category="VitalsCategory.Sleep" />
+        </div>
+
+        <h3>Ziel überschritten</h3>
+        <div class="vs-vitals-card-gallery__item">
+            <VitalsCard Title="Energie" HeadingLevel="4" Value="2450m" Unit="kcal" Goal="2200m"
+                        Trend="EnergyTrend" Icon="SystemIconName.ForkKnife" Category="VitalsCategory.Nutrition" />
+        </div>
+
+        <h3>Ohne Bereich und Symbol</h3>
+        <div class="vs-vitals-card-gallery__item">
+            <VitalsCard Title="Gewicht" HeadingLevel="4" Value="72.4m" Unit="kg" Decimals="1" />
+        </div>
+
+        <h3>Noch keine Daten</h3>
+        <div class="vs-vitals-card-gallery__item">
+            <VitalsCard Title="Schlaf" HeadingLevel="4" Value="null" Unit="Stunden" Decimals="1" Goal="8m"
+                        Icon="SystemIconName.Moon" Category="VitalsCategory.Sleep" />
+        </div>
+
+        <h3>Langer Text bei wenig Platz</h3>
+        <div class="vs-vitals-card-gallery__item vs-vitals-card-gallery__item--narrow">
+            <VitalsCard Title="Durchschnittliche Herzfrequenz während des Trainings" HeadingLevel="4"
+                        Value="138m" Unit="Schläge pro Minute" Icon="SystemIconName.Heartbeat"
+                        Category="VitalsCategory.HeartRate" Href="design-system/vitals-card" />
+        </div>
+    </text>;
+}

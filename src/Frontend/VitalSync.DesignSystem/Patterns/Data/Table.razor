@@ -26,6 +26,7 @@
     private readonly string _id = $"vs-table-{Guid.NewGuid():N}";
     private readonly List<TableColumn<TItem>> _columns = [];
     private ElementReference _scroller;
+    private ElementReference _caption;
     private Task<IJSObjectReference>? _module;
     private DotNetObjectReference<Table<TItem>>? _self;
     private bool _collecting;
@@ -51,6 +52,17 @@
     private string CaptionId => $"{_id}-caption";
 
     private bool Focusable => !RendererInfo.IsInteractive || _scrollable;
+
+    private protected virtual bool CaptionFocusable => false;
+
+    private protected virtual RenderFragment? EmptyContent => null;
+
+    private protected virtual RenderFragment HeaderContent(int index, TableColumn<TItem> column) =>
+        builder => builder.AddContent(0, column.Title);
+
+    private protected virtual string? HeaderSort(int index) => null;
+
+    internal ValueTask FocusCaptionAsync() => _caption.FocusAsync();
 
     protected override void OnParametersSet()
     {
@@ -163,14 +175,19 @@
                 var empty = true;
             }
             <table class="vs-table__table">
-                <caption id="@CaptionId" class="vs-table__caption">
+                <caption @key="Caption"
+                         @ref="_caption"
+                         id="@CaptionId"
+                         class="vs-table__caption"
+                         tabindex="@(CaptionFocusable ? "-1" : null)">
                     <span class="vs-table__caption-text">@Caption</span>
                 </caption>
                 <thead>
                     <tr>
-                        @foreach (var column in _columns)
+                        @for (var i = 0; i < _columns.Count; i++)
                         {
-                            <th scope="col" class="@CellClass("vs-table__header", column)">@column.Title</th>
+                            var column = _columns[i];
+                            <th scope="col" class="@CellClass("vs-table__header", column)" aria-sort="@HeaderSort(i)">@HeaderContent(i, column)</th>
                         }
                     </tr>
                 </thead>
@@ -197,7 +214,16 @@
                     @if (empty)
                     {
                         <tr>
-                            <td class="vs-table__empty" colspan="@_columns.Count">@EmptyText</td>
+                            <td class="vs-table__empty" colspan="@_columns.Count">
+                                @if (EmptyContent is { } emptyContent)
+                                {
+                                    @emptyContent
+                                }
+                                else
+                                {
+                                    @EmptyText
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>

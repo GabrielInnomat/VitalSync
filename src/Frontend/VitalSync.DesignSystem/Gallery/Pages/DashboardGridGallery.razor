@@ -1,0 +1,78 @@
+@page "/design-system/dashboard-grid"
+@layout GalleryLayout
+@using VitalSync.DesignSystem.Layouts
+
+<PageTitle>Übersichtsraster · Design System · VitalSync</PageTitle>
+
+<h1>Übersichtsraster (<code>DashboardGrid</code>)</h1>
+<p>
+    Das Übersichtsraster ordnet Karten einer Übersicht an. Es ist eine Liste: Bildschirmleser nennen
+    die Anzahl der Karten, und die Reihenfolge im Code ist die Reihenfolge auf dem Bildschirm. Die
+    Spaltenzahl folgt dem verfügbaren Platz; wird es eng, etwa beim Zoomen auf 400 %, steht jede
+    Karte in voller Breite untereinander. Ein breiter Eintrag nimmt immer die ganze Zeile ein. Die
+    Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-dashboard-grid-gallery__themes">
+    <section data-theme="light" class="vs-gallery__theme-panel">
+        <h2>Hell</h2>
+        @renderGrid()
+    </section>
+    <section data-theme="dark" class="vs-gallery__theme-panel">
+        <h2>Dunkel</h2>
+        @renderGrid()
+    </section>
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;DashboardGrid&gt;
+    &lt;DashboardGridItem&gt;
+        &lt;VitalsCard Title="Schritte" HeadingLevel="2" Value="steps" Unit="Schritte" /&gt;
+    &lt;/DashboardGridItem&gt;
+    &lt;DashboardGridItem Wide&gt;
+        &lt;EmptyState Title="Noch kein Verlauf" HeadingLevel="2"&gt;…&lt;/EmptyState&gt;
+    &lt;/DashboardGridItem&gt;
+&lt;/DashboardGrid&gt;
+</code></pre>
+
+@code {
+    private static readonly VitalsTrend StepsTrend =
+        new(VitalsTrendDirection.Up, "1’200 Schritte mehr als gestern");
+
+    private static readonly VitalsTrend PulseTrend =
+        new(VitalsTrendDirection.Steady, "Gleich wie gestern");
+
+    private static RenderFragment renderGrid() => @<text>
+        <h3>Heute</h3>
+        <DashboardGrid>
+            <DashboardGridItem>
+                <VitalsCard Title="Schritte" HeadingLevel="4" Value="7500m" Unit="Schritte" Goal="10000m"
+                            Trend="StepsTrend" Icon="SystemIconName.Footprints"
+                            Category="VitalsCategory.Activity" Href="design-system/dashboard-grid" />
+            </DashboardGridItem>
+            <DashboardGridItem>
+                <VitalsCard Title="Energie" HeadingLevel="4" Value="1850m" Unit="kcal" Goal="2200m"
+                            Icon="SystemIconName.ForkKnife" Category="VitalsCategory.Nutrition"
+                            Href="design-system/dashboard-grid" />
+            </DashboardGridItem>
+            <DashboardGridItem>
+                <VitalsCard Title="Ruhepuls" HeadingLevel="4" Value="62m" Unit="Schläge pro Minute"
+                            Trend="PulseTrend" Icon="SystemIconName.Heartbeat"
+                            Category="VitalsCategory.HeartRate" Href="design-system/dashboard-grid" />
+            </DashboardGridItem>
+            <DashboardGridItem>
+                <VitalsCard Title="Schlaf" HeadingLevel="4" Value="null" Unit="Stunden" Decimals="1" Goal="8m"
+                            Icon="SystemIconName.Moon" Category="VitalsCategory.Sleep"
+                            Href="design-system/dashboard-grid" />
+            </DashboardGridItem>
+            <DashboardGridItem Wide>
+                <div class="vs-dashboard-grid-gallery__card">
+                    <EmptyState Title="Noch kein Verlauf" HeadingLevel="4" Icon="SystemIconName.ChartLine">
+                        Nach einer Woche mit Daten erscheint hier der Verlauf deiner Kennzahlen.
+                    </EmptyState>
+                </div>
+            </DashboardGridItem>
+        </DashboardGrid>
+    </text>;
+}

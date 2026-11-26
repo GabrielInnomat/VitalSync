@@ -1,0 +1,198 @@
+@page "/design-system/data-table"
+@layout GalleryLayout
+@rendermode InteractiveServer
+
+<PageTitle>Datentabelle · Design System · VitalSync</PageTitle>
+
+<h1>Datentabelle (<code>DataTable</code>, <code>DataTableColumn</code>, <code>DataTableTemplateColumn</code>)</h1>
+<p>
+    Eine Datentabelle ist eine Tabelle, die man filtern, sortieren und blättern kann. Jede filterbare
+    Spalte hat ein eigenes Suchfeld; alle Filter gelten zusammen. Text wird als Teil gesucht, Zahlen
+    und Daten verstehen Vergleiche wie <code>&lt;50</code> und Bereiche wie <code>10-20</code>.
+    Gefiltert wird 800 ms nach dem letzten Tastendruck, mit Enter oder beim Verlassen des Felds sofort.
+    Sortierung, Filter und Seite stehen in der Adresse, ein Link führt also genau hierher zurück. Die
+    Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    @foreach (var demo in _themes)
+    {
+        <section data-theme="@demo.Theme" class="vs-gallery__theme-panel">
+            <h2>@demo.Title</h2>
+
+            <h3>Auf der Seite</h3>
+            @RenderFoods($"{demo.Theme}-seite")
+
+            <h3>In einer Card</h3>
+            <div class="vs-data-table-gallery__card">
+                @RenderFoods($"{demo.Theme}-card")
+            </div>
+
+            <h3>Vom Server</h3>
+            <p>Die Zeilen kommen seitenweise von einem Dienst, der hier eine halbe Sekunde braucht.</p>
+            <DataTable TItem="Food" ItemsProvider="LoadFoodsAsync" Caption="Lebensmittel im Katalog" QueryName="@($"{demo.Theme}-server")">
+                <DataTableColumn Title="Lebensmittel" Value="food => food.Name" Key="name" Sortable="true" Filterable="true" />
+                <DataTableColumn Title="Energie (kcal)" Value="food => food.Energy" Key="energy" Sortable="true" Filterable="true" />
+                <DataTableColumn Title="Erfasst am" Value="food => food.Added" Key="added" Sortable="true" Filterable="true" />
+            </DataTable>
+
+            <h3>Wenig Platz</h3>
+            <div class="vs-gallery__narrow">
+                @RenderFoods($"{demo.Theme}-schmal")
+            </div>
+        </section>
+    }
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;DataTable Items="foods" Caption="Nährwerte pro 100 g" QueryName="foods"&gt;
+    &lt;DataTableColumn Title="Lebensmittel" Value="food =&gt; food.Name" Key="name" Sortable="true" Filterable="true" /&gt;
+    &lt;DataTableColumn Title="Energie (kcal)" Value="food =&gt; food.Energy" Key="energy" Sortable="true" Filterable="true" /&gt;
+    &lt;DataTableColumn Title="Erfasst am" Value="food =&gt; food.Added" Key="added" Sortable="true" Filterable="true" /&gt;
+    &lt;DataTableTemplateColumn Title="Bewertung"&gt;
+        &lt;Badge Variant="BadgeVariant.Success"&gt;Im Ziel&lt;/Badge&gt;
+    &lt;/DataTableTemplateColumn&gt;
+&lt;/DataTable&gt;
+
+&lt;DataTable ItemsProvider="LoadFoodsAsync" Caption="Lebensmittel im Katalog" QueryName="catalog"&gt;
+    &lt;DataTableColumn Title="Lebensmittel" Value="food =&gt; food.Name" Key="name" Sortable="true" Filterable="true" /&gt;
+&lt;/DataTable&gt;
+
+async ValueTask&lt;DataTableResult&lt;Food&gt;&gt; LoadFoodsAsync(DataTableRequest request, CancellationToken cancellationToken)
+{
+    var page = await catalog.SearchAsync(request.Filters, request.Sort, request.Skip, request.PageSize, cancellationToken);
+    return new DataTableResult&lt;Food&gt;(page.Items, page.TotalCount);
+}
+</code></pre>
+
+@code {
+    private static readonly Food[] Foods =
+    [
+        new("Apfel", 52, 0.3m, new(2026, 11, 2), true),
+        new("Banane", 89, 1.1m, new(2026, 11, 2), true),
+        new("Birne", 57, 0.4m, new(2026, 11, 3), true),
+        new("Haferflocken", 372, 13.5m, new(2026, 11, 3), true),
+        new("Vollkornbrot", 214, 7.0m, new(2026, 11, 4), true),
+        new("Weissbrot", 265, 8.0m, new(2026, 11, 4), false),
+        new("Linsen, gekocht", 116, 9.0m, new(2026, 11, 5), true),
+        new("Kichererbsen, gekocht", 164, 8.9m, new(2026, 11, 5), true),
+        new("Griechischer Joghurt", 97, 9.0m, new(2026, 11, 6), true),
+        new("Magerquark", 67, 12.0m, new(2026, 11, 6), true),
+        new("Emmentaler", 380, 28.0m, new(2026, 11, 7), false),
+        new("Hüttenkäse", 98, 11.1m, new(2026, 11, 7), true),
+        new("Ei, gekocht", 155, 12.6m, new(2026, 11, 8), true),
+        new("Pouletbrust", 165, 31.0m, new(2026, 11, 8), true),
+        new("Lachs", 208, 20.4m, new(2026, 11, 9), true),
+        new("Thunfisch in Wasser", 116, 25.5m, new(2026, 11, 9), true),
+        new("Tofu", 76, 8.0m, new(2026, 11, 10), true),
+        new("Mandeln", 579, 21.2m, new(2026, 11, 10), false),
+        new("Baumnüsse", 654, 15.2m, new(2026, 11, 11), false),
+        new("Olivenöl", 884, 0m, new(2026, 11, 11), false),
+        new("Butter", 717, 0.9m, new(2026, 11, 12), false),
+        new("Milchschokolade", 546, 7.7m, new(2026, 11, 12), false),
+        new("Dunkle Schokolade", 598, 7.8m, new(2026, 11, 13), false),
+        new("Kartoffeln, gekocht", 87, 1.9m, new(2026, 11, 13), true),
+        new("Reis, gekocht", 130, 2.7m, new(2026, 11, 14), true),
+        new("Vollkornteigwaren, gekocht", 124, 5.3m, new(2026, 11, 14), true),
+        new("Broccoli", 34, 2.8m, new(2026, 11, 15), true),
+        new("Rüebli", 41, 0.9m, new(2026, 11, 15), true),
+        new("Spinat", 23, 2.9m, new(2026, 11, 16), true),
+        new("Tomate", 18, 0.9m, new(2026, 11, 16), true),
+        new("Avocado", 160, 2.0m, new(2026, 11, 17), true),
+        new("Orangensaft", 45, 0.7m, new(2026, 11, 17), false),
+        new("Vollmilch", 64, 3.3m, new(2026, 11, 18), true),
+        new("Hafermilch", 46, 1.0m, new(2026, 11, 18), true),
+        new("Honig", 304, 0.3m, new(2026, 11, 19), false),
+        new("Gipfeli", 406, 8.2m, new(2026, 11, 19), false),
+        new("Rösti", 141, 2.4m, new(2026, 11, 20), false),
+        new("Birchermüesli", 120, 3.6m, new(2026, 11, 20), true),
+        new("Zopf", 299, 9.1m, new(2026, 11, 21), false),
+        new("Cervelat", 268, 12.5m, new(2026, 11, 21), false),
+        new("Raclettekäse", 357, 23.0m, new(2026, 11, 22), false),
+        new("Älplermagronen", 172, 6.4m, new(2026, 11, 22), false),
+        new("Gerstensuppe", 63, 2.3m, new(2026, 11, 23), true),
+        new("Nüsslisalat", 21, 1.8m, new(2026, 11, 23), true),
+        new("Zwetschgen", 47, 0.6m, new(2026, 11, 24), true),
+        new("Kürbis", 26, 1.0m, new(2026, 11, 24), true),
+        new("Quinoa, gekocht", 120, 4.4m, new(2026, 11, 25), true),
+        new("Erdnussbutter", 588, 25.1m, new(2026, 11, 25), false),
+        new("Hummus", 166, 7.9m, new(2026, 11, 26), true),
+        new("Mozzarella", 280, 18.0m, new(2026, 11, 26), false),
+        new("Studentenfutter", 480, 13.0m, new(2026, 11, 27), false),
+        new("Blaubeeren", 57, 0.7m, new(2026, 11, 27), true),
+        new("Erdbeeren", 32, 0.7m, new(2026, 11, 28), true),
+        new("Kiwi", 61, 1.1m, new(2026, 11, 28), true),
+        new("Mango", 60, 0.8m, new(2026, 11, 29), true),
+        new("Ananas", 50, 0.5m, new(2026, 11, 29), true),
+        new("Popcorn", 387, 12.9m, new(2026, 11, 30), false),
+        new("Chips", 536, 7.0m, new(2026, 11, 30), false),
+    ];
+
+    private readonly ThemeDemo[] _themes =
+    [
+        new("light", "Hell"),
+        new("dark", "Dunkel"),
+    ];
+
+    private static RenderFragment RenderFoods(string queryName) =>
+        @<DataTable Items="Foods" Caption="Nährwerte pro 100 g" QueryName="@queryName">
+            <DataTableColumn Title="Lebensmittel" Value="food => food.Name" Key="name" Sortable="true" Filterable="true" />
+            <DataTableColumn Title="Energie (kcal)" Value="food => food.Energy" Key="energy" Sortable="true" Filterable="true" />
+            <DataTableColumn Title="Eiweiss (g)" Value="food => food.Protein" Key="protein" Sortable="true" Filterable="true" />
+            <DataTableColumn Title="Erfasst am" Value="food => food.Added" Key="added" Sortable="true" Filterable="true" />
+            <DataTableTemplateColumn Title="Bewertung">
+                @if (context.InTarget)
+                {
+                    <Badge Variant="BadgeVariant.Success">Im Ziel</Badge>
+                }
+                else
+                {
+                    <Badge Variant="BadgeVariant.Warning">Viel Zucker oder Fett</Badge>
+                }
+            </DataTableTemplateColumn>
+        </DataTable>;
+
+    private static async ValueTask<DataTableResult<Food>> LoadFoodsAsync(
+        DataTableRequest request,
+        CancellationToken cancellationToken)
+    {
+        await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken).ConfigureAwait(true);
+        IEnumerable<Food> foods = Foods;
+
+        foreach (var filter in request.Filters)
+        {
+            foods = filter switch
+            {
+                DataTableTextFilter { Key: "name" } text =>
+                    foods.Where(food => food.Name.Contains(text.Text, StringComparison.CurrentCultureIgnoreCase)),
+                DataTableNumberFilter { Key: "energy" } number => foods.Where(food => number.Range.Contains(food.Energy)),
+                DataTableDateFilter { Key: "added" } date => foods.Where(food => date.Range.Contains(food.Added)),
+                _ => foods,
+            };
+        }
+
+        foods = request.Sort switch
+        {
+            { Key: "name", Descending: false } => foods.OrderBy(food => food.Name, StringComparer.CurrentCultureIgnoreCase),
+            { Key: "name", Descending: true } => foods.OrderByDescending(food => food.Name, StringComparer.CurrentCultureIgnoreCase),
+            { Key: "energy", Descending: false } => foods.OrderBy(food => food.Energy),
+            { Key: "energy", Descending: true } => foods.OrderByDescending(food => food.Energy),
+            { Key: "added", Descending: false } => foods.OrderBy(food => food.Added),
+            { Key: "added", Descending: true } => foods.OrderByDescending(food => food.Added),
+            _ => foods,
+        };
+
+        var all = foods.ToList();
+        return new DataTableResult<Food>([.. all.Skip(request.Skip).Take(request.PageSize)], all.Count);
+    }
+
+    private sealed record Food(string Name, int Energy, decimal Protein, DateOnly Added, bool InTarget);
+
+    private sealed class ThemeDemo(string theme, string title)
+    {
+        public string Theme { get; } = theme;
+
+        public string Title { get; } = title;
+    }
+}

@@ -1,0 +1,193 @@
+.vs-data-table {
+    display: grid;
+    gap: var(--data-table-gap);
+    min-inline-size: 0;
+    font-family: var(--font-family-ui);
+}
+
+.vs-data-table__filters {
+    display: grid;
+    gap: var(--data-table-filter-gap);
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.vs-data-table__legend {
+    margin-block-end: var(--data-table-filter-gap);
+    padding: 0;
+    color: var(--data-table-legend-text-color);
+    font-size: var(--data-table-legend-font-size);
+    font-weight: var(--data-table-legend-font-weight);
+    line-height: var(--line-height-tight);
+}
+
+.vs-data-table__filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--data-table-filter-min-width)), 1fr));
+    gap: var(--data-table-filter-gap);
+}
+
+.vs-data-table__filter {
+    min-inline-size: 0;
+}
+
+.vs-data-table__reset {
+    display: inline-flex;
+    align-items: center;
+    justify-self: start;
+    min-block-size: var(--touch-target-min);
+    color: var(--data-table-link-text-color);
+    text-decoration: underline;
+}
+
+    .vs-data-table__reset:hover {
+        color: var(--data-table-link-text-color-hover);
+    }
+
+.vs-data-table__no-results {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--space-3);
+}
+
+.vs-data-table__sort {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-content: flex-end;
+    align-items: center;
+    column-gap: var(--data-table-sort-gap);
+    min-block-size: var(--touch-target-min);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--data-table-sort-text-color);
+    font: inherit;
+    text-align: inherit;
+    cursor: pointer;
+}
+
+    .vs-data-table__sort:hover {
+        color: var(--data-table-sort-text-color-hover);
+    }
+
+        .vs-data-table__sort:hover .vs-data-table__sort-title {
+            text-decoration: underline;
+        }
+
+.vs-data-table__sort-state {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--data-table-sort-state-text-color);
+    font-size: var(--data-table-sort-state-font-size);
+    font-weight: var(--data-table-sort-state-font-weight);
+}
+
+.vs-data-table__sort-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+    .vs-data-table__sort-icon ::deep svg {
+        width: var(--data-table-sort-icon-size);
+        height: var(--data-table-sort-icon-size);
+    }
+
+.vs-data-table__sort-icon--idle {
+    color: var(--data-table-sort-icon-color-idle);
+}
+
+.vs-data-table__pages {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--data-table-page-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.vs-data-table__page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    box-sizing: border-box;
+    min-inline-size: var(--touch-target-min);
+    min-block-size: var(--touch-target-min);
+    padding-inline: var(--data-table-page-padding-inline);
+    border: var(--data-table-page-border-width) solid var(--data-table-page-border-color);
+    border-radius: var(--data-table-page-radius);
+    color: var(--data-table-page-text-color);
+    font-variant-numeric: tabular-nums;
+    text-decoration: none;
+}
+
+    .vs-data-table__page:hover {
+        border-color: var(--data-table-page-border-color-hover);
+        color: var(--data-table-page-text-color-hover);
+        text-decoration: underline;
+    }
+
+    .vs-data-table__page[aria-current="page"] {
+        border-color: var(--data-table-page-current-background);
+        background: var(--data-table-page-current-background);
+        color: var(--data-table-page-current-text-color);
+        font-weight: var(--data-table-page-current-font-weight);
+    }
+
+.vs-data-table__page-prefix {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    /* pre keeps the trailing space that separates "Seite" from the number when read aloud. */
+    white-space: pre;
+    border: 0;
+}
+
+.vs-data-table__step-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+    .vs-data-table__step-icon ::deep svg {
+        width: var(--data-table-page-icon-size);
+        height: var(--data-table-page-icon-size);
+    }
+
+    .vs-data-table__step-icon:dir(rtl) {
+        transform: scaleX(-1);
+    }
+
+.vs-data-table__gap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--touch-target-min);
+    color: var(--data-table-page-gap-text-color);
+}
+
+.vs-data-table__sort:focus-visible,
+.vs-data-table__page:focus-visible,
+.vs-data-table__reset:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+    box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+}
+
+@media (forced-colors: active) {
+    .vs-data-table__page[aria-current="page"] {
+        forced-color-adjust: none;
+        border-color: Highlight;
+        background: Highlight;
+        color: HighlightText;
+    }
+}

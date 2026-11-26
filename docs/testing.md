@@ -80,6 +80,25 @@ The same check runs two ways. `dotnet run --project tools/VitalSync.DesignTokens
 readable report for whoever is changing a color, and the test project asserts the same result, so the
 ordinary test run is the gate and no separate pipeline step is needed.
 
+## Checks by hand
+
+Some accessibility properties cannot be proven by an automated browser with emulated settings,
+because the behaviour lives in the assistive technology or the operating system rather than in the
+page. A new or changed component is therefore also checked by hand:
+
+- **With a screen reader.** JAWS is the reference, because it is the screen reader that disability
+  insurance in Switzerland pays for and supports. NVDA and Windows Narrator are optional and not
+  checked. What a screen reader announces — and what it keeps from an earlier state of the page —
+  can differ from what the DOM says, so a component counts as accessible only once it has been
+  heard, not just inspected.
+- **Under a Windows contrast theme,** light and dark. Forced colours replace every colour the page
+  sets, so borders, focus rings, states, icons and indicators have to stay visible without them.
+- **By a sighted person,** for what only shows on a real screen, such as which area scrolls when the
+  content does not fit.
+
+A finding from such a check is fixed in the component and, where the reason is not obvious from the
+code, written down in the [design system](./design-system.md) next to the component it concerns.
+
 ## Hosted composition
 
 The settings that apply only when the AppHost is published — restart policies, published ports,

@@ -1,0 +1,7 @@
+.vs-dashboard-grid__item {
+    min-width: 0;
+}
+
+.vs-dashboard-grid__item--wide {
+    grid-column: 1 / -1;
+}

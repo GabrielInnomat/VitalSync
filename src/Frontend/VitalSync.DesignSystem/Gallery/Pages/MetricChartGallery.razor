@@ -1,0 +1,110 @@
+@page "/design-system/metric-chart"
+@layout GalleryLayout
+
+<PageTitle>Diagramm · Design System · VitalSync</PageTitle>
+
+<h1>Diagramm (<code>MetricChart</code>)</h1>
+<p>
+    Das Diagramm zeigt den Verlauf einer Kennzahl über 7 oder 30 Tage: Säulen für Tagessummen, eine
+    Linie für Messwerte. Die Grafik selbst ist für Bildschirmleser ausgeblendet. Dafür stehen der
+    neueste Wert und ein Satz mit dem Wichtigsten darüber, und darunter lässt sich dieselbe Reihe
+    als Tabelle aufklappen. Tage ohne Daten sind gestrichelt markiert oder eine Lücke, nie eine Null.
+    Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    <section data-theme="light" class="vs-gallery__theme-panel">
+        <h2>Hell</h2>
+        @renderCharts()
+    </section>
+    <section data-theme="dark" class="vs-gallery__theme-panel">
+        <h2>Dunkel</h2>
+        @renderCharts()
+    </section>
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;MetricChart Title="Schritte" HeadingLevel="2" Kind="MetricChartKind.Bars"
+             Unit="Schritte" Points="lastSevenDays" Goal="10000m"
+             Category="VitalsCategory.Activity"
+             Href="fitness" LinkText="Alle Aktivitäten" /&gt;
+</code></pre>
+
+@code {
+    private static readonly DateOnly End = new(2026, 11, 25);
+
+    private static readonly IReadOnlyList<MetricChartPoint> Steps =
+        Days(7, [8200m, 11000m, 6400m, 10500m, 9100m, 12300m, 7500m]);
+
+    private static readonly IReadOnlyList<MetricChartPoint> Energy = Days(30,
+    [
+        2100m, 2350m, null, 1980m, 2240m, 2410m, 2050m, 1890m, null, null,
+        2300m, 2180m, 2020m, 2260m, 2390m, 1950m, 2110m, null, 2280m, 2150m,
+        2070m, 2330m, 1990m, 2200m, 2420m, 2010m, null, 2190m, 2250m, 1850m,
+    ]);
+
+    private static readonly IReadOnlyList<MetricChartPoint> Pulse = Days(30,
+    [
+        62m, 61m, 63m, 60m, null, 59m, 61m, 64m, 62m, 60m,
+        null, null, 66m, null, 61m, 60m, 59m, 58m, 60m, 62m,
+        63m, 61m, 60m, null, 59m, 60m, 61m, 62m, 60m, 62m,
+    ]);
+
+    private static readonly IReadOnlyList<MetricChartPoint> Sleep =
+        Days(7, [7.2m, 6.5m, 8.1m, null, 7.8m, 6.9m, 7.5m]);
+
+    private static readonly IReadOnlyList<MetricChartPoint> Weight =
+        Days(7, [72.4m, 72.1m, 72.3m, 71.9m, 71.8m, 71.6m, 71.7m]);
+
+    private static readonly IReadOnlyList<MetricChartPoint> Sparse =
+        Days(7, [null, null, null, null, null, 6800m, null]);
+
+    private static IReadOnlyList<MetricChartPoint> Days(int count, decimal?[] values) =>
+        values.Select((value, index) => new MetricChartPoint(End.AddDays(index - count + 1), value)).ToList();
+
+    private static RenderFragment renderCharts() => @<text>
+        <h3>Säulen, 7 Tage mit Ziel</h3>
+        <div class="vs-metric-chart-gallery__item">
+            <MetricChart Title="Schritte" HeadingLevel="4" Kind="MetricChartKind.Bars" Unit="Schritte"
+                         Points="Steps" Goal="10000m" Category="VitalsCategory.Activity"
+                         Href="design-system/metric-chart" LinkText="Alle Aktivitäten" />
+        </div>
+
+        <h3>Säulen, 30 Tage mit fehlenden Tagen</h3>
+        <div class="vs-metric-chart-gallery__item">
+            <MetricChart Title="Energie" HeadingLevel="4" Kind="MetricChartKind.Bars" Unit="kcal"
+                         Points="Energy" Goal="2200m" Category="VitalsCategory.Nutrition" />
+        </div>
+
+        <h3>Linie, 30 Tage mit Lücken</h3>
+        <div class="vs-metric-chart-gallery__item">
+            <MetricChart Title="Ruhepuls" HeadingLevel="4" Kind="MetricChartKind.Line"
+                         Unit="Schläge pro Minute" Points="Pulse" Category="VitalsCategory.HeartRate" />
+        </div>
+
+        <h3>Linie, 7 Tage mit Nachkommastelle und Ziel</h3>
+        <div class="vs-metric-chart-gallery__item">
+            <MetricChart Title="Schlaf" HeadingLevel="4" Kind="MetricChartKind.Line" Unit="Stunden"
+                         Decimals="1" Points="Sleep" Goal="8m" Category="VitalsCategory.Sleep" />
+        </div>
+
+        <h3>Ohne Bereich</h3>
+        <div class="vs-metric-chart-gallery__item">
+            <MetricChart Title="Gewicht" HeadingLevel="4" Kind="MetricChartKind.Line" Unit="kg"
+                         Decimals="1" Points="Weight" />
+        </div>
+
+        <h3>Zu wenig Daten</h3>
+        <div class="vs-metric-chart-gallery__item">
+            <MetricChart Title="Schritte" HeadingLevel="4" Kind="MetricChartKind.Bars" Unit="Schritte"
+                         Points="Sparse" Category="VitalsCategory.Activity" />
+        </div>
+
+        <h3>Schmal</h3>
+        <div class="vs-metric-chart-gallery__item vs-metric-chart-gallery__item--narrow">
+            <MetricChart Title="Energie" HeadingLevel="4" Kind="MetricChartKind.Bars" Unit="kcal"
+                         Points="Energy" Goal="2200m" Category="VitalsCategory.Nutrition" />
+        </div>
+    </text>;
+}

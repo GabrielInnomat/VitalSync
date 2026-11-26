@@ -1,0 +1,75 @@
+@page "/design-system/empty-state"
+@layout GalleryLayout
+
+<PageTitle>Leerzustand · Design System · VitalSync</PageTitle>
+
+<h1>Leerzustand (<code>EmptyState</code>)</h1>
+<p>
+    Ein Leerzustand steht dort, wo ein funktionierender Bereich noch keine Daten hat: noch keine
+    Rezepte, noch keine Trainings. Er sagt, was fehlt, wie es sich füllt, und bietet höchstens eine
+    Aktion dafür an. Der Titel ist eine echte Überschrift, deren Stufe die Seite festlegt; das Symbol
+    ist Schmuck. Angesagt wird nichts. Die Begründungen stehen in
+    <a href="https://github.com/GabrielInnomat/VitalSync/blob/main/docs/design-system.md">docs/design-system.md</a>.
+</p>
+
+<div class="vs-gallery__themes">
+    <section data-theme="light" class="vs-gallery__theme-panel">
+        <h2>Hell</h2>
+        @renderStates()
+    </section>
+    <section data-theme="dark" class="vs-gallery__theme-panel">
+        <h2>Dunkel</h2>
+        @renderStates()
+    </section>
+</div>
+
+<h2>Verwendung</h2>
+<pre><code>&lt;EmptyState Title="Noch keine Rezepte" HeadingLevel="2" Icon="SystemIconName.ForkKnife"&gt;
+    &lt;ChildContent&gt;Lege dein erstes Rezept an, um es in Wochenplänen zu verwenden.&lt;/ChildContent&gt;
+    &lt;Action&gt;&lt;Button OnClick="CreateRecipe"&gt;Rezept anlegen&lt;/Button&gt;&lt;/Action&gt;
+&lt;/EmptyState&gt;
+
+&lt;EmptyState Title="Noch zu wenig Daten" HeadingLevel="2"&gt;
+    Nach einer Woche mit Mahlzeiten und Trainings erscheinen hier die ersten Auswertungen.
+&lt;/EmptyState&gt;
+</code></pre>
+
+@code {
+    private static RenderFragment renderStates() => @<text>
+        <h3>Mit Aktion</h3>
+        <EmptyState Title="Noch keine Rezepte" HeadingLevel="4" Icon="SystemIconName.ForkKnife">
+            <ChildContent>Lege dein erstes Rezept an, um es in Wochenplänen zu verwenden.</ChildContent>
+            <Action><Button>Rezept anlegen</Button></Action>
+        </EmptyState>
+
+        <h3>Mit Link</h3>
+        <EmptyState Title="Noch keine Trainings" HeadingLevel="4" Icon="SystemIconName.Barbell">
+            <ChildContent>Sobald du ein Training erfasst, siehst du hier deinen Verlauf.</ChildContent>
+            <Action><a href="design-system/empty-state">Training erfassen</a></Action>
+        </EmptyState>
+
+        <h3>Ohne Symbol und Aktion</h3>
+        <EmptyState Title="Noch zu wenig Daten" HeadingLevel="4">
+            Nach einer Woche mit Mahlzeiten und Trainings erscheinen hier die ersten Auswertungen.
+        </EmptyState>
+
+        <h3>In einer Karte</h3>
+        <div class="vs-empty-state-gallery__card">
+            <EmptyState Title="Noch keine Auswertungen" HeadingLevel="4" Icon="SystemIconName.ChartLine">
+                <ChildContent>Erfasse Mahlzeiten oder Trainings, damit hier Auswertungen entstehen.</ChildContent>
+                <Action><a href="design-system/empty-state">Mahlzeit erfassen</a></Action>
+            </EmptyState>
+        </div>
+
+        <h3>Langer Text bei wenig Platz</h3>
+        <div class="vs-empty-state-gallery__narrow">
+            <EmptyState Title="Noch keine Einkaufslisten für diese Woche" HeadingLevel="4" Icon="SystemIconName.ForkKnife">
+                <ChildContent>
+                    Eine Einkaufsliste entsteht aus einem Wochenplan. Plane zuerst Mahlzeiten für die
+                    kommende Woche, dann stellt VitalSync die Zutaten zusammen.
+                </ChildContent>
+                <Action><Button Variant="ButtonVariant.Secondary">Wochenplan öffnen</Button></Action>
+            </EmptyState>
+        </div>
+    </text>;
+}

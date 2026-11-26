@@ -8,7 +8,7 @@
 <h1>Hinweis (<code>Toggletip</code>)</h1>
 <p>
     Eine Info-Schaltfläche, die auf Klick, <kbd>Enter</kbd> oder <kbd>Leertaste</kbd> einen kurzen
-    Erklärtext öffnet. <kbd>Esc</kbd> oder ein Klick daneben schließt ihn wieder, und es ist immer
+    Erklärtext öffnet. <kbd>Esc</kbd> oder ein Klick daneben schliesst ihn wieder, und es ist immer
     nur einer offen. Der Text steht nur im Popup und ist reiner Text. <code>Subject</code> benennt,
     wozu die Hilfe gehört („Hilfe zu …“), <code>Text</code> ist der Inhalt; beide sind Pflicht. Jedes
     Formularfeld nimmt denselben Hinweis über seinen Parameter <code>Info</code> auf und setzt ihn
@@ -41,7 +41,7 @@
                     <SelectOption Value="@("vegan")" Label="Vegan" />
                 </Select>
 
-                <RadioGroup @bind-Value="demo.FieldsModel.Level" Label="Aktivitätsniveau" Info="Wie viel du dich außerhalb des Trainings bewegst, etwa im Beruf.">
+                <RadioGroup @bind-Value="demo.FieldsModel.Level" Label="Aktivitätsniveau" Info="Wie viel du dich ausserhalb des Trainings bewegst, etwa im Beruf.">
                     <RadioOption Value="@("low")" Label="Gering" />
                     <RadioOption Value="@("high")" Label="Hoch" />
                 </RadioGroup>

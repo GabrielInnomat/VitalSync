@@ -17,4 +17,12 @@ public enum SystemIconName
     ChartLine,
     Gear,
     List,
+    ArrowUp,
+    ArrowDown,
+    ArrowLeft,
+    ArrowRight,
+    ArrowsDownUp,
+    Footprints,
+    Heartbeat,
+    Moon,
 }

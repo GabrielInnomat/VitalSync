@@ -1,0 +1,177 @@
+.vs-vitals-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--vitals-card-gap);
+    block-size: 100%;
+    box-sizing: border-box;
+    padding: var(--vitals-card-padding);
+    background-color: var(--vitals-card-background);
+    border: var(--vitals-card-border);
+    border-radius: var(--vitals-card-radius);
+    box-shadow: var(--vitals-card-shadow);
+    font-family: var(--font-family-ui);
+    transition: box-shadow var(--motion-duration-fast) var(--motion-easing);
+}
+
+    .vs-vitals-card p {
+        margin: 0;
+    }
+
+.vs-vitals-card--link:hover {
+    box-shadow: var(--vitals-card-shadow-hover);
+}
+
+.vs-vitals-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--vitals-card-gap);
+}
+
+.vs-vitals-card__title {
+    min-width: 0;
+    margin: 0;
+    color: var(--vitals-card-title-text-color);
+    font-size: var(--vitals-card-title-font-size);
+    font-weight: var(--vitals-card-title-font-weight);
+    line-height: var(--vitals-card-title-line-height);
+    overflow-wrap: anywhere;
+    hyphens: auto;
+}
+
+.vs-vitals-card__link {
+    color: var(--vitals-card-link-text-color);
+    text-decoration: underline;
+}
+
+    .vs-vitals-card__link:hover {
+        color: var(--vitals-card-link-text-color-hover);
+    }
+
+    .vs-vitals-card__link::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+    }
+
+@supports selector(:has(*)) {
+    .vs-vitals-card:has(.vs-vitals-card__link:focus-visible) {
+        outline: var(--focus-ring-width) solid var(--focus-ring-color);
+        outline-offset: var(--focus-ring-offset);
+        box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+    }
+
+    .vs-vitals-card__link:focus-visible {
+        outline: none;
+        box-shadow: none;
+    }
+}
+
+.vs-vitals-card__icon {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+    .vs-vitals-card__icon ::deep svg {
+        width: var(--vitals-card-icon-size);
+        height: var(--vitals-card-icon-size);
+    }
+
+.vs-vitals-card__icon,
+.vs-vitals-card__bar-fill {
+    color: var(--vitals-card-accent-color);
+}
+
+.vs-vitals-card--activity :is(.vs-vitals-card__icon, .vs-vitals-card__bar-fill) {
+    color: var(--vitals-card-accent-color-activity);
+}
+
+.vs-vitals-card--nutrition :is(.vs-vitals-card__icon, .vs-vitals-card__bar-fill) {
+    color: var(--vitals-card-accent-color-nutrition);
+}
+
+.vs-vitals-card--heartrate :is(.vs-vitals-card__icon, .vs-vitals-card__bar-fill) {
+    color: var(--vitals-card-accent-color-heartrate);
+}
+
+.vs-vitals-card--sleep :is(.vs-vitals-card__icon, .vs-vitals-card__bar-fill) {
+    color: var(--vitals-card-accent-color-sleep);
+}
+
+.vs-vitals-card__value {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--space-2);
+    overflow-wrap: anywhere;
+}
+
+.vs-vitals-card__number {
+    color: var(--vitals-card-value-text-color);
+    font-size: var(--vitals-card-value-font-size);
+    font-weight: var(--vitals-card-value-font-weight);
+    line-height: var(--vitals-card-value-line-height);
+    font-variant-numeric: tabular-nums;
+}
+
+.vs-vitals-card__unit {
+    color: var(--vitals-card-unit-text-color);
+    font-size: var(--vitals-card-unit-font-size);
+}
+
+.vs-vitals-card__no-data,
+.vs-vitals-card__trend,
+.vs-vitals-card__goal-text {
+    color: var(--vitals-card-detail-text-color);
+    font-size: var(--vitals-card-detail-font-size);
+    line-height: var(--line-height-base);
+    overflow-wrap: anywhere;
+}
+
+.vs-vitals-card__trend {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+}
+
+.vs-vitals-card__trend-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    block-size: 1lh;
+    color: var(--vitals-card-trend-icon-color);
+}
+
+    .vs-vitals-card__trend-icon ::deep svg {
+        width: var(--vitals-card-trend-icon-size);
+        height: var(--vitals-card-trend-icon-size);
+    }
+
+.vs-vitals-card__goal {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-block-start: auto;
+}
+
+.vs-vitals-card__bar {
+    block-size: var(--vitals-card-bar-height);
+    overflow: hidden;
+    background-color: var(--vitals-card-bar-track-color);
+    border: var(--vitals-card-bar-track-border-width) solid var(--vitals-card-bar-track-border-color);
+    border-radius: var(--vitals-card-bar-radius);
+}
+
+.vs-vitals-card__bar-fill {
+    block-size: 100%;
+    background-color: currentColor;
+}
+
+@media (forced-colors: active) {
+    .vs-vitals-card__bar-fill {
+        forced-color-adjust: none;
+        background-color: CanvasText;
+    }
+}

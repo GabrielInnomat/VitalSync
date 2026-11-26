@@ -1,0 +1,195 @@
+@namespace VitalSync.DesignSystem.Patterns.Data
+@using System.Globalization
+
+<div @attributes="AdditionalAttributes" class="@CssClass">
+    <div class="vs-vitals-card__header">
+        @switch (HeadingLevel)
+        {
+            case 2:
+                <h2 class="vs-vitals-card__title">@TitleContent</h2>
+                break;
+            case 3:
+                <h3 class="vs-vitals-card__title">@TitleContent</h3>
+                break;
+            case 4:
+                <h4 class="vs-vitals-card__title">@TitleContent</h4>
+                break;
+            case 5:
+                <h5 class="vs-vitals-card__title">@TitleContent</h5>
+                break;
+            default:
+                <h6 class="vs-vitals-card__title">@TitleContent</h6>
+                break;
+        }
+        @if (Icon is { } icon)
+        {
+            <span class="vs-vitals-card__icon" aria-hidden="true">
+                <SystemIcon Name="icon" />
+            </span>
+        }
+    </div>
+    @if (Value is { } value)
+    {
+        <p class="vs-vitals-card__value">
+            <span class="vs-vitals-card__number">@FormatNumber(value)</span>
+            <span class="vs-vitals-card__unit">@UnitText</span>
+        </p>
+    }
+    else
+    {
+        <p class="vs-vitals-card__no-data">Noch keine Daten</p>
+    }
+    @if (Trend is { } trend)
+    {
+        <p class="vs-vitals-card__trend">
+            <span class="vs-vitals-card__trend-icon" aria-hidden="true">
+                <SystemIcon Name="TrendIcon(trend.Direction)" />
+            </span>
+            <span>@trend.Text</span>
+        </p>
+    }
+    @if (Goal is { } goal)
+    {
+        <div class="vs-vitals-card__goal">
+            <p class="vs-vitals-card__goal-text">@GoalText(goal)</p>
+            @if (GoalRatio is { } ratio)
+            {
+                <div class="vs-vitals-card__bar" aria-hidden="true">
+                    <div class="vs-vitals-card__bar-fill" style="@BarStyle(ratio)"></div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public int HeadingLevel { get; set; }
+
+    [Parameter, EditorRequired]
+    public decimal? Value { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Unit { get; set; } = "";
+
+    [Parameter]
+    public int Decimals { get; set; }
+
+    [Parameter]
+    public decimal? Goal { get; set; }
+
+    [Parameter]
+    public VitalsTrend? Trend { get; set; }
+
+    [Parameter]
+    public SystemIconName? Icon { get; set; }
+
+    [Parameter]
+    public VitalsCategory? Category { get; set; }
+
+    [Parameter]
+    public string? Href { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass
+    {
+        get
+        {
+            var classes = "vs-vitals-card";
+            if (Category is { } category)
+            {
+                classes += $" vs-vitals-card--{category.ToString().ToLowerInvariant()}";
+            }
+
+            if (Href is not null)
+            {
+                classes += " vs-vitals-card--link";
+            }
+
+            return CssClasses.Merge(classes, AdditionalAttributes);
+        }
+    }
+
+    private string TitleText => Title.Trim();
+
+    private string UnitText => Unit.Trim();
+
+    private RenderFragment TitleContent => Href is null
+        ? @<text>@TitleText</text>
+        : @<a class="vs-vitals-card__link" href="@HrefText">@TitleText</a>;
+
+    private string? HrefText => Href?.Trim();
+
+    private decimal? GoalRatio => Value is { } value && Goal is { } goal
+        ? Math.Floor(value / goal * 100m) / 100m
+        : null;
+
+    private string FormatNumber(decimal number) =>
+        number.ToString($"N{Decimals.ToString(CultureInfo.InvariantCulture)}", CultureInfo.CurrentCulture);
+
+    private string GoalText(decimal goal) => GoalRatio is { } ratio
+        ? $"Ziel: {FormatNumber(goal)} {UnitText}, {ratio.ToString("P0", CultureInfo.CurrentCulture)} erreicht"
+        : $"Ziel: {FormatNumber(goal)} {UnitText}";
+
+    private static string BarStyle(decimal ratio) => string.Create(
+        CultureInfo.InvariantCulture,
+        $"inline-size: {(int)(Math.Clamp(ratio, 0m, 1m) * 100m)}%");
+
+    private static SystemIconName TrendIcon(VitalsTrendDirection direction) => direction switch
+    {
+        VitalsTrendDirection.Up => SystemIconName.ArrowUp,
+        VitalsTrendDirection.Down => SystemIconName.ArrowDown,
+        VitalsTrendDirection.Steady => SystemIconName.ArrowRight,
+        _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, null),
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            throw new InvalidOperationException(
+                "VitalsCard requires a Title; it names the measurement the card shows.");
+        }
+
+        if (HeadingLevel is < 2 or > 6)
+        {
+            throw new InvalidOperationException(
+                "VitalsCard requires a HeadingLevel from 2 to 6; only the page knows where the card sits in its outline.");
+        }
+
+        if (string.IsNullOrWhiteSpace(Unit))
+        {
+            throw new InvalidOperationException(
+                "VitalsCard requires a Unit; a number without its unit cannot be read.");
+        }
+
+        if (Decimals < 0)
+        {
+            throw new InvalidOperationException(
+                "VitalsCard received negative Decimals; use 0 for whole numbers.");
+        }
+
+        if (Goal is <= 0m)
+        {
+            throw new InvalidOperationException(
+                "VitalsCard requires a Goal greater than zero; leave it out when there is no goal.");
+        }
+
+        if (Trend is not null && Value is null)
+        {
+            throw new InvalidOperationException(
+                "VitalsCard received a Trend without a Value; a trend describes a value that exists.");
+        }
+
+        if (Href is not null && string.IsNullOrWhiteSpace(Href))
+        {
+            throw new InvalidOperationException(
+                "VitalsCard received a blank Href; leave it out when the card does not lead anywhere.");
+        }
+    }
+}

@@ -1,0 +1,475 @@
+@namespace VitalSync.DesignSystem.Patterns.Data
+@using System.Globalization
+
+<div @attributes="AdditionalAttributes" class="@CssClass">
+    @switch (HeadingLevel)
+    {
+        case 2:
+            <h2 class="vs-metric-chart__title">@TitleText</h2>
+            break;
+        case 3:
+            <h3 class="vs-metric-chart__title">@TitleText</h3>
+            break;
+        case 4:
+            <h4 class="vs-metric-chart__title">@TitleText</h4>
+            break;
+        case 5:
+            <h5 class="vs-metric-chart__title">@TitleText</h5>
+            break;
+        default:
+            <h6 class="vs-metric-chart__title">@TitleText</h6>
+            break;
+    }
+    @if (_measured.Count < 2)
+    {
+        <p class="vs-metric-chart__detail">Noch zu wenig Daten. Das Diagramm erscheint ab zwei Tagen mit Daten.</p>
+    }
+    else
+    {
+        var latest = _measured[^1];
+        var scale = _scale!;
+        <p class="vs-metric-chart__latest-text">Neuester Wert am @FullDate(latest.Date): @FormatNumber(latest.Value!.Value) @UnitText.</p>
+        <div class="vs-metric-chart__latest" aria-hidden="true">
+            <p class="vs-metric-chart__value">
+                <span class="vs-metric-chart__number">@FormatNumber(latest.Value!.Value)</span>
+                <span class="vs-metric-chart__unit">@UnitText</span>
+            </p>
+            <p class="vs-metric-chart__detail">Neuester Wert: @FullDate(latest.Date)</p>
+        </div>
+        <p class="vs-metric-chart__detail vs-metric-chart__summary">@Summary</p>
+        <div class="vs-metric-chart__figure" aria-hidden="true">
+            <div class="vs-metric-chart__y-axis">
+                <div class="vs-metric-chart__y-sizer">
+                    @foreach (var tick in scale.Ticks)
+                    {
+                        <span>@FormatTick(tick)</span>
+                    }
+                </div>
+                @foreach (var tick in scale.Ticks)
+                {
+                    <span class="vs-metric-chart__y-label" style="@TopStyle(scale.Position(tick))">@FormatTick(tick)</span>
+                }
+            </div>
+            <div class="vs-metric-chart__plot">
+                <svg class="vs-metric-chart__svg" viewBox="@ViewBox" preserveAspectRatio="none" focusable="false">
+                    @foreach (var tick in scale.Ticks)
+                    {
+                        <line class="@(tick == scale.Low ? "vs-metric-chart__baseline" : "vs-metric-chart__grid")"
+                              x1="0" x2="@Coordinate(Width)" y1="@Y(scale, tick)" y2="@Y(scale, tick)"
+                              vector-effect="non-scaling-stroke" />
+                    }
+                    @if (Kind == MetricChartKind.Bars)
+                    {
+                        for (var i = 0; i < Points.Count; i++)
+                        {
+                            if (Points[i].Value is { } value)
+                            {
+                                if (value > 0m)
+                                {
+                                    <rect class="vs-metric-chart__bar" x="@Coordinate((i * SlotWidth) + BarInset)"
+                                          y="@Y(scale, value)" width="@Coordinate(SlotWidth - (2m * BarInset))"
+                                          height="@Coordinate(PlotHeight - (scale.Position(value) * PlotHeight))" />
+                                }
+                            }
+                            else
+                            {
+                                <rect class="vs-metric-chart__missing" x="@Coordinate((i * SlotWidth) + BarInset)"
+                                      y="@Coordinate(PlotHeight - MissingHeight)" width="@Coordinate(SlotWidth - (2m * BarInset))"
+                                      height="@Coordinate(MissingHeight)" vector-effect="non-scaling-stroke" />
+                            }
+                        }
+                    }
+                    else
+                    {
+                        <path class="vs-metric-chart__line" d="@LinePath(scale)" vector-effect="non-scaling-stroke" />
+                        <path class="vs-metric-chart__dots" d="@DotsPath(scale)" vector-effect="non-scaling-stroke" />
+                    }
+                    @if (Goal is { } goal)
+                    {
+                        <line class="vs-metric-chart__goal" x1="0" x2="@Coordinate(Width)"
+                              y1="@Y(scale, goal)" y2="@Y(scale, goal)" vector-effect="non-scaling-stroke" />
+                    }
+                </svg>
+            </div>
+            <div class="vs-metric-chart__x-axis">
+                @foreach (var label in XLabels)
+                {
+                    <span class="@label.CssClass" style="@PositionStyle(label)">@label.Text</span>
+                }
+            </div>
+            @if (Goal is not null || HasMissingDays)
+            {
+                <ul class="vs-metric-chart__legend">
+                    @if (Goal is { } legendGoal)
+                    {
+                        <li class="vs-metric-chart__legend-item">
+                            <svg class="vs-metric-chart__swatch vs-metric-chart__swatch--goal" viewBox="0 0 24 12" focusable="false">
+                                <line x1="0" x2="24" y1="6" y2="6" />
+                            </svg>
+                            <span>Ziel: @FormatNumber(legendGoal) @UnitText</span>
+                        </li>
+                    }
+                    @if (HasMissingDays)
+                    {
+                        <li class="vs-metric-chart__legend-item">
+                            @if (Kind == MetricChartKind.Bars)
+                            {
+                                <svg class="vs-metric-chart__swatch vs-metric-chart__swatch--missing" viewBox="0 0 12 12" focusable="false">
+                                    <rect x="1" y="1" width="10" height="10" />
+                                </svg>
+                                <span>Tag ohne Daten</span>
+                            }
+                            else
+                            {
+                                <span>Lücke in der Linie: Tag ohne Daten</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+        <details class="vs-metric-chart__details">
+            <summary class="vs-metric-chart__toggle">
+                <span class="vs-metric-chart__toggle-icon" aria-hidden="true">
+                    <SystemIcon Name="SystemIconName.CaretDown" />
+                </span>
+                <span class="vs-metric-chart__toggle-show">Als Tabelle anzeigen</span>
+                <span class="vs-metric-chart__toggle-hide">Tabelle ausblenden</span>
+            </summary>
+            <div class="vs-metric-chart__table">
+                <Table Caption="@Caption" Items="Points">
+                    <TableColumn Title="Tag" Context="point">@FullDate(point.Date)</TableColumn>
+                    <TableColumn Title="@UnitText" Numeric Context="point">@CellText(point)</TableColumn>
+                    @if (Kind == MetricChartKind.Bars && Goal is { } tableGoal)
+                    {
+                        <TableColumn Title="Ziel" Context="point">@GoalCellText(point, tableGoal)</TableColumn>
+                    }
+                </Table>
+            </div>
+        </details>
+    }
+    @if (Href is not null)
+    {
+        <a class="vs-metric-chart__link" href="@Href.Trim()">@LinkText!.Trim()</a>
+    }
+</div>
+
+@code {
+    private const decimal SlotWidth = 10m;
+    private const decimal BarInset = 2m;
+    private const decimal PlotHeight = 100m;
+    private const decimal MissingHeight = 8m;
+    private const int NarrowLabels = 3;
+    private const int MediumLabels = 5;
+    private const int WideLabels = 9;
+    private const int WeekdayLimit = 7;
+
+    private IReadOnlyList<MetricChartPoint> _measured = [];
+    private MetricChartScale? _scale;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public int HeadingLevel { get; set; }
+
+    [Parameter, EditorRequired]
+    public MetricChartKind Kind { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Unit { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<MetricChartPoint> Points { get; set; } = default!;
+
+    [Parameter]
+    public int Decimals { get; set; }
+
+    [Parameter]
+    public decimal? Goal { get; set; }
+
+    [Parameter]
+    public VitalsCategory? Category { get; set; }
+
+    [Parameter]
+    public string? Href { get; set; }
+
+    [Parameter]
+    public string? LinkText { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass
+    {
+        get
+        {
+            var classes = $"vs-metric-chart vs-metric-chart--{Kind.ToString().ToLowerInvariant()}";
+            if (Category is { } category)
+            {
+                classes += $" vs-metric-chart--{category.ToString().ToLowerInvariant()}";
+            }
+
+            return CssClasses.Merge(classes, AdditionalAttributes);
+        }
+    }
+
+    private string TitleText => Title.Trim();
+
+    private string UnitText => Unit.Trim();
+
+    private decimal Width => Points.Count * SlotWidth;
+
+    private string ViewBox => $"0 0 {Coordinate(Width)} {Coordinate(PlotHeight)}";
+
+    private bool HasMissingDays => _measured.Count < Points.Count;
+
+    private string Period => $"{ShortDate(Points[0].Date)} bis {ShortDate(Points[^1].Date)}";
+
+    private string Caption => Goal is { } goal
+        ? $"{TitleText}, {Period}, Ziel: {FormatNumber(goal)} {UnitText}"
+        : $"{TitleText}, {Period}";
+
+    private string Summary
+    {
+        get
+        {
+            var coverage = HasMissingDays
+                ? $"Vom {Period}, Daten an {_measured.Count} von {Points.Count} Tagen: "
+                : $"Vom {Period}: ";
+
+            if (Kind == MetricChartKind.Line)
+            {
+                var lowest = _measured.Min(point => point.Value!.Value);
+                var highest = _measured.Max(point => point.Value!.Value);
+                var lineText = $"{coverage}tiefster Wert {FormatNumber(lowest)} {UnitText}, höchster Wert {FormatNumber(highest)} {UnitText}.";
+                return Goal is { } lineGoal ? $"{lineText} Ziel: {FormatNumber(lineGoal)} {UnitText}." : lineText;
+            }
+
+            var average = _measured.Average(point => point.Value!.Value);
+            var top = _measured.First(point => point.Value == _measured.Max(candidate => candidate.Value));
+            var text = $"{coverage}Durchschnitt {FormatNumber(average)} {UnitText} pro Tag, höchster Wert am {FullDate(top.Date)}: {FormatNumber(top.Value!.Value)} {UnitText}.";
+
+            if (Goal is not { } goal)
+            {
+                return text;
+            }
+
+            var reached = _measured.Count(point => point.Value >= goal);
+            var days = HasMissingDays
+                ? $"an {reached} der {_measured.Count} Tage mit Daten"
+                : $"an {reached} von {Points.Count} Tagen";
+            return $"{text} Ziel {FormatNumber(goal)} {UnitText} {days} erreicht.";
+        }
+    }
+
+    private IEnumerable<XLabel> XLabels
+    {
+        get
+        {
+            var count = Points.Count;
+            if (count <= WeekdayLimit)
+            {
+                for (var i = 0; i < count; i++)
+                {
+                    yield return new XLabel(i, Weekday(Points[i].Date), "vs-metric-chart__x-label", AtEnd: false);
+                }
+
+                yield break;
+            }
+
+            var narrow = LabelStep(count, NarrowLabels);
+            var medium = LabelStep(count, MediumLabels);
+            var wide = LabelStep(count, WideLabels);
+
+            for (var i = 0; i < count; i++)
+            {
+                var fromEnd = count - 1 - i;
+                var levels = " vs-metric-chart__x-label--date";
+                var shown = false;
+                if (fromEnd % narrow == 0)
+                {
+                    levels += " vs-metric-chart__x-label--narrow";
+                    shown = true;
+                }
+
+                if (fromEnd % medium == 0)
+                {
+                    levels += " vs-metric-chart__x-label--medium";
+                    shown = true;
+                }
+
+                if (fromEnd % wide == 0)
+                {
+                    levels += " vs-metric-chart__x-label--wide";
+                    shown = true;
+                }
+
+                if (shown)
+                {
+                    yield return new XLabel(i, ShortDate(Points[i].Date), $"vs-metric-chart__x-label{levels}", AtEnd: fromEnd == 0);
+                }
+            }
+        }
+    }
+
+    private static int LabelStep(int count, int labels) => Math.Max(1, (count + labels - 1) / labels);
+
+    private string LinePath(MetricChartScale scale)
+    {
+        var path = new System.Text.StringBuilder();
+        var connected = false;
+        for (var i = 0; i < Points.Count; i++)
+        {
+            if (Points[i].Value is { } value)
+            {
+                path.Append(connected ? " L" : " M").Append(Coordinate(SlotCenter(i))).Append(' ').Append(Y(scale, value));
+                connected = true;
+            }
+            else
+            {
+                connected = false;
+            }
+        }
+
+        return path.ToString().Trim();
+    }
+
+    private string DotsPath(MetricChartScale scale)
+    {
+        var path = new System.Text.StringBuilder();
+        for (var i = 0; i < Points.Count; i++)
+        {
+            if (Points[i].Value is { } value)
+            {
+                path.Append(" M").Append(Coordinate(SlotCenter(i))).Append(' ').Append(Y(scale, value)).Append(" h0");
+            }
+        }
+
+        return path.ToString().Trim();
+    }
+
+    private static decimal SlotCenter(int index) => (index * SlotWidth) + (SlotWidth / 2m);
+
+    private static string Y(MetricChartScale scale, decimal value) => Coordinate(scale.Position(value) * PlotHeight);
+
+    private static string Coordinate(decimal value) =>
+        Math.Round(value, 3).ToString("0.###", CultureInfo.InvariantCulture);
+
+    private static string TopStyle(decimal position) => $"top: {Coordinate(position * 100m)}%";
+
+    private string PositionStyle(XLabel label) => label.AtEnd
+        ? "right: 0; transform: none"
+        : $"left: {Coordinate(SlotCenter(label.Index) / Width * 100m)}%";
+
+    private string FormatNumber(decimal number) =>
+        number.ToString($"N{Decimals.ToString(CultureInfo.InvariantCulture)}", CultureInfo.CurrentCulture);
+
+    private string FormatTick(decimal tick) =>
+        tick.ToString($"N{_scale!.TickDecimals.ToString(CultureInfo.InvariantCulture)}", CultureInfo.CurrentCulture);
+
+    private string CellText(MetricChartPoint point) =>
+        point.Value is { } value ? FormatNumber(value) : "Keine Daten";
+
+    private static string GoalCellText(MetricChartPoint point, decimal goal) => point.Value switch
+    {
+        null => "Keine Daten",
+        { } value when value >= goal => "erreicht",
+        _ => "nicht erreicht",
+    };
+
+    private static string ShortDate(DateOnly date) => date.ToString("d.M.", CultureInfo.CurrentCulture);
+
+    private static string FullDate(DateOnly date) => date.ToString("dddd, d.M.", CultureInfo.CurrentCulture);
+
+    private static string Weekday(DateOnly date) =>
+        CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(date.DayOfWeek);
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            throw new InvalidOperationException(
+                "MetricChart requires a Title; it names the measurement the chart shows.");
+        }
+
+        if (HeadingLevel is < 2 or > 6)
+        {
+            throw new InvalidOperationException(
+                "MetricChart requires a HeadingLevel from 2 to 6; only the page knows where the chart sits in its outline.");
+        }
+
+        if (!Enum.IsDefined(Kind))
+        {
+            throw new InvalidOperationException(
+                "MetricChart requires a Kind of Bars or Line.");
+        }
+
+        if (string.IsNullOrWhiteSpace(Unit))
+        {
+            throw new InvalidOperationException(
+                "MetricChart requires a Unit; a number without its unit cannot be read.");
+        }
+
+        if (Points is null)
+        {
+            throw new InvalidOperationException(
+                "MetricChart requires Points; pass one point per day and a null Value for a day without data.");
+        }
+
+        if (Decimals < 0)
+        {
+            throw new InvalidOperationException(
+                "MetricChart received negative Decimals; use 0 for whole numbers.");
+        }
+
+        if (Goal is <= 0m)
+        {
+            throw new InvalidOperationException(
+                "MetricChart requires a Goal greater than zero; leave it out when there is no goal.");
+        }
+
+        if (Href is not null && string.IsNullOrWhiteSpace(Href))
+        {
+            throw new InvalidOperationException(
+                "MetricChart received a blank Href; leave it out when the chart does not lead anywhere.");
+        }
+
+        if ((Href is null) != string.IsNullOrWhiteSpace(LinkText))
+        {
+            throw new InvalidOperationException(
+                "MetricChart requires Href and LinkText together; the link text names where the link leads.");
+        }
+
+        for (var i = 1; i < Points.Count; i++)
+        {
+            if (Points[i].Date != Points[i - 1].Date.AddDays(1))
+            {
+                throw new InvalidOperationException(
+                    "MetricChart requires one point per day in order without gaps; pass a null Value for a day without data.");
+            }
+        }
+
+        if (Kind == MetricChartKind.Bars && Points.Any(point => point.Value < 0m))
+        {
+            throw new InvalidOperationException(
+                "MetricChart received a negative value for bars; bars show daily totals, which start at zero.");
+        }
+
+        _measured = Points.Where(point => point.Value is not null).ToList();
+        _scale = _measured.Count < 2 ? null : CreateScale();
+    }
+
+    private MetricChartScale CreateScale()
+    {
+        var values = _measured.Select(point => point.Value!.Value).ToList();
+        if (Goal is { } goal)
+        {
+            values.Add(goal);
+        }
+
+        return MetricChartScale.Create(values.Min(), values.Max(), Kind == MetricChartKind.Bars, Decimals);
+    }
+
+    private sealed record XLabel(int Index, string Text, string CssClass, bool AtEnd);
+}

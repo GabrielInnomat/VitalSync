@@ -40,8 +40,8 @@ own configuration before starting them; publishing and deploying never take that
 `dotnet run` on an AppHost hands over to the Aspire CLI, which starts the Debug build whatever
 configuration was requested. The CI pipeline runs a Release build, so it starts the built AppHost
 assembly directly with `dotnet <AppHost>.dll`, and the AppHost builds the projects once more in
-Release before starting them. The `aspire.config.json` at the
-repository root points `aspire run` at `src/Aspire/VitalSync.AppHost`.
+Release before starting them. The `aspire.config.json` at the repository root points `aspire run`
+at `src/Aspire/VitalSync.AppHost`.
 
 The same AppHost also describes the hosted system. A Docker Compose compute environment turns every
 resource into a Compose service: each project becomes a container image built from its project file,
@@ -51,8 +51,8 @@ publishing — restart policies, plain HTTP between the containers, a separate m
 the health endpoints, a pgAdmin container of its own, passwords of its own rather than those of the
 development run, the released dashboard image at the AppHost's Aspire version, a dashboard that takes
 the scheme from the HTTPS proxy in front of it, and ports bound to the loopback address only. The
-dashboard version is pinned rather than following a moving tag, so a
-restart never brings a different dashboard, and it is moved up together with the Aspire packages.
+dashboard version is pinned rather than following a moving tag, so a restart never brings a
+different dashboard, and it is moved up together with the Aspire packages.
 
 The data volumes of the hosted system are declared external, under fixed names. `aspire deploy`
 names the Compose project after a hash of the AppHost's path, and Compose would put that name in

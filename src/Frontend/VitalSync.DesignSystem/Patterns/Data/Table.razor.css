@@ -70,6 +70,11 @@
     text-align: start;
 }
 
+    .vs-table__caption:focus-visible {
+        outline: var(--focus-ring-width) solid var(--focus-ring-color);
+        outline-offset: calc(-1 * var(--focus-ring-width));
+    }
+
 .vs-table__caption-text {
     position: sticky;
     inset-inline-start: var(--table-edge-padding);

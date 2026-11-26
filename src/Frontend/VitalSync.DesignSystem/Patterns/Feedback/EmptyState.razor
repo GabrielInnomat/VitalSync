@@ -1,0 +1,78 @@
+@namespace VitalSync.DesignSystem.Patterns.Feedback
+
+<div @attributes="AdditionalAttributes" class="@CssClass">
+    @if (Icon is { } icon)
+    {
+        <span class="vs-empty-state__icon" aria-hidden="true">
+            <SystemIcon Name="icon" />
+        </span>
+    }
+    @switch (HeadingLevel)
+    {
+        case 2:
+            <h2 class="vs-empty-state__title">@TitleText</h2>
+            break;
+        case 3:
+            <h3 class="vs-empty-state__title">@TitleText</h3>
+            break;
+        case 4:
+            <h4 class="vs-empty-state__title">@TitleText</h4>
+            break;
+        case 5:
+            <h5 class="vs-empty-state__title">@TitleText</h5>
+            break;
+        default:
+            <h6 class="vs-empty-state__title">@TitleText</h6>
+            break;
+    }
+    <div class="vs-empty-state__text">@ChildContent</div>
+    @if (Action is not null)
+    {
+        <div class="vs-empty-state__action">@Action</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public int HeadingLevel { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter]
+    public SystemIconName? Icon { get; set; }
+
+    [Parameter]
+    public RenderFragment? Action { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => CssClasses.Merge("vs-empty-state", AdditionalAttributes);
+
+    private string TitleText => Title.Trim();
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            throw new InvalidOperationException(
+                "EmptyState requires a Title; it names what is still missing.");
+        }
+
+        if (ChildContent is null)
+        {
+            throw new InvalidOperationException(
+                "EmptyState requires ChildContent; a sentence below the title says why the area is empty and what fills it.");
+        }
+
+        if (HeadingLevel is < 2 or > 6)
+        {
+            throw new InvalidOperationException(
+                "EmptyState requires a HeadingLevel from 2 to 6; only the page knows where the empty state sits in its outline.");
+        }
+    }
+}

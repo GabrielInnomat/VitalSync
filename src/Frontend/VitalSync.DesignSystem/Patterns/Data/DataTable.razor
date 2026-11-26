@@ -1,0 +1,879 @@
+@namespace VitalSync.DesignSystem.Patterns.Data
+@typeparam TItem
+@attribute [CascadingTypeParameter(nameof(TItem))]
+@using System.Globalization
+@using System.Web
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Rendering
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject LiveAnnouncer Announcer
+
+<div @ref="_root" @attributes="AdditionalAttributes" class="@CssClass">
+    <CascadingValue Value="this" IsFixed="true">
+        @{ StartCollecting(); }
+        @ChildContent
+        @RenderDeferred
+    </CascadingValue>
+</div>
+
+@code {
+    internal const int PageSize = 25;
+
+    private const string ModulePath = "./_content/VitalSync.DesignSystem/Patterns/Data/DataTable.razor.js";
+
+    private readonly List<DataTableColumnBase<TItem>> _columns = [];
+    private readonly List<FilterState> _filters = [];
+    private readonly Dictionary<string, string> _initialFilters = new(StringComparer.Ordinal);
+    private readonly List<string> _initialKeys = [];
+    private readonly EditContext _editContext;
+    private readonly ValidationMessageStore _messages;
+    private ElementReference _root;
+    private DataTableGrid<TItem>? _grid;
+    private Task<IJSObjectReference>? _module;
+    private DotNetObjectReference<DataTable<TItem>>? _self;
+    private CancellationTokenSource? _debounce;
+    private CancellationTokenSource? _load;
+    private DataTableItemsProvider<TItem>? _provider;
+    private IReadOnlyList<TItem> _rows = [];
+    private bool _collecting;
+    private bool _columnsKnown;
+    private bool _loading;
+    private bool _loaded;
+    private bool _loadRequested;
+    private bool _focusCaption;
+    private bool _announceCount;
+    private int _total;
+    private int _shownTotal = -1;
+    private int _page = 1;
+    private int _resetCount;
+    private string? _sortKey;
+    private bool _descending;
+    private string? _syncedUrl;
+
+    public DataTable()
+    {
+        _editContext = new EditContext(this);
+        _messages = new ValidationMessageStore(_editContext);
+    }
+
+    [Parameter, EditorRequired]
+    public string Caption { get; set; } = "";
+
+    [Parameter]
+    public IEnumerable<TItem>? Items { get; set; }
+
+    [Parameter]
+    public DataTableItemsProvider<TItem>? ItemsProvider { get; set; }
+
+    [Parameter]
+    public string EmptyText { get; set; } = "Keine Einträge vorhanden.";
+
+    [Parameter]
+    public string QueryName { get; set; } = "table";
+
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    internal TimeSpan FilterDelay { get; set; } = TimeSpan.FromMilliseconds(800);
+
+    internal RenderFragment? EmptyContent => _loading || !_loaded || HasActiveFilter ? RenderEmpty : null;
+
+    private string CssClass => CssClasses.Merge("vs-data-table", AdditionalAttributes);
+
+    private bool HasActiveFilter => _filters.Exists(state => state.Filter is not null);
+
+    private bool HasFilterText => _filters.Exists(state => state.Applied.Length > 0);
+
+    private int PageCount => Math.Max(1, (_total + PageSize - 1) / PageSize);
+
+    private string GridCaption => PageCount > 1 && _loaded
+        ? $"{Caption}, Seite {_page.ToString("N0", CultureInfo.CurrentCulture)} von {PageCount.ToString("N0", CultureInfo.CurrentCulture)}"
+        : Caption;
+
+    private DataTableColumnBase<TItem>? SortColumn =>
+        _sortKey is null ? null : _columns.Find(column => column.IsSortable && column.QueryKey == _sortKey);
+
+    protected override void OnInitialized()
+    {
+        if (string.IsNullOrWhiteSpace(QueryName))
+        {
+            throw new InvalidOperationException(
+                "A data table requires a QueryName; it keeps sorting, filters and page in the address.");
+        }
+
+        var query = HttpUtility.ParseQueryString(new Uri(Navigation.Uri).Query);
+        var prefix = $"{QueryName}.";
+        var filterPrefix = $"{QueryName}.filter.";
+
+        foreach (var name in query.AllKeys)
+        {
+            if (name is null || !name.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            _initialKeys.Add(name);
+
+            if (name.StartsWith(filterPrefix, StringComparison.Ordinal) && query[name] is { } text)
+            {
+                _initialFilters[name[filterPrefix.Length..]] = text;
+            }
+        }
+
+        _sortKey = query[$"{QueryName}.sort"];
+        _descending = _sortKey is not null && query[$"{QueryName}.order"] == "desc";
+
+        if (int.TryParse(query[$"{QueryName}.page"], NumberStyles.None, CultureInfo.InvariantCulture, out var page)
+            && page > 1)
+        {
+            _page = page;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Caption))
+        {
+            throw new InvalidOperationException(
+                "A data table requires a visible Caption; it names the table, its filters and its pages.");
+        }
+
+        if ((Items is null) == (ItemsProvider is null))
+        {
+            throw new InvalidOperationException(
+                "A data table requires either Items or an ItemsProvider, not both; one of them is where the rows come from.");
+        }
+
+        if (string.IsNullOrWhiteSpace(EmptyText))
+        {
+            throw new InvalidOperationException(
+                "A data table's EmptyText must not be blank; it is all an empty table has to say.");
+        }
+
+        if (ChildContent is null)
+        {
+            throw new InvalidOperationException("A data table requires ChildContent with at least one column.");
+        }
+
+        if (ItemsProvider is not null && !ReferenceEquals(ItemsProvider, _provider))
+        {
+            _provider = ItemsProvider;
+            _loadRequested = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!RendererInfo.IsInteractive || !_columnsKnown)
+        {
+            return;
+        }
+
+        if (_module is null)
+        {
+            _module = JS.InvokeAsync<IJSObjectReference>("import", ModulePath).AsTask();
+            _self = DotNetObjectReference.Create(this);
+            var attachModule = await _module.ConfigureAwait(true);
+            await attachModule.InvokeVoidAsync("attach", _root, _self).ConfigureAwait(true);
+        }
+
+        if (_focusCaption && _grid is not null)
+        {
+            _focusCaption = false;
+            await _grid.FocusCaptionAsync().ConfigureAwait(true);
+        }
+
+        var entries = UrlEntries(_page, filters: true);
+        var url = string.Join('&', entries.Select(entry => $"{entry.Key}={entry.Value}"));
+
+        if (!string.Equals(url, _syncedUrl, StringComparison.Ordinal))
+        {
+            _syncedUrl = url;
+            var module = await _module.ConfigureAwait(true);
+            await module.InvokeVoidAsync("replaceUrl", QueryName, entries).ConfigureAwait(true);
+        }
+
+        if (_loadRequested && ItemsProvider is not null)
+        {
+            _loadRequested = false;
+            await LoadAsync().ConfigureAwait(true);
+        }
+    }
+
+    public Task RefreshAsync() => InvokeAsync(async () =>
+    {
+        if (ItemsProvider is not null && _columnsKnown)
+        {
+            await LoadAsync().ConfigureAwait(true);
+        }
+        else
+        {
+            StateHasChanged();
+        }
+    });
+
+    [JSInvokable]
+    public Task GoToPage(int page) => InvokeAsync(async () =>
+    {
+        _page = Math.Clamp(page, 1, PageCount);
+        _focusCaption = true;
+        await ReloadAsync().ConfigureAwait(true);
+    });
+
+    [JSInvokable]
+    public Task ResetFilters() => InvokeAsync(async () =>
+    {
+        CancelDebounce();
+
+        foreach (var state in _filters)
+        {
+            state.Text = "";
+            state.Pending = "";
+            state.Applied = "";
+            state.Filter = null;
+        }
+
+        _messages.Clear();
+        _editContext.NotifyValidationStateChanged();
+        _resetCount++;
+        _page = 1;
+        _announceCount = true;
+        _focusCaption = true;
+        await ReloadAsync().ConfigureAwait(true);
+    });
+
+    internal void AddColumn(DataTableColumnBase<TItem> column)
+    {
+        if (_collecting)
+        {
+            _columns.Add(column);
+        }
+    }
+
+    internal string? HeaderSort(int index) =>
+        SortColumn == _columns[index] ? _descending ? "descending" : "ascending" : null;
+
+    internal RenderFragment HeaderContent(int index)
+    {
+        var column = _columns[index];
+
+        if (!column.IsSortable)
+        {
+            return builder => builder.AddContent(0, column.Title);
+        }
+
+        var sorted = SortColumn == column;
+        return RenderSortButton(column, sorted);
+    }
+
+    private void StartCollecting()
+    {
+        _columns.Clear();
+        _collecting = true;
+    }
+
+    private void RenderDeferred(RenderTreeBuilder builder)
+    {
+        builder.OpenComponent<TableDeferred>(0);
+        builder.AddComponentParameter(1, nameof(TableDeferred.ChildContent), RenderBody());
+        builder.CloseComponent();
+    }
+
+    private void CompleteColumns()
+    {
+        _collecting = false;
+
+        if (_columns.Count == 0)
+        {
+            throw new InvalidOperationException("A data table requires at least one column.");
+        }
+
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var column in _columns)
+        {
+            if (column.QueryKey is { } key && !keys.Add(key))
+            {
+                throw new InvalidOperationException(
+                    $"Two data table columns share the key '{key}'; every key must be unique.");
+            }
+        }
+
+        if (_sortKey is not null && SortColumn is null)
+        {
+            _sortKey = null;
+            _descending = false;
+        }
+
+        _filters.RemoveAll(state => !_columns.Exists(column =>
+            column.FilterKind != DataTableFilterKind.None && column.QueryKey == state.Key));
+
+        var index = 0;
+
+        foreach (var column in _columns)
+        {
+            if (column.FilterKind == DataTableFilterKind.None)
+            {
+                continue;
+            }
+
+            var state = _filters.Find(existing => existing.Key == column.QueryKey);
+
+            if (state is null)
+            {
+                state = new FilterState(column.QueryKey!);
+                _filters.Insert(index, state);
+
+                if (_initialFilters.TryGetValue(state.Key, out var text))
+                {
+                    state.Text = text;
+                    state.Pending = text;
+                    state.Column = column;
+                    Parse(state);
+                }
+            }
+            else
+            {
+                _filters.Remove(state);
+                _filters.Insert(index, state);
+            }
+
+            state.Column = column;
+            index++;
+        }
+
+        _columnsKnown = true;
+    }
+
+    private void ComputeLocalView()
+    {
+        if (Items is null)
+        {
+            return;
+        }
+
+        var items = Items;
+
+        foreach (var state in _filters)
+        {
+            if (state.Filter is { } filter)
+            {
+                var column = state.Column;
+                items = items.Where(item => column.Matches(item, filter));
+            }
+        }
+
+        if (SortColumn is { } sort)
+        {
+            items = sort.Sort(items, _descending);
+        }
+
+        var all = items.ToList();
+        _total = all.Count;
+
+        if (!_announceCount)
+        {
+            _shownTotal = _total;
+        }
+
+        _page = Math.Clamp(_page, 1, PageCount);
+        _rows = all.GetRange((_page - 1) * PageSize, Math.Min(PageSize, _total - ((_page - 1) * PageSize)));
+        _loaded = true;
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (ItemsProvider is not null)
+        {
+            await LoadAsync().ConfigureAwait(true);
+            return;
+        }
+
+        ComputeLocalView();
+        AnnounceCount();
+        StateHasChanged();
+    }
+
+    private async Task LoadAsync()
+    {
+        CancelLoad();
+        using var cancellation = new CancellationTokenSource();
+        _load = cancellation;
+        _loading = true;
+        StateHasChanged();
+        DataTableResult<TItem> result;
+
+        try
+        {
+            result = await ItemsProvider!(Request(), cancellation.Token).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            return;
+        }
+        finally
+        {
+            if (_load == cancellation)
+            {
+                _load = null;
+            }
+        }
+
+        if (cancellation.IsCancellationRequested)
+        {
+            return;
+        }
+
+        if (result is null)
+        {
+            throw new InvalidOperationException("A data table's ItemsProvider must return a result, not null.");
+        }
+
+        _total = Math.Max(0, result.TotalCount);
+
+        if (_page > PageCount)
+        {
+            _page = PageCount;
+            await LoadAsync().ConfigureAwait(true);
+            return;
+        }
+
+        _rows = result.Items;
+        _loading = false;
+        _loaded = true;
+        AnnounceCount();
+        StateHasChanged();
+    }
+
+    private DataTableRequest Request() => new(
+        [.. _filters.Where(state => state.Filter is not null).Select(state => state.Filter!)],
+        SortColumn is { QueryKey: { } key } ? new DataTableSort(key, _descending) : null,
+        _page,
+        PageSize);
+
+    private void AnnounceCount()
+    {
+        if (!_announceCount)
+        {
+            _shownTotal = _total;
+            return;
+        }
+
+        _announceCount = false;
+
+        if (_total == _shownTotal)
+        {
+            return;
+        }
+
+        _shownTotal = _total;
+        Announcer.Announce(_total == 0 ? "Keine Treffer" : $"{_total.ToString("N0", CultureInfo.CurrentCulture)} Treffer");
+    }
+
+    private async Task SortAsync(DataTableColumnBase<TItem> column)
+    {
+        _descending = SortColumn == column && !_descending;
+        _sortKey = column.QueryKey;
+        _page = 1;
+        await ReloadAsync().ConfigureAwait(true);
+    }
+
+    private void OnFilterInput(FilterState state, ChangeEventArgs args)
+    {
+        state.Pending = args.Value as string ?? "";
+        CancelDebounce();
+
+        if (_filters.Exists(other => other.Changed))
+        {
+            _debounce = new CancellationTokenSource();
+            Observe(DebounceAsync(_debounce.Token));
+        }
+    }
+
+    private void OnFilterChanged(FilterState state, string? value)
+    {
+        state.Text = value ?? "";
+        state.Pending = state.Text;
+    }
+
+    private Task OnFilterKeyDown(KeyboardEventArgs args) =>
+        args.Key == "Enter" ? ApplyFiltersAsync() : Task.CompletedTask;
+
+    private async Task DebounceAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(FilterDelay, cancellationToken).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        await InvokeAsync(ApplyFiltersAsync).ConfigureAwait(true);
+    }
+
+    private async Task ApplyFiltersAsync()
+    {
+        CancelDebounce();
+
+        if (!_filters.Exists(state => state.Changed))
+        {
+            return;
+        }
+
+        foreach (var state in _filters)
+        {
+            Parse(state);
+        }
+
+        _editContext.NotifyValidationStateChanged();
+        _page = 1;
+        _announceCount = true;
+        await ReloadAsync().ConfigureAwait(true);
+    }
+
+    private void Parse(FilterState state)
+    {
+        state.Applied = state.Normalized;
+        var field = new FieldIdentifier(state, nameof(FilterState.Text));
+        _messages.Clear(field);
+        state.Filter = null;
+
+        if (state.Applied.Length == 0)
+        {
+            return;
+        }
+
+        var key = state.Key;
+        var title = state.Column.Title;
+
+        switch (state.Column.FilterKind)
+        {
+            case DataTableFilterKind.Text:
+                state.Filter = new DataTableTextFilter(key, state.Applied);
+                break;
+            case DataTableFilterKind.Number when DataTableFilterParser.ParseNumber(state.Applied) is { } numbers:
+                state.Filter = new DataTableNumberFilter(key, numbers);
+                break;
+            case DataTableFilterKind.Number:
+                _messages.Add(field, $"Bitte gib bei {title} eine Zahl ein, etwa 100, <50 oder 10-20.");
+                break;
+            case DataTableFilterKind.Date when DataTableFilterParser.ParseDate(state.Applied) is { } dates:
+                state.Filter = new DataTableDateFilter(key, dates);
+                break;
+            case DataTableFilterKind.Date:
+                _messages.Add(
+                    field,
+                    $"Bitte gib bei {title} ein Datum ein, etwa 25.11.2026, <1.1.2026 oder 1.11.2026-30.11.2026.");
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void Observe(Task task) => _ = task.ContinueWith(
+        failed => InvokeAsync(() => DispatchExceptionAsync(failed.Exception!.GetBaseException())),
+        CancellationToken.None,
+        TaskContinuationOptions.OnlyOnFaulted,
+        TaskScheduler.Default);
+
+    private void CancelDebounce()
+    {
+        _debounce?.Cancel();
+        _debounce?.Dispose();
+        _debounce = null;
+    }
+
+    private void CancelLoad()
+    {
+        _load?.Cancel();
+        _load = null;
+    }
+
+    private Dictionary<string, string> UrlEntries(int page, bool filters)
+    {
+        var entries = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        if (SortColumn is { QueryKey: { } key })
+        {
+            entries[$"{QueryName}.sort"] = key;
+
+            if (_descending)
+            {
+                entries[$"{QueryName}.order"] = "desc";
+            }
+        }
+
+        if (page > 1)
+        {
+            entries[$"{QueryName}.page"] = page.ToString(CultureInfo.InvariantCulture);
+        }
+
+        if (filters)
+        {
+            foreach (var state in _filters)
+            {
+                if (state.Applied.Length > 0)
+                {
+                    entries[$"{QueryName}.filter.{state.Key}"] = state.Applied;
+                }
+            }
+        }
+
+        return entries;
+    }
+
+    private string Href(int page, bool filters)
+    {
+        var parameters = new Dictionary<string, object?>(StringComparer.Ordinal);
+
+        foreach (var key in _initialKeys)
+        {
+            parameters[key] = null;
+        }
+
+        foreach (var entry in UrlEntries(page, filters))
+        {
+            parameters[entry.Key] = entry.Value;
+        }
+
+        return Navigation.GetUriWithQueryParameters(parameters);
+    }
+
+    private List<int> PageEntries()
+    {
+        var pages = new SortedSet<int> { 1, PageCount, _page - 1, _page, _page + 1 };
+        pages.RemoveWhere(page => page < 1 || page > PageCount);
+        var entries = new List<int>();
+        var previous = 0;
+
+        foreach (var page in pages)
+        {
+            if (page - previous == 2)
+            {
+                entries.Add(page - 1);
+            }
+            else if (page - previous > 2)
+            {
+                entries.Add(0);
+            }
+
+            entries.Add(page);
+            previous = page;
+        }
+
+        return entries;
+    }
+
+    private static string? InfoFor(FilterState state) => state.Column.FilterKind switch
+    {
+        DataTableFilterKind.Number =>
+            "Eine Zahl wie 100, ein Vergleich wie <50 oder >=10, oder ein Bereich wie 10-20.",
+        DataTableFilterKind.Date =>
+            "Ein Datum wie 25.11.2026, ein Vergleich wie <1.1.2026, oder ein Bereich wie 1.11.2026-30.11.2026.",
+        _ => null,
+    };
+
+    private void RenderGrid(RenderTreeBuilder builder)
+    {
+        builder.OpenComponent<DataTableGrid<TItem>>(0);
+        builder.AddComponentParameter(1, nameof(DataTableGrid<TItem>.Owner), this);
+        builder.AddComponentParameter(2, nameof(DataTableGrid<TItem>.Items), _rows);
+        builder.AddComponentParameter(3, nameof(DataTableGrid<TItem>.Caption), GridCaption);
+        builder.AddComponentParameter(4, nameof(DataTableGrid<TItem>.EmptyText), EmptyText);
+        builder.AddComponentParameter(5, nameof(DataTableGrid<TItem>.ChildContent), (RenderFragment)RenderColumns);
+        builder.AddComponentReferenceCapture(6, grid => _grid = (DataTableGrid<TItem>)grid);
+        builder.CloseComponent();
+    }
+
+    private void RenderColumns(RenderTreeBuilder builder)
+    {
+        foreach (var column in _columns)
+        {
+            builder.OpenComponent<TableColumn<TItem>>(0);
+            builder.AddComponentParameter(1, nameof(TableColumn<TItem>.Title), column.Title);
+            builder.AddComponentParameter(2, nameof(TableColumn<TItem>.Numeric), column.IsNumeric);
+            builder.AddComponentParameter(3, nameof(TableColumn<TItem>.RowHeader), column.RowHeader);
+            builder.AddComponentParameter(4, nameof(TableColumn<TItem>.ChildContent), column.Cell);
+            builder.CloseComponent();
+        }
+    }
+
+    private RenderFragment RenderBody() =>
+        @<text>
+            @{
+                CompleteColumns();
+                ComputeLocalView();
+            }
+            @if (_filters.Count > 0)
+            {
+                <CascadingValue Value="_editContext" IsFixed="true">
+                    <fieldset class="vs-data-table__filters">
+                        <legend class="vs-data-table__legend">@Caption filtern</legend>
+                        <div class="vs-data-table__filter-grid">
+                            @foreach (var state in _filters)
+                            {
+                                <div @key="(state, _resetCount)"
+                                     class="vs-data-table__filter"
+                                     @oninput="args => OnFilterInput(state, args)"
+                                     @onkeydown="OnFilterKeyDown"
+                                     @onfocusout="ApplyFiltersAsync">
+                                    <Input TValue="string"
+                                           Label="@state.Column.Title"
+                                           Info="@InfoFor(state)"
+                                           Value="@state.Text"
+                                           ValueChanged="value => OnFilterChanged(state, value)"
+                                           ValueExpression="() => state.Text" />
+                                </div>
+                            }
+                        </div>
+                        @if (HasFilterText)
+                        {
+                            <a class="vs-data-table__reset"
+                               href="@Href(1, filters: false)"
+                               data-vs-data-table-action="reset">Alle Filter zurücksetzen</a>
+                        }
+                    </fieldset>
+                </CascadingValue>
+            }
+            @if (_loading && _rows.Count > 0)
+            {
+                <div class="vs-data-table__loading">
+                    <Spinner />
+                </div>
+            }
+            @RenderGrid
+            @if (PageCount > 1 && _loaded)
+            {
+                <nav class="vs-data-table__pagination" aria-label="@($"{Caption}: Seiten")">
+                    <ul class="vs-data-table__pages">
+                        @if (_page > 1)
+                        {
+                            <li>
+                                <a class="vs-data-table__page vs-data-table__step"
+                                   href="@Href(_page - 1, filters: true)"
+                                   data-vs-data-table-action="page"
+                                   data-vs-data-table-page="@(_page - 1)">
+                                    <span class="vs-data-table__step-icon"><SystemIcon Name="SystemIconName.ArrowLeft" /></span>
+                                    Vorherige
+                                </a>
+                            </li>
+                        }
+                        @foreach (var number in PageEntries())
+                        {
+                            if (number == 0)
+                            {
+                                <li class="vs-data-table__gap" aria-hidden="true">…</li>
+                            }
+                            else
+                            {
+                                <li>
+                                    <a class="vs-data-table__page"
+                                       href="@Href(number, filters: true)"
+                                       aria-current="@(number == _page ? "page" : null)"
+                                       data-vs-data-table-action="page"
+                                       data-vs-data-table-page="@number"><span class="vs-data-table__page-prefix">Seite </span>@number</a>
+                                </li>
+                            }
+                        }
+                        @if (_page < PageCount)
+                        {
+                            <li>
+                                <a class="vs-data-table__page vs-data-table__step"
+                                   href="@Href(_page + 1, filters: true)"
+                                   data-vs-data-table-action="page"
+                                   data-vs-data-table-page="@(_page + 1)">
+                                    Nächste
+                                    <span class="vs-data-table__step-icon"><SystemIcon Name="SystemIconName.ArrowRight" /></span>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+        </text>;
+
+    private RenderFragment RenderEmpty =>
+        @<text>
+            @if (_loading || !_loaded)
+            {
+                <Spinner />
+            }
+            else
+            {
+                <span class="vs-data-table__no-results">
+                    Keine Treffer.
+                    @if (HasFilterText)
+                    {
+                        <a class="vs-data-table__reset"
+                           href="@Href(1, filters: false)"
+                           data-vs-data-table-action="reset">Alle Filter zurücksetzen</a>
+                    }
+                </span>
+            }
+        </text>;
+
+    private RenderFragment RenderSortButton(DataTableColumnBase<TItem> column, bool sorted) =>
+        @<button type="button" class="vs-data-table__sort" @onclick="() => SortAsync(column)">
+            <span class="vs-data-table__sort-title">@column.Title</span>
+            @if (sorted)
+            {
+                <span class="vs-data-table__sort-state" aria-hidden="true">
+                    <span class="vs-data-table__sort-icon"><SystemIcon Name="@(_descending ? SystemIconName.ArrowDown : SystemIconName.ArrowUp)" /></span>
+                    @(_descending ? "absteigend" : "aufsteigend")
+                </span>
+            }
+            else
+            {
+                <span class="vs-data-table__sort-icon vs-data-table__sort-icon--idle"><SystemIcon Name="SystemIconName.ArrowsDownUp" /></span>
+            }
+        </button>;
+
+    public async ValueTask DisposeAsync()
+    {
+        CancelDebounce();
+        CancelLoad();
+
+        if (_module is not null)
+        {
+            try
+            {
+                var module = await _module.ConfigureAwait(true);
+                await module.InvokeVoidAsync("detach", _root).ConfigureAwait(true);
+                await module.DisposeAsync().ConfigureAwait(true);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        _self?.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private sealed class FilterState(string key)
+    {
+        public string Key { get; } = key;
+
+        public DataTableColumnBase<TItem> Column { get; set; } = default!;
+
+        public string Text { get; set; } = "";
+
+        public string Pending { get; set; } = "";
+
+        public string Applied { get; set; } = "";
+
+        public DataTableFilter? Filter { get; set; }
+
+        public string Normalized => string.IsNullOrWhiteSpace(Pending) ? "" : Pending.Trim();
+
+        public bool Changed => !string.Equals(Normalized, Applied, StringComparison.Ordinal);
+    }
+}

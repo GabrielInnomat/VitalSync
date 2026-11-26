@@ -1,0 +1,29 @@
+@namespace VitalSync.DesignSystem.Layouts
+
+<li @attributes="AdditionalAttributes" class="@CssClass">
+    @ChildContent
+</li>
+
+@code {
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter]
+    public bool Wide { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => CssClasses.Merge(
+        Wide ? "vs-dashboard-grid__item vs-dashboard-grid__item--wide" : "vs-dashboard-grid__item",
+        AdditionalAttributes);
+
+    protected override void OnParametersSet()
+    {
+        if (ChildContent is null)
+        {
+            throw new InvalidOperationException(
+                "DashboardGridItem requires ChildContent; it is the card the item places in the grid.");
+        }
+    }
+}

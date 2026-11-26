@@ -1,0 +1,350 @@
+.vs-metric-chart {
+    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    gap: var(--metric-chart-gap);
+    block-size: 100%;
+    box-sizing: border-box;
+    padding: var(--metric-chart-padding);
+    background-color: var(--metric-chart-background);
+    border: var(--metric-chart-border);
+    border-radius: var(--metric-chart-radius);
+    box-shadow: var(--metric-chart-shadow);
+    font-family: var(--font-family-ui);
+}
+
+    .vs-metric-chart p {
+        margin: 0;
+    }
+
+.vs-metric-chart__title {
+    margin: 0;
+    color: var(--metric-chart-title-text-color);
+    font-size: var(--metric-chart-title-font-size);
+    font-weight: var(--metric-chart-title-font-weight);
+    line-height: var(--metric-chart-title-line-height);
+    overflow-wrap: anywhere;
+    hyphens: auto;
+}
+
+.vs-metric-chart__latest-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+.vs-metric-chart__latest {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.vs-metric-chart__value {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--space-2);
+    overflow-wrap: anywhere;
+}
+
+.vs-metric-chart__number {
+    color: var(--metric-chart-value-text-color);
+    font-size: var(--metric-chart-value-font-size);
+    font-weight: var(--metric-chart-value-font-weight);
+    line-height: var(--metric-chart-value-line-height);
+    font-variant-numeric: tabular-nums;
+}
+
+.vs-metric-chart__unit {
+    color: var(--metric-chart-unit-text-color);
+    font-size: var(--metric-chart-unit-font-size);
+}
+
+.vs-metric-chart__detail,
+.vs-metric-chart__legend {
+    color: var(--metric-chart-detail-text-color);
+    font-size: var(--metric-chart-detail-font-size);
+    line-height: var(--line-height-base);
+    overflow-wrap: anywhere;
+}
+
+.vs-metric-chart__figure {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+        "y-axis plot"
+        ". x-axis"
+        "legend legend";
+    column-gap: var(--metric-chart-axis-gap);
+    padding-block-start: var(--space-2);
+}
+
+.vs-metric-chart__y-axis,
+.vs-metric-chart__x-axis {
+    position: relative;
+    color: var(--metric-chart-axis-text-color);
+    font-size: var(--metric-chart-axis-font-size);
+    line-height: var(--line-height-base);
+    font-variant-numeric: tabular-nums;
+}
+
+.vs-metric-chart__y-axis {
+    grid-area: y-axis;
+}
+
+.vs-metric-chart__y-sizer {
+    display: grid;
+    block-size: 0;
+    overflow: hidden;
+    visibility: hidden;
+}
+
+    .vs-metric-chart__y-sizer > span {
+        grid-area: 1 / 1;
+        white-space: nowrap;
+    }
+
+.vs-metric-chart__y-label {
+    position: absolute;
+    inset-inline-end: 0;
+    white-space: nowrap;
+    transform: translateY(-50%);
+}
+
+.vs-metric-chart__plot {
+    grid-area: plot;
+    block-size: var(--metric-chart-plot-height);
+}
+
+.vs-metric-chart__svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: visible;
+    color: var(--metric-chart-series-color);
+}
+
+.vs-metric-chart--activity .vs-metric-chart__svg {
+    color: var(--metric-chart-series-color-activity);
+}
+
+.vs-metric-chart--nutrition .vs-metric-chart__svg {
+    color: var(--metric-chart-series-color-nutrition);
+}
+
+.vs-metric-chart--heartrate .vs-metric-chart__svg {
+    color: var(--metric-chart-series-color-heartrate);
+}
+
+.vs-metric-chart--sleep .vs-metric-chart__svg {
+    color: var(--metric-chart-series-color-sleep);
+}
+
+.vs-metric-chart__grid {
+    stroke: var(--metric-chart-grid-color);
+    stroke-width: var(--metric-chart-grid-width);
+}
+
+.vs-metric-chart__baseline {
+    stroke: var(--metric-chart-baseline-color);
+    stroke-width: var(--metric-chart-grid-width);
+}
+
+.vs-metric-chart__bar {
+    fill: currentColor;
+}
+
+.vs-metric-chart__line {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: var(--metric-chart-line-width);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.vs-metric-chart__dots {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: var(--metric-chart-dot-size);
+    stroke-linecap: round;
+}
+
+.vs-metric-chart__missing,
+.vs-metric-chart__swatch--missing rect {
+    fill: none;
+    stroke: var(--metric-chart-missing-color);
+    stroke-width: var(--metric-chart-missing-width);
+    stroke-dasharray: var(--metric-chart-missing-dash);
+}
+
+.vs-metric-chart__goal,
+.vs-metric-chart__swatch--goal line {
+    stroke: var(--metric-chart-goal-color);
+    stroke-width: var(--metric-chart-goal-width);
+    stroke-dasharray: var(--metric-chart-goal-dash);
+}
+
+.vs-metric-chart__x-axis {
+    grid-area: x-axis;
+    min-block-size: 1lh;
+    margin-block-start: var(--space-1);
+}
+
+.vs-metric-chart__x-label {
+    position: absolute;
+    inset-block-start: 0;
+    white-space: nowrap;
+    transform: translateX(-50%);
+}
+
+.vs-metric-chart__x-label--date {
+    display: none;
+}
+
+.vs-metric-chart__x-label--narrow {
+    display: block;
+}
+
+@container (min-width: 30rem) {
+    .vs-metric-chart__x-label--narrow {
+        display: none;
+    }
+
+    .vs-metric-chart__x-label--medium {
+        display: block;
+    }
+}
+
+@container (min-width: 48rem) {
+    .vs-metric-chart__x-label--medium {
+        display: none;
+    }
+
+    .vs-metric-chart__x-label--wide {
+        display: block;
+    }
+}
+
+.vs-metric-chart__legend {
+    grid-area: legend;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.vs-metric-chart__legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.vs-metric-chart__swatch {
+    flex-shrink: 0;
+    inline-size: var(--metric-chart-swatch-width);
+    block-size: var(--metric-chart-swatch-height);
+    overflow: visible;
+}
+
+.vs-metric-chart__swatch--missing {
+    inline-size: var(--metric-chart-swatch-height);
+}
+
+.vs-metric-chart__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-block-size: var(--touch-target-min);
+    color: var(--metric-chart-toggle-text-color);
+    font-size: var(--metric-chart-detail-font-size);
+    text-decoration: underline;
+    cursor: pointer;
+    list-style: none;
+}
+
+    .vs-metric-chart__toggle::-webkit-details-marker {
+        display: none;
+    }
+
+    .vs-metric-chart__toggle:hover {
+        color: var(--metric-chart-toggle-text-color-hover);
+    }
+
+    .vs-metric-chart__toggle:focus-visible,
+    .vs-metric-chart__link:focus-visible {
+        outline: var(--focus-ring-width) solid var(--focus-ring-color);
+        outline-offset: var(--focus-ring-offset);
+        box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+    }
+
+.vs-metric-chart__toggle-icon {
+    display: inline-flex;
+    transform: rotate(-90deg);
+}
+
+    .vs-metric-chart__toggle-icon ::deep svg {
+        width: var(--metric-chart-toggle-icon-size);
+        height: var(--metric-chart-toggle-icon-size);
+    }
+
+.vs-metric-chart__details[open] .vs-metric-chart__toggle-icon {
+    transform: none;
+}
+
+.vs-metric-chart__details[open] .vs-metric-chart__toggle-show,
+.vs-metric-chart__details:not([open]) .vs-metric-chart__toggle-hide {
+    display: none;
+}
+
+.vs-metric-chart__table {
+    margin-block-start: var(--space-3);
+}
+
+.vs-metric-chart__link {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    min-block-size: var(--touch-target-min);
+    margin-block-start: auto;
+    color: var(--metric-chart-link-text-color);
+    font-size: var(--metric-chart-detail-font-size);
+    text-decoration: underline;
+}
+
+    .vs-metric-chart__link:hover {
+        color: var(--metric-chart-link-text-color-hover);
+    }
+
+@media (forced-colors: active) {
+    .vs-metric-chart__svg,
+    .vs-metric-chart__swatch {
+        forced-color-adjust: none;
+        color: CanvasText;
+    }
+
+    .vs-metric-chart__bar {
+        fill: CanvasText;
+    }
+
+    .vs-metric-chart__line,
+    .vs-metric-chart__dots,
+    .vs-metric-chart__missing,
+    .vs-metric-chart__swatch--missing rect,
+    .vs-metric-chart__goal,
+    .vs-metric-chart__swatch--goal line {
+        stroke: CanvasText;
+    }
+
+    .vs-metric-chart__grid,
+    .vs-metric-chart__baseline {
+        stroke: GrayText;
+    }
+}
