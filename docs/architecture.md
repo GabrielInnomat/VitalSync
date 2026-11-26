@@ -101,6 +101,10 @@ database it owns, a readiness check for the broker, problem-details error handli
 global exception handler, and the default health endpoints. The connection names are the Aspire
 resource names.
 
+The BFF wires the same service defaults, problem-details error handling, global exception handler
+and default health endpoints. It owns no database and does not use the broker, so it has no
+readiness checks of its own.
+
 Where the composed system runs and who can reach it is described in [Hosting](./hosting.md).
 
 ## Principles
