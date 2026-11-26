@@ -38,7 +38,7 @@ GitHub, so this opens nothing on the computer.
 - **What triggers it** — a push to `main` that changes at least one file that is not Markdown. A push
   that changes only `*.md` files, wherever they are, starts nothing. The pipeline can also be started
   by hand.
-- **Tests first, on GitHub** — the same Release build, tests and smoke tests as for a pull request,
+- **Tests first, on GitHub** — the same Release build and tests as for a pull request,
   on GitHub's own machines. The system is deployed only once all of them have passed; otherwise the
   running system stays as it is.
 - **The deployment** — creates any volume a change has added, runs `aspire deploy` without asking
@@ -175,8 +175,8 @@ that matches the AppHost's Aspire packages.
 - **A runner on the computer itself, for the deployment only** — GitHub's own machines could only
   deploy if the computer were reachable from the internet. A runner on the computer deploys without
   that, and it is free. Building and testing stay on GitHub's machines: the tests start containers
-  and a samples system of their own, which would otherwise compete with the hosted system for the
-  computer's Docker and ports, and the build and tests keep running while the computer is off.
+  of their own, which would otherwise compete with the hosted system for the computer's Docker and
+  ports, and the build and tests keep running while the computer is off.
 - **A public repository** — a pull request from a fork could otherwise change a workflow so that it
   runs on the computer. Workflows of outside contributors therefore wait for the owner's approval,
   and the `production` environment accepts deployments from `main` only. The pipeline's logs are

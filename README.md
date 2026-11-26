@@ -36,6 +36,7 @@ VitalSync/
 │       ├── Fitness/
 │       └── HealthAnalytics/
 ├── docs/                        Architecture documentation
+├── tools/                       Build-time checks, hosting scripts and the operations guide, not shipped
 └── tests/                       Cross-cutting / integration tests
 ```
 

@@ -120,8 +120,7 @@ One workflow, `.github/workflows/build.yml`, builds and tests, always on GitHub'
 every pull request, on demand, and as the first job of `.github/workflows/deploy.yml` for every push
 to `main` that changes more than Markdown. The deployment on the hosting computer runs only once it
 has passed — see [Hosting](./hosting.md#how-a-change-reaches-it). It builds in Release — which, with
-warnings as errors, is also the analyzer and style gate — then runs the tests, and then starts the
-samples AppHost and runs the smoke tests against it.
+warnings as errors, is also the analyzer and style gate — and then runs the tests.
 
 Container-backed tests skip when Docker is unavailable, which keeps the suite usable locally. In CI
 that would be dangerous: an agent without Docker would report success while entire test classes
