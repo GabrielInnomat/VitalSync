@@ -20,13 +20,70 @@ if (-not (Test-Path -LiteralPath $manifestPath)) {
 }
 
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+
+$invalid = @($manifest.databases | Where-Object { "$($_.name)" -cnotmatch '^[a-z0-9][a-z0-9-]*$' })
+if ($invalid.Count -gt 0) {
+    $listed = ($invalid | ForEach-Object { "'$($_.name)'" }) -join ', '
+    throw "The manifest of '$Backup' names databases that are not VitalSync database names: $listed. Nothing was restored."
+}
+
+$globalsPath = Join-Path $Backup 'globals.sql'
+if (-not (Test-Path -LiteralPath $globalsPath)) {
+    throw "'$Backup' is not a complete VitalSync backup: it has no globals.sql."
+}
+
+$globals = @(Get-Content -LiteralPath $globalsPath -Encoding UTF8)
 $inContainer = '/tmp/vitalsync-restore'
 
-function Restore-Databases {
+function Get-RoleName {
+    param([string] $Line)
+
+    if ($Line -cmatch '^(?:CREATE|ALTER) ROLE ("(?:[^"]|"")+"|[^\s;"]+)[\s;]') {
+        $name = $Matches[1]
+        if ($name.StartsWith('"')) {
+            $name = $name.Substring(1, $name.Length - 2).Replace('""', '"')
+        }
+
+        $name
+    }
+}
+
+$backupRoles = @($globals | Where-Object { $_ -cmatch '^CREATE ROLE ' } | ForEach-Object { Get-RoleName -Line $_ })
+
+function Restore-Roles {
+    param([Parameter(Mandatory)] [string] $Container)
+
+    $existing = Get-Roles -Container $Container
+    $kept = @($backupRoles | Where-Object { $existing -ccontains $_ })
+    $created = @($backupRoles | Where-Object { $existing -cnotcontains $_ })
+    if ($kept.Count -gt 0) {
+        Write-Host "Keeping the existing roles $($kept -join ', ') as they are"
+    }
+    if ($created.Count -eq 0) {
+        return
+    }
+
+    Write-Host "Creating the roles $($created -join ', ')"
+    $statements = @($globals | Where-Object { $existing -cnotcontains (Get-RoleName -Line $_) })
+    $file = [IO.Path]::GetTempFileName()
+    try {
+        [IO.File]::WriteAllText($file, (($statements -join "`n") + "`n"), (New-Object Text.UTF8Encoding $false))
+        Invoke-Docker -Arguments @('cp', $file, "${Container}:$inContainer/roles.sql") | Out-Null
+    }
+    finally {
+        Remove-Item -LiteralPath $file -Force
+    }
+
+    Invoke-InPostgres -Container $Container -Command "psql -U postgres -X -q -v ON_ERROR_STOP=1 --file '$inContainer/roles.sql'" | Out-Null
+}
+
+function Restore-Backup {
     param([Parameter(Mandatory)] [string] $Container)
 
     Invoke-Docker -Arguments @('exec', $Container, 'rm', '-rf', $inContainer) | Out-Null
     Invoke-Docker -Arguments @('cp', $Backup, "${Container}:$inContainer") | Out-Null
+
+    Restore-Roles -Container $Container
 
     foreach ($database in $manifest.databases) {
         Write-Host "Restoring $($database.name)"
@@ -44,6 +101,16 @@ function Assert-Restored {
 
     $present = Get-ApplicationDatabases -Container $Container
     $failures = @()
+
+    $roles = Get-Roles -Container $Container
+    $missingRoles = @($backupRoles | Where-Object { $roles -cnotcontains $_ })
+    if ($missingRoles.Count -gt 0) {
+        $failures += "the roles $($missingRoles -join ', ') are missing"
+    }
+    else {
+        Write-Host "  roles: all $($backupRoles.Count) of the backup present"
+    }
+
     foreach ($database in $manifest.databases) {
         if ($present -notcontains $database.name) {
             $failures += "$($database.name) is missing"
@@ -79,7 +146,7 @@ if ($PSCmdlet.ParameterSetName -eq 'Verify') {
             Start-Sleep -Seconds 1
         }
 
-        Restore-Databases -Container $container
+        Restore-Backup -Container $container
         Assert-Restored -Container $container
         Write-Host "The backup $Backup restores completely."
     }
@@ -107,7 +174,7 @@ if ($services.Count -gt 0) {
 }
 
 try {
-    Restore-Databases -Container $postgres
+    Restore-Backup -Container $postgres
     Assert-Restored -Container $postgres
 }
 finally {

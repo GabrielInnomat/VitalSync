@@ -134,10 +134,11 @@ before it counts.**
 - **Where** — in a folder outside the Docker volumes, so losing a volume does not lose its backups.
   A fixed number of the newest backups is kept.
 - **Checking** — a backup can be restored into a throwaway PostgreSQL container and compared with
-  its manifest, without touching the running system.
+  its manifest and its roles, without touching the running system.
 - **Restoring** — a restore into the running system stops every service that uses the databases,
-  recreates each database from the backup, checks it against the manifest and starts the services
-  again.
+  creates the roles the server does not have yet, recreates each database from the backup, checks
+  it against the manifest and starts the services again. Roles that already exist are left as they
+  are, so a restore never replaces a password the running system uses.
 - **The broker** — its volume is not backed up. Integration events leave a service through its
   outbox, which lives in that service's database, so the databases are what has to survive. This
   is to be confirmed once real messages flow.

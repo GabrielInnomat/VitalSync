@@ -68,6 +68,13 @@ function Get-ApplicationDatabases {
     @((Invoke-InPostgres -Container $Container -Command $query) -split "`r?`n" | Where-Object { $_ })
 }
 
+function Get-Roles {
+    param([Parameter(Mandatory)] [string] $Container)
+
+    $query = 'psql -U postgres -At -c ''SELECT rolname FROM pg_roles ORDER BY rolname'''
+    @((Invoke-InPostgres -Container $Container -Command $query) -split "`r?`n" | Where-Object { $_ })
+}
+
 function Get-TableCount {
     param([Parameter(Mandatory)] [string] $Container, [Parameter(Mandatory)] [string] $Database)
 
@@ -91,4 +98,4 @@ function Get-LatestBackup {
     $latest.FullName
 }
 
-Export-ModuleMember -Function Invoke-Docker, Resolve-ComposeProject, Get-ServiceContainer, Invoke-InPostgres, Get-ApplicationDatabases, Get-TableCount, Get-LatestBackup
+Export-ModuleMember -Function Invoke-Docker, Resolve-ComposeProject, Get-ServiceContainer, Invoke-InPostgres, Get-ApplicationDatabases, Get-Roles, Get-TableCount, Get-LatestBackup

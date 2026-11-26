@@ -290,17 +290,24 @@ backups stay, older ones are removed.
 `-Backup`.
 
 Without further switches it only checks the backup. It restores into a throwaway PostgreSQL
-container, compares every database with the manifest and removes the container again. The running
-system is not touched, so this can run as often as wanted.
+container, checks that every role of the backup exists, compares every database with the manifest
+and removes the container again. The running system is not touched, so this can run as often as
+wanted.
+
+Before it touches anything, it checks every database name in the manifest and stops if one holds
+anything but lowercase letters, digits and hyphens. It then creates the roles from `globals.sql`
+that the server does not have yet, before any database, so that every object finds its owner. Roles
+the server already has, `postgres` always among them, stay exactly as they are: a restore never
+replaces a password the running system uses, including the new ones chosen on another computer.
 
 ```powershell
 .\tools\hosting\Restore-VitalSync.ps1 -Destination "$env:USERPROFILE\Documents\Backups\VitalSync"
 ```
 
 With `-IntoRunningSystem` it replaces the databases of the running system. It asks for
-confirmation first, stops every service that uses the databases, recreates each database from the
-backup, checks it against the manifest and starts the services again. Everything written since the
-backup is lost.
+confirmation first, stops every service that uses the databases, creates the missing roles,
+recreates each database from the backup, checks it against the manifest and starts the services
+again. Everything written since the backup is lost.
 
 ```powershell
 .\tools\hosting\Restore-VitalSync.ps1 -Destination "$env:USERPROFILE\Documents\Backups\VitalSync" -IntoRunningSystem
