@@ -7,6 +7,11 @@ on:
 
 permissions:
   contents: read
+  deployments: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
 
 jobs:
   ci:
@@ -26,15 +31,31 @@ jobs:
       - name: Decide whether to deploy
         id: decide
         env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
-          BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
         run: |
           deploy=true
-          if [ "$EVENT_NAME" = "push" ] && git cat-file -e "${BEFORE}^{commit}" 2> /dev/null; then
-            changed="$(git diff --name-only "$BEFORE" "$AFTER")"
-            if ! grep -qv '\.md$' <<< "$changed"; then
-              deploy=false
+          if [ "$EVENT_NAME" = "push" ]; then
+            deployed=""
+            deployments="$(gh api "repos/${REPOSITORY}/deployments?environment=production&per_page=100" --jq '.[] | "\(.id) \(.sha)"' || true)"
+            while read -r id sha; do
+              if [ -z "$id" ]; then
+                continue
+              fi
+              state="$(gh api "repos/${REPOSITORY}/deployments/${id}/statuses?per_page=1" --jq '.[0].state // ""' || true)"
+              if [ "$state" = "success" ]; then
+                deployed="$sha"
+                break
+              fi
+            done <<< "$deployments"
+            echo "Last successful deployment: ${deployed:-none}"
+            if [ -n "$deployed" ] && git cat-file -e "${deployed}^{commit}" 2> /dev/null; then
+              changed="$(git diff --name-only "$deployed" "$AFTER")"
+              if ! grep -qv '\.md$' <<< "$changed"; then
+                deploy=false
+              fi
             fi
           fi
           echo "deploy=${deploy}" >> "$GITHUB_OUTPUT"
@@ -46,9 +67,6 @@ jobs:
     runs-on: [self-hosted, windows, vitalsync]
     timeout-minutes: 30
     environment: production
-    concurrency:
-      group: deploy
-      cancel-in-progress: false
     defaults:
       run:
         shell: powershell
@@ -80,4 +98,14 @@ jobs:
               throw "$service did not answer Healthy."
             }
             Write-Output "$service is healthy."
+          }
+
+      - name: Remove unused images
+        run: |
+          Import-Module .\tools\hosting\VitalSyncHosting.psm1
+          $prune = Invoke-Docker -Arguments @('image', 'prune', '--all', '--force') -AllowFailure
+          if ($prune.ExitCode -eq 0) {
+            Write-Output (($prune.Output -split [Environment]::NewLine) | Where-Object { $_ -like 'Total reclaimed space*' })
+          } else {
+            Write-Warning "docker image prune failed with exit code $($prune.ExitCode)."
           }
