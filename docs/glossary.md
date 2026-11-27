@@ -122,12 +122,12 @@ transaction has committed rather than inside it.
 
 ### Event store
 
-The append-only storage of event streams used by event-sourced contexts.
+The append-only storage of event streams used by event-sourced aggregates.
 
 ### Persistence strategy
 
-The choice between state-stored and event-sourced persistence. It is made **per bounded context**,
-never per aggregate.
+The choice between state-stored and event-sourced persistence. It is made **per aggregate**, so one
+bounded context may hold both kinds; a single command still commits through exactly one store.
 
 ### Projection
 

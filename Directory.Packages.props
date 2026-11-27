@@ -14,13 +14,13 @@
     <PackageVersion Include="AspNetCore.HealthChecks.Rabbitmq" Version="9.0.0" />
     <PackageVersion Include="bunit" Version="2.15.2" />
     <PackageVersion Include="coverlet.collector" Version="10.1.1" />
-    <PackageVersion Include="GaWeCodes.Thessera.Analyzers" Version="1.0.0-Preview.4" />
-    <PackageVersion Include="GaWeCodes.Thessera.Application" Version="1.0.0-Preview.4" />
-    <PackageVersion Include="GaWeCodes.Thessera.Domain" Version="1.0.0-Preview.4" />
-    <PackageVersion Include="GaWeCodes.Thessera.Messaging.RabbitMq" Version="1.0.0-Preview.4" />
-    <PackageVersion Include="GaWeCodes.Thessera.Persistence.EfCore.Postgres" Version="1.0.0-Preview.4" />
-    <PackageVersion Include="GaWeCodes.Thessera.Persistence.Marten" Version="1.0.0-Preview.4" />
-    <PackageVersion Include="GaWeCodes.Thessera.Testing" Version="1.0.0-Preview.4" />
+    <PackageVersion Include="GaWeCodes.Thessera.Analyzers" Version="1.0.0-rc.1" />
+    <PackageVersion Include="GaWeCodes.Thessera.Application" Version="1.0.0-rc.1" />
+    <PackageVersion Include="GaWeCodes.Thessera.Domain" Version="1.0.0-rc.1" />
+    <PackageVersion Include="GaWeCodes.Thessera.Messaging.RabbitMq" Version="1.0.0-rc.1" />
+    <PackageVersion Include="GaWeCodes.Thessera.Persistence.EfCore.Postgres" Version="1.0.0-rc.1" />
+    <PackageVersion Include="GaWeCodes.Thessera.Persistence.Marten" Version="1.0.0-rc.1" />
+    <PackageVersion Include="GaWeCodes.Thessera.Testing" Version="1.0.0-rc.1" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.85.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Scripting" Version="5.9.0" />

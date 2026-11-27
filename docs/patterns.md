@@ -113,27 +113,35 @@ Two complementary strategies are used.
 - **Event Sourcing is selective.** The aggregate's state is derived from an append-only stream of
   domain events instead of being stored directly.
 
-**Event Sourcing is applied only where it adds business value.** Which contexts justify it is still
-open and is decided per context. Event Sourcing brings inherent history, audit and temporal
+**Event Sourcing is applied only where it adds business value.** Which aggregates justify it is
+still open and is decided per aggregate. Event Sourcing brings inherent history, audit and temporal
 queries, at the cost of an event store, projections, event versioning and more operational surface.
 Where that history has no business value, the cost buys nothing.
 
-> **The choice is per bounded context, not per aggregate.** A microservice hosts exactly one bounded
-> context, and a bounded context uses exactly one strategy — either all state-stored or all
-> event-sourced, never both. The two stores live in separate databases, so a single commit cannot
-> span them atomically. A context that appears to need both is a sign that it is **cut wrong** and
-> should be split into two contexts, each in its own service with its own single strategy. The host
-> configuration rejects a selection of both strategies at start-up.
+> **The choice is per aggregate, not per bounded context.** A bounded context may keep one aggregate
+> event-sourced and its other aggregates state-stored, in the same service and the same write
+> database. Every aggregate belongs to exactly one store. What stays fixed is the unit of
+> consistency: **a command handler works through the repository of exactly one aggregate, so every
+> command commits through exactly one store**, in one transaction. A handler that reaches for a
+> second aggregate is rejected at build time by an analyzer, and the host rejects at start-up both
+> such a handler and an aggregate claimed by two stores. Consistency between aggregates — inside a
+> context as across contexts — is reached through domain events, never through a shared
+> transaction.
 
-Candidates worth evaluating for Event Sourcing are workout-session tracking, which forms a natural
+Candidates worth evaluating for Event Sourcing are the workout session, which forms a natural
 event stream whose history has analytical value, and nutrient intake over time, which is
-append-only by nature. Largely CRUD-shaped areas such as the ingredient catalog are better served by
-state storage.
+append-only by nature. Largely CRUD-shaped aggregates such as the ingredient catalog are better
+served by state storage, even when they live in the same context as an event-sourced one.
+
+A domain event that has to change is never edited in place. A new version takes its place, and the
+**retired** version declares its successor, so every stored occurrence is read as the current
+version. The domain, the projections and the integration-event mappers only ever handle the current
+version, and raising a retired event is a build error.
 
 ## The outbox and the read side
 
 The read side of every context lives in its own read database and is kept current by an
-outbox-backed publisher. The same mechanism is used for state-stored and event-sourced contexts
+outbox-backed publisher. The same mechanism is used for state-stored and event-sourced aggregates
 alike:
 
 1. Handling a command makes the aggregate raise **domain events**.
@@ -164,12 +172,12 @@ Two obligations follow for every projection handler:
   processed and ignores anything at or below it. Ordering across different aggregates is not
   guaranteed.
 
-A read model is **rebuildable**, by different means depending on the strategy: an event-sourced
-context replays its stream, while a state-stored context has no surviving history and instead
-derives the read model again from the current aggregate state. This has a consequence worth stating
-plainly: **every field of a state-stored read model must be a function of the current state.** A
-rebuild writes absolute values, never increments. A field that needs history belongs in an
-event-sourced context.
+A read model is **rebuildable**, by different means depending on the strategy of the aggregate that
+feeds it: an event-sourced aggregate replays its stream, while a state-stored aggregate has no
+surviving history and instead derives the read model again from its current state. This has a
+consequence worth stating plainly: **every field of a read model fed by a state-stored aggregate
+must be a function of its current state.** A rebuild writes absolute values, never increments. A
+field that needs history belongs to an event-sourced aggregate.
 
 A rebuild is invoked explicitly, never automatically, and it publishes no integration events.
 

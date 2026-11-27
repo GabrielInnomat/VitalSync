@@ -60,9 +60,8 @@ and recipe management are largely CRUD-shaped, and the history of an edited reci
 business value.
 
 Nutrient intake over time is the one part that argues the other way, being append-only by nature. If
-that turns out to need a real event history, it is a signal that intake belongs in its own bounded
-context rather than that this one needs two strategies — see the decision rule in
-[Patterns](../patterns.md).
+that turns out to need a real event history, intake can be event-sourced on its own while the rest
+of the context stays state-stored — see the decision rule in [Patterns](../patterns.md).
 
 ## Published integration events
 

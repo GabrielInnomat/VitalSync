@@ -111,8 +111,9 @@ describes.
 ## PostgreSQL
 
 **PostgreSQL is the single relational engine of the platform.** It backs both persistence
-strategies: state-stored contexts through EF Core, event-sourced contexts through Marten. It also
-hosts the write and the read database of every context.
+strategies: state-stored aggregates through EF Core, event-sourced aggregates through Marten. It
+also hosts the write and the read database of every context. A context that mixes both strategies
+keeps both stores in its one write database.
 
 Standardizing on one engine is a deliberate simplification. It is required by Marten anyway, it
 keeps the operational surface small, and it means one set of tools, one backup strategy and one
@@ -120,17 +121,17 @@ kind of connection string.
 
 ## Entity Framework Core
 
-**EF Core is the ORM for state-stored contexts**, running on PostgreSQL through the Npgsql provider.
-It maps aggregates and their child collections to tables and provides the transaction the unit of
-work commits.
+**EF Core is the ORM for state-stored aggregates**, running on PostgreSQL through the Npgsql
+provider. It maps aggregates and their child collections to tables and provides the transaction the
+unit of work commits.
 
 Its design-time tooling belongs to the migration worker, not to the service. The migrations
 themselves live next to the `DbContext` they describe.
 
 ## Marten
 
-**Marten turns PostgreSQL into the event store** for event-sourced contexts. It is MIT-licensed and
-runs side by side with Wolverine, sharing a transaction with it.
+**Marten turns PostgreSQL into the event store** for event-sourced aggregates. It is MIT-licensed
+and runs side by side with Wolverine, sharing a transaction with it.
 
 It is used as a **raw event store**: events are appended to a stream and streams are read back,
 while the folding of events into state stays in the domain. Marten's own convention-based

@@ -40,9 +40,9 @@ rather than a row that gets updated.
 system: it forms a natural event stream, and its full history has analytical value rather than
 merely audit value.
 
-Note that the choice is made for the whole context, not for the session alone — see the decision
-rule in [Patterns](../patterns.md). If exercises and plans turn out to be poorly served by an event
-store, that is an argument for cutting the context differently, not for mixing two strategies.
+The choice is made per aggregate — see the decision rule in [Patterns](../patterns.md). The session
+can therefore be event-sourced while exercises and plans, which are largely CRUD-shaped, stay
+state-stored within this one context.
 
 ## Published integration events
 
@@ -51,6 +51,6 @@ None yet. A completed workout session is the obvious candidate for
 
 ## Open questions
 
-- Does the context justify Event Sourcing as a whole, or only the session part?
+- Which aggregates besides the workout session, if any, justify Event Sourcing?
 - Is energy expenditure calculated here or derived in Health Analytics?
 - How much of the exercise catalog is shared reference data versus user-owned?
