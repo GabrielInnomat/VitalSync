@@ -33,6 +33,12 @@ reason to work around the rule.
 Package versions are managed centrally in `Directory.Packages.props`: a `.csproj` carries
 `<PackageReference Include="..." />` with no `Version`.
 
+**Only LTS releases of .NET.** VitalSync moves to a new .NET version only when it is a Long Term
+Support release; Standard Term Support releases are skipped. A package whose newer version requires
+an STS release of .NET, or a newer compiler than the pinned SDK ships, stays on the latest version
+that supports the current LTS release. Dependabot (`.github/dependabot.yml`) enforces this and keeps
+package families together; the rules are described in `docs/technologies.md`.
+
 Every push to `main` is built and tested on GitHub's own machines by `.github/workflows/build.yml`;
 one that changes more than Markdown is then **deployed** by `.github/workflows/deploy.yml` on the
 hosting computer — see `docs/hosting.md`. Only the deployment job runs there, and its steps run in Windows
@@ -119,7 +125,8 @@ behavioral change, and make them pass.
 ## How to behave
 
 - **Always work on `main`** — never a separate branch, and never ask which branch to use.
-- **Never commit.** Leave the changes in the working tree.
+- **Never commit or push without asking.** Leave the changes in the working tree until a human
+  agrees.
 - **Never assume anything.** If you need more information, always **ask a human**.
 - **Always ask in the chat, as plain prose.** Never open a dialog, prompt, or multiple-choice picker;
   do not use a question tool. Write the question and its options as normal text in your answer, then

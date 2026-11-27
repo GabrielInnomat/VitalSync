@@ -1,0 +1,72 @@
+version: 2
+updates:
+  - package-ecosystem: dotnet-sdk
+    directory: /
+    schedule:
+      interval: daily
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: Microsoft.EntityFrameworkCore*
+        update-types:
+          - version-update:semver-major
+      - dependency-name: Microsoft.AspNetCore*
+        update-types:
+          - version-update:semver-major
+      - dependency-name: Npgsql*
+        update-types:
+          - version-update:semver-major
+      - dependency-name: Microsoft.CodeAnalysis*
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
+    groups:
+      aspire:
+        patterns:
+          - Aspire.*
+      thessera:
+        patterns:
+          - GaWeCodes.Thessera.*
+      entity-framework-core:
+        patterns:
+          - Microsoft.EntityFrameworkCore*
+      dotnet-extensions:
+        patterns:
+          - Microsoft.Extensions.Http.Resilience
+          - Microsoft.Extensions.TimeProvider.Testing
+      roslyn:
+        patterns:
+          - Microsoft.CodeAnalysis*
+      opentelemetry:
+        patterns:
+          - OpenTelemetry*
+      protobuf-net:
+        patterns:
+          - protobuf-net*
+      health-checks:
+        patterns:
+          - AspNetCore.HealthChecks.*
+      xunit:
+        patterns:
+          - xunit*
+      test-tooling:
+        patterns:
+          - Microsoft.NET.Test.Sdk
+          - coverlet.*
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+    groups:
+      github-actions:
+        patterns:
+          - "*"

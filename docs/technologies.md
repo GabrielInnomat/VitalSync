@@ -9,6 +9,12 @@ Every project targets **.NET 10**. The SDK version is pinned in `global.json` an
 within its feature band, so every machine and every build agent compiles against the same compiler
 and analyzers.
 
+VitalSync follows **Long Term Support releases only**. Standard Term Support releases of .NET are
+skipped, and a package whose newer major version requires one stays on the line that supports the
+current LTS release. The same holds for the compiler: `Microsoft.CodeAnalysis.CSharp` is never newer
+than the compiler the pinned SDK ships, because an analyzer referencing a newer compiler cannot be
+loaded by the build.
+
 Solution-wide settings live in `Directory.Build.props`: nullable reference types and implicit usings
 are on, the analysis level is the strictest available, and warnings are errors — those of the
 compiler and the analyzers as well as those that MSBuild itself and the targets of SDKs and packages
@@ -17,6 +23,30 @@ report. There is no
 
 Package versions are managed centrally in `Directory.Packages.props`, so a project file references a
 package by name and never carries a version of its own.
+
+Transitive pinning is on, so a version listed there also applies wherever the package arrives
+indirectly. This is why `Microsoft.CodeAnalysis.Scripting` is listed although no project references
+it: Wolverine's runtime compiler requires it in an older version than the rest of Roslyn, and its
+dependencies demand exactly that older compiler. Pinning it to the same version as
+`Microsoft.CodeAnalysis.CSharp` keeps every Roslyn package on one version.
+
+**Dependabot** proposes updates daily as pull requests, configured in `.github/dependabot.yml`, for
+the SDK in `global.json`, the packages in `Directory.Packages.props` and the GitHub Actions. Nothing
+is merged without review. Dependabot alerts and security updates are enabled for the repository as
+well: a known vulnerability in a dependency raises an alert and, independently of the schedule, a
+pull request to the lowest fixed version. The configuration encodes two rules:
+
+- **LTS only.** Dependabot never proposes a new major version of the SDK, of Entity Framework Core,
+  ASP.NET Core or Npgsql, because their major version follows the .NET release. Moving to the next
+  LTS release is a deliberate migration that also changes the target framework. Roslyn
+  (`Microsoft.CodeAnalysis*`) only receives patch updates; it is raised by hand together with the
+  SDK feature band.
+- **What belongs together moves together.** Packages released as one family — Aspire, Thessera,
+  Entity Framework Core, Roslyn, OpenTelemetry, protobuf-net, xUnit, and the `dotnet/extensions`
+  packages — arrive in one pull request per family, so they never drift apart.
+
+Packages whose version does not follow .NET, such as `Microsoft.Extensions.Http.Resilience`, may use
+a higher major version than the runtime as long as they support the current LTS target framework.
 
 ## .NET Aspire
 
