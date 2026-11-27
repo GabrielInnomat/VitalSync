@@ -24,6 +24,15 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Install the Aspire CLI bundle
+        run: |
+          version="$(sed -n 's/.*Include="Aspire.Hosting.AppHost" Version="\([^"]*\)".*/\1/p' Directory.Packages.props)"
+          if [ -z "$version" ]; then
+            echo "Directory.Packages.props has no version for Aspire.Hosting.AppHost."
+            exit 1
+          fi
+          dnx --yes "aspire.cli@${version}" -- setup --install-path "$HOME/.aspire"
+
       - name: Restore
         run: dotnet restore
 

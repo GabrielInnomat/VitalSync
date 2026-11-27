@@ -31,7 +31,9 @@ reachable.
 No Aspire workload has to be installed; the AppHost is a plain .NET project that references the
 Aspire hosting packages. The orchestrator and the dashboard are taken from the Aspire CLI bundle
 rather than from NuGet packages. The build resolves the bundle by itself, through a compatible
-`aspire` on the `PATH` or through `dnx`.
+`aspire` on the `PATH` or through `dnx`. The CI pipeline prepares the bundle once before it builds,
+because the two AppHosts would otherwise each set it up at the same time and collide on the same
+files.
 
 The AppHost registers each project by the path of its project file, not through a project
 reference, so it compiles without the projects it starts. When it runs, it builds them itself in its
