@@ -19,7 +19,7 @@ public sealed class VitalsCardTests : BunitContext
             .Add(p => p.Unit, "  Schritte  "));
 
         Assert.Equal("Schritte", cut.Find("h2.vs-vitals-card__title").TextContent);
-        Assert.Equal("12’500", cut.Find(".vs-vitals-card__number").TextContent);
+        Assert.Equal(Swiss("12’500"), cut.Find(".vs-vitals-card__number").TextContent);
         Assert.Equal("Schritte", cut.Find(".vs-vitals-card__unit").TextContent);
     }
 
@@ -65,7 +65,7 @@ public sealed class VitalsCardTests : BunitContext
 
         Assert.Equal("Noch keine Daten", cut.Find(".vs-vitals-card__no-data").TextContent);
         Assert.Empty(cut.FindAll(".vs-vitals-card__value"));
-        Assert.Equal("Ziel: 10’000 Schritte", cut.Find(".vs-vitals-card__goal-text").TextContent);
+        Assert.Equal(Swiss("Ziel: 10’000 Schritte"), cut.Find(".vs-vitals-card__goal-text").TextContent);
         Assert.Empty(cut.FindAll(".vs-vitals-card__bar"));
     }
 
@@ -85,7 +85,7 @@ public sealed class VitalsCardTests : BunitContext
             .Add(p => p.Goal, 10000m));
 
         Assert.Equal(
-            $"Ziel: 10’000 Schritte, {percentage} erreicht",
+            Swiss($"Ziel: 10’000 Schritte, {percentage} erreicht"),
             cut.Find(".vs-vitals-card__goal-text").TextContent);
         Assert.Equal("true", cut.Find(".vs-vitals-card__bar").GetAttribute("aria-hidden"));
         Assert.Equal(barStyle, cut.Find(".vs-vitals-card__bar-fill").GetAttribute("style"));
@@ -273,6 +273,9 @@ public sealed class VitalsCardTests : BunitContext
     {
         Assert.ThrowsAny<ArgumentException>(() => new VitalsTrend(VitalsTrendDirection.Up, text));
     }
+
+    private static string Swiss(string text) =>
+        text.Replace("’", SwissGerman.NumberFormat.NumberGroupSeparator, StringComparison.Ordinal);
 
     private IRenderedComponent<VitalsCard> RenderCard(
         Action<ComponentParameterCollectionBuilder<VitalsCard>> parameterBuilder)

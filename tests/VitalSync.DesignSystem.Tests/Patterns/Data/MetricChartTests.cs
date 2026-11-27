@@ -28,14 +28,14 @@ public sealed class MetricChartTests : BunitContext
             .Add(p => p.Goal, 10000m));
 
         Assert.Equal("Schritte", cut.Find("h2.vs-metric-chart__title").TextContent);
-        Assert.Equal("7’500", cut.Find(".vs-metric-chart__number").TextContent);
+        Assert.Equal(Swiss("7’500"), cut.Find(".vs-metric-chart__number").TextContent);
         Assert.Equal("Schritte", cut.Find(".vs-metric-chart__unit").TextContent);
         Assert.Equal("Neuester Wert: Mittwoch, 25.11.", cut.Find(".vs-metric-chart__latest .vs-metric-chart__detail").TextContent);
         Assert.Equal("true", cut.Find(".vs-metric-chart__latest").GetAttribute("aria-hidden"));
-        Assert.Equal("Neuester Wert am Mittwoch, 25.11.: 7’500 Schritte.", cut.Find(".vs-metric-chart__latest-text").TextContent);
+        Assert.Equal(Swiss("Neuester Wert am Mittwoch, 25.11.: 7’500 Schritte."), cut.Find(".vs-metric-chart__latest-text").TextContent);
         Assert.Equal(
-            "Vom 19.11. bis 25.11.: Durchschnitt 9’286 Schritte pro Tag, höchster Wert am Dienstag, 24.11.: 12’300 Schritte. "
-            + "Ziel 10’000 Schritte an 3 von 7 Tagen erreicht.",
+            Swiss("Vom 19.11. bis 25.11.: Durchschnitt 9’286 Schritte pro Tag, höchster Wert am Dienstag, 24.11.: 12’300 Schritte. "
+            + "Ziel 10’000 Schritte an 3 von 7 Tagen erreicht."),
             cut.Find(".vs-metric-chart__summary").TextContent);
     }
 
@@ -51,8 +51,8 @@ public sealed class MetricChartTests : BunitContext
             .Add(p => p.Goal, 9000m));
 
         Assert.Equal(
-            "Vom 21.11. bis 25.11., Daten an 3 von 5 Tagen: Durchschnitt 8’000 Schritte pro Tag, "
-            + "höchster Wert am Mittwoch, 25.11.: 10’000 Schritte. Ziel 9’000 Schritte an 1 der 3 Tage mit Daten erreicht.",
+            Swiss("Vom 21.11. bis 25.11., Daten an 3 von 5 Tagen: Durchschnitt 8’000 Schritte pro Tag, "
+            + "höchster Wert am Mittwoch, 25.11.: 10’000 Schritte. Ziel 9’000 Schritte an 1 der 3 Tage mit Daten erreicht."),
             cut.Find(".vs-metric-chart__summary").TextContent);
     }
 
@@ -92,15 +92,15 @@ public sealed class MetricChartTests : BunitContext
         Assert.Null(details.GetAttribute("open"));
         Assert.Equal("Als Tabelle anzeigen", details.QuerySelector(".vs-metric-chart__toggle-show")!.TextContent);
         Assert.Equal("Tabelle ausblenden", details.QuerySelector(".vs-metric-chart__toggle-hide")!.TextContent);
-        Assert.Equal("Schritte, 21.11. bis 25.11., Ziel: 9’000 Schritte", cut.Find("caption").TextContent.Trim());
+        Assert.Equal(Swiss("Schritte, 21.11. bis 25.11., Ziel: 9’000 Schritte"), cut.Find("caption").TextContent.Trim());
         Assert.Equal(["Tag", "Schritte", "Ziel"], cut.FindAll("thead th").Select(cell => cell.TextContent.Trim()));
         Assert.Equal(
             [
-                ["Samstag, 21.11.", "8’000", "nicht erreicht"],
+                ["Samstag, 21.11.", Swiss("8’000"), "nicht erreicht"],
                 ["Sonntag, 22.11.", "Keine Daten", "Keine Daten"],
-                ["Montag, 23.11.", "6’000", "nicht erreicht"],
+                ["Montag, 23.11.", Swiss("6’000"), "nicht erreicht"],
                 ["Dienstag, 24.11.", "Keine Daten", "Keine Daten"],
-                ["Mittwoch, 25.11.", "10’000", "erreicht"],
+                ["Mittwoch, 25.11.", Swiss("10’000"), "erreicht"],
             ],
             cut.FindAll("tbody tr").Select(row => row.QuerySelectorAll("th, td").Select(cell => cell.TextContent.Trim()).ToArray()));
     }
@@ -127,7 +127,7 @@ public sealed class MetricChartTests : BunitContext
         var cut = RenderChart(Chart(Days(8200m, 11000m, 6400m, 10500m, 9100m, 12300m, 7500m)));
 
         Assert.Equal(
-            ["0", "5’000", "10’000", "15’000"],
+            ["0", Swiss("5’000"), Swiss("10’000"), Swiss("15’000")],
             cut.FindAll(".vs-metric-chart__y-label").Select(label => label.TextContent));
         Assert.Single(cut.FindAll(".vs-metric-chart__baseline"));
         Assert.Equal("100", cut.Find(".vs-metric-chart__baseline").GetAttribute("y1"));
@@ -170,7 +170,7 @@ public sealed class MetricChartTests : BunitContext
 
         var goal = cut.Find("line.vs-metric-chart__goal");
         Assert.Equal(goal.GetAttribute("y1"), goal.GetAttribute("y2"));
-        Assert.Equal(["Ziel: 10’000 Schritte"], cut.FindAll(".vs-metric-chart__legend-item").Select(item => item.TextContent.Trim()));
+        Assert.Equal([Swiss("Ziel: 10’000 Schritte")], cut.FindAll(".vs-metric-chart__legend-item").Select(item => item.TextContent.Trim()));
     }
 
     [Fact]
@@ -382,6 +382,9 @@ public sealed class MetricChartTests : BunitContext
             .Add(p => p.Goal, goal)
             .Add(p => p.Href, href)
             .Add(p => p.LinkText, linkText);
+
+    private static string Swiss(string text) =>
+        text.Replace("’", SwissGerman.NumberFormat.NumberGroupSeparator, StringComparison.Ordinal);
 
     private static IEnumerable<string> LabelTexts(IRenderedComponent<MetricChart> cut, string level) =>
         cut.FindAll($".vs-metric-chart__x-label--{level}").Select(label => label.TextContent);
